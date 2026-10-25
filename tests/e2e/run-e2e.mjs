@@ -113,6 +113,8 @@ async function main() {
       { timeout: 15000 },
     );
     const sw = await swTarget.worker();
+    // Node 的 URL 对 chrome-extension 这类非特殊协议 .origin 返回 "null"，手动截取
+    const extOrigin = swTarget.url().replace(/\/[^/]*$/, '');
     await warmup.close().catch(() => undefined);
     console.log('✓ 扩展 Service Worker 已启动');
 
@@ -369,6 +371,36 @@ async function main() {
     await new Promise((r) => setTimeout(r, 300));
     const editorClosed = await page.evaluate(() => !document.getElementById('pagemask-editor-host'));
     assert(editorClosed, '编辑面板关闭');
+
+    // ===================== 管理页 / 引导页 =====================
+    console.log('\n--- 管理页与引导页 ---');
+    const mPage = await browser.newPage();
+    await mPage.goto(`${extOrigin}/management.html`, { waitUntil: 'load' });
+    await mPage.waitForSelector('.site', { timeout: 5000 });
+    const mgmt = await mPage.evaluate(() => ({
+      host: document.querySelector('.site .host')?.textContent ?? '',
+      state: document.querySelector('.site .state')?.textContent ?? '',
+      hasExport: !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
+    }));
+    assert(mgmt.host.includes('127.0.0.1'), `管理页列出站点（${mgmt.host}）`);
+    assert(mgmt.state.includes('规则'), `管理页显示规则数与状态（${mgmt.state.trim()}）`);
+    assert(mgmt.hasExport, '管理页有导出/导入');
+    await mPage.screenshot({ path: `${EVIDENCE_DIR}/e2e-management.png` });
+    await mPage.close();
+
+    const oPage = await browser.newPage();
+    await oPage.goto(`${extOrigin}/onboarding.html`, { waitUntil: 'load' });
+    const onboard = await oPage.evaluate(async () => {
+      const steps = document.querySelectorAll('.step').length;
+      const next = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === '下一步');
+      next?.click();
+      await new Promise((r) => setTimeout(r, 150));
+      const active2 = document.querySelector('.step.active .num')?.textContent;
+      return { steps, active2 };
+    });
+    assert(onboard.steps === 3, `引导页 3 步图文（${onboard.steps}）`);
+    assert(onboard.active2 === '2', '引导页步骤可切换');
+    await oPage.close();
 
     console.log('\n全部 E2E 断言通过 ✅');
     process.exitCode = 0;
