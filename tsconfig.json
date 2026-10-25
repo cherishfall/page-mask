@@ -1,0 +1,9 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["vitest/globals"]
+  },
+  "include": [".wxt/wxt.d.ts", "entrypoints", "core", "ui", "tests"],
+  "exclude": ["node_modules", ".output"]
+}

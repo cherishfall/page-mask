@@ -1,0 +1,28 @@
+{
+  "name": "page-mask",
+  "version": "0.1.0",
+  "description": "PageMask —— 让非工作网站在一瞥之下看起来不像它自己 / Make non-work sites stop looking like themselves at a glance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt dev",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "compile": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "css-selector-generator": "^3.9.4",
+    "vue": "^3.5.0",
+    "wxt": "^0.21.0"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "^2.4.6",
+    "@wxt-dev/module-vue": "^1.0.3",
+    "happy-dom": "^15.11.7",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "vue-tsc": "^2.1.10"
+  }
+}
