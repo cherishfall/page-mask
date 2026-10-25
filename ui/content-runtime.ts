@@ -11,8 +11,10 @@ import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
 import { probeRules } from '@/core/health';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
+import WizardApp from './wizard/WizardApp.vue';
 
 const TOGGLE_HOST_ID = 'pagemask-floating-host';
+const WIZARD_HOST_ID = 'pagemask-wizard-host';
 
 export function initContentRuntime(): void {
   const origin = location.origin;
@@ -23,6 +25,9 @@ export function initContentRuntime(): void {
   let settings: GlobalSettings = { defaultTitle: '新建标签页' };
   let host: HTMLDivElement | null = null;
   let app: App | null = null;
+  let wizardHost: HTMLDivElement | null = null;
+  let wizardApp: App | null = null;
+  let wizardActive = false;
   let lastHref = location.href;
   let lastHealthFingerprint = '';
 
@@ -86,14 +91,51 @@ export function initContentRuntime(): void {
     openEditorPanel();
   }
 
-  // ---------- 编辑面板 / 向导（后续任务票接入） ----------
+  // ---------- 编辑面板 / 向导 ----------
 
   function openEditorPanel() {
     console.info('[PageMask] 编辑面板即将接入');
   }
 
-  function openWizard() {
-    console.info('[PageMask] 设置向导即将接入');
+  /** 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程） */
+  async function openWizard(mode: 'newSite' | 'addElement') {
+    if (!profile || wizardActive) return;
+    wizardActive = true;
+
+    const wasDisguised = profile.switchState === 'disguised';
+    if (wasDisguised) {
+      await browser.runtime.sendMessage({ t: 'restoreOriginal' }).catch(() => undefined);
+      guard.restore();
+    }
+    unmountToggle();
+
+    wizardHost = document.createElement('div');
+    wizardHost.id = WIZARD_HOST_ID;
+    Object.assign(wizardHost.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '2147483647',
+      pointerEvents: 'none', // 覆盖层自身穿透，页面照常交互；交互元素自行恢复 pointer-events
+    } as Partial<CSSStyleDeclaration>);
+    const shadow = wizardHost.attachShadow({ mode: 'open' });
+    const mountPoint = document.createElement('div');
+    shadow.appendChild(mountPoint);
+    document.documentElement.appendChild(wizardHost);
+
+    wizardApp = createApp(WizardApp, {
+      mode,
+      url: location.href,
+      onDone: () => {
+        wizardApp?.unmount();
+        wizardApp = null;
+        wizardHost?.remove();
+        wizardHost = null;
+        wizardActive = false;
+        // 保存路径已写入 storage；这里统一按当前配置恢复（保存触发 onChanged 但被向导屏蔽）
+        void refreshState();
+      },
+    });
+    wizardApp.mount(mountPoint);
   }
 
   // ---------- 伪装应用 / 还原 ----------
@@ -157,18 +199,20 @@ export function initContentRuntime(): void {
     }
   }
 
-  // storage 变化驱动：开关切换、规则增删改、标题/图标修改、健康状态回写
+  // storage 变化驱动：开关切换、规则增删改、标题/图标修改、健康状态回写。
+  // 向导打开期间屏蔽（避免向导内的临时状态被真样式覆盖），退出时统一 refreshState
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local') return;
+    if (area !== 'local' || wizardActive) return;
     const keys = Object.keys(changes);
     if (!keys.some((k) => k === profileKey(origin) || k === 'settings')) return;
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => void refreshState(), 150);
   });
 
-  // SPA 路由变化：重评估每条规则的生效范围（微信读书翻页等场景）
+  // SPA 路由变化：重评估每条规则的生效范围（微信读书翻页等场景）；向导期间屏蔽
   setInterval(() => {
+    if (wizardActive) return;
     if (location.href !== lastHref && profile?.switchState === 'disguised') {
       lastHref = location.href;
       void applyAll();
@@ -178,8 +222,8 @@ export function initContentRuntime(): void {
   }, 1000);
 
   // popup 触发的入口消息
-  browser.runtime.onMessage.addListener((msg: { t?: string }) => {
-    if (msg?.t === 'openWizard') openWizard();
+  browser.runtime.onMessage.addListener((msg: { t?: string; mode?: 'newSite' | 'addElement' }) => {
+    if (msg?.t === 'openWizard') openWizard(msg.mode ?? 'addElement');
     if (msg?.t === 'openEditor') openEditorPanel();
   });
 

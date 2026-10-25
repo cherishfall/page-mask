@@ -13,9 +13,12 @@ export default defineBackground(() => {
   const storage = createPageMaskStorage(browser.storage.local);
   /** 每个 tab 最近一次注入的 CSS 文本，用于幂等移除（SPA 软导航换范围时先移旧再注新） */
   const lastCssByTab = new Map<number, string>();
+  /** 向导预览的草稿样式（与正式样式分道跟踪） */
+  const draftCssByTab = new Map<number, string>();
 
   browser.tabs.onRemoved.addListener((tabId) => {
     lastCssByTab.delete(tabId);
+    draftCssByTab.delete(tabId);
   });
 
   async function registerSiteContentScript(origin: string): Promise<void> {
@@ -63,14 +66,16 @@ export default defineBackground(() => {
 
     if (prev) {
       try {
-        await browser.scripting.removeCSS({ target: { tabId }, css: prev });
+        // origin 必须与 insertCSS 完全一致，否则删不掉
+        await browser.scripting.removeCSS({ target: { tabId }, css: prev, origin: 'USER' });
       } catch {
         // 标签页已导航/关闭时忽略
       }
       lastCssByTab.delete(tabId);
     }
     if (css) {
-      await browser.scripting.insertCSS({ target: { tabId }, css });
+      // 用户样式表通道（ADR-0002）：优先级高于站点作者样式，且 CSP 免疫
+      await browser.scripting.insertCSS({ target: { tabId }, css, origin: 'USER' });
       lastCssByTab.set(tabId, css);
     }
     return { ok: true };
@@ -80,11 +85,29 @@ export default defineBackground(() => {
     const prev = lastCssByTab.get(tabId);
     if (prev) {
       try {
-        await browser.scripting.removeCSS({ target: { tabId }, css: prev });
+        await browser.scripting.removeCSS({ target: { tabId }, css: prev, origin: 'USER' });
       } catch {
         // 忽略
       }
       lastCssByTab.delete(tabId);
+    }
+    return { ok: true };
+  }
+
+  /** 向导预览草稿样式：与正式样式分开跟踪，css 为 null 时清除 */
+  async function applyDraftCss(tabId: number, css: string | null): Promise<Ack> {
+    const prev = draftCssByTab.get(tabId);
+    if (prev) {
+      try {
+        await browser.scripting.removeCSS({ target: { tabId }, css: prev, origin: 'USER' });
+      } catch {
+        // 忽略
+      }
+      draftCssByTab.delete(tabId);
+    }
+    if (css) {
+      await browser.scripting.insertCSS({ target: { tabId }, css, origin: 'USER' });
+      draftCssByTab.set(tabId, css);
     }
     return { ok: true };
   }
@@ -103,6 +126,9 @@ export default defineBackground(() => {
         case 'restoreOriginal':
           if (tabId === undefined) return Promise.resolve({ ok: false, error: 'no sender tab' });
           return restoreOriginal(tabId);
+        case 'draftCss':
+          if (tabId === undefined) return Promise.resolve({ ok: false, error: 'no sender tab' });
+          return applyDraftCss(tabId, msg.css);
         default:
           return undefined;
       }

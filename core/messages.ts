@@ -32,6 +32,12 @@ export interface RestoreOriginalRequest {
   t: 'restoreOriginal';
 }
 
+/** 向导 → 后台：预览草稿样式（null = 清除预览） */
+export interface DraftCssRequest {
+  t: 'draftCss';
+  css: string | null;
+}
+
 export interface Ack {
   ok: boolean;
   error?: string;
@@ -48,5 +54,10 @@ export interface OpenEditorMsg {
   t: 'openEditor';
 }
 
-export type BgRequest = EnableSiteRequest | ResetSiteRequest | ApplyDisguiseRequest | RestoreOriginalRequest;
+export type BgRequest =
+  | EnableSiteRequest
+  | ResetSiteRequest
+  | ApplyDisguiseRequest
+  | RestoreOriginalRequest
+  | DraftCssRequest;
 export type ContentMsg = OpenWizardMsg | OpenEditorMsg;
