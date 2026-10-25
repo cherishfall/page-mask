@@ -20,7 +20,7 @@
   "devDependencies": {
     "@vue/test-utils": "^2.4.6",
     "@wxt-dev/module-vue": "^1.0.3",
-    "happy-dom": "^15.11.7",
+    "jsdom": "^29.1.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
     "vue-tsc": "^2.1.10"

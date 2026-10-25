@@ -46,5 +46,5 @@ export const STRATEGY_ORDER: StrategyId[] = ['remove', 'blank', 'mask'];
 
 export function nextStrategy(s: StrategyId): StrategyId {
   const i = STRATEGY_ORDER.indexOf(s);
-  return STRATEGY_ORDER[(i + 1) % STRATEGY_ORDER.length];
+  return STRATEGY_ORDER[(i + 1) % STRATEGY_ORDER.length] ?? 'remove';
 }
