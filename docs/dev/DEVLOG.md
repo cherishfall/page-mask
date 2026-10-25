@@ -2,6 +2,14 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 2026-10-26 03:00 · 向导全流程 E2E 通过（真鼠标拾取→预览→保存）
+
+两个通宵踩坑，值得记录：
+
+- **shadow 事件重定向**：shadow DOM 内元素的事件传到 window 级监听器时，target 会被重定向成 shadow host。自家 UI 判定必须同时认 host 本身、host 的后代、shadow 内部节点三者。症状：JS 点击工具条按钮被当成页面点选（还把 host 选中了），且捕获阶段的 stopPropagation 吞掉了按钮本该收到的点击。
+- **Vue 响应式代理 × chrome.storage**：响应式代理数组经 chrome.storage 序列化会变成 `{"0":..,"1":..}` 数字键对象，后续 `.map` 全崩。修法在存储层入口（putProfile）统一 JSON 规范化，所有写入方一并治愈。
+- **insertCSS 通道**：默认 origin 是 AUTHOR，须显式 `origin:'USER'` 才是设计要求的用户样式表通道；removeCSS 参数必须与插入完全一致（探针脚本验证过 CfT 157 行为符合文档）。
+
 ## 2026-10-26 02:00 · 真机 E2E 链路打通（重要里程碑）
 
 用 puppeteer-core + Chrome for Testing 157 加载真实扩展，12 项断言全过：伪装态标题/图标替换、方案A/B 生效、范围外零影响、原样态完全还原、悬浮按钮常驻、开关反复切换。证据截图 `docs/dev/evidence/`。`npm run test:e2e`。

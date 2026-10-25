@@ -1,7 +1,8 @@
 /**
  * 内容脚本运行时：生命周期编排。
- * - 已配置站点伪装态：请求后台注入隐藏样式 + 标题/图标伪装 + 体检 + 悬浮按钮
- * - 原样态：完全还原（样式、标题、图标），悬浮按钮保留（切回入口）
+ * - 已配置站点伪装态：请求后台注入隐藏样式（方案A/B）+ 标题/图标伪装 + 体检 +
+ *   方案C遮罩覆盖层 + 悬浮按钮
+ * - 原样态：完全还原（样式、标题、图标、遮罩），悬浮按钮保留（切回入口）
  * - storage.onChanged 驱动同站多标签页联动；SPA 路由变化重评估生效范围
  */
 import { createApp, type App } from 'vue';
@@ -9,17 +10,23 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
 import { probeRules } from '@/core/health';
+import { maskRulesAt } from '@/core/css-builder';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
+import EditorPanel from './editor/EditorPanel.vue';
+import { ElementFollower } from './follow';
 
 const TOGGLE_HOST_ID = 'pagemask-floating-host';
 const WIZARD_HOST_ID = 'pagemask-wizard-host';
+const EDITOR_HOST_ID = 'pagemask-editor-host';
+const MASK_HOST_ID = 'pagemask-mask-host';
 
 export function initContentRuntime(): void {
   const origin = location.origin;
   const storage = createPageMaskStorage(browser.storage.local);
   const guard = new TitleFaviconGuard(document);
+  const follower = new ElementFollower();
 
   let profile: SiteProfile | null = null;
   let settings: GlobalSettings = { defaultTitle: '新建标签页' };
@@ -27,6 +34,9 @@ export function initContentRuntime(): void {
   let app: App | null = null;
   let wizardHost: HTMLDivElement | null = null;
   let wizardApp: App | null = null;
+  let editorHost: HTMLDivElement | null = null;
+  let editorApp: App | null = null;
+  let maskHost: HTMLDivElement | null = null;
   let wizardActive = false;
   let lastHref = location.href;
   let lastHealthFingerprint = '';
@@ -91,21 +101,115 @@ export function initContentRuntime(): void {
     openEditorPanel();
   }
 
+  // ---------- 方案C 遮罩覆盖层 ----------
+
+  function ensureMaskHost(): HTMLDivElement {
+    if (maskHost) return maskHost;
+    maskHost = document.createElement('div');
+    maskHost.id = MASK_HOST_ID;
+    Object.assign(maskHost.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '2147483644',
+      pointerEvents: 'none',
+    } as Partial<CSSStyleDeclaration>);
+    document.documentElement.appendChild(maskHost);
+    return maskHost;
+  }
+
+  function clearMasks(): void {
+    follower.stop();
+    maskHost?.remove();
+    maskHost = null;
+  }
+
+  /** 方案C遮罩：对当前页面生效的每条 mask 规则，给命中元素盖上不透明贴纸（滚动跟手） */
+  function rebuildMasks(): void {
+    clearMasks();
+    if (!profile || profile.switchState !== 'disguised') return;
+    const rules = maskRulesAt(profile.hideRules, location.href);
+    if (rules.length === 0) return;
+    const mh = ensureMaskHost();
+    const seen = new Set<Element>();
+    for (const rule of rules) {
+      for (const sel of rule.candidates) {
+        let els: NodeListOf<Element>;
+        try {
+          els = document.querySelectorAll(sel);
+        } catch {
+          continue;
+        }
+        for (const el of Array.from(els)) {
+          if (seen.has(el)) continue;
+          seen.add(el);
+          const box = document.createElement('div');
+          Object.assign(box.style, {
+            position: 'fixed',
+            background: '#f4f4f4',
+            boxSizing: 'border-box',
+          } as Partial<CSSStyleDeclaration>);
+          mh.appendChild(box);
+          follower.trackLive(el, box);
+        }
+      }
+    }
+  }
+
   // ---------- 编辑面板 / 向导 ----------
 
-  function openEditorPanel() {
-    console.info('[PageMask] 编辑面板即将接入');
+  function closeEditorPanel(): void {
+    editorApp?.unmount();
+    editorApp = null;
+    editorHost?.remove();
+    editorHost = null;
+  }
+
+  /** 悬浮按钮右键 → 编辑伪装。改动直接写库，storage 变化即时重应用＝即时预览 */
+  function openEditorPanel(): void {
+    if (!profile || wizardActive || editorHost) return;
+    editorHost = document.createElement('div');
+    editorHost.id = EDITOR_HOST_ID;
+    Object.assign(editorHost.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '2147483646',
+      pointerEvents: 'none',
+    } as Partial<CSSStyleDeclaration>);
+    const shadow = editorHost.attachShadow({ mode: 'open' });
+    const mountPoint = document.createElement('div');
+    shadow.appendChild(mountPoint);
+    document.documentElement.appendChild(editorHost);
+    editorApp = createApp(EditorPanel, {
+      origin,
+      url: location.href,
+      onClose: closeEditorPanel,
+      onAddElement: () => {
+        closeEditorPanel();
+        void openWizard('addElement');
+      },
+      onReselect: (ruleId: string) => {
+        // 重选元素 = 删除旧规则 + 进向导重新点选（v1 简化，记 DEVLOG）
+        if (!profile) return;
+        profile.hideRules = profile.hideRules.filter((r) => r.id !== ruleId);
+        void storage.putProfile(profile);
+        closeEditorPanel();
+        void openWizard('addElement');
+      },
+    });
+    editorApp.mount(mountPoint);
   }
 
   /** 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程） */
   async function openWizard(mode: 'newSite' | 'addElement') {
     if (!profile || wizardActive) return;
     wizardActive = true;
+    closeEditorPanel();
 
     const wasDisguised = profile.switchState === 'disguised';
     if (wasDisguised) {
       await browser.runtime.sendMessage({ t: 'restoreOriginal' }).catch(() => undefined);
       guard.restore();
+      clearMasks();
     }
     unmountToggle();
 
@@ -144,6 +248,7 @@ export function initContentRuntime(): void {
     if (!profile) return;
     await browser.runtime.sendMessage({ t: 'applyDisguise', url: location.href }).catch(() => undefined);
     guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    rebuildMasks();
     await runHealthCheck();
     mountToggle();
   }
@@ -151,6 +256,7 @@ export function initContentRuntime(): void {
   async function restoreAll(): Promise<void> {
     await browser.runtime.sendMessage({ t: 'restoreOriginal' }).catch(() => undefined);
     guard.restore();
+    clearMasks();
     mountToggle();
   }
 
@@ -188,7 +294,9 @@ export function initContentRuntime(): void {
     if (!p) {
       // 站点被一键清空：撤掉一切痕迹
       unmountToggle();
+      closeEditorPanel();
       guard.restore();
+      clearMasks();
       return;
     }
     profile = p;
@@ -223,7 +331,7 @@ export function initContentRuntime(): void {
 
   // popup 触发的入口消息
   browser.runtime.onMessage.addListener((msg: { t?: string; mode?: 'newSite' | 'addElement' }) => {
-    if (msg?.t === 'openWizard') openWizard(msg.mode ?? 'addElement');
+    if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'addElement');
     if (msg?.t === 'openEditor') openEditorPanel();
   });
 

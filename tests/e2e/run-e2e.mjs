@@ -323,6 +323,53 @@ async function main() {
     assert(stored.state === 'disguised', '站点开关切到伪装态');
     await page.screenshot({ path: `${EVIDENCE_DIR}/e2e-wizard-saved.png` });
 
+    // ===================== 编辑面板 + 方案C遮罩 =====================
+    console.log('\n--- 编辑面板与方案C遮罩 ---');
+    await sw.evaluate(async (id) => {
+      await chrome.tabs.sendMessage(id, { t: 'openEditor' });
+    }, realTabId);
+    await new Promise((r) => setTimeout(r, 500));
+    const editorOk = await page.evaluate(() => {
+      const host = document.getElementById('pagemask-editor-host');
+      return !!host?.shadowRoot?.querySelector('[data-testid="pm-editor-panel"]');
+    });
+    assert(editorOk, '编辑面板打开，列出当前页面生效规则');
+
+    // 把刚保存的规则换成方案C遮罩 → 出现覆盖层，元素不再 display:none
+    const ruleId = await sw.evaluate(async (origin) => {
+      const items = await chrome.storage.local.get(`profile:${origin}`);
+      return items[`profile:${origin}`].hideRules[0].id;
+    }, ORIGIN);
+    await page.evaluate((rid) => {
+      const host = document.getElementById('pagemask-editor-host');
+      const btn = host?.shadowRoot?.querySelector(`[data-testid="pm-ed-strategy-${rid}-mask"]`);
+      btn?.click();
+      return !!btn;
+    }, ruleId);
+    await new Promise((r) => setTimeout(r, 900));
+    const maskState = await page.evaluate(() => {
+      const maskHost = document.getElementById('pagemask-mask-host');
+      const boxes = maskHost?.children.length ?? 0;
+      const cards = document.querySelectorAll('.rec-card');
+      const first = cards[0]?.getBoundingClientRect();
+      const box = maskHost?.children[0]?.getBoundingClientRect();
+      const covered = !!first && !!box && box.top <= first.top + 2 && box.bottom >= first.bottom - 2 && box.width > 10;
+      return { boxes, cardDisplay: getComputedStyle(cards[0]).display, covered };
+    });
+    assert(maskState.cardDisplay !== 'none', `方案C：元素不再被移除（display=${maskState.cardDisplay}）`);
+    assert(maskState.boxes >= 1, `方案C：遮罩覆盖层出现（${maskState.boxes} 个）`);
+    assert(maskState.covered, '方案C：遮罩位置覆盖元素');
+    await page.screenshot({ path: `${EVIDENCE_DIR}/e2e-mask.png` });
+
+    // 关闭面板
+    await page.evaluate(() => {
+      const host = document.getElementById('pagemask-editor-host');
+      host?.shadowRoot?.querySelector('[data-testid="pm-editor-close"]')?.click();
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const editorClosed = await page.evaluate(() => !document.getElementById('pagemask-editor-host'));
+    assert(editorClosed, '编辑面板关闭');
+
     console.log('\n全部 E2E 断言通过 ✅');
     process.exitCode = 0;
   } catch (e) {
