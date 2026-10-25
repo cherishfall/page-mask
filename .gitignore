@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+
+# Node / WXT
+node_modules/
+.output/
+dist/
