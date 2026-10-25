@@ -143,16 +143,20 @@ const markerBoxes = new Map<number, HTMLElement>();
 
 const sitePattern = computed(() => deriveScopePattern(props.url));
 
+let pickLayer: HTMLElement | null = null;
+
 onMounted(() => {
-  document.documentElement.style.cursor = 'crosshair';
+  // 全屏透明捕获层：拾取期接管全部指针事件（见 pick-controller 注释）
+  pickLayer = document.createElement('div');
+  pickLayer.dataset.testid = 'pm-pick-layer';
+  overlayLayer.value?.appendChild(pickLayer);
   pick = new PickController({
-    isOwnUi: (t) => {
-      if (!(t instanceof Node) || !overlayLayer.value) return false;
+    isOwnNode: (n) => {
+      if (!(n instanceof Node) || !overlayLayer.value) return false;
       const root = overlayLayer.value.getRootNode();
       if (!(root instanceof ShadowRoot)) return false;
-      // 事件传到 window 时，shadow 内的目标会被重定向成 host —— host 及其后代都算自家 UI
       const host = root.host;
-      return t === host || host.contains(t) || root.contains(t);
+      return n === host || host.contains(n) || root.contains(n);
     },
     onHoverChange: (el) => {
       hoverEl.value = el;
@@ -179,7 +183,7 @@ onMounted(() => {
       requestExit();
     },
   });
-  pick.start();
+  if (pickLayer) pick.attach(pickLayer);
 });
 
 onBeforeUnmount(() => {
@@ -291,6 +295,7 @@ function enterPreview() {
   phase.value = 'preview';
   document.documentElement.style.cursor = '';
   pick.stop();
+  if (pickLayer) pickLayer.style.display = 'none';
   // 悬停框、序号牌退场
   updateHoverBox(null);
   for (const [, box] of badgeBoxes) follower.drop(box);
@@ -313,7 +318,10 @@ function backToPick() {
   drafts.value = [];
   clearDraftCss();
   renderBadges();
-  pick.start();
+  if (pickLayer) {
+    pickLayer.style.display = '';
+    pick.attach(pickLayer);
+  }
 }
 
 function clearMarkers() {

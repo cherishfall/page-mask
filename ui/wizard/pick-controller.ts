@@ -1,12 +1,14 @@
 /**
  * 点选控制器：悬停高亮、点击多选（挂序号牌）、层级调整、Esc。
- * 事件挂在 window 捕获阶段；自家 UI（阴影 DOM 内）的事件不参与选点。
+ * 事件策略（uBlock 元素选择器同款思路）：拾取阶段在页面上盖一层全屏透明捕获层，
+ * 指针事件全部落在我们自己的层上，用 elementsFromPoint 反查目标元素——
+ * 站点自身的捕获监听/事件拦截（极客时间等）无从干扰，链接跳转也被天然挡住。
  */
 import { isTooBigForPick, navigateLevel } from '@/core/wizard-logic';
 
 export interface PickCallbacks {
-  /** 返回 true 表示该事件目标属于向导自身 UI，不参与选点 */
-  isOwnUi(target: EventTarget | null): boolean;
+  /** 该节点属于向导自身 UI（阴影树或宿主），不算页面元素 */
+  isOwnNode(n: Node): boolean;
   onHoverChange(el: Element | null): void;
   onSelectionChange(els: Element[]): void;
   onWarnTooBig(el: Element): void;
@@ -16,6 +18,7 @@ export interface PickCallbacks {
 export class PickController {
   private selection = new Set<Element>();
   private hoverEl: Element | null = null;
+  private layer: HTMLElement | null = null;
 
   constructor(private cb: PickCallbacks) {}
 
@@ -27,16 +30,24 @@ export class PickController {
     return Array.from(this.selection);
   }
 
-  start(): void {
-    window.addEventListener('mousemove', this.onMouseMove, true);
-    window.addEventListener('click', this.onClick, true);
+  /** 挂到全屏捕获层（透明、crosshair 光标；层本身 pointer-events:auto） */
+  attach(layer: HTMLElement): void {
+    this.layer = layer;
+    layer.style.position = 'fixed';
+    layer.style.inset = '0';
+    layer.style.zIndex = '1'; // 阴影树内低于工具条等交互元素
+    layer.style.pointerEvents = 'auto';
+    layer.style.cursor = 'crosshair';
+    layer.addEventListener('pointermove', this.onPointerMove);
+    layer.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('keydown', this.onKeyDown, true);
   }
 
   stop(): void {
-    window.removeEventListener('mousemove', this.onMouseMove, true);
-    window.removeEventListener('click', this.onClick, true);
+    this.layer?.removeEventListener('pointermove', this.onPointerMove);
+    this.layer?.removeEventListener('pointerdown', this.onPointerDown);
     window.removeEventListener('keydown', this.onKeyDown, true);
+    this.layer = null;
   }
 
   clear(): void {
@@ -59,26 +70,30 @@ export class PickController {
     this.cb.onSelectionChange(this.selected);
   }
 
-  private readonly onMouseMove = (e: MouseEvent) => {
-    const target = e.target as Element | null;
-    if (!target || this.cb.isOwnUi(target)) {
-      if (this.hoverEl) {
-        this.hoverEl = null;
-        this.cb.onHoverChange(null);
+  /** 从命中栈里取第一个不属于向导自身的元素 */
+  private elementUnderPoint(x: number, y: number): Element | null {
+    const stack = document.elementsFromPoint(x, y);
+    for (const el of stack) {
+      if (!this.cb.isOwnNode(el) && el !== document.documentElement && el !== document.body) {
+        return el;
       }
-      return;
     }
-    if (target !== this.hoverEl) {
-      this.hoverEl = target;
-      this.cb.onHoverChange(target);
+    return null;
+  }
+
+  private readonly onPointerMove = (e: PointerEvent) => {
+    const el = this.elementUnderPoint(e.clientX, e.clientY);
+    if (el !== this.hoverEl) {
+      this.hoverEl = el;
+      this.cb.onHoverChange(el);
     }
   };
 
-  private readonly onClick = (e: MouseEvent) => {
-    const target = e.target as Element | null;
-    if (!target || this.cb.isOwnUi(target)) return;
+  private readonly onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 || !e.isPrimary) return;
     e.preventDefault();
-    e.stopPropagation();
+    const target = this.hoverEl ?? this.elementUnderPoint(e.clientX, e.clientY);
+    if (!target) return;
     if (isTooBigForPick(target.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight })) {
       this.cb.onWarnTooBig(target);
     }
