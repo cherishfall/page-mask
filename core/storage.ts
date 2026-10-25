@@ -31,7 +31,10 @@ export function createPageMaskStorage(area: KVArea) {
   }
 
   async function putProfile(profile: SiteProfile): Promise<void> {
-    await area.set({ [profileKey(profile.origin)]: { ...profile, updatedAt: Date.now() } });
+    // JSON 规范化：调用方（如 Vue 组件）可能传入响应式代理对象，
+    // 直接进 chrome.storage 会被序列化成数字键对象而非数组
+    const plain = JSON.parse(JSON.stringify(profile)) as SiteProfile;
+    await area.set({ [profileKey(plain.origin)]: { ...plain, updatedAt: Date.now() } });
   }
 
   async function deleteProfile(origin: string): Promise<void> {

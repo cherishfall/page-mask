@@ -42,6 +42,42 @@ function assert(cond, msg) {
   console.log(`  ✓ ${msg}`);
 }
 
+/** 在向导阴影 DOM 中按 data-testid 查找（弹窗/标记等 UI 都在 shadow root 里） */
+async function shadowQuery(page, testid) {
+  return page.evaluate((tid) => {
+    const host = document.getElementById('pagemask-wizard-host') ?? document.getElementById('pagemask-floating-host');
+    const root = host?.shadowRoot;
+    return root?.querySelector(`[data-testid="${tid}"]`) ?? null;
+  }, testid);
+}
+
+async function shadowExists(page, testid) {
+  return (await shadowQuery(page, testid)) !== null;
+}
+
+async function shadowClick(page, testid) {
+  return page.evaluate((tid) => {
+    const host = document.getElementById('pagemask-wizard-host') ?? document.getElementById('pagemask-floating-host');
+    const el = host?.shadowRoot?.querySelector(`[data-testid="${tid}"]`);
+    if (el) el.click();
+    return !!el;
+  }, testid);
+}
+
+async function shadowText(page, testid) {
+  return page.evaluate((tid) => {
+    const host = document.getElementById('pagemask-wizard-host') ?? document.getElementById('pagemask-floating-host');
+    return host?.shadowRoot?.querySelector(`[data-testid="${tid}"]`)?.textContent ?? '';
+  }, testid);
+}
+
+async function centerOf(page, selector) {
+  return page.evaluate((sel) => {
+    const r = document.querySelector(sel).getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }, selector);
+}
+
 async function main() {
   fs.rmSync(PROFILE_DIR, { recursive: true, force: true });
   fs.rmSync(TEST_EXT_DIR, { recursive: true, force: true });
@@ -189,6 +225,103 @@ async function main() {
     await new Promise((r) => setTimeout(r, 800));
     const again = await page.evaluate(() => getComputedStyle(document.getElementById('site-header')).display);
     assert(again === 'none', '再次进入伪装态样式重新注入');
+
+    // ===================== 向导全流程（拾取 → 预览 → 保存） =====================
+    console.log('\n--- 向导全流程 ---');
+    // 重置为"新站点"状态：空规则 + 原样态，然后重载页面
+    await sw.evaluate(async (origin) => {
+      const key = `profile:${origin}`;
+      const items = await chrome.storage.local.get(key);
+      const p = items[key];
+      p.hideRules = [];
+      p.switchState = 'original';
+      await chrome.storage.local.set({ [key]: p });
+    }, ORIGIN);
+    await page.reload({ waitUntil: 'networkidle0' });
+    await new Promise((r) => setTimeout(r, 600));
+
+    // 以 popup 同款消息触发向导（新站点模式）：从 SW 找到页面 tabId 后 sendMessage
+    const realTabId = await sw.evaluate(async (origin) => {
+      const tabs = await chrome.tabs.query({ url: `${origin}/*` });
+      return tabs[0]?.id ?? -1;
+    }, ORIGIN);
+    assert(realTabId !== -1, '找到测试页 tabId');
+    await sw.evaluate(async (id) => {
+      await chrome.tabs.sendMessage(id, { t: 'openWizard', mode: 'newSite' });
+    }, realTabId);
+    await new Promise((r) => setTimeout(r, 500));
+
+    const wizVisible = await shadowExists(page, 'pm-wizard-toolbar');
+    assert(wizVisible, '向导工具条出现');
+
+    // 拾取：真实鼠标点击两个元素（页头左侧 + 第一张推荐卡）。
+    // 注意避开顶部中央的工具条（它 pointer-events:auto，盖住的区域点不到页面元素）
+    const headerPt = await page.evaluate(() => {
+      const r = document.getElementById('site-header').getBoundingClientRect();
+      return { x: r.x + 40, y: r.y + r.height / 2 };
+    });
+    const cardPt = await centerOf(page, '.rec-card');
+    await page.mouse.click(headerPt.x, headerPt.y);
+    await new Promise((r) => setTimeout(r, 250));
+    await page.mouse.click(cardPt.x, cardPt.y);
+    await new Promise((r) => setTimeout(r, 400));
+    const previewBtnReady = await shadowText(page, 'pm-wiz-preview');
+    assert(previewBtnReady.includes('2'), `两个元素已选中（预览按钮：${previewBtnReady}）`);
+
+    // 进入预览
+    await shadowClick(page, 'pm-wiz-preview');
+    await new Promise((r) => setTimeout(r, 700));
+    const previewState = await page.evaluate(() => ({
+      nav: getComputedStyle(document.querySelector('.top-nav')).display,
+      card: getComputedStyle(document.querySelector('.rec-card')).display,
+    }));
+    assert(previewState.nav === 'none', `预览：导航按方案A移除（实际 ${previewState.nav}）`);
+    assert(previewState.card === 'none', `预览：推荐卡按方案A移除（实际 ${previewState.card}）`);
+    const markerOk = await page.evaluate(() => {
+      const host = document.getElementById('pagemask-wizard-host');
+      const boxes = host?.shadowRoot?.querySelectorAll('[data-testid^="pm-marker-"]');
+      return boxes?.length ?? 0;
+    });
+    assert(markerOk === 2, `预览：两个幽灵标记存在（实际 ${markerOk}）`);
+    await page.screenshot({ path: `${EVIDENCE_DIR}/e2e-wizard-preview.png` });
+
+    // 点第一个标记 → 弹片 → 换成方案B（原地留白）
+    await shadowClick(page, 'pm-marker-1');
+    await new Promise((r) => setTimeout(r, 300));
+    await shadowClick(page, 'pm-pop-strategy-blank');
+    await new Promise((r) => setTimeout(r, 600));
+    const afterBlank = await page.evaluate(() => ({
+      navVisibility: getComputedStyle(document.querySelector('.top-nav')).visibility,
+    }));
+    assert(afterBlank.navVisibility === 'hidden', `标记弹片换方案B生效（visibility=${afterBlank.navVisibility}）`);
+    await shadowClick(page, 'pm-pop-remove');
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 保存（默认整站）
+    await shadowClick(page, 'pm-wiz-save');
+    await new Promise((r) => setTimeout(r, 300));
+    await shadowClick(page, 'pm-wiz-save-yes');
+    await new Promise((r) => setTimeout(r, 900));
+
+    const saved = await page.evaluate(() => ({
+      wizardGone: !document.getElementById('pagemask-wizard-host'),
+      toggleBack: !!document.getElementById('pagemask-floating-host'),
+      title: document.title,
+      card: getComputedStyle(document.querySelector('.rec-card')).display,
+    }));
+    assert(saved.wizardGone, '保存后向导关闭');
+    assert(saved.toggleBack, '悬浮按钮回归');
+    assert(saved.title === '新建标签页', `新站点保存后自动进入伪装态（标题=${saved.title}）`);
+    assert(saved.card === 'none', `正式规则生效（推荐卡 display=${saved.card}）`);
+
+    const stored = await sw.evaluate(async (origin) => {
+      const items = await chrome.storage.local.get(`profile:${origin}`);
+      const p = items[`profile:${origin}`];
+      return { rules: p.hideRules.length, state: p.switchState };
+    }, ORIGIN);
+    assert(stored.rules === 1, `规则落库（1 条方案B，另一条已移出；实际 ${stored.rules}）`);
+    assert(stored.state === 'disguised', '站点开关切到伪装态');
+    await page.screenshot({ path: `${EVIDENCE_DIR}/e2e-wizard-saved.png` });
 
     console.log('\n全部 E2E 断言通过 ✅');
     process.exitCode = 0;

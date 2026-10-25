@@ -146,7 +146,14 @@ const sitePattern = computed(() => deriveScopePattern(props.url));
 onMounted(() => {
   document.documentElement.style.cursor = 'crosshair';
   pick = new PickController({
-    isOwnUi: (t) => !!overlayLayer.value && t instanceof Node && (overlayLayer.value.getRootNode() as ShadowRoot).host.contains(t),
+    isOwnUi: (t) => {
+      if (!(t instanceof Node) || !overlayLayer.value) return false;
+      const root = overlayLayer.value.getRootNode();
+      if (!(root instanceof ShadowRoot)) return false;
+      // 事件传到 window 时，shadow 内的目标会被重定向成 host —— host 及其后代都算自家 UI
+      const host = root.host;
+      return t === host || host.contains(t) || root.contains(t);
+    },
     onHoverChange: (el) => {
       hoverEl.value = el;
       updateHoverBox(el);
@@ -305,7 +312,6 @@ function backToPick() {
   clearMarkers();
   drafts.value = [];
   clearDraftCss();
-  selEls.value = selEls.value; // 保留原选择
   renderBadges();
   pick.start();
 }
@@ -375,9 +381,8 @@ function applyPreview() {
       follower.trackLive(d.el, box);
     }
   });
-  void browser.runtime
-    .sendMessage({ t: 'draftCss', css: cssParts.length ? cssParts.join('\n') : null })
-    .catch(() => undefined);
+  const draftText = cssParts.length ? cssParts.join('\n') : null;
+  void browser.runtime.sendMessage({ t: 'draftCss', css: draftText }).catch(() => undefined);
 }
 
 function addMarkerTag(box: HTMLElement, seq: number, color: string) {
