@@ -12,7 +12,7 @@ export interface RegistrationPlan {
   id: string;
   matches: string[];
   js: ScriptFile[];
-  runAt: 'document_idle';
+  runAt: 'document_start';
   persistAcrossSessions: boolean;
 }
 
@@ -21,7 +21,7 @@ export function registrationPlan(origin: string): RegistrationPlan {
     id: `pagemask:${origin}`,
     matches: [`${origin}/*`],
     js: [CONTENT_SCRIPT_FILE],
-    runAt: 'document_idle',
+    runAt: 'document_start',
     persistAcrossSessions: true,
   };
 }

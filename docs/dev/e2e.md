@@ -3,7 +3,7 @@
 ## 怎么跑
 
 ```bash
-npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 50 秒（含 30 秒 SW 空闲等待）
+npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45～60 秒（含 30 秒 SW 空闲等待）
 ```
 
 首次运行会把固定版本的 Chrome for Testing（`CHROME_BUILD_ID`，见 `tests/e2e/lib/browser.mjs`）下载到 `.cache/chrome/`（已忽略），之后复用。
@@ -42,6 +42,11 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 50
 | 用例 | 票 |
 |---|---|
 | 悬浮按钮右键菜单「编辑规则」打开编辑面板 | #25 |
-| SW 被 CDP 停止后切回原样，被藏元素重新可见 | #20 |
-| SW 自然空闲回收后切回原样，被藏元素重新可见 | #20 |
 | `runtime.reload()` 后已配置站点仍然生效 | #21 |
+
+## 注入引擎回归（#20）
+
+- SW 被 CDP 停止 / 自然空闲回收后切回原样，被藏元素重新可见（原 #20 两条预期失败，已转正）
+- 向导预览中 SW 被 CDP 停止，点「放弃」后预览样式撤掉（自然回收由上一条覆盖，省 30 秒）
+- A 页清爽态 → 同源跳 B → 后退 → 切原样，A 页无残留；以及 A 在 bfcache 期间存储切到原样、后退后按新状态同步。用例断言 bfcache 确实生效（A 页里记录的 `pageshow.persisted`；CfT 157 新 headless 下实测生效）。注意 bfcache 恢复不触发 `load`，`page.goBack()` 的等待条件不可靠，用例只等地址回到 A
+- 刷新已配置站点的首帧：主世界 `evaluateOnNewDocument` 钩子在目标元素进入 DOM 后逐个动画帧（rAF 在该帧绘制前执行）用 `checkVisibility({ opacityProperty, visibilityProperty })` 采样 20 帧，断言目标元素每帧都不可见、内容可见的每一帧标题都已替换。只靠用户样式表时这条 3 次全失败（首帧约 5ms），见 ADR-0005

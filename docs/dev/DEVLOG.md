@@ -2,6 +2,39 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.2.0 · #20 注入引擎：按文档跟踪 + 首屏防闪
+- **消息协议**（`core/messages.ts`）：`applyDisguise {prev}`、`restoreOriginal {prev}`、`draftCss {prev, next}`，回复 `CssAck {ok, error?, css}`，css = 处理后文档里实际存在的文本。内容脚本侧记录在 `core/doc-styles.ts`，一条 promise 链串行。后台 `core/background-engine.ts` 不再有 Map。
+- **后台回复**统一 `sendResponse` + 同步 `return true`；非后台消息返回 false 不占通道。popup 的 enableSite、管理页的 resetSite 检查 `res?.ok` 并提示；内容脚本样式失败 `console.warn`；向导预览失败弹页内提示。
+- **首屏过渡遮挡**（ADR-0005）：实测 CfT 157 本地页面首个动画帧在 5～10ms，SW 往返赶不上（先做了只改 `document_start` 的版本，E2E 首帧断言 3 次全失败），一次 storage 读取也只有 1/3 能赶上首帧。调研：uBO MV2 靠 `webNavigation` 抢先注入（要新权限，否决），Dark Reader 用 `<style>`（与 ADR-0002 冲突，否决）。最终用可构造样式表：先整页透明，读到配置后换精确规则，正式样式到位后撤掉。
+- **标题守卫**：`document_start` 时 `<head>` 不存在，图标等 head 出现再插（Chrome 只认 head 里的图标声明）；启动时快照是空的，改为观察到站点自己写入的标题/图标时更新快照（顺带解决 B21「还原回到开启那一刻的标题」）。
+- **每个候选独立 CSS 块**；「原地留白」补 `opacity:0`；向导预览改用 `buildPreviewCss`，与正式样式同一实现（B33）。
+- **一键清空后的已打开页面**：内容脚本"配置被删"分支顺带按存储同步一次样式（后台算出 null 即移除）；但撤权限先于删配置，移除可能因无权限失败，完整修复仍归 B7。
+
+## 0.2.0 · #28 manifest 多语言与最低 Chrome 版本
+
+- **多语言包**：`public/_locales/{en,zh_CN}/messages.json`（WXT 原样复制到产物），`default_locale: en`；`name` / `description` / `action.default_title` 改为 `__MSG_extName__` / `__MSG_extDescription__` / `__MSG_actionTitle__`。没有引入 `@wxt-dev/i18n`（只需 manifest 层面的多语言）；`wxt prepare` 会按默认语言的 messages 生成 `.wxt/types/i18n.d.ts` 的 `getMessage` 键类型，与现有代码无冲突。
+- **坑：WXT 用 popup 的 `<title>` 覆盖 `action.default_title`**，且 `<title>` 优先于 `<meta name="manifest.default_title">`。在 `wxt.config.ts` 的 `build:manifestGenerated` 钩子里改回占位，popup 页面标题不动。
+- **打包门禁补充**（`scripts/check-package.mjs`）：各语言键集合一致、每条有 message 文本；有 `_locales` 必须声明 `default_locale`；name/description/按钮提示的各语言文本不含禁用词（伪装 / disguise / New Tab / 新建标签页 / 摸鱼）；按钮提示占位也必须能解析。已用篡改产物验证四类错误都会拦下。
+- **真机验证**：`tests/e2e/check-i18n.mjs`（手动跑，不进 `test:e2e`）。macOS 上 `--lang`、`--accept-lang` 都不改变 Chrome 界面语言（实测 CfT 157，系统语言 zh-Hans-CN），只有 Cocoa 参数 `-AppleLanguages (en-US)` 生效。
+- **`minimum_chrome_version: "116"`**，核实结果如下（"渐进"表示不支持时自动降级、不影响功能）：
+
+| 用到的能力 | 起始版本 | 是否硬要求 | 来源 |
+|---|---|---|---|
+| MV3、`optional_host_permissions`、`chrome.scripting`、`insertCSS` 的 `origin: 'USER'`（文档未单列版本，即随 scripting 一起） | 88 | 是 | [scripting](https://developer.chrome.com/docs/extensions/reference/api/scripting)、[MV3 迁移](https://developer.chrome.com/docs/extensions/develop/migrate/manifest) |
+| `insertCSS` / `removeCSS` 返回 Promise | 90 | 是 | scripting |
+| `registerContentScripts` / `unregisterContentScripts` / `getRegisteredContentScripts`，含 `runAt`、`persistAcrossSessions` | 96 | 是 | scripting |
+| `InjectionTarget.documentIds`、`InjectionResult.documentId` | 106 | 是（#20 用） | scripting |
+| `MessageSender.documentId` | 106 | 是（#20 用） | [runtime](https://developer.chrome.com/docs/extensions/reference/api/runtime) |
+| `runtime.onMessage` 用 `sendResponse` 回复 | 所有版本 | — | runtime |
+| 构建产物 JS 语法：Vite 8 默认 `build.target` 为 Baseline Widely Available（2025-05-01）= `chrome111`，WXT 0.21 未覆盖 | 111 | 是 | `node_modules/vite/dist/node/chunks/node.js` |
+| Popover API | 114 | 是（#25 计划用） | [Introducing the popover API](https://developer.chrome.com/blog/introducing-popover-api) |
+| CSS `@starting-style`（若用于入场动画） | 117 | 渐进 | [New in Chrome 117](https://developer.chrome.com/blog/new-in-chrome-117) |
+| CSS `light-dark()`（已有兜底） | 123 | 渐进 | [New in Chrome 123](https://developer.chrome.com/blog/new-in-chrome-123) |
+| `<dialog>` | 37 | — | MDN |
+
+  硬下限是 114（Popover）。取 116 的理由：多留两个版本余量，避开 Popover 首发版本可能存在的问题；116 发布于 2023 年 8 月，Chrome 自动更新，低于它的用户可以忽略；本项目也只在新版 CfT（157）上做真机测试，无法覆盖更老的版本。没有取 123：`light-dark()` 和 `@starting-style` 都已渐进处理，不值得为此挡掉用户。按[官方说明](https://developer.chrome.com/docs/extensions/reference/manifest/minimum-chrome-version)，低于该版本的浏览器在商店显示"不兼容"，已安装用户会静默停止更新，所以以后上调要谨慎。
+- 补 `homepage_url`：https://github.com/cherishfall/page-mask 。
+
 ## 0.2.0 · #32 选择器生成与生效范围推导修正
 
 - **首页用精确匹配，而不是不提供**：`ScopePattern` 增加可选 `match: 'exact'`（缺省 = 带边界的前缀匹配，旧数据不用迁移）。理由：「只在首页藏推荐流」是真实需求，直接拿掉选项会丢功能；精确匹配只比 站点+路径，忽略 `?` 与 `#`。`sanitizeScope` 白名单同步。

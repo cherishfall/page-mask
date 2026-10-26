@@ -45,7 +45,7 @@ function styleOf(page, selector) {
     if (!el) return null;
     const cs = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
-    return { display: cs.display, visibility: cs.visibility, height: rect.height };
+    return { display: cs.display, visibility: cs.visibility, opacity: cs.opacity, height: rect.height };
   }, selector);
 }
 
@@ -140,7 +140,8 @@ async function main() {
     await waitStyle(page, '页头被移除', '#site-header', 'display', 'none');
     check(true, '悬浮按钮挂载、标题已伪装');
     check((await styleOf(page, '#site-header')).display === 'none', '方案A：页头 display:none');
-    check((await styleOf(page, '#site-footer')).visibility === 'hidden', '方案B：页脚原地留白 visibility:hidden');
+    const footer = await styleOf(page, '#site-footer');
+    check(footer.visibility === 'hidden' && footer.opacity === '0', '方案B：页脚原地留白 visibility:hidden + opacity:0');
     check(isShown(await styleOf(page, '#page-title')), '没有规则命中的元素保持可见（#page-title）');
     check(isShown(await styleOf(page, '.rec-card')), '没有规则命中的元素保持可见（.rec-card）');
     check(isShown(await styleOf(page, '#side-promo')), '生效范围外：仅章节页生效的规则在首页不隐藏 #side-promo');
@@ -297,36 +298,156 @@ async function main() {
     await oPage.close();
 
     // ===================== SW 回收后还原（#20） =====================
+    // 注入记录由页面内的内容脚本按文档持有，SW 被回收后新实例照样能删掉。
     // 先用 CDP 立即停止（快），再做自然空闲回收（关键回归，约 30 秒）
     // 每个用例前：清爽态 + 重载页面，让当前 SW 实例注入隐藏样式
-    const prepareDisguised = async () => {
+    const prepareDisguised = async (p = page) => {
       await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
-      await page.reload({ waitUntil: 'load' });
-      await waitFor(page, '清爽态标题', (t) => document.title === t, [DISGUISED_TITLE]);
-      await waitStyle(page, '清爽态页头被移除', '#site-header', 'display', 'none');
+      await p.reload({ waitUntil: 'load' });
+      await waitFor(p, '清爽态标题', (t) => document.title === t, [DISGUISED_TITLE]);
+      await waitStyle(p, '清爽态页头被移除', '#site-header', 'display', 'none');
+      await p.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
     };
     // 换回带 remove 规则的配置（上一节把唯一规则改成了遮罩），便于观察隐藏样式是否被撤掉
     await patchProfile(ext.control, ORIGIN, { hideRules: seedProfile(ORIGIN).hideRules });
     await prepareDisguised();
 
-    await expectFail('SW 被 CDP 停止后，点悬浮按钮切回原样，被藏元素重新可见', 20, async () => {
-      await stopServiceWorker(ext);
-      await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
-      await waitFor(page, '标题还原', (t) => document.title === t, [FIXTURE_TITLE]);
-      await waitStyle(page, '页头重新可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
-      check(true, '页头重新可见');
+    console.log('\n--- SW 被 CDP 停止后切回原样 ---');
+    await stopServiceWorker(ext);
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await waitFor(page, '标题还原', (t) => document.title === t, [FIXTURE_TITLE]);
+    await waitStyle(page, '页头重新可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    check(true, 'SW 被 CDP 停止后点悬浮按钮切回原样：页头重新可见');
+
+    console.log('\n--- 向导预览停留到 SW 被停止后点「放弃」 ---');
+    await prepareDisguised();
+    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'addElement' });
+    await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));
+    await waitStyle(page, '进向导临时还原：页头可见', '#site-header', 'display', 'none', { not: true });
+    const cardPt2 = await page.evaluate(() => {
+      const rc = document.querySelector('.rec-card').getBoundingClientRect();
+      return { x: rc.x + 40, y: rc.y + rc.height / 2 };
     });
+    await page.mouse.click(cardPt2.x, cardPt2.y);
+    await waitFor(
+      page,
+      '已选 1 个',
+      (h, sel) => (document.querySelector(h)?.shadowRoot?.querySelector(sel)?.textContent ?? '').includes('1'),
+      [WIZARD_HOST, tid('pm-wiz-preview')],
+    );
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-preview'));
+    await waitStyle(page, '预览：推荐卡被移除', '.rec-card', 'display', 'none');
+    await stopServiceWorker(ext);
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-giveup'));
+    await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
+    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
+    await waitStyle(page, '放弃后推荐卡重新可见', '.rec-card', 'display', 'none', { not: true, timeout: 3000 });
+    await waitStyle(page, '放弃后回到清爽态', '#site-header', 'display', 'none');
+    check(true, '预览期间 SW 被停止，点「放弃」后预览样式被撤掉，正式规则照常恢复');
+    check((await getProfile(ext.control, ORIGIN)).hideRules.length === 3, '放弃不保存任何规则');
+
+    console.log('\n--- SW 自然空闲回收后切回原样 ---');
+    await prepareDisguised();
+    const ms = await waitForServiceWorkerIdle(ext);
+    console.log(`  · SW 已自然空闲回收（等待 ${(ms / 1000).toFixed(1)} 秒）`);
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await waitFor(page, '标题还原', (t) => document.title === t, [FIXTURE_TITLE]);
+    await waitStyle(page, '页头重新可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    await waitStyle(page, '页脚重新可见', '#site-footer', 'visibility', 'visible', { timeout: 1000 });
+    check(true, 'SW 自然空闲回收后点悬浮按钮切回原样：页头、页脚重新可见');
+
+    // ===================== bfcache 后退（#20） =====================
+    console.log('\n--- A 页清爽态 → 同源跳 B → 后退 → 切原样 ---');
+    /** 后退到首页并报告是否从 bfcache 恢复（同一文档的 JS 状态还在 + pageshow.persisted） */
+    const backToA = async () => {
+      // bfcache 恢复不触发 load；goBack 自身的等待条件不可靠，只等地址回到 A
+      await Promise.race([page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => undefined), new Promise((res) => setTimeout(res, 3000))]);
+      await waitFor(page, '回到 A 页', () => location.pathname === '/index.html');
+      return page.evaluate(() => ({
+        restored: (window.__pmPageshow ?? []).includes(true),
+        navType: performance.getEntriesByType('navigation')[0]?.type,
+      }));
+    };
+    const markA = () =>
+      page.evaluate(() => {
+        window.__pmPageshow = [];
+        addEventListener('pageshow', (e) => window.__pmPageshow.push(e.persisted));
+      });
+    const expectNoResidue = async (label) => {
+      await waitStyle(page, `${label}：页头可见`, '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+      await waitStyle(page, `${label}：页脚可见`, '#site-footer', 'visibility', 'visible', { timeout: 1000 });
+      await waitFor(page, `${label}：标题还原`, (t) => document.title === t, [FIXTURE_TITLE]);
+      const all = await Promise.all(['#site-header', '#site-footer', '#side-promo', '.rec-card'].map((sel) => styleOf(page, sel)));
+      check(all.every((st) => isShown(st) && st.opacity === '1'), `${label}：A 页无残留样式`);
+    };
 
     await prepareDisguised();
-    await expectFail('SW 自然空闲回收后，点悬浮按钮切回原样，被藏元素重新可见', 20, async () => {
-      const ms = await waitForServiceWorkerIdle(ext);
-      console.log(`  · SW 已自然空闲回收（等待 ${(ms / 1000).toFixed(1)} 秒）`);
-      await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
-      await waitFor(page, '标题还原', (t) => document.title === t, [FIXTURE_TITLE]);
-      await waitStyle(page, '页头重新可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
-      await waitStyle(page, '页脚重新可见', '#site-footer', 'visibility', 'visible', { timeout: 1000 });
-      check(true, '页头、页脚重新可见');
+    await markA();
+    await page.goto(`${ORIGIN}/article/1`, { waitUntil: 'load' });
+    await waitStyle(page, 'B 页 #side-promo 被移除', '#side-promo', 'display', 'none');
+    let back = await backToA();
+    console.log(`  · 后退：${back.restored ? '从 bfcache 恢复' : `未走 bfcache（navigation type = ${back.navType}）`}`);
+    check(back.restored, '测试环境中 bfcache 生效（A 页文档被原样恢复）');
+    await waitStyle(page, 'A 页仍是清爽态', '#site-header', 'display', 'none');
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await expectNoResidue('后退后切原样');
+
+    console.log('\n--- A 页在 bfcache 期间切了原样 → 后退 ---');
+    await prepareDisguised();
+    await markA();
+    await page.goto(`${ORIGIN}/article/1`, { waitUntil: 'load' });
+    await waitStyle(page, 'B 页 #side-promo 被移除', '#side-promo', 'display', 'none');
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitStyle(page, 'B 页随存储切回原样', '#side-promo', 'display', 'none', { not: true });
+    back = await backToA();
+    check(back.restored, 'A 页从 bfcache 恢复');
+    await expectNoResidue('恢复后按新状态同步');
+
+    // ===================== 首屏防闪（#20） =====================
+    console.log('\n--- 刷新已配置站点：首帧已隐藏、标题已替换 ---');
+    await prepareDisguised();
+    // 主世界钩子（每个新文档最先执行）：目标元素首次进入 DOM 起，逐个动画帧（rAF 在该帧绘制之前执行）
+    // 记录目标元素与普通内容是否可见、当时的标题，共 20 帧
+    const hook = await page.evaluateOnNewDocument(() => {
+      const vis = (el) => !!el && el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
+      window.__pmFrames = [];
+      const sample = () => {
+        window.__pmFrames.push({
+          t: Math.round(performance.now()),
+          target: vis(document.getElementById('site-header')),
+          content: vis(document.getElementById('page-title')),
+          title: document.title,
+        });
+        if (window.__pmFrames.length < 20) requestAnimationFrame(sample);
+      };
+      const mo = new MutationObserver(() => {
+        if (!document.getElementById('site-header')) return;
+        mo.disconnect();
+        requestAnimationFrame(sample);
+      });
+      mo.observe(document, { childList: true, subtree: true });
     });
+    const runs = [];
+    for (let i = 0; i < 3; i++) {
+      await page.reload({ waitUntil: 'load' });
+      await waitFor(page, '采样 20 帧', () => window.__pmFrames?.length >= 20);
+      runs.push(await page.evaluate(() => window.__pmFrames));
+    }
+    await page.removeScriptToEvaluateOnNewDocument(hook.identifier);
+    for (const frames of runs) {
+      const firstShown = frames.find((f) => f.content);
+      console.log(
+        `  · 首帧 t=${frames[0].t}ms；内容首次可见 ${firstShown ? `t=${firstShown.t}ms（第 ${frames.indexOf(firstShown) + 1} 帧）` : '未出现'}；` +
+          `目标元素可见的帧 ${frames.filter((f) => f.target).length} 个`,
+      );
+    }
+    check(runs.every((frames) => frames.every((f) => !f.target)), '刷新后从首帧起目标元素始终不可见（3 次 × 20 帧）');
+    check(
+      runs.every((frames) => frames.some((f) => f.content) && frames.filter((f) => f.content).every((f) => f.title === DISGUISED_TITLE)),
+      '页面内容可见的每一帧标题都已替换（3 次）',
+    );
+    check(isShown(await styleOf(page, '#page-title')), '过渡遮挡已撤掉，普通内容正常显示');
 
     // ===================== 扩展重载（#21） =====================
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });

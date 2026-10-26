@@ -45,6 +45,7 @@
         <div class="row actions">
           <button class="ghost" @click="toggleSite(p)">{{ p.switchState === 'disguised' ? '切回原样' : '开启清爽' }}</button>
           <button class="ghost danger" @click="askReset(p)">一键清空</button>
+          <span v-if="resetError[p.origin]" class="hint error" role="alert">{{ resetError[p.origin] }}</span>
         </div>
       </div>
     </section>
@@ -88,6 +89,7 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage, INVALID_EXPORT_FILE, type ImportResult } from '@/core/storage';
 import { isSafeFaviconDataUrl } from '@/core/validate';
 import type { SiteProfile } from '@/core/types';
+import type { Ack } from '@/core/messages';
 
 const storage = createPageMaskStorage(browser.storage.local);
 const profiles = ref<SiteProfile[]>([]);
@@ -97,6 +99,7 @@ const importMode = ref<'merge' | 'replace'>('merge');
 const importResult = ref('');
 const importInput = ref<HTMLInputElement | null>(null);
 const iconError = ref<Record<string, string>>({});
+const resetError = ref<Record<string, string>>({});
 
 onMounted(async () => {
   defaultTitle.value = (await storage.getSettings()).defaultTitle;
@@ -182,7 +185,9 @@ async function doReset() {
   const p = resetTarget.value;
   if (!p) return;
   resetTarget.value = null;
-  await browser.runtime.sendMessage({ t: 'resetSite', origin: p.origin });
+  resetError.value[p.origin] = '';
+  const res: Ack | undefined = await browser.runtime.sendMessage({ t: 'resetSite', origin: p.origin }).catch(() => undefined);
+  if (!res?.ok) resetError.value[p.origin] = '没能清空，请稍后再试一次';
   await reload();
 }
 

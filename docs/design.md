@@ -81,7 +81,7 @@
 
 ## 实现铁律
 
-- **注入通道**：隐藏一律走 `chrome.scripting.insertCSS`（浏览器用户样式表通道 + `!important`）。禁止改行内样式（会被框架重渲染洗掉）、禁止插入 `<style>` 标签（会被严格 CSP 站点拦截）。
+- **注入通道**：隐藏一律走 `chrome.scripting.insertCSS`（浏览器用户样式表通道 + `!important`）。禁止改行内样式（会被框架重渲染洗掉）、禁止插入 `<style>` 标签（会被严格 CSP 站点拦截）。注入记录按文档由内容脚本持有，后台无状态；内容脚本 `document_start` 启动，首屏用可构造样式表做几十毫秒的过渡遮挡（ADR-0005）。
 - **性能**：方案 A/B 零监听（纯样式表）；MutationObserver 仅用于标题/图标补刀、遮罩滚动跟随、SPA 路由变化时重评估范围。未配置站点零注入（按站点授权的 optional host permissions + 动态注册）。
 - **存储**：`chrome.storage.local`；不用 `storage.sync`（公司/自购电脑互不串扰）。导出 JSON 带版本号字段供未来迁移。
 - **权限**：最小权限集（storage、scripting、activeTab + 按站点可选主机权限），利于商店审核。

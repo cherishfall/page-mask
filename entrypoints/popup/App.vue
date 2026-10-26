@@ -21,6 +21,7 @@
         </div>
       </div>
 
+      <p v-if="setupError" class="hint error" role="alert">{{ setupError }}</p>
       <button class="primary" @click="setup">{{ profile ? '＋ 添加要去掉的元素' : '为当前网站开启清爽模式' }}</button>
     </template>
 
@@ -34,9 +35,12 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import type { SiteProfile } from '@/core/types';
+import type { EnableSiteResponse } from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
 const profile = ref<SiteProfile | null>(null);
+const setupError = ref('');
+const SETUP_FAILED = '没能在这个页面启动，刷新页面后再试一次';
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -69,8 +73,17 @@ async function toggleSwitch() {
   profile.value = fresh;
 }
 
+/** 让后台为站点注册并向当前标签页注入内容脚本；失败返回 false（后台回复 ok:false 或根本没有回复） */
+async function enableSite(tabId: number): Promise<boolean> {
+  const res: EnableSiteResponse | undefined = await browser.runtime
+    .sendMessage({ t: 'enableSite', origin: origin.value, tabId })
+    .catch(() => undefined);
+  return res?.ok === true;
+}
+
 /** 唯一入口：新站点授权并注入，随后打开设置向导 */
 async function setup() {
+  setupError.value = '';
   const url = tab.value?.url;
   const tabId = tab.value?.id;
   if (!url || !origin.value || tabId === undefined) return;
@@ -83,7 +96,10 @@ async function setup() {
     const storage = createPageMaskStorage(browser.storage.local);
     // 已有则原样保留，没有则新建空配置
     profile.value = await storage.updateProfile(origin.value, () => false, { create: true });
-    await browser.runtime.sendMessage({ t: 'enableSite', origin: origin.value, tabId });
+    if (!(await enableSite(tabId))) {
+      setupError.value = SETUP_FAILED;
+      return;
+    }
     // 内容脚本刚被注入，稍等后通知其打开向导（注入竞态重试）
     for (let i = 0; i < 10; i++) {
       await sleep(200);
@@ -99,7 +115,10 @@ async function setup() {
       await browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'addElement' });
     } catch {
       // 页面脚本不在（如扩展刚重载），重新拉起后重试一次
-      await browser.runtime.sendMessage({ t: 'enableSite', origin: origin.value, tabId });
+      if (!(await enableSite(tabId))) {
+        setupError.value = SETUP_FAILED;
+        return;
+      }
       await sleep(400);
       await browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'addElement' }).catch(() => undefined);
     }
@@ -144,6 +163,9 @@ function sleep(ms: number) {
   font-size: 13px;
   color: var(--pm-fg-muted);
   margin: 4px 0;
+}
+.hint.error {
+  color: var(--pm-danger);
 }
 .site .row {
   display: flex;

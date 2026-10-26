@@ -115,13 +115,20 @@ import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { STRATEGY_LABEL, type StrategyId } from '@/core/types';
 import { newRuleId, type HideRule, type Scope, type SiteProfile } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
+import { buildPreviewCss } from '@/core/css-builder';
+import type { CssAck } from '@/core/messages';
 import { unsavableDraftWarning, type DraftItem } from '@/core/wizard-logic';
 import { PickController } from './pick-controller';
 import { ElementFollower } from '../follow';
 
 type DraftStrategy = StrategyId;
 
-const props = defineProps<{ mode: 'newSite' | 'addElement'; url: string }>();
+const props = defineProps<{
+  mode: 'newSite' | 'addElement';
+  url: string;
+  /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
+  setDraft: (css: string | null) => Promise<CssAck>;
+}>();
 const emit = defineEmits<{ done: [saved: boolean] }>();
 
 const phase = ref<'pick' | 'preview'>('pick');
@@ -192,7 +199,7 @@ onBeforeUnmount(() => {
   document.documentElement.style.cursor = '';
   pick?.stop();
   follower.stop();
-  clearDraftCss();
+  void clearDraftCss();
   if (warnTimer) clearTimeout(warnTimer);
 });
 
@@ -320,7 +327,7 @@ function backToPick() {
   document.documentElement.style.cursor = 'crosshair';
   clearMarkers();
   drafts.value = [];
-  clearDraftCss();
+  void clearDraftCss();
   renderBadges();
   if (pickLayer) {
     pickLayer.style.display = '';
@@ -335,12 +342,9 @@ function clearMarkers() {
 
 function applyPreview() {
   clearMarkers();
-  const cssParts: string[] = [];
   drafts.value.forEach((d, i) => {
-    const sel = d.candidates.join(', ');
-    if (!sel) return;
+    if (d.candidates.length === 0) return;
     if (d.strategy === 'remove') {
-      cssParts.push(`${sel} { display: none !important; }`);
       // 幽灵标记：捕获当前矩形，滚动跟随
       const r = d.el.getBoundingClientRect();
       const box = makeBox({
@@ -360,7 +364,6 @@ function applyPreview() {
       // remove 生效后元素矩形归零，改用幽灵跟随（初始矩形+滚动差）
       setTimeout(() => follower.trackGhost({ left: r.left, top: r.top, width: r.width, height: r.height }, box), 0);
     } else if (d.strategy === 'blank') {
-      cssParts.push(`${sel} { visibility: hidden !important; pointer-events: none !important; }`);
       const box = makeBox({
         border: '2px dashed #888',
         pointerEvents: 'auto',
@@ -393,8 +396,13 @@ function applyPreview() {
       follower.trackLive(d.el, box);
     }
   });
-  const draftText = cssParts.length ? cssParts.join('\n') : null;
-  void browser.runtime.sendMessage({ t: 'draftCss', css: draftText }).catch(() => undefined);
+  // 预览与正式样式同一实现（core/css-builder），保证预览所见 = 保存所得
+  void setDraftCss(buildPreviewCss(drafts.value));
+}
+
+async function setDraftCss(css: string | null): Promise<void> {
+  const res = await props.setDraft(css);
+  if (!res.ok) showWarn(css ? '预览没能生效，请再点一次预览试试' : '预览效果没能撤掉，刷新页面即可恢复');
 }
 
 function addMarkerTag(box: HTMLElement, seq: number, color: string) {
@@ -447,8 +455,8 @@ function removeDraft(idx: number) {
   }
 }
 
-function clearDraftCss() {
-  void browser.runtime.sendMessage({ t: 'draftCss', css: null }).catch(() => undefined);
+function clearDraftCss(): Promise<void> {
+  return setDraftCss(null);
 }
 
 // ---------- 保存 ----------

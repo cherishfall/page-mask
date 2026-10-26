@@ -21,6 +21,8 @@ export class TitleFaviconGuard {
   private active = false;
   private wantedTitle = '';
   private wantedIcon = '';
+  /** 我们插入的那一张图标（区分站点自己的图标声明） */
+  private ownLink: HTMLLinkElement | null = null;
 
   constructor(private doc: Document) {}
 
@@ -47,10 +49,12 @@ export class TitleFaviconGuard {
     this.active = false;
     const snap = this.snapshot;
     this.snapshot = null;
+    this.ownLink = null;
     if (!snap) return;
     this.doc.title = snap.title;
     for (const link of this.doc.querySelectorAll(ICON_SELECTOR)) link.remove();
-    for (const link of snap.iconLinks) this.doc.head.appendChild(link);
+    const parent = this.doc.head ?? this.doc.documentElement;
+    for (const link of snap.iconLinks) parent.appendChild(link);
   }
 
   /** 伪装参数变更（改标题/图标）时直接生效 */
@@ -70,12 +74,18 @@ export class TitleFaviconGuard {
     this.observer?.disconnect();
     try {
       if (this.doc.title !== this.wantedTitle) this.doc.title = this.wantedTitle;
-      // 移除站点全部图标声明，换成我们的一张
+      // 移除站点全部图标声明，换成我们的一张。
+      // document_start 时 <head> 可能还没解析出来：先不插图标（Chrome 只认 head 里的图标声明），
+      // 观察器会在 head 出现时再补上。
       for (const link of this.doc.querySelectorAll(ICON_SELECTOR)) link.remove();
-      const link = this.doc.createElement('link');
-      link.rel = 'icon';
-      link.href = this.wantedIcon;
-      this.doc.head.appendChild(link);
+      this.ownLink = null;
+      if (this.doc.head) {
+        const link = this.doc.createElement('link');
+        link.rel = 'icon';
+        link.href = this.wantedIcon;
+        this.doc.head.appendChild(link);
+        this.ownLink = link;
+      }
     } finally {
       if (this.active) this.observer?.observe(this.doc.documentElement, {
         childList: true,
@@ -93,11 +103,27 @@ export class TitleFaviconGuard {
       if (!this.active) return;
       const titleDiverged = this.doc.title !== this.wantedTitle;
       const iconDiverged = this.iconDiverged();
-      if (titleDiverged || iconDiverged) this.force();
+      if (titleDiverged || iconDiverged) {
+        this.recordSiteValues(titleDiverged);
+        this.force();
+      }
     });
   }
 
+  /**
+   * 观察到的变化都来自站点（我们自己的写入前后断开了观察器）：记下站点最新的标题与图标，
+   * 还原时回到它们。document_start 启动时快照还是空的，站点的 <title>/<link> 要靠这里补记。
+   */
+  private recordSiteValues(titleDiverged: boolean): void {
+    if (!this.snapshot) return;
+    const title = this.doc.title;
+    if (titleDiverged && title.trim()) this.snapshot.title = title;
+    const siteLinks = Array.from(this.doc.querySelectorAll(ICON_SELECTOR)).filter((l) => l !== this.ownLink);
+    if (siteLinks.length) this.snapshot.iconLinks = siteLinks.map((l) => l.cloneNode(false) as Element);
+  }
+
   private iconDiverged(): boolean {
+    if (!this.doc.head) return false; // 还没有 head，图标无处可放，等 head 出现
     const links = Array.from(this.doc.querySelectorAll(ICON_SELECTOR));
     if (links.length !== 1) return true;
     const href = links[0]?.getAttribute('href') ?? '';

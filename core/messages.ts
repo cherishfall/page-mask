@@ -21,26 +21,42 @@ export interface ResetSiteRequest {
   origin: string;
 }
 
-/** 内容脚本 → 后台：应用伪装（计算并注入该页 CSS）。tabId 由后台从 sender 取；携带页面自身 URL 以判断生效范围 */
+/*
+ * 隐藏样式按「文档」跟踪（不是按标签页，ADR-0002 补充、REVIEW B5）：
+ * - 内容脚本持有本文档已注入的两份文本：正式样式、向导预览样式，每次请求带上 prev（本文档当前文本）
+ * - 后台不记任何状态：用 sender.tab.id + sender.documentId 定位文档，用 sender.url 判断生效范围，
+ *   按 prev → next 替换（相同跳过；不同先插新后删旧），把替换后文档里的文本作为 css 回传
+ * 因此 SW 被回收、bfcache 后退、预渲染激活都不会删错或漏删。
+ */
+
+/** 内容脚本 → 后台：按当前存储与 sender.url 同步本文档的正式隐藏样式（原样态 / 无规则 → 移除） */
 export interface ApplyDisguiseRequest {
   t: 'applyDisguise';
-  url: string;
+  /** 本文档当前已注入的正式样式文本（null = 没有） */
+  prev: string | null;
 }
 
-/** 内容脚本 → 后台：还原（移除注入的 CSS） */
+/** 内容脚本 → 后台：移除本文档的正式隐藏样式（例如进入向导前临时还原） */
 export interface RestoreOriginalRequest {
   t: 'restoreOriginal';
+  prev: string | null;
 }
 
-/** 向导 → 后台：预览草稿样式（null = 清除预览） */
+/** 向导（内容脚本内）→ 后台：把本文档的预览样式从 prev 换成 next（next = null 即清除预览） */
 export interface DraftCssRequest {
   t: 'draftCss';
-  css: string | null;
+  prev: string | null;
+  next: string | null;
 }
 
 export interface Ack {
   ok: boolean;
   error?: string;
+}
+
+/** 样式请求的回复：css = 处理后本文档里实际存在的文本（失败时通常仍是 prev），内容脚本据此更新记录 */
+export interface CssAck extends Ack {
+  css: string | null;
 }
 
 /** popup → 内容脚本：打开设置向导（新站点或添加元素） */

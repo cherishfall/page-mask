@@ -8,41 +8,43 @@ import type { HideRule, StrategyId } from './types';
 import { rulesApplicableAt } from './scope';
 import { isSafeSelector } from './validate';
 
-/** 只拼接通过统一校验的候选（第二道防线：存储层已校验，这里防止旧数据或绕过存储的输入跳出规则块） */
-function ruleSelector(rule: HideRule): string {
-  return rule.candidates.filter((c) => isSafeSelector(c)).map((c) => c.trim()).join(', ');
+/** 生成 CSS 只需要"藏什么 + 怎么藏"：正式规则与向导草稿共用 */
+export type CssSource = Pick<HideRule, 'candidates' | 'strategy'>;
+
+const DECLARATIONS: Record<Exclude<StrategyId, 'mask'>, string> = {
+  remove: 'display: none !important;',
+  // 原地留白：位置保留；透明兜底（后代写 visibility:visible 也透不出来）；不可点；元素在无障碍树中一并隐藏
+  blank: 'visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;',
+};
+
+/**
+ * 单条规则（方案 A/B）的 CSS 片段；方案 C 返回 null（由覆盖层实现）。
+ * 每个候选独立成块：浏览器不认识的选择器只会让自己那一块失效，不连累其他候选（选择器列表里一个坏项会让整条失效）。
+ * 只输出通过统一校验的候选（第二道防线：存储层已校验，这里防止旧数据或绕过存储的输入跳出规则块）。
+ */
+export function buildRuleCss(rule: CssSource): string | null {
+  if (rule.strategy === 'mask') return null;
+  const decl = DECLARATIONS[rule.strategy];
+  if (!decl) return null;
+  const blocks = rule.candidates.filter((c) => isSafeSelector(c)).map((c) => `${c.trim()} { ${decl} }`);
+  return blocks.length ? blocks.join('\n') : null;
 }
 
-/** 单条规则（方案 A/B）的 CSS 片段；方案 C 返回 null（由覆盖层实现） */
-export function buildRuleCss(rule: HideRule): string | null {
-  const sel = ruleSelector(rule);
-  if (!sel) return null;
-  switch (rule.strategy) {
-    case 'remove':
-      return `${sel} { display: none !important; }`;
-    case 'blank':
-      // 全透明、不可点、位置保留（元素在无障碍树中一并隐藏）
-      return `${sel} { visibility: hidden !important; pointer-events: none !important; }`;
-    case 'mask':
-      return null;
-  }
+/** 向导预览草稿 → CSS（与正式样式同一实现，保证"预览所见 = 保存所得"）；无 A/B 方案草稿返回 null */
+export function buildPreviewCss(items: CssSource[]): string | null {
+  const parts = items.map(buildRuleCss).filter((s): s is string => s !== null);
+  return parts.length ? parts.join('\n') : null;
 }
 
 /** 汇总某 URL 上应注入的 CSS 文本（仅 A/B 方案规则）；无则返回 null */
 export function buildDisguiseCss(rules: HideRule[], url: string): string | null {
-  const parts = rulesApplicableAt(rules, url)
-    .map(buildRuleCss)
-    .filter((s): s is string => s !== null);
-  return parts.length ? parts.join('\n') : null;
+  return buildPreviewCss(rulesApplicableAt(rules, url));
 }
 
 /** 某页面上需要覆盖层（方案 C）的规则列表 */
 export function maskRulesAt(rules: HideRule[], url: string): HideRule[] {
   return rulesApplicableAt(rules, url).filter((r) => r.strategy === 'mask');
 }
-
-/** 用于 removeCSS 的配套：按同样规则列表重建 CSS 文本（保持与 insertCSS 完全一致以幂等移除） */
-export { buildRuleCss as cssForRemove };
 
 export const STRATEGY_ORDER: StrategyId[] = ['remove', 'blank', 'mask'];
 

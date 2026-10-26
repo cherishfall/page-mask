@@ -56,6 +56,38 @@ describe('TitleFaviconGuard（jsdom）', () => {
     expect(doc.title).toBe('公司Wiki');
   });
 
+  it('document_start：head 还没解析出来时不抛错；head 与站点标题/图标出现后立即压住，还原时回到站点的', async () => {
+    const early = document.implementation.createHTMLDocument('');
+    early.documentElement.replaceChildren(); // 解析刚开始：只有 <html>，没有 <head>
+    const guard = new TitleFaviconGuard(early);
+
+    expect(() => guard.apply('新建标签页', null)).not.toThrow();
+
+    // 模拟解析器随后插入 <head><title>站点标题</title><link rel=icon></head>
+    const head = early.createElement('head');
+    const title = early.createElement('title');
+    title.textContent = '站点标题';
+    const siteIcon = early.createElement('link');
+    siteIcon.rel = 'icon';
+    siteIcon.href = 'https://site.com/favicon.ico';
+    head.append(title, siteIcon);
+    early.documentElement.appendChild(head);
+
+    await vi.waitFor(() => {
+      expect(early.title).toBe('新建标签页');
+      const icons = early.querySelectorAll('link[rel~="icon"]');
+      expect(icons).toHaveLength(1);
+      expect(icons[0]?.getAttribute('href')).toMatch(/^data:image\/png/);
+      expect(icons[0]?.parentElement).toBe(early.head);
+    });
+
+    guard.restore();
+    expect(early.title).toBe('站点标题');
+    expect(Array.from(early.querySelectorAll('link[rel~="icon"]')).map((l) => l.getAttribute('href'))).toEqual([
+      'https://site.com/favicon.ico',
+    ]);
+  });
+
   it('自定义图标生效', () => {
     const guard = new TitleFaviconGuard(doc);
     guard.apply('t', 'data:image/png;base64,CUSTOM');

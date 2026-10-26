@@ -33,10 +33,19 @@ function stubScripting() {
   return { scripting, permissions, registered };
 }
 
-/** 模拟一条消息进入后台，返回监听器给出的回复 */
-async function send(msg: unknown, sender: { tab?: { id: number } } = {}) {
-  const results = await fakeBrowser.runtime.onMessage.trigger(msg, sender as never, () => undefined);
-  return results.find((r) => r !== undefined);
+/** 内容脚本所在文档（后台按 sender 定位文档、判断生效范围） */
+const DOC_SENDER = { tab: TAB, frameId: 0, documentId: 'doc-A', url: `${ORIGIN}/home` };
+
+/**
+ * 模拟一条消息进入后台，返回经 sendResponse 回传的结果。
+ * 同时断言"回调式回复"：监听器返回 true 保持通道（Chrome 148 以下不支持用返回的 Promise 回复）。
+ */
+async function send(msg: unknown, sender: object = {}) {
+  let reply!: (v: unknown) => void;
+  const replied = new Promise((r) => (reply = r));
+  const returned: unknown[] = await fakeBrowser.runtime.onMessage.trigger(msg, sender as never, reply as never);
+  expect(returned.filter((r) => r !== undefined && r !== false)).toEqual([true]);
+  return replied;
 }
 
 function disguisedProfile(): SiteProfile {
@@ -95,33 +104,133 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(res.error).toContain('Cannot access');
   });
 
-  it('applyDisguise：清爽态站点向发送方标签页注入隐藏样式；restoreOriginal 移除同一份样式', async () => {
-    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: disguisedProfile() });
-
-    expect(await send({ t: 'applyDisguise', url: `${ORIGIN}/home` }, { tab: TAB })).toEqual({ ok: true });
-    expect(stubs.scripting.insertCSS).toHaveBeenCalledTimes(1);
-    const inserted = stubs.scripting.insertCSS.mock.calls[0]![0];
-    expect(inserted.target).toEqual({ tabId: TAB.id });
-    expect(inserted.css).toContain('#promo-banner');
-
-    expect(await send({ t: 'restoreOriginal' }, { tab: TAB })).toEqual({ ok: true });
-    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(
-      expect.objectContaining({ target: { tabId: TAB.id }, css: inserted.css, origin: 'USER' }),
+  it('回调式回复：只支持 sendResponse 的浏览器下也能拿到结果（监听器同步返回 true，而不是 Promise）', async () => {
+    const sendResponse = vi.fn();
+    const returned: unknown[] = await fakeBrowser.runtime.onMessage.trigger(
+      { t: 'enableSite', origin: ORIGIN, tabId: 3 },
+      {} as never,
+      sendResponse,
     );
+    expect(returned).toContain(true);
+    expect(returned.some((r) => r instanceof Promise)).toBe(false);
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: true }));
   });
 
-  it('applyDisguise：原样态站点不注入样式', async () => {
-    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: createEmptyProfile(ORIGIN) });
+  it('未知消息不占用回复通道', async () => {
+    const returned: unknown[] = await fakeBrowser.runtime.onMessage.trigger({ t: 'nope' }, {} as never, () => undefined);
+    expect(returned.every((r) => r !== true)).toBe(true);
+  });
 
-    await send({ t: 'applyDisguise', url: `${ORIGIN}/home` }, { tab: TAB });
+  it('applyDisguise：按发送方文档注入隐藏样式，回传已注入文本', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: disguisedProfile() });
 
+    const res = (await send({ t: 'applyDisguise', prev: null }, DOC_SENDER)) as { ok: boolean; css: string };
+
+    expect(res.ok).toBe(true);
+    expect(res.css).toContain('#promo-banner');
+    expect(stubs.scripting.insertCSS).toHaveBeenCalledWith({
+      target: { tabId: TAB.id, documentIds: ['doc-A'] },
+      css: res.css,
+      origin: 'USER',
+    });
+  });
+
+  it('applyDisguise：生效范围按 sender.url 判断（不信任消息里的地址）', async () => {
+    const p = disguisedProfile();
+    p.hideRules[0]!.scope = { type: 'include', patterns: [{ label: '书架', prefix: `${ORIGIN}/shelf` }] };
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: p });
+
+    const res = (await send(
+      { t: 'applyDisguise', prev: null, url: `${ORIGIN}/shelf/1` },
+      { ...DOC_SENDER, url: `${ORIGIN}/home` },
+    )) as { ok: boolean; css: string | null };
+
+    expect(res).toEqual({ ok: true, css: null });
     expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
   });
 
-  it('applyDisguise：没有发送方标签页时拒绝', async () => {
-    const res = await send({ t: 'applyDisguise', url: `${ORIGIN}/home` });
+  it('applyDisguise：文本与本文档已注入的相同则跳过（不闪）', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: disguisedProfile() });
+    const first = (await send({ t: 'applyDisguise', prev: null }, DOC_SENDER)) as { css: string };
+    stubs.scripting.insertCSS.mockClear();
 
-    expect(res).toEqual({ ok: false, error: 'no sender tab' });
+    const again = await send({ t: 'applyDisguise', prev: first.css }, DOC_SENDER);
+
+    expect(again).toEqual({ ok: true, css: first.css });
+    expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
+    expect(stubs.scripting.removeCSS).not.toHaveBeenCalled();
+  });
+
+  it('applyDisguise：文本变了先插新、再删旧（中间不出现无样式的空档）', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: disguisedProfile() });
+    const order: string[] = [];
+    stubs.scripting.insertCSS.mockImplementation(async ({ css }) => void order.push(`insert:${css}`));
+    stubs.scripting.removeCSS.mockImplementation((async ({ css }: { css: string }) => void order.push(`remove:${css}`)) as never);
+
+    const res = (await send({ t: 'applyDisguise', prev: 'OLD' }, DOC_SENDER)) as { css: string };
+
+    expect(order).toEqual([`insert:${res.css}`, 'remove:OLD']);
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith({
+      target: { tabId: TAB.id, documentIds: ['doc-A'] },
+      css: 'OLD',
+      origin: 'USER',
+    });
+  });
+
+  it('applyDisguise：站点切到原样时移除本文档的旧样式', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: createEmptyProfile(ORIGIN) });
+
+    const res = await send({ t: 'applyDisguise', prev: 'OLD' }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: null });
+    expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'OLD' }));
+  });
+
+  it('restoreOriginal：后台不靠内存记录（SW 回收后的新实例）也能移除内容脚本报上来的样式', async () => {
+    // beforeEach 刚创建的后台实例从没注入过任何东西，等价于 SW 被回收后重启
+    const res = await send({ t: 'restoreOriginal', prev: 'CSS-A' }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: null });
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith({
+      target: { tabId: TAB.id, documentIds: ['doc-A'] },
+      css: 'CSS-A',
+      origin: 'USER',
+    });
+  });
+
+  it('draftCss：预览样式同样按 prev/next 在本文档内替换', async () => {
+    expect(await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER)).toEqual({ ok: true, css: 'D1' });
+    expect(await send({ t: 'draftCss', prev: 'D1', next: null }, DOC_SENDER)).toEqual({ ok: true, css: null });
+    expect(stubs.scripting.insertCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1' }));
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1' }));
+  });
+
+  it('注入失败：回复 ok:false，并告知文档里仍是旧样式', async () => {
+    stubs.scripting.insertCSS.mockRejectedValueOnce(new Error('No document with id'));
+
+    const res = (await send({ t: 'draftCss', prev: 'D1', next: 'D2' }, DOC_SENDER)) as {
+      ok: boolean;
+      css: string | null;
+      error?: string;
+    };
+
+    expect(res.ok).toBe(false);
+    expect(res.css).toBe('D1');
+    expect(res.error).toContain('No document');
+    expect(stubs.scripting.removeCSS).not.toHaveBeenCalled();
+  });
+
+  it('发送方没有 documentId（旧版浏览器）时退回按 frameId 定位', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 0, url: `${ORIGIN}/home` });
+    expect(stubs.scripting.insertCSS).toHaveBeenCalledWith(
+      expect.objectContaining({ target: { tabId: TAB.id, frameIds: [0] } }),
+    );
+  });
+
+  it('样式消息：没有发送方标签页时拒绝', async () => {
+    const res = await send({ t: 'applyDisguise', prev: null });
+    expect(res).toEqual({ ok: false, error: 'no sender tab', css: null });
   });
 
   it('resetSite：注销内容脚本、撤销站点权限并删除站点配置', async () => {
