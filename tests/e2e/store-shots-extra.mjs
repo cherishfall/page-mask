@@ -84,6 +84,14 @@ try {
   await p.screenshot({ path: `${OUT}/screenshot-3-popup.png`, clip: { x: 0, y: 0, width: 1280, height: 800 } });
   await p.close();
 
+  // 管理页（与弹窗同一份种子数据）
+  const pm = await browser.newPage();
+  await pm.setViewport({ width: 1280, height: 800 });
+  await pm.goto(`${extBase}/management.html`, { waitUntil: 'load' });
+  await pm.waitForSelector('.site', { timeout: 5000 });
+  await pm.screenshot({ path: `${OUT}/screenshot-4-management.png`, clip: { x: 0, y: 0, width: 1280, height: 800 } });
+  await pm.close();
+
   // 440×280 宣传图块：品牌 + 一句话 + 微缩效果演示
   const p2 = await browser.newPage();
   await p2.setViewport({ width: 440, height: 280 });
@@ -104,7 +112,7 @@ try {
   await p2.screenshot({ path: `${OUT}/promo-tile-440x280.png`, clip: { x: 0, y: 0, width: 440, height: 280 } });
   await p2.close();
 
-  console.log('popup 展示图 + 宣传图块完成');
+  console.log('popup 展示图 + 宣传图块 + 管理页完成');
 } finally {
   await browser.close().catch(() => undefined);
   server.close();
