@@ -24,6 +24,19 @@
 - **导出 / 导入**：全部配置导出为一个 JSON 文件，换电脑不丢失
 - **完全本地**：所有配置只存在你自己的浏览器里，没有任何联网行为
 
+### 与同类工具的定位差别
+
+PageMask 的位置在「广告拦截器」和「阅读模式」之间的空档：
+
+| 工具类型 | 代表 | 它们做什么 | PageMask 的不同 |
+|---|---|---|---|
+| 广告拦截器 | uBlock Origin | 全局规则拦截广告与追踪，规则体系面向高级用户 | 不拦广告、不需要规则：鼠标点哪个元素就收起哪个，预览满意再保存，随时还原 |
+| 阅读模式 | 简悦 SimpRead、Just Read | 把文章**重排**成杂志式阅读版式 | 在**原页面做减法**，不改版式；可收起任意元素（推荐流、横幅、评论区），不止正文 |
+| 信息流屏蔽 | News Feed Eradicator | 只针对预置的几个社交网站 | 任意网站都能用，收起什么由你自己点选 |
+| 元素隐藏小工具 | 各类 "Hide xxx" | 功能单一，普遍粗糙或停更 | 完整产品：点选向导、实时预览、失效体检、按站点管理、导出导入，完全本地 |
+
+一句话：**页面要清爽，但不想学规则、不想换版式、还想让标签页一起变低调——这就是 PageMask。**
+
 ### 安装（开发者模式自用）
 
 1. 下载或克隆本仓库
@@ -76,6 +89,19 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Rule health check**: when a site redesign breaks a rule, you get a plain-language heads-up
 - **Export / import**: all configs in one JSON file for moving between machines
 - **Fully local**: everything stays in your browser. No network calls, ever
+
+### How PageMask differs from similar tools
+
+PageMask occupies the gap between ad blockers and reader modes:
+
+| Tool type | Example | What they do | What PageMask does differently |
+|---|---|---|---|
+| Ad blockers | uBlock Origin | Block ads & trackers globally with rule systems aimed at power users | No rules needed: click any element to collapse it, preview, save, revert anytime |
+| Reader modes | Just Read, SimpRead | **Re-layout** articles into a magazine-style view | Subtractive instead: keeps the original page, removes any element you pick — feeds, banners, comment boxes, not just the article |
+| Feed blockers | News Feed Eradicator | Only a preset list of social sites | Works on any site; you choose what goes |
+| Element hiders | Various "Hide xxx" utilities | Single-purpose, often rough or unmaintained | A complete product: pick wizard, live preview, health notices, per-site management, export/import — fully local |
+
+In one line: **a clean page without learning rules or switching layouts — and your tab goes low-key too.**
 
 ### Install (developer mode)
 

@@ -8,7 +8,8 @@
 |---|---|---|
 | 上传包 | `npm run zip` → `.output/page-mask-0.1.0-chrome.zip` | 已验证可构建（84KB） |
 | 商店图标 | `docs/store-assets/icon-128.png` | 128×128，已同步进扩展 manifest |
-| 截图 ×4 | `docs/store-assets/screenshot-*.png` | 1280×800 标准尺寸：清爽生效页 / 向导预览 / 弹窗 / 管理页 |
+| 截图 ×4 | `docs/store-assets/screenshot-*.png` | 1280×800 标准尺寸：清爽生效页 / 向导预览 / 弹窗（居中放大展示图）/ 管理页 |
+| 宣传图块 | `docs/store-assets/promo-tile-440x280.png` | 440×280，品牌 + 一句话定位，建议上传 |
 | 商店文案 | 本文 §3 | 中英双语，可直接粘贴 |
 | 隐私政策 | 仓库 `PRIVACY.md`（英文版） | 隐私政策 URL 填其 GitHub 页面链接 |
 
@@ -62,7 +63,7 @@ PageMask 给你一个清爽专注的阅读界面。
 
 ### English（en-US）
 
-- **Name**: `PageMask — Clean Reading Mode`
+- **Name**: `PageMask — Clean & Focused Pages`
 - **Summary**:
   `Hide distracting page elements for focused reading. Custom tab title & favicon, per-site switch, fully local.`
 - **Detailed description**:
@@ -97,7 +98,7 @@ HOW TO USE
 
 - **商店图标**：`docs/store-assets/icon-128.png`（128×128）
 - **截图**（至少 1 张，至多 5 张，1280×800）：`screenshot-1-clean-page`（主图）、`screenshot-2-wizard`、`screenshot-4-management`、`screenshot-3-popup`
-- **小型宣传图块**（440×280，可选但建议）：可用截图 1 裁剪，或之后补
+- **小型宣传图块**（440×280，可选但建议）：`docs/store-assets/promo-tile-440x280.png` 已备好
 - 注意：截图里不要出现「伪装/摸鱼」等字样（当前截图已是清爽话术 UI）
 
 ## 5. 隐私（Privacy）与合规答复
@@ -118,6 +119,16 @@ scripting: injects the user-authored hiding styles into tabs, on sites the user 
 activeTab: determines the current tab to act on when the user clicks the toolbar action.
 optional host permissions: requested one site at a time, only when the user clicks "Enable clean mode" for that site; used to register the content script that renders the user's chosen clean layout. Never requested globally.
 ```
+
+### 给审核员的备注（Item 里的 "Notes" / 审核备注字段，建议填写）
+
+```
+PageMask is a per-site page decluttering tool. It injects content scripts ONLY into sites the user explicitly enables via the popup (optional host permissions, one site at a time), lets the user pick distracting elements with a visual wizard, and applies hiding styles via chrome.scripting.insertCSS. Tab title/favicon customization is applied only on enabled sites in "clean mode". There is no network activity, no data collection, no remote code, and no bundled site presets.
+```
+
+### 远程代码声明
+
+提交表单会问是否使用远程代码：勾选「否」。本扩展无任何远程加载的脚本/样式/配置（构建产物静态自包含，代码中无 eval / 远程 URL 引用），满足 MV3 远程代码禁令。
 
 ## 6. 分发设置（Distribution）
 
@@ -144,6 +155,17 @@ optional host permissions: requested one site at a time, only when the user clic
 3. 控制台该扩展 → 「打包」页上传新 zip → 提交审核（老账号更新审核通常 1–3 天）
 4. CHANGELOG.md 补双语条目
 
-## 9. 名字策略备忘（待用户最终拍板）
+## 8.5 提交前自查清单（全部打勾再点提交）
 
-当前结论：**保留 PageMask 项目名**，商店名用「PageMask · 页面清爽模式」双关呈现。若想彻底改店名（与仓库名互不影响），候选：`清爽页面 ClearPage`（直白）、`净读 ClearRead`（阅读气质）、`ZenTab 禅页`（最中性）。改名只需改 §3 的名称字段与 manifest `name`，一分钟的事，随时可换。
+- [ ] zip 是最新构建（`npm run build && npm run zip`，版本号比已发布版本大）
+- [ ] manifest description ≤132 字符、name ≤45 字符（当前满足）
+- [ ] 截图全部 1280×800、图标 128×128（已验证尺寸）
+- [ ] 截图与描述中无「伪装/摸鱼」等字样，全部为清爽话术 UI
+- [ ] 隐私标签全部勾「不收集」，隐私政策 URL 可公开访问
+- [ ] 单一用途说明、权限理由、审核员备注已粘贴
+- [ ] 远程代码勾「否」
+- [ ] 语言 zh-CN 与 en-US 两份文案都已填写
+
+## 9. 名字策略（已定，2026-10-26 与用户确认）
+
+**保留 PageMask 品牌名 + 品类副标题**（中「PageMask · 页面清爽模式」/ 英 "PageMask — Clean & Focused Pages"）。理由：商店第一印象由「图标+名称+副标题+首图」四件套共同承担，品牌名管记忆与搜索，副标题管品类认知（命中「清爽」搜索词）；纯描述性名字会同质化且锁死后续扩展方向。竞品空位分析见 README「与同类工具的定位差别」一节。若日后要换店名，只改 §3 名称字段与 manifest `name` 即可，与仓库名互不影响。
