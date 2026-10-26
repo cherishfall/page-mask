@@ -48,6 +48,8 @@ jobs:
           name: page-mask-chrome-zip
           path: .output/*-chrome.zip
           if-no-files-found: error
+          # .output 以点开头，upload-artifact v4+ 默认跳过隐藏路径
+          include-hidden-files: true
 
       - uses: actions/upload-artifact@v7
         if: always()
