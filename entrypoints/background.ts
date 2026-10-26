@@ -53,7 +53,12 @@ export default defineBackground(() => {
     } catch {
       // 未注册过时忽略
     }
-    await browser.permissions.remove({ origins: plan.matches });
+    try {
+      // 非法 origin（如旧版导入的脏数据）会让这里抛错；不能因此删不掉配置
+      await browser.permissions.remove({ origins: plan.matches });
+    } catch {
+      // 忽略
+    }
     await storage.deleteProfile(origin);
   }
 

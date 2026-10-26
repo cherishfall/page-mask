@@ -80,20 +80,37 @@ export function initContentRuntime(): void {
 
   async function handleToggle() {
     if (!profile) return;
-    profile.switchState = profile.switchState === 'disguised' ? 'original' : 'disguised';
-    await storage.putProfile(profile); // 按站点记忆 + storage.onChanged 联动所有标签页
+    // 目标态取自按钮当前显示的状态的反面；只改开关字段（按站点记忆 + onChanged 联动所有标签页）
+    const target = profile.switchState === 'disguised' ? 'original' : 'disguised';
+    profile.switchState = target;
+    await storage.updateProfile(origin, (p) => {
+      p.switchState = target;
+    });
   }
 
   async function handleMoved(pos: { x: number; y: number }) {
     if (!profile) return;
     profile.floatingBtnPos = pos;
-    await storage.putProfile(profile);
+    // 坐标是本机界面状态，不算用户修改设置
+    await storage.updateProfile(
+      origin,
+      (p) => {
+        p.floatingBtnPos = pos;
+      },
+      { touch: false },
+    );
   }
 
   async function handleResetPos() {
     if (!profile) return;
     profile.floatingBtnPos = null;
-    await storage.putProfile(profile);
+    await storage.updateProfile(
+      origin,
+      (p) => {
+        p.floatingBtnPos = null;
+      },
+      { touch: false },
+    );
     syncToggleProps();
   }
 
@@ -191,7 +208,9 @@ export function initContentRuntime(): void {
         // 重选元素 = 删除旧规则 + 进向导重新点选（v1 简化，记 DEVLOG）
         if (!profile) return;
         profile.hideRules = profile.hideRules.filter((r) => r.id !== ruleId);
-        void storage.putProfile(profile);
+        void storage.updateProfile(origin, (p) => {
+          p.hideRules = p.hideRules.filter((r) => r.id !== ruleId);
+        });
         closeEditorPanel();
         void openWizard('addElement');
       },
@@ -282,7 +301,12 @@ export function initContentRuntime(): void {
     const fp = JSON.stringify(profile.hideRules.map((r) => [r.id, r.lastHealth]));
     if (changed && fp !== lastHealthFingerprint) {
       lastHealthFingerprint = fp;
-      await storage.putProfile(profile);
+      // 只回写健康字段：不会覆盖期间在 popup/管理页改过的开关、规则
+      await storage.updateRuleHealth(
+        origin,
+        results.map(({ rule, status }) => ({ id: rule.id, status })),
+        now,
+      );
     }
   }
 

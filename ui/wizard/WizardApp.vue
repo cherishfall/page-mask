@@ -469,10 +469,11 @@ async function doSave() {
   await clearDraftCss();
   const storage = createPageMaskStorage(browser.storage.local);
   const origin = new URL(props.url).origin;
-  const profile = (await storage.getProfile(origin))!;
-  profile.hideRules.push(...rules);
-  if (props.mode === 'newSite') profile.switchState = 'disguised'; // 新站点保存后自动进入伪装态
-  await storage.putProfile(profile);
+  // 原子追加：基于最新存储值只加规则（站点若已被清空则不写入）
+  await storage.updateProfile(origin, (p) => {
+    p.hideRules.push(...rules);
+    if (props.mode === 'newSite') p.switchState = 'disguised'; // 新站点保存后自动进入伪装态
+  });
   emit('done', true);
 }
 

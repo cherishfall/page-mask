@@ -1,9 +1,16 @@
 /**
  * 存储层：chrome.storage.local 封装（ADR-0004：仅本地存储，导出/导入代替自动同步）。
  * 通过注入 KVArea 接口解耦浏览器 API，纯逻辑可单测。
+ *
+ * 写入纪律（审查 S2）：站点配置只能经 updateProfile(origin, 改动函数) 修改——
+ * 写前重读最新值、只改调用方关心的字段、写入前统一校验（core/validate.ts）。
+ * 同一上下文内的所有写入按存储区串行执行，交错的修改不会互相覆盖。
+ * 注意：chrome.storage 本身没有事务，跨上下文（popup 与页面）仍可能在"读→写"的极短窗口内交错；
+ * 重读最新值已把这个窗口缩到一次异步往返。
  */
 import type { ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import { createEmptyProfile } from './types';
+import { isValidOrigin, readSettings, sanitizeProfile } from './validate';
 
 export interface KVArea {
   get(keys: string[] | null): Promise<Record<string, unknown>>;
@@ -14,48 +21,139 @@ export interface KVArea {
 export const PROFILE_PREFIX = 'profile:';
 export const SETTINGS_KEY = 'settings';
 
+/** 用户可见的导入报错（GLOSSARY：说"导出文件"，不说"配置文件"） */
+export const INVALID_EXPORT_FILE = '不是有效的 PageMask 导出文件';
+
 export const profileKey = (origin: string) => PROFILE_PREFIX + origin;
 
 export interface ImportResult {
+  /** 本地原来没有、新加入的站点数 */
   added: number;
+  /** 本地已有、被合并或替换的站点数 */
   updated: number;
+  /** 整体替换时，本地有但导入文件里没有、因而被移除的站点数（合并模式恒为 0） */
+  removed: number;
+  /** 文件里不合法、被跳过的站点条目数 */
+  skipped: number;
+  /** 合法站点里因不合法被忽略的规则条数 */
+  skippedRules: number;
   /** 'merge'（默认，规则并集）或 'replace'（整体替换） */
   mode: 'merge' | 'replace';
 }
 
+export interface UpdateOptions {
+  /** 站点配置不存在时是否新建空配置。默认 false：站点已被一键清空就不再"复活" */
+  create?: boolean;
+  /**
+   * 是否刷新"用户修改时间"（updatedAt，合并导入时据此判断哪边较新）。
+   * 默认 true；体检回写、悬浮按钮坐标这类非用户设置的写入传 false。
+   */
+  touch?: boolean;
+}
+
+/** 改动函数：直接修改传入的最新副本；返回 false 表示无需写入 */
+export type ProfileMutator = (draft: SiteProfile) => void | false;
+
+export interface HealthResult {
+  id: string;
+  status: 'ok' | 'stale';
+}
+
+/** 每个存储区一条写入队列（模块级，同一上下文里多个 storage 实例共享） */
+const writeChains = new WeakMap<object, Promise<unknown>>();
+
+function serialize<T>(area: KVArea, task: () => Promise<T>): Promise<T> {
+  const prev = writeChains.get(area) ?? Promise.resolve();
+  const next = prev.then(task);
+  writeChains.set(
+    area,
+    next.catch(() => undefined),
+  );
+  return next;
+}
+
+function clone<T>(v: T): T {
+  // JSON 规范化：调用方（如 Vue 组件）可能传入响应式代理，直接进 chrome.storage 会被序列化走样
+  return JSON.parse(JSON.stringify(v)) as T;
+}
+
 export function createPageMaskStorage(area: KVArea) {
+  async function readProfile(origin: string): Promise<SiteProfile | null> {
+    const key = profileKey(origin);
+    const obj = await area.get([key]);
+    const s = sanitizeProfile(obj[key]);
+    return s && s.profile.origin === origin ? s.profile : null;
+  }
+
   async function getProfile(origin: string): Promise<SiteProfile | null> {
-    const obj = await area.get([profileKey(origin)]);
-    const v = obj[profileKey(origin)];
-    return isProfile(v) ? v : null;
+    return readProfile(origin);
   }
 
-  async function putProfile(profile: SiteProfile): Promise<void> {
-    // JSON 规范化：调用方（如 Vue 组件）可能传入响应式代理对象，
-    // 直接进 chrome.storage 会被序列化成数字键对象而非数组
-    const plain = JSON.parse(JSON.stringify(profile)) as SiteProfile;
-    await area.set({ [profileKey(plain.origin)]: { ...plain, updatedAt: Date.now() } });
+  /**
+   * 原子更新：排队 → 重读最新值 → 交给改动函数 → 校验 → 写回。
+   * 返回写入后的最新配置；站点不存在且未要求新建时返回 null（不写入）。
+   */
+  function updateProfile(origin: string, mutate: ProfileMutator, opts: UpdateOptions = {}): Promise<SiteProfile | null> {
+    if (!isValidOrigin(origin)) return Promise.reject(new Error(`无效的站点地址：${origin}`));
+    return serialize(area, async () => {
+      const current = await readProfile(origin);
+      if (!current && !opts.create) return null;
+      const draft = clone(current ?? createEmptyProfile(origin));
+      // 返回 false = 无需改动；但"不存在且要求新建"时仍要落库空配置
+      if (mutate(draft) === false && current) return current;
+      draft.formatVersion = 1;
+      draft.origin = origin;
+      if (opts.touch !== false || !current) draft.updatedAt = Date.now();
+      const clean = sanitizeProfile(clone(draft));
+      if (!clean) throw new Error('站点配置数据不合法，未保存');
+      await area.set({ [profileKey(origin)]: clean.profile });
+      return clean.profile;
+    });
   }
 
-  async function deleteProfile(origin: string): Promise<void> {
-    await area.remove([profileKey(origin)]);
+  /** 体检回写：只改各规则的健康字段，不碰开关等其他字段，也不刷新用户修改时间 */
+  function updateRuleHealth(origin: string, results: HealthResult[], now = Date.now()): Promise<SiteProfile | null> {
+    const byId = new Map(results.map((r) => [r.id, r.status]));
+    return updateProfile(
+      origin,
+      (p) => {
+        let changed = false;
+        for (const r of p.hideRules) {
+          const status = byId.get(r.id);
+          if (status && r.lastHealth !== status) {
+            r.lastHealth = status;
+            r.lastHealthAt = now;
+            changed = true;
+          }
+        }
+        return changed ? undefined : false;
+      },
+      { touch: false },
+    );
+  }
+
+  function deleteProfile(origin: string): Promise<void> {
+    return serialize(area, () => area.remove([profileKey(origin)]));
   }
 
   async function listProfiles(): Promise<SiteProfile[]> {
     const all = await area.get(null);
-    return Object.entries(all)
-      .filter(([k, v]) => k.startsWith(PROFILE_PREFIX) && isProfile(v))
-      .map(([, v]) => v as SiteProfile)
-      .sort((a, b) => a.origin.localeCompare(b.origin));
+    const out: SiteProfile[] = [];
+    for (const [k, v] of Object.entries(all)) {
+      if (!k.startsWith(PROFILE_PREFIX)) continue;
+      const s = sanitizeProfile(v);
+      if (s && profileKey(s.profile.origin) === k) out.push(s.profile);
+    }
+    return out.sort((a, b) => a.origin.localeCompare(b.origin));
   }
 
   async function getSettings(): Promise<GlobalSettings> {
     const obj = await area.get([SETTINGS_KEY]);
-    return { ...DEFAULT_SETTINGS, ...(obj[SETTINGS_KEY] as Partial<GlobalSettings> | undefined) };
+    return readSettings(obj[SETTINGS_KEY]);
   }
 
-  async function putSettings(settings: GlobalSettings): Promise<void> {
-    await area.set({ [SETTINGS_KEY]: settings });
+  function putSettings(settings: GlobalSettings): Promise<void> {
+    return serialize(area, () => area.set({ [SETTINGS_KEY]: readSettings(clone(settings)) }));
   }
 
   async function exportBundle(): Promise<ExportBundle> {
@@ -63,48 +161,91 @@ export function createPageMaskStorage(area: KVArea) {
       app: 'pagemask',
       formatVersion: 1,
       exportedAt: new Date().toISOString(),
+      settings: await getSettings(),
       profiles: await listProfiles(),
     };
   }
 
   /**
-   * 导入：默认合并（同源配置做规则并集，冲突规则以导入方为准；站点级字段以较新的一方为准），
-   * 可选整体替换（清掉本地全部站点配置后写入导入内容）。
+   * 导入：先完整校验并构建新数据集，再一次性写入；任何校验失败都不改动本地数据。
+   * - 合并（默认）：同源配置做规则并集（冲突规则以导入方为准），站点级字段取用户修改时间较新的一方；
+   *   本地已设置过的全局设置保留
+   * - 整体替换：以导入文件为准（含全局设置），本地多出的站点移除
+   * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑）。
    */
-  async function importBundle(bundle: ExportBundle, mode: 'merge' | 'replace' = 'merge'): Promise<ImportResult> {
-    if (bundle.app !== 'pagemask' || !Array.isArray(bundle.profiles)) {
-      throw new Error('不是有效的 PageMask 配置文件');
+  async function importBundle(bundle: unknown, mode: 'merge' | 'replace' = 'merge'): Promise<ImportResult> {
+    if (!isObject(bundle) || bundle.app !== 'pagemask' || !Array.isArray(bundle.profiles)) {
+      throw new Error(INVALID_EXPORT_FILE);
     }
-    if (mode === 'replace') {
-      const all = await area.get(null);
-      const keys = Object.keys(all).filter((k) => k.startsWith(PROFILE_PREFIX));
-      if (keys.length) await area.remove(keys);
-      for (const p of bundle.profiles) {
-        if (isProfile(p)) await area.set({ [profileKey(p.origin)]: p });
-      }
-      return { added: bundle.profiles.length, updated: 0, mode };
+    if (bundle.formatVersion !== 1) {
+      throw new Error(
+        typeof bundle.formatVersion === 'number' && bundle.formatVersion > 1
+          ? '这个导出文件来自更新版本的 PageMask，请先升级后再导入'
+          : INVALID_EXPORT_FILE,
+      );
     }
 
-    let added = 0;
-    let updated = 0;
-    for (const incoming of bundle.profiles) {
-      if (!isProfile(incoming)) continue;
-      const local = await getProfile(incoming.origin);
-      if (!local) {
-        await area.set({ [profileKey(incoming.origin)]: incoming });
-        added++;
+    // 1) 校验导入方，同一站点出现多次则先在文件内部合并
+    const incoming = new Map<string, SiteProfile>();
+    let skipped = 0;
+    let skippedRules = 0;
+    for (const raw of bundle.profiles) {
+      const s = sanitizeProfile(raw);
+      if (!s) {
+        skipped++;
         continue;
       }
-      const merged = mergeProfiles(local, incoming);
-      await area.set({ [profileKey(merged.origin)]: merged });
-      updated++;
+      skippedRules += s.droppedRules;
+      const prev = incoming.get(s.profile.origin);
+      incoming.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
     }
-    return { added, updated, mode };
+    if (incoming.size === 0) {
+      throw new Error(`${INVALID_EXPORT_FILE}：里面没有可导入的站点配置，本地数据没有改动`);
+    }
+    const importedSettings = isObject(bundle.settings) ? readSettings(bundle.settings) : null;
+
+    // 2) 基于本地最新值构建新数据集，一次性写入
+    return serialize(area, async () => {
+      const all = await area.get(null);
+      const localKeys = Object.keys(all).filter((k) => k.startsWith(PROFILE_PREFIX));
+      const local = new Map<string, SiteProfile>();
+      for (const k of localKeys) {
+        const s = sanitizeProfile(all[k]);
+        if (s && profileKey(s.profile.origin) === k) local.set(s.profile.origin, s.profile);
+      }
+
+      const writes: Record<string, unknown> = {};
+      let added = 0;
+      let updated = 0;
+      for (const [origin, inc] of incoming) {
+        const mine = local.get(origin);
+        let next: SiteProfile;
+        if (!mine) {
+          next = { ...inc, floatingBtnPos: null };
+          added++;
+        } else {
+          next = mode === 'merge' ? mergeProfiles(mine, inc) : { ...inc, floatingBtnPos: mine.floatingBtnPos };
+          updated++;
+        }
+        writes[profileKey(origin)] = next;
+      }
+      if (importedSettings && (mode === 'replace' || !(SETTINGS_KEY in all))) {
+        writes[SETTINGS_KEY] = importedSettings;
+      }
+
+      await area.set(writes);
+      // 先写后删：即使删除失败，也只是多留旧数据，不会丢数据
+      const obsolete = mode === 'replace' ? localKeys.filter((k) => !(k in writes)) : [];
+      if (obsolete.length) await area.remove(obsolete);
+      const removed = obsolete.filter((k) => local.has(k.slice(PROFILE_PREFIX.length))).length;
+      return { added, updated, removed, skipped, skippedRules, mode };
+    });
   }
 
   return {
     getProfile,
-    putProfile,
+    updateProfile,
+    updateRuleHealth,
     deleteProfile,
     listProfiles,
     getSettings,
@@ -114,7 +255,12 @@ export function createPageMaskStorage(area: KVArea) {
   };
 }
 
-/** 合并两个同源站点配置：规则按 id 并集（冲突取导入方）；站点级字段取 updatedAt 较新者 */
+export type PageMaskStorage = ReturnType<typeof createPageMaskStorage>;
+
+/**
+ * 合并两个同源站点配置：规则按 id 并集（冲突取导入方）；
+ * 站点级字段取用户修改时间（updatedAt）较新的一方；悬浮按钮坐标保留本地。
+ */
 export function mergeProfiles(local: SiteProfile, incoming: SiteProfile): SiteProfile {
   const newer = incoming.updatedAt >= local.updatedAt ? incoming : local;
   const byId = new Map<string, HideRule>();
@@ -123,16 +269,14 @@ export function mergeProfiles(local: SiteProfile, incoming: SiteProfile): SitePr
   return {
     ...newer,
     formatVersion: 1,
+    origin: local.origin,
+    floatingBtnPos: local.floatingBtnPos,
+    createdAt: Math.min(local.createdAt, incoming.createdAt),
+    updatedAt: Math.max(local.updatedAt, incoming.updatedAt),
     hideRules: Array.from(byId.values()).sort((a, b) => a.createdAt - b.createdAt),
   };
 }
 
-function isProfile(v: unknown): v is SiteProfile {
-  return (
-    typeof v === 'object' &&
-    v !== null &&
-    (v as SiteProfile).formatVersion === 1 &&
-    typeof (v as SiteProfile).origin === 'string' &&
-    Array.isArray((v as SiteProfile).hideRules)
-  );
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }

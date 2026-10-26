@@ -28,14 +28,19 @@
       <div class="site-body">
         <div class="row">
           <label>标签页标题</label>
-          <input v-model="p.disguisedTitle" :placeholder="defaultTitle" @change="saveProfile(p)" />
+          <input v-model="p.disguisedTitle" :placeholder="defaultTitle" @change="saveTitle(p)" />
         </div>
         <div class="row">
           <label>标签页图标</label>
           <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前标签页图标" />
           <span v-else class="hint">未设置（中性默认）</span>
-          <input type="file" accept="image/*" @change="(e) => uploadFavicon(p, e)" />
-          <button v-if="p.faviconDataUrl" class="ghost danger" @click="p.faviconDataUrl = null; saveProfile(p)">清除图标</button>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
+            @change="(e) => uploadFavicon(p, e)"
+          />
+          <button v-if="p.faviconDataUrl" class="ghost danger" @click="clearFavicon(p)">清除图标</button>
+          <span v-if="iconError[p.origin]" class="hint error" role="alert">{{ iconError[p.origin] }}</span>
         </div>
         <div class="row actions">
           <button class="ghost" @click="toggleSite(p)">{{ p.switchState === 'disguised' ? '切回原样' : '开启清爽' }}</button>
@@ -80,8 +85,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
-import { createPageMaskStorage } from '@/core/storage';
-import type { ExportBundle, SiteProfile } from '@/core/types';
+import { createPageMaskStorage, INVALID_EXPORT_FILE, type ImportResult } from '@/core/storage';
+import { isSafeFaviconDataUrl } from '@/core/validate';
+import type { SiteProfile } from '@/core/types';
 
 const storage = createPageMaskStorage(browser.storage.local);
 const profiles = ref<SiteProfile[]>([]);
@@ -90,6 +96,7 @@ const resetTarget = ref<SiteProfile | null>(null);
 const importMode = ref<'merge' | 'replace'>('merge');
 const importResult = ref('');
 const importInput = ref<HTMLInputElement | null>(null);
+const iconError = ref<Record<string, string>>({});
 
 onMounted(async () => {
   defaultTitle.value = (await storage.getSettings()).defaultTitle;
@@ -123,18 +130,32 @@ async function saveSettings() {
   await storage.putSettings({ defaultTitle: t || '新建标签页' });
 }
 
-async function saveProfile(p: SiteProfile) {
-  if (p.disguisedTitle !== null && !p.disguisedTitle.trim()) p.disguisedTitle = null;
-  await storage.putProfile(p);
+// 以下写入均为原子更新：基于最新存储值只改本次操作涉及的字段
+
+async function saveTitle(p: SiteProfile) {
+  const title = p.disguisedTitle !== null && p.disguisedTitle.trim() ? p.disguisedTitle : null;
+  await storage.updateProfile(p.origin, (d) => {
+    d.disguisedTitle = title;
+  });
 }
 
 async function toggleSite(p: SiteProfile) {
-  p.switchState = p.switchState === 'disguised' ? 'original' : 'disguised';
-  await storage.putProfile(p);
+  const target = p.switchState === 'disguised' ? 'original' : 'disguised';
+  await storage.updateProfile(p.origin, (d) => {
+    d.switchState = target;
+  });
+}
+
+async function clearFavicon(p: SiteProfile) {
+  iconError.value[p.origin] = '';
+  await storage.updateProfile(p.origin, (d) => {
+    d.faviconDataUrl = null;
+  });
 }
 
 async function uploadFavicon(p: SiteProfile, e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
   if (!file) return;
   const dataUrl = await new Promise<string>((res, rej) => {
     const r = new FileReader();
@@ -142,8 +163,15 @@ async function uploadFavicon(p: SiteProfile, e: Event) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-  p.faviconDataUrl = dataUrl;
-  await storage.putProfile(p);
+  input.value = '';
+  if (!isSafeFaviconDataUrl(dataUrl)) {
+    iconError.value[p.origin] = '图标只支持 PNG、JPG、GIF、WebP、ICO 格式，且不超过 256KB';
+    return;
+  }
+  iconError.value[p.origin] = '';
+  await storage.updateProfile(p.origin, (d) => {
+    d.faviconDataUrl = dataUrl;
+  });
 }
 
 function askReset(p: SiteProfile) {
@@ -173,14 +201,29 @@ async function doImport(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   try {
-    const bundle = JSON.parse(await file.text()) as ExportBundle;
+    let bundle: unknown;
+    try {
+      bundle = JSON.parse(await file.text());
+    } catch {
+      throw new Error(INVALID_EXPORT_FILE);
+    }
     const res = await storage.importBundle(bundle, importMode.value);
-    importResult.value = `导入完成：新增 ${res.added} 个站点，更新 ${res.updated} 个站点（${importMode.value === 'merge' ? '合并' : '整体替换'}）`;
+    importResult.value = describeImport(res);
   } catch (err) {
     importResult.value = `导入失败：${err instanceof Error ? err.message : String(err)}`;
   }
   (e.target as HTMLInputElement).value = '';
+  defaultTitle.value = (await storage.getSettings()).defaultTitle;
   await reload();
+}
+
+/** 如实报告导入结果：新增 / 更新 / 移除 / 跳过 */
+function describeImport(res: ImportResult): string {
+  const parts = [`新增 ${res.added} 个站点`, `更新 ${res.updated} 个站点`];
+  if (res.removed) parts.push(`移除 ${res.removed} 个本地站点`);
+  if (res.skipped) parts.push(`跳过 ${res.skipped} 个无效站点`);
+  if (res.skippedRules) parts.push(`忽略 ${res.skippedRules} 条无效规则`);
+  return `导入完成：${parts.join('，')}（${res.mode === 'merge' ? '合并' : '整体替换'}）`;
 }
 </script>
 
@@ -272,6 +315,9 @@ h3 {
 .hint {
   font-size: 12px;
   color: #999;
+}
+.hint.error {
+  color: #c33;
 }
 .inline {
   display: inline-flex;

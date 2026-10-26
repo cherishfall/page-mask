@@ -6,9 +6,11 @@
  */
 import type { HideRule, StrategyId } from './types';
 import { rulesApplicableAt } from './scope';
+import { isSafeSelector } from './validate';
 
+/** 只拼接通过统一校验的候选（第二道防线：存储层已校验，这里防止旧数据或绕过存储的输入跳出规则块） */
 function ruleSelector(rule: HideRule): string {
-  return rule.candidates.join(', ');
+  return rule.candidates.filter((c) => isSafeSelector(c)).map((c) => c.trim()).join(', ');
 }
 
 /** 单条规则（方案 A/B）的 CSS 片段；方案 C 返回 null（由覆盖层实现） */
@@ -39,7 +41,7 @@ export function maskRulesAt(rules: HideRule[], url: string): HideRule[] {
   return rulesApplicableAt(rules, url).filter((r) => r.strategy === 'mask');
 }
 
-/** 用于 removeCSS 的配套：按同样规则集合重建 CSS 文本（保持与 insertCSS 完全一致以幂等移除） */
+/** 用于 removeCSS 的配套：按同样规则列表重建 CSS 文本（保持与 insertCSS 完全一致以幂等移除） */
 export { buildRuleCss as cssForRemove };
 
 export const STRATEGY_ORDER: StrategyId[] = ['remove', 'blank', 'mask'];

@@ -63,6 +63,7 @@ export interface SiteProfile {
   /** 悬浮按钮记住的位置（视口坐标）；null = 默认右下角 */
   floatingBtnPos: { x: number; y: number } | null;
   createdAt: number;
+  /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */
   updatedAt: number;
 }
 
@@ -79,6 +80,8 @@ export interface ExportBundle {
   app: 'pagemask';
   formatVersion: 1;
   exportedAt: string;
+  /** 全局设置（0.2.0 起导出；旧文件没有此字段） */
+  settings?: GlobalSettings;
   profiles: SiteProfile[];
 }
 

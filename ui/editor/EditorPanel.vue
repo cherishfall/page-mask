@@ -82,7 +82,8 @@ import { deriveScopePattern } from '@/core/origin';
 import { scopeLabel } from '@/core/scope';
 import { healthMessage } from '@/core/health';
 import { selectorHitsElement } from '@/core/selectors';
-import { STRATEGY_LABEL, type HideRule, type SiteProfile, type StrategyId } from '@/core/types';
+import { isSafeSelector } from '@/core/validate';
+import { STRATEGY_LABEL, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
 
 const props = defineProps<{ origin: string; url: string }>();
 const emit = defineEmits<{
@@ -109,36 +110,57 @@ onMounted(async () => {
   for (const r of rules.value) advanced[r.id] = r.candidates.join('\n');
 });
 
-async function persist() {
-  if (!profile.value) return;
-  await storage.putProfile(profile.value); // onChanged → 运行时即时重应用（即时预览）
+/**
+ * 原子写入：对最新存储值只改这一条规则（或规则列表），写完用最新值刷新面板。
+ * onChanged → 运行时即时重应用（即时预览）
+ */
+async function persist(mutate: (p: SiteProfile) => void | false) {
+  const fresh = await storage.updateProfile(props.origin, mutate);
+  if (fresh) profile.value = fresh;
+}
+
+function updateRule(ruleId: string, change: (r: HideRule) => void) {
+  void persist((p) => {
+    const r = p.hideRules.find((x) => x.id === ruleId);
+    if (!r) return false;
+    change(r);
+  });
 }
 
 function setStrategy(rule: HideRule, s: StrategyId) {
   rule.strategy = s;
-  void persist();
+  updateRule(rule.id, (r) => {
+    r.strategy = s;
+  });
 }
 
 function setScope(rule: HideRule, type: 'all' | 'include' | 'exclude') {
-  if (type === 'all' || !pattern.value) {
-    rule.scope = { type: 'all' };
-  } else {
-    rule.scope = { type, patterns: [pattern.value] };
-  }
-  void persist();
+  const scope: Scope =
+    type === 'all' || !pattern.value ? { type: 'all' } : { type, patterns: [{ ...pattern.value }] };
+  rule.scope = scope;
+  updateRule(rule.id, (r) => {
+    r.scope = scope;
+  });
 }
 
 function removeRule(rule: HideRule) {
   if (!profile.value) return;
   profile.value.hideRules = profile.value.hideRules.filter((r) => r.id !== rule.id);
-  void persist();
+  void persist((p) => {
+    p.hideRules = p.hideRules.filter((r) => r.id !== rule.id);
+  });
 }
 
-/** 高级后门（uBlock 同款门槛）：保存前必须现场命中至少一个元素 */
+/** 高级后门（uBlock 同款门槛）：每行必须是单个合法选择器，且保存前必须现场命中至少一个元素 */
 function saveAdvanced(rule: HideRule) {
   const text = (advanced[rule.id] ?? '').trim();
   if (!text) {
     advError[rule.id] = '选择器不能为空';
+    return;
+  }
+  const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
+  if (!lines.every((s) => isSafeSelector(s))) {
+    advError[rule.id] = '每行只能写一个有效的选择器，不能包含 { } ; @ 或逗号';
     return;
   }
   const hits = selectorHitsElement(text);
@@ -147,8 +169,10 @@ function saveAdvanced(rule: HideRule) {
     return;
   }
   advError[rule.id] = '';
-  rule.candidates = text.split('\n').map((s) => s.trim()).filter(Boolean);
-  void persist();
+  rule.candidates = lines;
+  updateRule(rule.id, (r) => {
+    r.candidates = lines;
+  });
 }
 
 function healthMsg(rule: HideRule): string {

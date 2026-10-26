@@ -33,7 +33,7 @@ import { computed, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
-import { createEmptyProfile, type SiteProfile } from '@/core/types';
+import type { SiteProfile } from '@/core/types';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
 const profile = ref<SiteProfile | null>(null);
@@ -60,9 +60,13 @@ async function refreshProfile() {
 
 async function toggleSwitch() {
   if (!profile.value || !origin.value) return;
-  profile.value.switchState = profile.value.switchState === 'disguised' ? 'original' : 'disguised';
+  // 目标态 = 当前显示状态的反面；只改开关字段，不覆盖页面里刚写入的体检结果等
+  const target = profile.value.switchState === 'disguised' ? 'original' : 'disguised';
   const storage = createPageMaskStorage(browser.storage.local);
-  await storage.putProfile(profile.value);
+  const fresh = await storage.updateProfile(origin.value, (p) => {
+    p.switchState = target;
+  });
+  profile.value = fresh;
 }
 
 /** 唯一入口：新站点授权并注入，随后打开设置向导 */
@@ -77,8 +81,8 @@ async function setup() {
     if (!granted) return;
 
     const storage = createPageMaskStorage(browser.storage.local);
-    profile.value = (await storage.getProfile(origin.value)) ?? createEmptyProfile(origin.value);
-    await storage.putProfile(profile.value);
+    // 已有则原样保留，没有则新建空配置
+    profile.value = await storage.updateProfile(origin.value, () => false, { create: true });
     await browser.runtime.sendMessage({ t: 'enableSite', origin: origin.value, tabId });
     // 内容脚本刚被注入，稍等后通知其打开向导（注入竞态重试）
     for (let i = 0; i < 10; i++) {
