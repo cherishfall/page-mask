@@ -16,6 +16,7 @@ import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
 import { ElementFollower } from './follow';
+import { adoptPageMaskStyles } from './shadow-styles';
 
 const TOGGLE_HOST_ID = 'pagemask-floating-host';
 const WIZARD_HOST_ID = 'pagemask-wizard-host';
@@ -51,6 +52,8 @@ export function initContentRuntime(): void {
     host = document.createElement('div');
     host.id = TOGGLE_HOST_ID;
     const shadow = host.attachShadow({ mode: 'open' });
+    // 共享 tokens 样式（示例接入；向导 / 编辑面板的接入与硬编码颜色替换见 #25）
+    adoptPageMaskStyles(shadow);
     const mountPoint = document.createElement('div');
     shadow.appendChild(mountPoint);
     document.documentElement.appendChild(host);

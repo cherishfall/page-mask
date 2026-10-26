@@ -1,0 +1,28 @@
+/*
+ * 页内 shadow root 共享基础样式（经 ui/shadow-styles.ts 以字符串形式引入）。
+ *
+ * shadow 边界挡得住网页的选择器，但挡不住「继承属性」：line-height、letter-spacing、
+ * text-transform、font-weight 等会从网页的 <html> 一路继承进来。所以先在 :host 上
+ * all: initial 切断继承，再用 tokens 重新设定字体、颜色、明暗。
+ * 注意：all 不影响自定义属性（--pm-*），所以 tokens 不会被清掉；但它会把 color-scheme
+ * 重置为 normal，因此必须在其后重新声明 color-scheme。
+ * 局限：网页里直接命中宿主元素的规则优先级高于 :host，宿主本身的防护见 #25（N40）。
+ */
+@import './tokens.css';
+
+:host {
+  all: initial;
+  color-scheme: light dark;
+  font-family: var(--pm-font-family);
+  font-size: var(--pm-font-size-body);
+  line-height: var(--pm-line-height);
+  color: var(--pm-fg);
+}
+
+/* 原生表单控件默认不继承字体 */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

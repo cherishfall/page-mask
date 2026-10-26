@@ -1,0 +1,43 @@
+/*
+ * 扩展页面（popup / 管理页 / 引导页）共享基础样式。
+ * 用法：在页面入口 main.ts 里 `import '@/styles/base.css'`，并在 index.html 的 <head> 写
+ *   <meta name="color-scheme" content="light dark">
+ * （让浏览器在 CSS 加载前就按系统明暗画底色，避免深色模式下先闪一下白）。
+ *
+ * 只放「所有扩展页面都一样」的东西；页面自己的布局仍写在各自 App.vue 里。
+ */
+@import './tokens.css';
+
+:root {
+  /* 复选框、单选框、滑块等原生控件的强调色跟随主色 */
+  accent-color: var(--pm-accent);
+}
+
+body {
+  margin: 0;
+  font-family: var(--pm-font-family);
+  font-size: var(--pm-font-size-body);
+  line-height: var(--pm-line-height);
+  color: var(--pm-fg);
+  background: var(--pm-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 原生表单控件默认不继承字体（用平台字体），统一改为继承 */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* 键盘焦点可见；鼠标点击不出现焦点环 */
+:focus-visible {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+}
+
+a {
+  color: var(--pm-accent);
+}

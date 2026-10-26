@@ -118,10 +118,7 @@ function sleep(ms: number) {
 </script>
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
-}
+/* body 的字体、前景、背景来自 @/styles/base.css（tokens 示例接入，#33）；其余尺寸 / 结构的整改见 #26 */
 .popup {
   width: 280px;
   padding: 12px;
@@ -140,12 +137,12 @@ body {
   letter-spacing: 0.2px;
 }
 .dot {
-  color: #e5484d;
+  color: var(--pm-danger);
   cursor: help;
 }
 .hint {
   font-size: 13px;
-  color: #666;
+  color: var(--pm-fg-muted);
   margin: 4px 0;
 }
 .site .row {
@@ -161,49 +158,49 @@ body {
   white-space: nowrap;
 }
 .switch {
-  border: 1px solid #d0d0d0;
-  background: #f5f5f5;
+  border: 1px solid var(--pm-border-control);
+  background: var(--pm-bg-subtle);
   border-radius: 999px;
   padding: 3px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: #555;
+  color: var(--pm-fg);
 }
 .switch.on {
-  background: #3575e0;
-  border-color: #3575e0;
-  color: #fff;
+  background: var(--pm-accent);
+  border-color: var(--pm-accent);
+  color: var(--pm-on-accent);
 }
 .meta {
   font-size: 12px;
-  color: #888;
+  color: var(--pm-fg-muted);
   margin-top: 4px;
 }
 .stale {
-  color: #e5484d;
+  color: var(--pm-danger);
 }
 .primary {
   border: none;
-  background: #3575e0;
-  color: #fff;
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 13px;
   cursor: pointer;
 }
 .primary:hover {
-  background: #2b66c9;
+  background: var(--pm-accent-hover);
 }
 .ghost {
   border: none;
   background: transparent;
-  color: #666;
+  color: var(--pm-fg-muted);
   font-size: 12px;
   cursor: pointer;
   text-align: center;
   padding: 4px;
 }
 .ghost:hover {
-  color: #333;
+  color: var(--pm-fg);
 }
 </style>

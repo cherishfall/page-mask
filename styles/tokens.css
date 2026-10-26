@@ -1,0 +1,222 @@
+/*
+ * PageMask 设计 tokens ——「安静的纸面」（docs/dev/review/appendix-ui.md §7）
+ *
+ * 同一份文件同时服务两类场景：
+ *   - 扩展页面（popup / 管理页 / 引导页）：经 styles/base.css 引入，变量落在 :root
+ *   - 页内 shadow root（悬浮按钮 / 向导 / 编辑面板）：经 ui/shadow-styles.ts 引入，变量落在 :host
+ *   （文档级样式表里的 :host 和 shadow 样式表里的 :root 都匹配不到任何元素，互不干扰）
+ *
+ * 结构（按 modern-web-guidance「dark-mode」指南）：
+ *   1. 原始色值：--pm-<名>-light / --pm-<名>-dark，只写 #rrggbb，供对比度测试解析
+ *   2. 语义变量 --pm-<名>：默认取浅色值
+ *   3. @media (prefers-color-scheme: dark)：不支持 light-dark() 的浏览器（Chrome < 123）的兜底
+ *   4. @supports light-dark()：现代浏览器按元素的 color-scheme 自动取值
+ *   5. @media (forced-colors: active)：Windows 高对比度模式改用系统色
+ *
+ * 规则：界面代码只用语义变量（--pm-fg 等），不要直接用 -light / -dark 原始值。
+ *
+ * ── 对比度（WCAG 2.x 相对亮度公式实算，tests/tokens-contrast.test.ts 自动守门）──
+ * 门槛：正文文字 ≥4.5；控件边界 / 焦点环等非文字 ≥3（WCAG 1.4.11）。
+ * 下表每行格式固定（测试会逐行解析并复算），改色值后跑 npm test 会提示更新。
+ *
+ *   前景             背景             浅色    深色    门槛
+ *   fg               on bg            浅 15.78  深 12.75  ≥4.5
+ *   fg               on bg-subtle     浅 14.72  深 11.01  ≥4.5
+ *   fg-muted         on bg            浅 4.83  深 5.98  ≥4.5
+ *   fg-muted         on bg-subtle     浅 4.51  深 5.16  ≥4.5
+ *   accent           on bg            浅 5.17  深 7.68  ≥4.5
+ *   accent           on bg-subtle     浅 4.82  深 6.63  ≥4.5
+ *   on-accent        on accent        浅 5.17  深 7.68  ≥4.5
+ *   on-accent        on accent-hover  浅 6.70  深 9.71  ≥4.5
+ *   danger           on bg            浅 6.47  深 5.71  ≥4.5
+ *   danger           on bg-subtle     浅 6.04  深 4.93  ≥4.5
+ *   on-danger        on danger        浅 6.47  深 5.71  ≥4.5
+ *   warning          on bg            浅 5.18  深 6.97  ≥4.5
+ *   warning          on bg-subtle     浅 4.83  深 6.02  ≥4.5
+ *   on-warning       on warning       浅 5.18  深 6.97  ≥4.5
+ *   success          on bg            浅 5.02  深 9.06  ≥4.5
+ *   success          on bg-subtle     浅 4.68  深 7.82  ≥4.5
+ *   on-success       on success       浅 5.02  深 9.06  ≥4.5
+ *   border-control   on bg            浅 3.25  深 4.13  ≥3
+ *   border-control   on bg-subtle     浅 3.03  深 3.57  ≥3
+ *
+ * 说明：
+ *   - --pm-border 只用于卡片之间的装饰性分隔线，不承担「这里有个控件」的提示，因此不受 3:1 约束；
+ *     输入框、开关、次要按钮等控件的外框必须用 --pm-border-control。
+ *   - 焦点环用 --pm-accent：accent 两行已 ≥4.5，自然满足非文字 3:1。
+ *   - 颜色之外还要有文字或图标表达状态（「可能失效」不能只靠红色）。
+ */
+
+:root,
+:host {
+  color-scheme: light dark;
+
+  /* ── 1. 原始色值 ── */
+  --pm-accent-light: #2563eb;
+  --pm-accent-dark: #93b4ff;
+  --pm-accent-hover-light: #1d4ed8;
+  --pm-accent-hover-dark: #b4cbff;
+  --pm-on-accent-light: #ffffff;
+  --pm-on-accent-dark: #1f2329;
+
+  --pm-fg-light: #1f2329;
+  --pm-fg-dark: #e5e7eb;
+  --pm-fg-muted-light: #6b7280;
+  --pm-fg-muted-dark: #9aa0a6;
+
+  --pm-bg-light: #ffffff;
+  --pm-bg-dark: #1f2329;
+  --pm-bg-subtle-light: #f6f7f9;
+  --pm-bg-subtle-dark: #2a2e35;
+
+  --pm-border-light: #d1d5db;
+  --pm-border-dark: #3f444c;
+  --pm-border-control-light: #8a8f98;
+  --pm-border-control-dark: #7d838c;
+
+  --pm-danger-light: #b91c1c;
+  --pm-danger-dark: #f87171;
+  --pm-on-danger-light: #ffffff;
+  --pm-on-danger-dark: #1f2329;
+  --pm-warning-light: #c2410c;
+  --pm-warning-dark: #fb923c;
+  --pm-on-warning-light: #ffffff;
+  --pm-on-warning-dark: #1f2329;
+  --pm-success-light: #15803d;
+  --pm-success-dark: #4ade80;
+  --pm-on-success-light: #ffffff;
+  --pm-on-success-dark: #1f2329;
+
+  /* 浮层阴影 / 对话框遮罩用的半透明色（非文字、非控件边界，不参与对比度门槛） */
+  --pm-shadow-color-light: rgb(0 0 0 / 0.12);
+  --pm-shadow-color-dark: rgb(0 0 0 / 0.5);
+  --pm-ring-color-light: rgb(0 0 0 / 0.06);
+  --pm-ring-color-dark: rgb(255 255 255 / 0.08);
+  --pm-backdrop-light: rgb(0 0 0 / 0.32);
+  --pm-backdrop-dark: rgb(0 0 0 / 0.56);
+
+  /* ── 2. 语义变量（默认浅色） ── */
+  --pm-accent: var(--pm-accent-light);
+  --pm-accent-hover: var(--pm-accent-hover-light);
+  --pm-on-accent: var(--pm-on-accent-light);
+  --pm-fg: var(--pm-fg-light);
+  --pm-fg-muted: var(--pm-fg-muted-light);
+  --pm-bg: var(--pm-bg-light);
+  --pm-bg-subtle: var(--pm-bg-subtle-light);
+  --pm-border: var(--pm-border-light);
+  --pm-border-control: var(--pm-border-control-light);
+  --pm-danger: var(--pm-danger-light);
+  --pm-on-danger: var(--pm-on-danger-light);
+  --pm-warning: var(--pm-warning-light);
+  --pm-on-warning: var(--pm-on-warning-light);
+  --pm-success: var(--pm-success-light);
+  --pm-on-success: var(--pm-on-success-light);
+  --pm-shadow-color: var(--pm-shadow-color-light);
+  --pm-ring-color: var(--pm-ring-color-light);
+  --pm-backdrop: var(--pm-backdrop-light);
+
+  /* 浮层：实底卡片 + 阴影 + 1px 细环（不再用深色玻璃） */
+  --pm-shadow-overlay: 0 8px 24px var(--pm-shadow-color), 0 0 0 1px var(--pm-ring-color);
+
+  /* ── 排版：字号阶梯 12 / 13 / 15 / 20（不再使用 11px），行高 1.5 ──
+   * 用 px 而不是 rem：页内 UI 不能受网页根字号影响 */
+  --pm-font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --pm-font-size-caption: 12px; /* 辅助说明，最小字号 */
+  --pm-font-size-body: 13px; /* 正文、控件 */
+  --pm-font-size-title: 15px; /* 卡片标题，配 600 */
+  --pm-font-size-heading: 20px; /* 页面标题，配 600 */
+  --pm-font-weight-strong: 600;
+  --pm-line-height: 1.5;
+
+  /* ── 间距：4 的倍数 ── */
+  --pm-space-1: 4px;
+  --pm-space-2: 8px;
+  --pm-space-3: 12px; /* 组件间距 */
+  --pm-space-4: 16px; /* 卡片内边距 */
+  --pm-space-6: 24px; /* 页面边距 */
+  --pm-space-8: 32px;
+
+  /* ── 圆角：控件 8 / 卡片与浮层 12 / 胶囊 999 ── */
+  --pm-radius-control: 8px;
+  --pm-radius-card: 12px;
+  --pm-radius-pill: 999px;
+
+  /* ── 焦点环 ── */
+  --pm-focus-ring: 2px solid var(--pm-accent);
+  --pm-focus-ring-offset: 2px;
+}
+
+/* ── 3. 不支持 light-dark() 时按系统偏好切换 ── */
+@media (prefers-color-scheme: dark) {
+  :root,
+  :host {
+    --pm-accent: var(--pm-accent-dark);
+    --pm-accent-hover: var(--pm-accent-hover-dark);
+    --pm-on-accent: var(--pm-on-accent-dark);
+    --pm-fg: var(--pm-fg-dark);
+    --pm-fg-muted: var(--pm-fg-muted-dark);
+    --pm-bg: var(--pm-bg-dark);
+    --pm-bg-subtle: var(--pm-bg-subtle-dark);
+    --pm-border: var(--pm-border-dark);
+    --pm-border-control: var(--pm-border-control-dark);
+    --pm-danger: var(--pm-danger-dark);
+    --pm-on-danger: var(--pm-on-danger-dark);
+    --pm-warning: var(--pm-warning-dark);
+    --pm-on-warning: var(--pm-on-warning-dark);
+    --pm-success: var(--pm-success-dark);
+    --pm-on-success: var(--pm-on-success-dark);
+    --pm-shadow-color: var(--pm-shadow-color-dark);
+    --pm-ring-color: var(--pm-ring-color-dark);
+    --pm-backdrop: var(--pm-backdrop-dark);
+  }
+}
+
+/* ── 4. 现代浏览器：跟随元素实际使用的 color-scheme ── */
+@supports (color: light-dark(white, black)) {
+  :root,
+  :host {
+    --pm-accent: light-dark(var(--pm-accent-light), var(--pm-accent-dark));
+    --pm-accent-hover: light-dark(var(--pm-accent-hover-light), var(--pm-accent-hover-dark));
+    --pm-on-accent: light-dark(var(--pm-on-accent-light), var(--pm-on-accent-dark));
+    --pm-fg: light-dark(var(--pm-fg-light), var(--pm-fg-dark));
+    --pm-fg-muted: light-dark(var(--pm-fg-muted-light), var(--pm-fg-muted-dark));
+    --pm-bg: light-dark(var(--pm-bg-light), var(--pm-bg-dark));
+    --pm-bg-subtle: light-dark(var(--pm-bg-subtle-light), var(--pm-bg-subtle-dark));
+    --pm-border: light-dark(var(--pm-border-light), var(--pm-border-dark));
+    --pm-border-control: light-dark(var(--pm-border-control-light), var(--pm-border-control-dark));
+    --pm-danger: light-dark(var(--pm-danger-light), var(--pm-danger-dark));
+    --pm-on-danger: light-dark(var(--pm-on-danger-light), var(--pm-on-danger-dark));
+    --pm-warning: light-dark(var(--pm-warning-light), var(--pm-warning-dark));
+    --pm-on-warning: light-dark(var(--pm-on-warning-light), var(--pm-on-warning-dark));
+    --pm-success: light-dark(var(--pm-success-light), var(--pm-success-dark));
+    --pm-on-success: light-dark(var(--pm-on-success-light), var(--pm-on-success-dark));
+    --pm-shadow-color: light-dark(var(--pm-shadow-color-light), var(--pm-shadow-color-dark));
+    --pm-ring-color: light-dark(var(--pm-ring-color-light), var(--pm-ring-color-dark));
+    --pm-backdrop: light-dark(var(--pm-backdrop-light), var(--pm-backdrop-dark));
+  }
+}
+
+/* ── 5. 强制颜色模式（Windows 高对比度）：改用系统色 ──
+ * 浏览器在此模式下会丢弃 box-shadow，所以边界一律靠 border/outline（CanvasText）表达，
+ * 选中态用 Highlight / HighlightText。不使用 forced-color-adjust: none。 */
+@media (forced-colors: active) {
+  :root,
+  :host {
+    --pm-accent: Highlight;
+    --pm-accent-hover: Highlight;
+    --pm-on-accent: HighlightText;
+    --pm-fg: CanvasText;
+    --pm-fg-muted: CanvasText;
+    --pm-bg: Canvas;
+    --pm-bg-subtle: Canvas;
+    --pm-border: CanvasText;
+    --pm-border-control: CanvasText;
+    --pm-danger: CanvasText;
+    --pm-on-danger: Canvas;
+    --pm-warning: CanvasText;
+    --pm-on-warning: Canvas;
+    --pm-success: CanvasText;
+    --pm-on-success: Canvas;
+    --pm-focus-ring: 2px solid Highlight;
+  }
+}
