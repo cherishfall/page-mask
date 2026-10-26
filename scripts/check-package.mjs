@@ -4,6 +4,8 @@
 // 检查项：
 //   - manifest（产物目录与 zip 内各查一遍）：manifest_version 为 3；name 解析后 ≤45 字符；description 解析后 ≤132 字符
 //     （name/description 若为 __MSG_x__，到 _locales/<各语言>/messages.json 查实际文本，每种语言都检查）
+//   - name/description/action.default_title 各语言文本不含禁用词（伪装、disguise、New Tab、新建标签页、摸鱼）
+//   - 有 _locales 时必须声明 default_locale；各语言 messages.json 键集合一致、每条都有 message 文本
 //   - icons 含 16/32/48/128，且对应文件在 zip 内存在
 //   - zip 内无 *.map、.DS_Store、*.test.*、tests/ 路径；包含 THIRD_PARTY_NOTICES.txt
 //
@@ -115,19 +117,63 @@ function checkManifest(label, manifest, readFile, listLocales, hasFile) {
       // 按 Unicode 字符计数（与商店一致，中文一个字算 1）
       const len = [...text].length;
       if (len > LIMITS[field]) fail(`[${label}] ${where} 长度 ${len} 超过上限 ${LIMITS[field]}：「${text}」`);
+      checkWording(label, where, text);
     }
   }
 
+  // action.default_title 若用占位符，也必须能解析（无长度上限，但同样不得出现禁用词）
+  const actionTitle = manifest.action?.default_title;
+  if (actionTitle) {
+    for (const { locale, text, error } of resolveMessage(actionTitle, readFile, listLocales, manifest.default_locale)) {
+      const where = locale ? `action.default_title（${locale}）` : 'action.default_title';
+      if (error) fail(`[${label}] ${where}：${error}`);
+      else checkWording(label, where, text);
+    }
+  }
   const locale = manifest.default_locale;
+  const locales = listLocales();
   if (locale && !hasFile(`_locales/${locale}/messages.json`)) {
     fail(`[${label}] default_locale 为 ${locale}，但缺少 _locales/${locale}/messages.json`);
   }
-
+  // Chrome 规则：有 _locales 必须声明 default_locale，反之亦然，否则拒绝加载
+  if (!locale && locales.length > 0) fail(`[${label}] 包内有 _locales，但 manifest 缺少 default_locale`);
+  checkLocaleKeys(label, locales, readFile);
   const icons = manifest.icons ?? {};
   for (const size of REQUIRED_ICON_SIZES) {
     const path = icons[size];
     if (!path) fail(`[${label}] manifest.icons 缺少 ${size} 尺寸`);
     else if (!hasFile(path.replace(/^\//, ''))) fail(`[${label}] 图标 ${size} 指向的 ${path} 不存在`);
+  }
+}
+
+/** 商店可见文案不得出现的叫法（附录 store D5 / GLOSSARY：对外话术统一为"清爽"） */
+const FORBIDDEN_WORDS = [/伪装/, /disguis/i, /new\s*tab/i, /新建标签页/, /摸鱼/];
+function checkWording(label, where, text) {
+  for (const re of FORBIDDEN_WORDS) {
+    if (re.test(text)) fail(`[${label}] ${where} 含有禁用词 ${re}：「${text}」`);
+  }
+}
+
+/** 各语言 messages.json 的键集合必须一致（大小写不敏感，与 Chrome 一致），避免某语言漏翻回退成英文 */
+function checkLocaleKeys(label, locales, readFile) {
+  const keySets = new Map();
+  for (const l of locales) {
+    let messages;
+    try {
+      messages = JSON.parse(readFile(`_locales/${l}/messages.json`) ?? '{}');
+    } catch (e) {
+      fail(`[${label}] _locales/${l}/messages.json 不是合法 JSON：${e.message}`);
+      continue;
+    }
+    for (const [k, v] of Object.entries(messages)) {
+      if (typeof v?.message !== 'string' || v.message === '') fail(`[${label}] _locales/${l} 的 ${k} 缺少 message 文本`);
+    }
+    keySets.set(l, new Set(Object.keys(messages).map((k) => k.toLowerCase())));
+  }
+  const all = new Set([...keySets.values()].flatMap((s) => [...s]));
+  for (const [l, keys] of keySets) {
+    const missing = [...all].filter((k) => !keys.has(k));
+    if (missing.length) fail(`[${label}] _locales/${l} 缺少消息：${missing.join(', ')}`);
   }
 }
 

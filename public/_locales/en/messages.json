@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "PageMask — Clean & Focused Pages",
+    "description": "Extension name shown in Chrome and the Chrome Web Store. Max 45 characters."
+  },
+  "extDescription": {
+    "message": "Hide distracting page elements you pick, on sites you choose. Optional custom tab title and icon. Data stays in your browser.",
+    "description": "Short description shown in Chrome and the Chrome Web Store. Max 132 characters."
+  },
+  "actionTitle": {
+    "message": "PageMask: make this site clean & focused",
+    "description": "Tooltip of the toolbar button."
+  }
+}
