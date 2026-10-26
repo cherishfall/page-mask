@@ -7,7 +7,7 @@
  *   - 注释里写的数字必须与实算一致（保留两位小数），防止改了色值忘记更新注释
  *   - 必须覆盖的关键组合不能从表里漏掉
  */
-// 直接用 Node 读文件：vitest 默认不处理 CSS，`?raw` 导入 .css 会得到空串。
+// 直接用 Node 读文件：vitest 默认不处理 CSS，`?raw` 导入 .css 拿到的是空串。
 // 项目未安装 @types/node，这里只需要 readFileSync 一个函数，用 ts-ignore 收窄影响面。
 // @ts-ignore -- node:fs 无类型声明
 import { readFileSync } from 'node:fs';

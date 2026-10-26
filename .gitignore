@@ -9,3 +9,5 @@ dist/
 # 测试产物
 coverage/
 test-results/
+# E2E 浏览器下载缓存（tests/e2e/lib/browser.mjs）
+.cache/

@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
+import { WxtVitest } from 'wxt/testing/vitest-plugin';
+
 export default defineConfig({
+  // WXT 官方测试插件：注入 auto-import、@/ 路径别名，并把 `wxt/browser` 替换为内存版 fakeBrowser
+  // （fakeBrowser 不实现 scripting / permissions，用到时在测试里 stub）。
+  plugins: [WxtVitest()],
   test: {
     environment: 'jsdom',
     globals: true,
