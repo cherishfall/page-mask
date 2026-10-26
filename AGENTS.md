@@ -60,4 +60,9 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 - 用户位于中国内地，访问 GitHub 依赖本地 Clash 代理 `127.0.0.1:7890`（代理可能掉线，掉线时 git/gh 降级为本地操作稍后重试）。
 - `gh` 命令必须加前缀 `HTTPS_PROXY=http://127.0.0.1:7890`；本仓库 git 已配仓库级代理，git 命令免前缀。
-- npm 官方源可直连但较慢，大规模安装可用 npmmirror 镜像。
+- npm 镜像只配在用户级 `~/.npmrc`（`registry=https://registry.npmmirror.com`）；**仓库不带 `.npmrc`**，`package-lock.json` 里的 `resolved` 必须全部是 `https://registry.npmjs.org`（CI 与其他贡献者用官方源）。已实测的规则：
+  - `npm ci`、不带包名的 `npm install`：npm 默认 `replace-registry-host=npmjs`，下载时把 lockfile 里的官方地址自动换成镜像，**不改写 lockfile**，日常装依赖直接用即可（快）。
+  - **新增 / 升级 / 删除依赖**（`npm install <pkg>`、`npm update`、重建 lockfile）：新写入的条目会记录成镜像地址。必须临时指定官方源：`npm install <pkg>@<精确版本> --save-exact --registry=https://registry.npmjs.org`（官方源可直连但慢，超时给足）。
+  - 提交前核对：`grep -c registry.npmmirror.com package-lock.json` 应为 0；若不为 0，删除 `node_modules` 与 `package-lock.json` 后用 `npm install --registry=https://registry.npmjs.org` 重建。
+  - `npm audit` 镜像不支持，一律加 `--registry=https://registry.npmjs.org`。
+- 依赖一律精确版本（无 `^`/`~`）。依赖版本变化后运行 `npm run notices` 重新生成 `public/THIRD_PARTY_NOTICES.txt` 并提交（CI 会校验它是否过期）。

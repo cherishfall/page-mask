@@ -1,10 +1,24 @@
 {
   "name": "page-mask",
   "version": "0.1.0",
-  "description": "PageMask —— 让非工作网站在一瞥之下看起来不像它自己 / Make non-work sites stop looking like themselves at a glance",
+  "description": "PageMask —— 页面清爽模式：收起网页干扰元素，专注阅读 / Clean & focused pages: tuck away distracting page elements",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "author": "cherishfall",
+  "homepage": "https://github.com/cherishfall/page-mask#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cherishfall/page-mask.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cherishfall/page-mask/issues"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
+    "postinstall": "wxt prepare",
     "dev": "wxt dev",
     "build": "wxt build",
     "zip": "wxt zip",
@@ -12,20 +26,22 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "notices": "node scripts/gen-notices.mjs",
+    "check:package": "node scripts/check-package.mjs"
   },
   "dependencies": {
-    "css-selector-generator": "^3.9.4",
-    "vue": "^3.5.0",
-    "wxt": "^0.21.0"
+    "css-selector-generator": "3.9.4",
+    "vue": "3.5.44"
   },
   "devDependencies": {
-    "@vue/test-utils": "^2.4.6",
-    "@wxt-dev/module-vue": "^1.0.3",
-    "jsdom": "^29.1.1",
-    "puppeteer-core": "^25.16.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "vue-tsc": "^2.1.10"
+    "@vitest/coverage-v8": "5.0.5",
+    "@wxt-dev/module-vue": "1.0.3",
+    "jsdom": "29.1.1",
+    "puppeteer-core": "25.16.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5",
+    "vue-tsc": "2.2.12",
+    "wxt": "0.21.4"
   }
 }

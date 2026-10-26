@@ -1,0 +1,51 @@
+name: 问题反馈 / Bug report
+description: 报告 PageMask 的异常行为 / Report something that is not working
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。安全问题请勿在此公开，见 SECURITY.md。
+        Thanks for reporting. For security issues, please follow SECURITY.md instead of filing a public issue.
+  - type: input
+    id: version
+    attributes:
+      label: 扩展版本 / Extension version
+      description: chrome://extensions 中显示的版本号 / As shown in chrome://extensions
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器与系统 / Browser & OS
+      placeholder: "Chrome 140, macOS 15"
+    validations:
+      required: true
+  - type: input
+    id: site
+    attributes:
+      label: 出现问题的网站 / Affected site
+      description: 只需填域名，不要粘贴含个人信息的完整网址 / Domain only; avoid URLs with personal data
+      placeholder: "example.com"
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果与实际结果 / Expected vs. actual
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 截图或其他信息 / Screenshots or other context
+      description: 截图前请遮挡个人信息 / Please redact personal information
