@@ -89,6 +89,16 @@ describe('图标、origin、范围、方案校验（表格驱动）', () => {
       () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/r/' }] }, 'https://a.com'),
       true,
     ],
+    [
+      'scope：仅首页（精确匹配）',
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'exact' }] }, 'https://a.com'),
+      true,
+    ],
+    [
+      '畸形 scope：未知匹配方式',
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'regex' }] }, 'https://a.com'),
+      false,
+    ],
     ['未知收起方案', () => isValidStrategy('explode'), false],
     ['合法收起方案', () => isValidStrategy('mask'), true],
   ];

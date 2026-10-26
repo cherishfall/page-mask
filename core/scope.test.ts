@@ -38,6 +38,25 @@ describe('scopeMatches', () => {
   });
 });
 
+describe('scopeMatches：首页与边界（#32）', () => {
+  const home = { label: 'weread.qq.com 的首页', prefix: 'https://weread.qq.com/', match: 'exact' as const };
+  it('仅首页：只在首页生效，不再等于整站', () => {
+    const scope: HideRule['scope'] = { type: 'include', patterns: [home] };
+    expect(scopeMatches(scope, 'https://weread.qq.com/')).toBe(true);
+    expect(scopeMatches(scope, 'https://weread.qq.com/web/shelf')).toBe(false);
+  });
+  it('排除首页：其他页面照常生效', () => {
+    const scope: HideRule['scope'] = { type: 'exclude', patterns: [home] };
+    expect(scopeMatches(scope, 'https://weread.qq.com/')).toBe(false);
+    expect(scopeMatches(scope, 'https://weread.qq.com/web/shelf')).toBe(true);
+  });
+  it('/web 不命中 /website', () => {
+    const scope: HideRule['scope'] = { type: 'include', patterns: [{ label: 'x', prefix: 'https://weread.qq.com/web' }] };
+    expect(scopeMatches(scope, 'https://weread.qq.com/web/shelf')).toBe(true);
+    expect(scopeMatches(scope, 'https://weread.qq.com/website')).toBe(false);
+  });
+});
+
 describe('rulesApplicableAt 只取范围内规则', () => {
   it('过滤范围外的规则', () => {
     const rules = [

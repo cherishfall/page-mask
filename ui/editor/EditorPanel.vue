@@ -47,6 +47,7 @@
           </template>
         </div>
       </div>
+      <div v-if="!pattern && scopeHint" :style="{ fontSize: '11px', color: '#999', marginTop: '2px' }">{{ scopeHint }}</div>
       <div v-if="pattern && rule.scope.type !== 'all'" :style="{ fontSize: '11px', color: '#999', marginTop: '2px' }">
         {{ rule.scope.type === 'include' ? '仅' : '除' }}：{{ rule.scope.patterns[0]?.label ?? pattern.label }}
       </div>
@@ -78,7 +79,7 @@ import { computed, onMounted, reactive, ref, type CSSProperties } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { rulesApplicableAt } from '@/core/scope';
-import { deriveScopePattern } from '@/core/origin';
+import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { scopeLabel } from '@/core/scope';
 import { healthMessage } from '@/core/health';
 import { selectorHitsElement } from '@/core/selectors';
@@ -98,6 +99,7 @@ const profile = ref<SiteProfile | null>(null);
 const advanced = reactive<Record<string, string>>({});
 const advError = reactive<Record<string, string>>({});
 const pattern = computed(() => deriveScopePattern(props.url));
+const scopeHint = computed(() => scopeUnavailableHint(props.url));
 
 const rules = computed(() => {
   const p = profile.value;

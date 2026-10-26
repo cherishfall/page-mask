@@ -121,7 +121,9 @@ export function sanitizeScope(v: unknown, origin?: string): Scope | null {
     if (!isObject(p) || typeof p.label !== 'string' || typeof p.prefix !== 'string') return null;
     const okPrefix = origin ? p.prefix.startsWith(`${origin}/`) : normalizeOrigin(p.prefix) !== null;
     if (!okPrefix) return null;
-    patterns.push({ label: p.label, prefix: p.prefix });
+    // 匹配方式白名单：缺省（前缀）或 'exact'（精确页面）
+    if (p.match !== undefined && p.match !== 'exact') return null;
+    patterns.push(p.match === 'exact' ? { label: p.label, prefix: p.prefix, match: 'exact' } : { label: p.label, prefix: p.prefix });
   }
   return { type: v.type, patterns };
 }

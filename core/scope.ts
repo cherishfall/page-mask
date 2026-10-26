@@ -3,16 +3,16 @@
  * 范围属于规则，不属于站点配置（GLOSSARY.md「生效范围」）。
  */
 import type { HideRule, Scope } from './types';
-import { urlMatchesPrefix } from './origin';
+import { urlMatchesPattern } from './origin';
 
 export function scopeMatches(scope: Scope, url: string): boolean {
   switch (scope.type) {
     case 'all':
       return true;
     case 'include':
-      return scope.patterns.some((p) => urlMatchesPrefix(url, p.prefix));
+      return scope.patterns.some((p) => urlMatchesPattern(url, p));
     case 'exclude':
-      return !scope.patterns.some((p) => urlMatchesPrefix(url, p.prefix));
+      return !scope.patterns.some((p) => urlMatchesPattern(url, p));
   }
 }
 

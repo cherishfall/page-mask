@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { isTooBigForPick, navigateLevel } from './wizard-logic';
+import { isTooBigForPick, navigateLevel, unsavableDraftWarning } from './wizard-logic';
 
 describe('isTooBigForPick 防呆', () => {
   const vp = { width: 1000, height: 800 };
@@ -24,5 +24,16 @@ describe('navigateLevel 层级导航', () => {
     const outer = document.getElementById('outer')!;
     expect(navigateLevel(outer, 'smaller')!.id).toBe('mid');
     expect(navigateLevel(document.getElementById('inner')!, 'smaller')).toBeNull();
+  });
+});
+
+describe('unsavableDraftWarning 保存门槛：每条规则至少 1 个候选', () => {
+  it('全部有候选时放行', () => {
+    expect(unsavableDraftWarning([{ candidates: ['.a'] }, { candidates: ['#b', '.c'] }])).toBeNull();
+  });
+  it('有元素没有候选时拦下，并指出第几个', () => {
+    const msg = unsavableDraftWarning([{ candidates: ['.a'] }, { candidates: [] }]);
+    expect(msg).toContain('第 2 个');
+    expect(msg).toContain('选大一点');
   });
 });

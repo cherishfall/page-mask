@@ -18,12 +18,18 @@ export const STRATEGY_LABEL: Record<StrategyId, string> = {
 /** 默认伪装标题：不能为空——空白会让 Chrome 显示网址反而泄露（design.md） */
 export const DEFAULT_DISGUISED_TITLE = '新建标签页';
 
-/** 一条生效范围模式：零专业输入，用 URL 前缀表达"这类页面" */
+/**
+ * 一条生效范围模式：零专业输入，用 URL 前缀表达"这类页面"。
+ * 匹配方式（match）：
+ * - 缺省 = 带边界的前缀匹配：prefix 后面必须是结尾、/、? 或 #（/web 命中 /web/a，不命中 /website）
+ * - 'exact' = 只匹配这一个页面：比较 站点+路径，忽略 ?查询 与 #锚点。用于首页——根路径的前缀等于整站
+ */
 export interface ScopePattern {
-  /** 人类可读说明，如 "weread.qq.com 上 /web/reader/ 开头的页面" */
+  /** 人类可读说明，如 "weread.qq.com 上 /web/reader 下的页面"、"weread.qq.com 的首页" */
   label: string;
-  /** 匹配前缀（origin + 路径前缀），如 https://weread.qq.com/web/reader/ */
+  /** 匹配前缀（origin + 路径，编码形式），如 https://weread.qq.com/web/reader；exact 时是完整页面地址 */
   prefix: string;
+  match?: 'exact';
 }
 
 /** 生效范围：整站（默认）/ 仅某类页面 / 排除某类页面。范围属于规则，不属于站点配置 */

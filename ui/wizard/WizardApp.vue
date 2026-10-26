@@ -94,6 +94,7 @@
             <label v-if="sitePattern" :style="radioStyle">
               <input type="radio" value="exclude" v-model="scopeChoice" /> 排除：{{ sitePattern.label }}
             </label>
+            <div v-if="!sitePattern && scopeHint" :style="hintStyle" data-testid="pm-wiz-scope-hint">{{ scopeHint }}</div>
           </div>
         </div>
         <div :style="{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }">
@@ -110,11 +111,11 @@ import { computed, onBeforeUnmount, onMounted, ref, type CSSProperties } from 'v
 import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
-import { deriveScopePattern } from '@/core/origin';
+import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { STRATEGY_LABEL, type StrategyId } from '@/core/types';
 import { newRuleId, type HideRule, type Scope, type SiteProfile } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
-import type { DraftItem } from '@/core/wizard-logic';
+import { unsavableDraftWarning, type DraftItem } from '@/core/wizard-logic';
 import { PickController } from './pick-controller';
 import { ElementFollower } from '../follow';
 
@@ -142,6 +143,7 @@ const badgeBoxes = new Map<Element, HTMLElement>();
 const markerBoxes = new Map<number, HTMLElement>();
 
 const sitePattern = computed(() => deriveScopePattern(props.url));
+const scopeHint = computed(() => scopeUnavailableHint(props.url));
 
 let pickLayer: HTMLElement | null = null;
 
@@ -309,6 +311,8 @@ function enterPreview() {
     candidates: generateCandidates(el, { onlyThis: false }),
   }));
   applyPreview();
+  const warn = unsavableDraftWarning(drafts.value);
+  if (warn) showWarn(warn);
 }
 
 function backToPick() {
@@ -423,7 +427,14 @@ function setStrategy(idx: number, s: DraftStrategy) {
 function regenCandidates(idx: number) {
   const d = drafts.value[idx];
   if (!d) return;
-  d.candidates = generateCandidates(d.el, { onlyThis: d.onlyThis });
+  const next = generateCandidates(d.el, { onlyThis: d.onlyThis });
+  if (next.length === 0) {
+    // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
+    d.onlyThis = !d.onlyThis;
+    showWarn('切换后没法稳定识别这个元素，已保持原来的设置');
+    return;
+  }
+  d.candidates = next;
 }
 
 function removeDraft(idx: number) {
@@ -443,12 +454,23 @@ function clearDraftCss() {
 // ---------- 保存 ----------
 
 function openSave() {
+  // 保存门槛：每条规则至少 1 个候选，空规则保存后什么也藏不掉
+  const warn = unsavableDraftWarning(drafts.value);
+  if (warn) {
+    showWarn(warn);
+    return;
+  }
   scopeChoice.value = 'all';
   saveOpen.value = true;
 }
 
 async function doSave() {
   saveOpen.value = false;
+  const warn = unsavableDraftWarning(drafts.value);
+  if (warn) {
+    showWarn(warn);
+    return;
+  }
   const pattern = sitePattern.value;
   let scope: Scope = { type: 'all' };
   if (scopeChoice.value !== 'all' && pattern) {
@@ -585,5 +607,6 @@ const segStyle: CSSProperties = {
   cursor: 'pointer',
 };
 const segOnStyle = { ...segStyle, background: '#3575e0', borderColor: '#3575e0', color: '#fff' };
+const hintStyle: CSSProperties = { fontSize: '12px', color: '#888' };
 const radioStyle: CSSProperties = { fontSize: '13px', display: 'flex', gap: '6px', alignItems: 'center', cursor: 'pointer' };
 </script>

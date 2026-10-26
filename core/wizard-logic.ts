@@ -32,3 +32,13 @@ export interface DraftItem {
   strategy: 'remove' | 'blank' | 'mask';
   onlyThis: boolean;
 }
+
+/**
+ * 保存门槛：每条规则至少要有 1 个候选选择器，否则保存后什么也藏不掉、体检永远报失效。
+ * 返回给用户的提示；全部可保存时返回 null。
+ */
+export function unsavableDraftWarning(drafts: readonly { candidates: readonly string[] }[]): string | null {
+  const idx = drafts.findIndex((d) => d.candidates.length === 0);
+  if (idx < 0) return null;
+  return `第 ${idx + 1} 个元素没法稳定识别：请把它移出本次选择，再用「选大一点」重新选`;
+}
