@@ -7,7 +7,7 @@
     <section class="card">
       <h2>全局默认</h2>
       <div class="row">
-        <label>默认伪装标题</label>
+        <label>默认标签页标题</label>
         <input v-model="defaultTitle" placeholder="新建标签页" @change="saveSettings" />
         <span class="hint">站点未单独设置时使用。不能为空白——空白会让 Chrome 显示网址反而泄露。</span>
       </div>
@@ -21,7 +21,7 @@
       <div class="site-head">
         <span class="host">{{ hostOf(p.origin) }}</span>
         <span class="state" :class="p.switchState">
-          {{ p.switchState === 'disguised' ? '伪装中' : '原样' }} · {{ p.hideRules.length }} 条规则
+          {{ p.switchState === 'disguised' ? '清爽中' : '原样' }} · {{ p.hideRules.length }} 条规则
           <template v-if="staleOf(p) > 0">· <span class="stale" :title="staleList(p)">● {{ staleOf(p) }} 条可能失效</span></template>
         </span>
       </div>
@@ -32,7 +32,7 @@
         </div>
         <div class="row">
           <label>标签页图标</label>
-          <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前伪装图标" />
+          <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前标签页图标" />
           <span v-else class="hint">未设置（中性默认）</span>
           <input type="file" accept="image/*" @change="(e) => uploadFavicon(p, e)" />
           <button v-if="p.faviconDataUrl" class="ghost danger" @click="p.faviconDataUrl = null; saveProfile(p)">清除图标</button>
@@ -64,7 +64,7 @@
         <h3>清空 {{ hostOf(resetTarget.origin) }} 的全部配置？</h3>
         <ul>
           <li>{{ resetTarget.hideRules.length }} 条隐藏规则将被删除</li>
-          <li>伪装标题、图标设置将被删除</li>
+          <li>标签页标题、图标设置将被删除</li>
           <li>该站点恢复为"从未配置过"的状态，悬浮按钮随之消失</li>
           <li>浏览器对该站点的授权会被收回（下次配置需重新允许）</li>
         </ul>

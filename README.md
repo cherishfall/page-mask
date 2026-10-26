@@ -24,16 +24,16 @@
 - **导出 / 导入**：全部配置导出为一个 JSON 文件，换电脑不丢失
 - **完全本地**：所有配置只存在你自己的浏览器里，没有任何联网行为
 
-### 与同类工具的定位差别
+### 与同类工具：各自适合什么
 
-PageMask 的位置在「广告拦截器」和「阅读模式」之间的空档：
+不同工具解决不同问题，选适合你的：
 
-| 工具类型 | 代表 | 它们做什么 | PageMask 的不同 |
+| 工具类型 | 代表 | 最适合 | 不太适合 |
 |---|---|---|---|
-| 广告拦截器 | uBlock Origin | 全局规则拦截广告与追踪，规则体系面向高级用户 | 不拦广告、不需要规则：鼠标点哪个元素就收起哪个，预览满意再保存，随时还原 |
-| 阅读模式 | 简悦 SimpRead、Just Read | 把文章**重排**成杂志式阅读版式 | 在**原页面做减法**，不改版式；可收起任意元素（推荐流、横幅、评论区），不止正文 |
-| 信息流屏蔽 | News Feed Eradicator | 只针对预置的几个社交网站 | 任意网站都能用，收起什么由你自己点选 |
-| 元素隐藏小工具 | 各类 "Hide xxx" | 功能单一，普遍粗糙或停更 | 完整产品：点选向导、实时预览、失效体检、按站点管理、导出导入，完全本地 |
+| 广告拦截器 | uBlock Origin | 系统性屏蔽广告与追踪、全局生效；愿意了解一点规则概念 | 只想收起某几个特定元素、完全不想碰规则 |
+| 阅读模式 | 简悦 SimpRead、Just Read | 长文沉浸阅读、杂志式排版、标注与同步等阅读增强 | 想保留原页面布局只做减法；首页、社区等非文章页 |
+| 信息流屏蔽 | News Feed Eradicator | 戒掉预置社交网站的信息流刷屏 | 其他网站、自选任意元素 |
+| **PageMask** | — | 零专业知识、鼠标点选任意元素即时预览；按站点独立开关、随时还原；标签页标题图标一起变低调；配置完全本地 | 拦截广告与追踪（请用广告拦截器）；重排版式的沉浸长文（请用阅读模式）；多设备自动同步（PageMask 提供导出/导入） |
 
 一句话：**页面要清爽，但不想学规则、不想换版式、还想让标签页一起变低调——这就是 PageMask。**
 
@@ -90,16 +90,16 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Export / import**: all configs in one JSON file for moving between machines
 - **Fully local**: everything stays in your browser. No network calls, ever
 
-### How PageMask differs from similar tools
+### Compared to similar tools: which fits you
 
-PageMask occupies the gap between ad blockers and reader modes:
+Different tools solve different problems — pick what suits yours:
 
-| Tool type | Example | What they do | What PageMask does differently |
+| Tool type | Example | Best for | Not so good for |
 |---|---|---|---|
-| Ad blockers | uBlock Origin | Block ads & trackers globally with rule systems aimed at power users | No rules needed: click any element to collapse it, preview, save, revert anytime |
-| Reader modes | Just Read, SimpRead | **Re-layout** articles into a magazine-style view | Subtractive instead: keeps the original page, removes any element you pick — feeds, banners, comment boxes, not just the article |
-| Feed blockers | News Feed Eradicator | Only a preset list of social sites | Works on any site; you choose what goes |
-| Element hiders | Various "Hide xxx" utilities | Single-purpose, often rough or unmaintained | A complete product: pick wizard, live preview, health notices, per-site management, export/import — fully local |
+| Ad blockers | uBlock Origin | Systematically blocking ads & trackers, globally; okay with rule concepts | Hiding just a few specific elements with zero learning curve |
+| Reader modes | Just Read, SimpRead | Immersive long-form reading, magazine layout, highlights & sync | Keeping the original layout and only subtracting; non-article pages like homepages or forums |
+| Feed blockers | News Feed Eradicator | Breaking doom-scrolling on a preset list of social sites | Other sites; picking arbitrary elements yourself |
+| **PageMask** | — | Zero expertise — click any element with live preview; per-site switch, revert anytime; tab title & favicon go low-key too; fully local | Blocking ads & trackers (use an ad blocker); re-laid-out immersive reading (use a reader mode); automatic multi-device sync (PageMask offers export/import) |
 
 In one line: **a clean page without learning rules or switching layouts — and your tab goes low-key too.**
 

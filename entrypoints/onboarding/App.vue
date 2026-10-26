@@ -7,7 +7,7 @@
       <div class="step" :class="{ active: step === 1, done: step > 1 }">
         <div class="num">1</div>
         <div class="body">
-          <h2>打开你想伪装的网站</h2>
+          <h2>打开你想变清爽的网站</h2>
           <p>比如微信读书、得到、极客时间。PageMask 不会主动打扰任何网站——只有你主动添加的站点才会被处理。</p>
         </div>
       </div>
@@ -15,7 +15,7 @@
         <div class="num">2</div>
         <div class="body">
           <h2>点工具栏图标，选要去掉的干扰</h2>
-          <p>点击浏览器右上角的 PageMask 图标 → 「为当前网站设置伪装」。鼠标悬停会高亮元素，点击选中（可连选），选到内层文字可以用「选大一点 / 选小一点」调整。</p>
+          <p>点击浏览器右上角的 PageMask 图标 → 「为当前网站开启清爽模式」。鼠标悬停会高亮元素，点击选中（可连选），选到内层文字可以用「选大一点 / 选小一点」调整。</p>
         </div>
       </div>
       <div class="step" :class="{ active: step === 3, done: step > 3 }">

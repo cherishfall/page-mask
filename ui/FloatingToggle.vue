@@ -2,7 +2,7 @@
   <div :style="rootStyle" @pointerdown.prevent="onPointerDown" @contextmenu.prevent="openMenu" :title="tipText">
     <span :style="dotStyle">{{ state === 'disguised' ? '●' : '○' }}</span>
     <div v-if="menuOpen" :style="menuStyle">
-      <div :style="menuItemStyle" @click.stop="onMenuEdit">编辑伪装</div>
+      <div :style="menuItemStyle" @click.stop="onMenuEdit">编辑规则</div>
       <div :style="menuItemStyle" @click.stop="onMenuResetPos">按钮归位</div>
     </div>
   </div>
