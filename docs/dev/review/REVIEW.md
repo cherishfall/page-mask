@@ -3,6 +3,8 @@
 本轮取代第一轮审查（第一轮的 E/C/S/W/U/A 编号在下文"旧编号"列保留对照）。
 审查依据：`chrome-extensions` skill（MV3 规则、权限、内容脚本、Service Worker、上架清单、商店文案与隐私政策指南）、`modern-web-guidance` 指南（`dialog`、`light-dismiss-a-dialog`、`menu`、`viewport-aware-dropdowns`、`switch`、`drag`、`dark-mode`、`color`、`accessibility`、`html`、`shadow-dom`、`styling-web-components`、`persistent-toast-notifications`、`security`）、Chrome 官方文档与 Chrome Web Store 现行政策（2026-10 实时抓取）。
 
+> **版本口径（用户 2026-10-27 决定，优先于下文及附录）**：本轮质量加固发布 **0.2.0**，直接推送 master；1.0.0 由用户反复验证确认后另行定版并提交商店。附录中"用 1.0.0 上架"的建议以此为准。
+
 ## 0. 怎么读这份文档
 
 - 本文是汇总。逐条细节（行号、证据、改写文案）在两份附录：
