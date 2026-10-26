@@ -76,7 +76,7 @@ const menuItemStyle = {
 };
 
 const tipText = computed(() =>
-  props.state === 'disguised' ? 'PageMask：伪装中，点击还原' : 'PageMask：点击进入伪装',
+  props.state === 'disguised' ? 'PageMask：清爽中，点击还原' : 'PageMask：点击开启清爽模式',
 );
 
 function onPointerDown(e: PointerEvent) {

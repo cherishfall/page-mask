@@ -1,7 +1,7 @@
 <template>
   <div :style="drawerStyle" data-testid="pm-editor-panel">
     <div :style="headStyle">
-      <span :style="{ fontSize: '14px', fontWeight: 600 }">编辑伪装</span>
+      <span :style="{ fontSize: '14px', fontWeight: 600 }">编辑规则</span>
       <button :style="closeBtnStyle" data-testid="pm-editor-close" @click="emit('close')">✕</button>
     </div>
     <div :style="{ fontSize: '11px', color: '#999', marginBottom: '8px' }">

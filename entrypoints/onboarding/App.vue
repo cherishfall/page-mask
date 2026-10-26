@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <h1>欢迎使用 PageMask 🎭</h1>
-    <p class="sub">让非工作网站在一瞥之下"看起来不像它自己"。你不设置，插件对任何网站零影响。</p>
+    <p class="sub">一键收起网页上的干扰元素，给自己一个清爽专注的阅读界面。你不设置，插件对任何网站零影响。</p>
 
     <div class="steps">
       <div class="step" :class="{ active: step === 1, done: step > 1 }">
@@ -14,15 +14,15 @@
       <div class="step" :class="{ active: step === 2, done: step > 2 }">
         <div class="num">2</div>
         <div class="body">
-          <h2>点工具栏图标，选要藏的东西</h2>
+          <h2>点工具栏图标，选要去掉的干扰</h2>
           <p>点击浏览器右上角的 PageMask 图标 → 「为当前网站设置伪装」。鼠标悬停会高亮元素，点击选中（可连选），选到内层文字可以用「选大一点 / 选小一点」调整。</p>
         </div>
       </div>
       <div class="step" :class="{ active: step === 3, done: step > 3 }">
         <div class="num">3</div>
         <div class="body">
-          <h2>预览、保存，一瞥安全</h2>
-          <p>预览时可以给每个元素换收起方案（彻底移除 / 原地留白 / 遮罩覆盖）。保存后标签页标题和图标也会换成低调的样子。想临时还原？点页面右下角的小按钮就行。</p>
+          <h2>预览、保存，清爽常驻</h2>
+          <p>预览时可以给每个元素换收起方案（彻底移除 / 原地留白 / 遮罩覆盖）。保存后页面即刻清爽，标签页标题和图标也会换成低调的样子。想临时还原？点页面右下角的小按钮就行。</p>
         </div>
       </div>
     </div>

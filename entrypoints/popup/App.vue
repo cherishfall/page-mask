@@ -12,7 +12,7 @@
         <div class="row">
           <span class="host">{{ host }}</span>
           <button class="switch" :class="{ on: profile.switchState === 'disguised' }" @click="toggleSwitch">
-            {{ profile.switchState === 'disguised' ? '伪装中' : '原样' }}
+            {{ profile.switchState === 'disguised' ? '清爽中' : '原样' }}
           </button>
         </div>
         <div class="meta">
@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <button class="primary" @click="setup">{{ profile ? '＋ 添加元素' : '为当前网站设置伪装' }}</button>
+      <button class="primary" @click="setup">{{ profile ? '＋ 添加要去掉的元素' : '为当前网站开启清爽模式' }}</button>
     </template>
 
     <button class="ghost" @click="manage">管理全部站点</button>

@@ -1,7 +1,7 @@
 <template>
   <div class="page">
-    <h1>PageMask 管理页</h1>
-    <p class="sub">所有已配置站点在此总览。改伪装标题/图标、看体检状态、一键清空、导出导入。</p>
+    <h1>PageMask · 页面清爽模式</h1>
+    <p class="sub">所有已配置站点在此总览。自定义各站点的标签页标题/图标、查看规则状态、一键清空、导出导入。</p>
 
     <!-- 全局设置 -->
     <section class="card">
@@ -27,18 +27,18 @@
       </div>
       <div class="site-body">
         <div class="row">
-          <label>伪装标题</label>
+          <label>标签页标题</label>
           <input v-model="p.disguisedTitle" :placeholder="defaultTitle" @change="saveProfile(p)" />
         </div>
         <div class="row">
-          <label>伪装图标</label>
+          <label>标签页图标</label>
           <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前伪装图标" />
           <span v-else class="hint">未设置（中性默认）</span>
           <input type="file" accept="image/*" @change="(e) => uploadFavicon(p, e)" />
           <button v-if="p.faviconDataUrl" class="ghost danger" @click="p.faviconDataUrl = null; saveProfile(p)">清除图标</button>
         </div>
         <div class="row actions">
-          <button class="ghost" @click="toggleSite(p)">{{ p.switchState === 'disguised' ? '切回原样' : '进入伪装' }}</button>
+          <button class="ghost" @click="toggleSite(p)">{{ p.switchState === 'disguised' ? '切回原样' : '开启清爽' }}</button>
           <button class="ghost danger" @click="askReset(p)">一键清空</button>
         </div>
       </div>
