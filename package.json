@@ -11,7 +11,8 @@
     "compile": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs"
+    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs",
+    "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "css-selector-generator": "^3.9.4",

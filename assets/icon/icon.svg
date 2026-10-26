@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- PageMask 图标（方案 A）：浏览器窗口线框 + 中间一段内容被折叠收起，露出干净留白。
+       用于 32/48/128。主体 96×96（16..112），四周 16px 透明留白。主色 = 设计 tokens 中的 pm-accent（#2563eb）。注意 XML 注释里不能出现两个连字符。 -->
+  <!-- 窗口：蓝色外框 + 白色内容区 -->
+  <rect x="16" y="16" width="96" height="96" rx="16" fill="#2563eb"/>
+  <rect x="22" y="38" width="84" height="68" rx="8" fill="#ffffff"/>
+  <!-- 标题栏上的三个小圆点（通用窗口意象） -->
+  <circle cx="32" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
+  <circle cx="43" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
+  <circle cx="54" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
+  <!-- 上方保留的内容行 -->
+  <rect x="32" y="46" width="64" height="8" rx="4" fill="#9aa3af"/>
+  <!-- 折叠：两个箭头向中线收拢，中线为虚线，四周是干净留白 -->
+  <path d="M56 60 L64 66 L72 60" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="32" y1="72" x2="96" y2="72" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="0.1 9"/>
+  <path d="M56 84 L64 78 L72 84" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 下方保留的内容行 -->
+  <rect x="32" y="90" width="44" height="8" rx="4" fill="#9aa3af"/>
+</svg>

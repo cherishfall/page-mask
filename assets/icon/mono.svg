@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+  <!-- PageMask 单色图标（12-16px），供页内悬浮按钮使用；颜色跟随 currentColor。
+       图形与主图标一致：窗口线框 + 标题栏 + 上下内容行 + 中间点状折叠线。 -->
+  <rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2" stroke-width="1.5"/>
+  <line x1="2" y1="5.25" x2="14" y2="5.25" stroke-width="1.5"/>
+  <line x1="4.75" y1="7.75" x2="11.25" y2="7.75" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="4.75" y1="11.25" x2="9.25" y2="11.25" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="4" y1="9.5" x2="12" y2="9.5" stroke-width="1" stroke-dasharray="1 1.5" opacity=".8"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- PageMask 16px 简化版：窗口外框 + 标题栏 + 上下两行内容，中间留白处一条主色点状折叠线（与 128 版虚线呼应）。
+       全部整像素对齐；圆角用切掉 1px 角的方式手绘，避免抗锯齿发虚。 -->
+  <rect x="1" y="1" width="14" height="14" fill="#2563eb"/>
+  <rect x="0" y="2" width="16" height="12" fill="#2563eb"/>
+  <rect x="2" y="5" width="12" height="8" fill="#ffffff"/>
+  <!-- 上下保留的内容行 -->
+  <rect x="4" y="6" width="8" height="2" fill="#6b7280"/>
+  <rect x="4" y="11" width="6" height="1" fill="#6b7280"/>
+  <!-- 中间点状折叠线 -->
+  <rect x="3" y="9" width="1" height="1" fill="#2563eb"/>
+  <rect x="5" y="9" width="1" height="1" fill="#2563eb"/>
+  <rect x="7" y="9" width="1" height="1" fill="#2563eb"/>
+  <rect x="9" y="9" width="1" height="1" fill="#2563eb"/>
+  <rect x="11" y="9" width="1" height="1" fill="#2563eb"/>
+</svg>
