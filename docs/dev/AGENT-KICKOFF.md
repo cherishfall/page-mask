@@ -42,7 +42,7 @@
    - `npm run compile`
    - `npm test`
    - `npm run build`
-   - 涉及运行时/界面的票：`npm run test:e2e`（Chrome for Testing 在 `/tmp/cft/`；若缺失按 `HANDOFF` 已记录的 npmmirror 地址下载，或在 #31 完成后用其下载脚本）
+   - 涉及运行时/界面的票：`npm run test:e2e`（Chrome for Testing 在 `/tmp/cft/`；若缺失，从 `https://registry.npmmirror.com/-/binary/chrome-for-testing/` 下载 mac-arm64 版解压到 `/tmp/cft/` 并执行 `xattr -dr com.apple.quarantine /tmp/cft`；#31 完成后改用其下载脚本。品牌版 Chrome 137+ 会忽略 `--load-extension`，不能替代）
    - 对照票的每一条 Acceptance criteria 逐条核对；无法自动验证的条目（例如需要真实授权弹窗、肉眼看图标）在票里评论说明"需用户人工验收"，不要假装完成。
 5. **收尾**：提交推送 → 在票里评论（做了什么、怎么验证的、提交哈希、遗留的人工验收项）→ 勾选已满足的验收项 → `gh issue close <n>`。重要取舍补记到 `docs/dev/DEVLOG.md`。
 
