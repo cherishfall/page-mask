@@ -31,7 +31,7 @@
       </div>
 
       <template v-if="phase === 'pick'">
-        <p class="pm-wiz-sub">点一下选中，再点一下取消，可以连续选多个。按 Esc 或「退出」离开。</p>
+        <p class="pm-wiz-sub">点一下选中，再点一下取消，可以连续选多个。按 Esc 或「取消」离开。</p>
         <p class="pm-wiz-sub" data-testid="pm-wiz-adjust-target">
           <template v-if="lastSel">
             选中的是里面的文字？用「选大一点」调整
@@ -47,6 +47,15 @@
             选小一点
           </button>
           <button
+            v-if="selEls.length > 0"
+            type="button"
+            class="pm-wiz-btn"
+            data-testid="pm-wiz-clear"
+            @click="clearSelection"
+          >
+            清空（{{ selEls.length }}）
+          </button>
+          <button
             type="button"
             class="pm-wiz-btn primary"
             data-testid="pm-wiz-preview"
@@ -55,7 +64,7 @@
           >
             预览（{{ selEls.length }}）
           </button>
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">退出</button>
+          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">取消</button>
         </div>
       </template>
 
@@ -80,7 +89,7 @@
         <div class="pm-wiz-btns">
           <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-continue" @click="backToPick">继续选择</button>
           <button type="button" class="pm-wiz-btn primary" data-testid="pm-wiz-save" @click="openSave">保存</button>
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">退出</button>
+          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">取消</button>
         </div>
       </template>
     </section>
@@ -137,7 +146,7 @@
       </template>
     </dialog>
 
-    <!-- 退出确认：模态；Esc = 继续编辑，焦点默认在「继续编辑」（N9） -->
+    <!-- 放弃确认：模态；Esc = 继续编辑，焦点默认在「继续编辑」（危险动作实底红，N9） -->
     <dialog
       ref="exitDlg"
       class="pm-wiz-dialog"
@@ -146,13 +155,13 @@
       @close="onExitClose"
     >
       <form method="dialog">
-        <h2 id="pm-exit-title">退出向导？</h2>
+        <h2 id="pm-exit-title">放弃这些设置？</h2>
         <p>
-          {{ phase === 'pick' ? `已经选了 ${selEls.length} 项，` : `${drafts.length} 项还没保存，` }}退出后不会保存，页面恢复原样。
+          {{ phase === 'pick' ? `已经选了 ${selEls.length} 项，` : `${drafts.length} 项还没保存，` }}放弃后不会保存，页面恢复原样。
         </p>
         <div class="pm-wiz-actions">
-          <button value="exit" class="pm-wiz-btn" data-testid="pm-wiz-exit-yes">退出</button>
-          <button value="cancel" class="pm-wiz-btn primary" autofocus data-testid="pm-wiz-exit-no">继续编辑</button>
+          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">继续编辑</button>
+          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">放弃</button>
         </div>
       </form>
     </dialog>
@@ -394,6 +403,11 @@ async function finish(saved: boolean) {
 
 function adjust(dir: 'bigger' | 'smaller') {
   pick.adjust(dir);
+}
+
+/** 工具条「清空」：去掉全部已选，仍留在点选模式（不想一个个点掉时的出口） */
+function clearSelection() {
+  pick.clear(); // 选择集变化会经 onSelectionChange 同步序号牌与工具条
 }
 
 // ---------- 页内标记 ----------

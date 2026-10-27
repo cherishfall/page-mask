@@ -114,8 +114,10 @@ button.primary:hover:not(:disabled) {
   background: var(--pm-accent-hover);
   border-color: var(--pm-accent-hover);
 }
+/* 危险动作：行内次级 = 红字红边；主危险（确认框里的那个）= 实底红。.ghost 的透明边框写在后面，不受影响 */
 button.danger {
   color: var(--pm-danger);
+  border-color: var(--pm-danger);
 }
 button.primary.danger {
   background: var(--pm-danger);

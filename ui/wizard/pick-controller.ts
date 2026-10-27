@@ -82,6 +82,14 @@ export class PickController {
     this.cb.onSelectionChange(this.selected);
   }
 
+  /** 工具条「清空」：一次去掉全部已选，仍留在点选模式 */
+  clear(): void {
+    if (this.selection.length === 0) return;
+    this.selection = [];
+    this.lastEl = null;
+    this.cb.onSelectionChange(this.selected);
+  }
+
   /** 工具条「选大一点 / 选小一点」：作用于最后选中的元素，原位替换（N13、N6） */
   adjust(dir: 'bigger' | 'smaller'): void {
     const el = this.last;

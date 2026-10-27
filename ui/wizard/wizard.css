@@ -36,8 +36,19 @@
   background: var(--pm-accent-hover);
   border-color: var(--pm-accent-hover);
 }
+/* 危险动作：行内次级 = 红字红边；确认框里的主危险 = 实底红（与扩展页面的 .danger / .primary.danger 同一套） */
 .pm-wiz-btn.danger {
   color: var(--pm-danger);
+  border-color: var(--pm-danger);
+}
+.pm-wiz-btn.primary.danger {
+  background: var(--pm-danger);
+  border-color: var(--pm-danger);
+  color: var(--pm-on-danger);
+}
+.pm-wiz-btn.primary.danger:hover:not(:disabled) {
+  background: var(--pm-danger);
+  border-color: var(--pm-danger);
 }
 .pm-wiz-btn.small {
   min-block-size: 24px;
