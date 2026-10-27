@@ -97,8 +97,10 @@ const ERROR_TEXT: Record<string, string> = {
   tabMismatch: '页面已经换了，请回到要设置的网站再点一次 PageMask',
   notGranted: '还没有拿到这个网站的访问权限，请再点一次并选择「允许」',
   injectFailed: '没能在这个页面启动，刷新页面后再试一次',
+  // denied / gestureLost 都用这句：能做的只有再点一次
+  denied: '需要允许访问这个网站，才能开启清爽模式。可以再点一次并选择「允许」',
+  gestureLost: '没能打开权限弹窗，请再点一次 PageMask',
 };
-const DENIED_TEXT = '需要允许访问这个网站，才能开启清爽模式。可以再点一次并选择「允许」';
 const TOGGLE_FAILED_TEXT = '没能切换清爽模式，请稍后再试一次';
 const EDIT_FAILED_TEXT = '没能打开编辑面板，刷新这个页面后再试一次';
 
@@ -166,15 +168,17 @@ async function toggleSwitch(e: Event) {
 
 /**
  * 让后台核对标签页、对账注册并向当前标签页注入内容脚本，可选随即打开向导（后台注入完成后直接通知，无需等待重试）。
- * 返回是否成功；失败时设置提示文字。
+ * 传 requestPermission 时由后台在用户手势的同一个回合里请求站点权限：权限框弹出会销毁 popup，
+ * 只有后台能跨过这一步继续把向导打开（见 core/background-engine.ts）。
  */
-async function enableSite(tabId: number, o: string, open?: OpenIntent): Promise<boolean> {
-  const res: EnableSiteResponse | undefined = await browser.runtime
-    .sendMessage({ t: 'enableSite', origin: o, tabId, open })
+async function enableSite(
+  tabId: number,
+  o: string,
+  opts: { open?: OpenIntent; requestPermission?: boolean } = {},
+): Promise<EnableSiteResponse | undefined> {
+  return browser.runtime
+    .sendMessage({ t: 'enableSite', origin: o, tabId, open: opts.open, requestPermission: opts.requestPermission })
     .catch(() => undefined);
-  if (res?.ok) return true;
-  message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
-  return false;
 }
 
 /** 主按钮：新站点授权并打开设置向导；已配置站点打开「添加元素」向导 */
@@ -182,30 +186,20 @@ function setup() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
-  if (!profile.value) {
-    // 权限请求必须直接处于点击手势的同步上下文中：这里之前不能有任何 await
-    const request = browser.permissions.request({ origins: [originPattern(o)] });
-    message.value = '';
-    busy.value = 'setup';
-    void (async () => {
-      try {
-        if (!(await request.catch(() => false))) {
-          message.value = DENIED_TEXT;
-          return;
-        }
-        // 新站点：保存向导前不写配置；取消向导时后台会收回这次授权
-        if (await enableSite(tabId, o, 'newSite')) window.close();
-      } finally {
-        busy.value = '';
-      }
-    })();
-    return;
-  }
   message.value = '';
   busy.value = 'setup';
   void (async () => {
     try {
-      if (await enableSite(tabId, o, 'addElement')) window.close();
+      const res = await enableSite(
+        tabId,
+        o,
+        profile.value ? { open: 'addElement' } : { open: 'newSite', requestPermission: true },
+      );
+      if (res?.ok) {
+        window.close();
+        return;
+      }
+      message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
     } finally {
       busy.value = '';
     }
@@ -217,17 +211,16 @@ function reauthorize() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
-  // 同上：第一条语句就请求权限，保留用户手势
-  const request = browser.permissions.request({ origins: [originPattern(o)] });
   message.value = '';
   busy.value = 'reauth';
   void (async () => {
     try {
-      if (!(await request.catch(() => false))) {
-        message.value = DENIED_TEXT;
+      const res = await enableSite(tabId, o, { requestPermission: true });
+      if (!res?.ok) {
+        message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
         return;
       }
-      if (await enableSite(tabId, o)) granted.value = true;
+      granted.value = true;
       await refresh();
     } finally {
       busy.value = '';
@@ -250,7 +243,7 @@ async function editSite() {
     try {
       await send();
     } catch {
-      if (!(await enableSite(tabId, o))) return;
+      if (!(await enableSite(tabId, o))?.ok) return;
       await send();
     }
     window.close();

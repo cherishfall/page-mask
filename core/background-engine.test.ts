@@ -64,6 +64,11 @@ function stubBrowser() {
       for (const o of origins) granted.delete(o);
       return true;
     }),
+    /** 默认「用户点了允许」：把来源记进已授权集合（真实权限框无法自动化，E2E 也只覆盖到这里） */
+    request: vi.fn(async ({ origins }: { origins: string[] }) => {
+      for (const o of origins) granted.add(o);
+      return true;
+    }),
     onAdded,
     onRemoved,
   };
@@ -369,6 +374,61 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(res.ok).toBe(false);
       expect(res.code).toBe('injectFailed');
       expect(res.error).toContain('Cannot access');
+    });
+  });
+
+  // ---------- 带权限请求的启用站点（#39：权限框会销毁 popup，所以整条链必须在后台跑完） ----------
+
+  describe('enableSite 带权限请求', () => {
+    it('用户允许：先请求权限，再注入并打开向导', async () => {
+      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true });
+
+      expect(res).toEqual({ ok: true });
+      expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      const calls = stubs.scripting.executeScript.mock.calls.map(([inj]) => inj);
+      expect(calls[0]).toEqual({ target: { tabId: siteTabId }, files: ['content-scripts/content.js'] });
+      expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['newSite'] }));
+    });
+
+    it('用户拒绝：回复 denied，什么都不注入', async () => {
+      stubs.permissions.request.mockResolvedValueOnce(false);
+
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true })) as {
+        ok: boolean;
+        code?: string;
+      };
+
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'denied' }));
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('后台已失去用户手势：回复 gestureLost，让 popup 提示再点一次', async () => {
+      stubs.permissions.request.mockRejectedValueOnce(new Error('This function must be called during a user gesture'));
+
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true })) as {
+        ok: boolean;
+        code?: string;
+      };
+
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'gestureLost' }));
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('网页里的内容脚本发来的请求：不碰权限请求，回复 forbidden', async () => {
+      const res = (await send(
+        { t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true },
+        DOC_SENDER,
+      )) as { ok: boolean; code?: string };
+
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'forbidden' }));
+      expect(stubs.permissions.request).not.toHaveBeenCalled();
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('不带 requestPermission 时不请求权限（已授权站点走这条）', async () => {
+      await configure(ORIGIN);
+      await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId });
+      expect(stubs.permissions.request).not.toHaveBeenCalled();
     });
   });
 

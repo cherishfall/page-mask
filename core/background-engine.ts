@@ -133,6 +133,35 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   // ---------- 启用站点 ----------
 
+  /**
+   * 先请求站点权限再启用。
+   * **这一行 permissions.request 必须同步执行**：用户手势从 popup / 管理页跨 runtime.sendMessage
+   * 传到后台时只在同一个同步回合内有效，之前任何 await 都会让请求以「no user gesture」失败。
+   * 权限框弹出会销毁 popup，所以「拿到权限之后」的一切都必须在这里跑完，不能指望 popup 继续。
+   */
+  function requestPermissionThenEnable(msg: EnableSiteRequest): Promise<Reply> {
+    let requested: Promise<boolean>;
+    try {
+      requested = browser.permissions.request({ origins: [originPattern(msg.origin)] });
+    } catch (e) {
+      if (/gesture/i.test(String(e))) {
+        return Promise.resolve({ ok: false, code: 'gestureLost', error: String(e) } satisfies EnableSiteResponse);
+      }
+      return Promise.resolve({ ok: false, code: 'notGranted', error: String(e) } satisfies EnableSiteResponse);
+    }
+    return requested.then(
+      (granted) =>
+        granted ? enableSite(msg) : ({ ok: false, code: 'denied', error: 'user denied site access' } satisfies EnableSiteResponse),
+      // 手势丢失可能是同步抛出，也可能是 promise 拒绝；两者都要让 popup 知道可以「再点一次」
+      (e: unknown) =>
+        ({
+          ok: false,
+          code: /gesture/i.test(String(e)) ? 'gestureLost' : 'notGranted',
+          error: String(e),
+        }) satisfies EnableSiteResponse,
+    );
+  }
+
   async function enableSite(msg: EnableSiteRequest): Promise<EnableSiteResponse> {
     const { origin, tabId } = msg;
     const open: OpenIntent | undefined = msg.open === 'newSite' || msg.open === 'addElement' ? msg.open : undefined;
@@ -383,7 +412,14 @@ export function createBackground({ browser }: BackgroundDeps): void {
   }
 
   browser.runtime.onMessage.addListener((msg: BgRequest, sender, sendResponse) => {
-    const pending = handle(msg, sender);
+    // 需要请求权限的启用站点：必须在这里直接发起请求，不能先走 handle()（async 函数里的第一个 await
+    // 就会让用户手势失效）。fromExtensionPage 是同步的，可以先判来源。
+    const pending =
+      msg?.t === 'enableSite' && msg.requestPermission
+        ? fromExtensionPage(sender)
+          ? requestPermissionThenEnable(msg)
+          : Promise.resolve(FORBIDDEN)
+        : handle(msg, sender);
     if (!pending) return false; // 不是给后台的消息（例如发往内容脚本的），不占用回复通道
     pending.then(sendResponse, (e: unknown) => sendResponse({ ok: false, error: String(e) }));
     return true; // 异步回复：保持通道直到 sendResponse

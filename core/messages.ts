@@ -18,10 +18,26 @@ export interface EnableSiteRequest {
   tabId: number;
   /** 注入后直接打开的向导模式；不传则只注入 */
   open?: OpenIntent;
+  /**
+   * 先向用户请求这个站点的访问权限，再继续。
+   * 请求必须由后台在消息监听器的第一个同步回合里发起：popup 会在权限框弹出时被销毁，
+   * 而用户手势可以跨 runtime.sendMessage 传到后台（只在同一个同步回合内有效）。
+   */
+  requestPermission?: boolean;
 }
 
-/** 失败原因：tabMismatch = 标签页已不在该站点；notGranted = 没有站点授权；injectFailed = 页面拒绝注入 */
-export type EnableSiteErrorCode = 'tabMismatch' | 'notGranted' | 'injectFailed' | 'forbidden';
+/**
+ * 失败原因：tabMismatch = 标签页已不在该站点；notGranted = 没有站点授权；
+ * injectFailed = 页面拒绝注入；denied = 用户在权限框上拒绝；
+ * gestureLost = 后台调用权限请求时已不在用户手势内（popup 可退回自己发起，见 popup 的兜底分支）
+ */
+export type EnableSiteErrorCode =
+  | 'tabMismatch'
+  | 'notGranted'
+  | 'injectFailed'
+  | 'forbidden'
+  | 'denied'
+  | 'gestureLost';
 
 export interface EnableSiteResponse {
   ok: boolean;
