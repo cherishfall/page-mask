@@ -3,10 +3,12 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
+> 最后更新：2026-10-27 · 对应构建 **0.2.0**（`.output/page-mask-0.2.0-chrome.zip`）
+
 ## 0. 提交前清单
 
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）
-- [x] 版本号已改（`package.json` → `0.2.0`，产物 `page-mask-0.2.0-chrome.zip`，22 个文件），`CHANGELOG.md` 有对应版本的双语条目
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.2.0-chrome.zip`，22 个文件、115 KB
+- [x] 版本号已改（`package.json` → `0.2.0`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.2.0` 已推送
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [x] 5 张截图与宣传图块已按 §8 重拍（`docs/store-assets/`，全部 1280×800 / 440×280）
 - [x] §6 的测试步骤已在真实 Chrome + Wikipedia 首页走通（结果见 §6 末）
@@ -42,7 +44,8 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上让你分�
 • 保存前预览：每个元素都能单独换收起方式，满意再保存
 • 生效范围：整站，或只在 / 排除某一类页面
 • 标签页标题与图标：可为该网站自定义标签页标题和图标
-• 每个网站一个开关：页面角落的小胶囊一点即可切回原样，同一网站的所有标签页一起切换
+• 每个网站一个开关：页面右下角的小胶囊显示当前是「清爽」还是「原样」，点一下即可切换，同一网站的所有标签页一起切换
+• 页面内编辑规则：改收起方式、改生效范围、重选元素、删除（5 秒内可撤销）、编辑选择器原文
 • 失效提醒：网站改版导致某条规则找不到目标时，会提醒你重新选择
 • 导出 / 导入：全部配置导出为一个文件，换电脑后导入
 
@@ -50,7 +53,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上让你分�
 1. 打开想变清爽的网站，点工具栏的 PageMask 图标
 2. 点「为当前网站开启清爽模式」，在 Chrome 的授权提示里点「允许」
 3. 点选要收起的元素 →「预览」→「保存」
-4. 想看原样，点页面右下角的小胶囊；想改规则，点它的「⋯」→「编辑规则」，或从图标菜单点「编辑当前网站」
+4. 想看原样，点页面右下角小胶囊上的「清爽 / 原样」；想改规则，点胶囊上的「⋯」→「编辑规则」，或从工具栏图标里点「编辑当前网站」
 
 【隐私与权限】
 • 只对你添加的网站生效；没添加的网站，PageMask 不会运行任何内容
@@ -75,7 +78,8 @@ FEATURES
 • Preview before saving: change the hiding method per element, then save
 • Scope: the whole site, only a type of page, or everything except a type of page
 • Tab title & icon: set a custom tab title and icon for the site
-• One switch per site: a small on-page capsule flips back to the original page; all tabs of that site switch together
+• One switch per site: the small capsule at the bottom-right shows 「清爽」 (Clean) or 「原样」 (Original); one click flips it, and all tabs of that site switch together
+• On-page rule editor: change the hiding method or scope, re-pick an element, delete (undo within 5 seconds), or edit the raw selectors
 • Broken-rule notices: if a site redesign means a rule no longer finds its target, you're asked to re-pick it
 • Export / import: move all your settings to another computer as one file
 
@@ -83,7 +87,7 @@ HOW TO USE
 1. Open the site and click the PageMask toolbar icon
 2. Click 「为当前网站开启清爽模式」 (Enable clean mode for this site) and choose Allow in Chrome's prompt
 3. Click the elements to hide → 预览 (Preview) → 保存 (Save)
-4. To see the original page, click the small capsule at the bottom-right; to edit rules, click 「⋯」→「编辑规则」 (Edit rules) on it, or 「编辑当前网站」 (Edit this site) from the toolbar icon menu
+4. To see the original page, click 「清爽 / 原样」 on the small capsule at the bottom-right; to edit rules, click 「⋯」→「编辑规则」 (Edit rules) on the capsule, or 「编辑当前网站」 (Edit this site) from the toolbar icon
 
 PRIVACY & PERMISSIONS
 • Runs only on sites you add. On every other site, PageMask runs nothing
@@ -138,8 +142,8 @@ No network requests, no analytics, no remote code, no bundled site rules. All da
 Test steps (no login needed):
 1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click the blue button, choose Allow.
 2. The setup wizard appears. Click on the "From today's featured article" box (or the picture inside it — whichever you prefer to hide) → 「预览」 (Preview) → 「保存」 (Save) → 「保存」 (Save).
-3. The picked element is hidden and the tab title changes to "Reading" («阅读» when Chrome's UI language is Chinese). Click the left part of the small capsule at the bottom-right to switch back to the original page: the element reappears and the title reverts.
-4. Click 「⋯」 on the capsule → 「编辑规则」 (Edit rules) opens the on-page rule editor; press Esc to close it.
+3. The picked element is hidden and the tab title changes to "Reading" («阅读» when Chrome's UI language is Chinese). Click 「清爽 / 原样」 (Clean / Original, the left part of the small capsule at the bottom-right) to switch back: the element reappears and the title reverts.
+4. Click 「⋯」 on the capsule. The menu has two items: 「编辑规则」 (Edit rules — opens the on-page rule editor; press Esc to close it) and 「按钮归位」 (Reset button position — only affects where the capsule sits). The same editor is also reachable from the popup via 「编辑当前网站」 (Edit this site).
 5. Toolbar icon → 「管理全部网站」 (Manage all sites) → 「一键清空」 (Reset) removes that site's settings and its permission.
 ```
 
@@ -149,7 +153,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
-| 0.2.0 | 2026-10-27 | 上架前质量加固：遮罩覆盖、设置向导、编辑规则、悬浮按钮的可用性修复，无障碍与对比度，文档一致性。详见 `CHANGELOG.md` |
+| 0.2.0 | 2026-10-27 | 上架前质量加固：遮罩覆盖、设置向导、编辑规则、悬浮按钮的可用性修复，无障碍与对比度，文档一致性。构建产物 `.output/page-mask-0.2.0-chrome.zip`（22 个文件 / 115 KB），tag `v0.2.0`。详见 `CHANGELOG.md` |
 | 0.1.0 | 2026-10-26 | 首个功能完整版本（未提交商店） |
 
 ## 8. 截图与素材清单
@@ -182,7 +186,18 @@ Test steps (no login needed):
 - iframe 与 shadow DOM 内部的元素暂时无法点选。
 - 标签页悬停缩略图、浏览器历史记录里的标题是浏览器自身行为，扩展改不到。
 
-## 10. review-checklist 自查结论
+## 10. 审核员可能问的问题（提交前先想好答案）
+
+| 问题 | 回答 |
+|---|---|
+| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「为当前网站开启清爽模式」并选「允许」后，才按单个 origin 请求，代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「一次授权全部」也只是一个用户手势内的多 origin 请求，且只包含用户自己导入/已配置的站点）。 |
+| 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
+| 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。不改网页原有 DOM、不发请求、不注入远程代码。 |
+| 会不会收集浏览记录？ | 不收集。网站地址存在本机 `chrome.storage.local`（用户配置的一部分），不上传、不同步（没用 `storage.sync`）。 |
+| 为什么能改标签页标题/图标？ | 这是产品功能之一（`document.title` + `link[rel=icon]`），只对用户已开启且开关为「清爽」的网站生效；切回原样或卸载后立刻还原。 |
+| 关闭扩展后页面会残留样式吗？ | 不会：切回原样、一键清空、卸载都会撤掉注入的样式；E2E 覆盖了「清空后已打开页面立即恢复原样」。 |
+
+## 11. review-checklist 自查结论
 
 按 `chrome-extensions` skill 的 pre-publish checklist 逐项过了一遍（0.2.0，2026-10-27）：
 

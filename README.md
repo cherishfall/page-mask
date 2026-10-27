@@ -41,17 +41,35 @@
 
 ### 安装（开发者模式自用）
 
+需要 **Chrome 116 或更高版本**。
+
 1. 下载或克隆本仓库
-2. `npm install && npm run build`
+2. `npm ci && npm run build`（有 `package-lock.json`，用 `npm ci` 装出来的依赖与发布版一致）
 3. 打开 Chrome → 地址栏输入 `chrome://extensions` → 打开右上角「开发者模式」
 4. 点「加载已解压的扩展程序」→ 选择项目的 `.output/chrome-mv3` 目录
+
+### 本地自测
+
+1. 按上面的步骤加载后，打开任意你想变清爽的网站，点工具栏的 PageMask 图标（建议先把它固定到工具栏：拼图图标 → 图钉）
+2. 改完代码重新 `npm run build` 后，回到 `chrome://extensions` 点这个扩展卡片上的**刷新**按钮；**已经打开的页面要再刷新一次**——内容脚本只在页面加载时注入
+3. 想从头再来：管理页对该网站点「一键清空」（同时收回授权），或直接在 `chrome://extensions` 移除扩展
+4. 出问题时先看两处日志：页面的 DevTools Console（内容脚本的报错会打在这里）、`chrome://extensions` 里本扩展的「服务工作进程」→「检查」
+
+之前装过 0.1.0 的话，对同一个目录点刷新即可，旧配置会保留；如果旧规则看起来不对，清空后重新设置一次最省事。
 
 ### 使用方法
 
 1. 打开想变清爽的网站，点工具栏的 PageMask 图标，点「为当前网站开启清爽模式」，在 Chrome 的授权提示里选「允许」
 2. 点选页面上要收起的东西 →「预览」→「保存」
-3. 想临时看原样，点页面右下角的小胶囊；想改规则，点胶囊上的「⋯」→「编辑规则」，或从 popup 点「编辑当前网站」
+3. 想临时看原样，点页面右下角的小胶囊里的「清爽 / 原样」；想改规则，点胶囊上的「⋯」→「编辑规则」，或从 popup 点「编辑当前网站」
 4. 所有网站的管理（标签页标题 / 图标、一键清空、导出导入）在 popup 的「管理全部网站」
+
+### 已知限制
+
+- 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
+- iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
+- 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
+- 界面目前是简体中文（扩展名称与简介有英文包，按浏览器语言切换）
 
 ### 隐私与权限说明（Chrome 应用商店审核适用）
 
@@ -67,7 +85,7 @@
 ### 开发
 
 ```bash
-npm install
+npm ci             # 按 lockfile 精确安装
 npm run dev        # 开发模式
 npm run build      # 构建到 .output/chrome-mv3
 npm run zip        # 打包商店上传 zip
@@ -111,17 +129,35 @@ In one line: **a clean page without learning rules or switching layouts — and 
 
 ### Install (developer mode)
 
+Requires **Chrome 116 or later**.
+
 1. Clone this repo
-2. `npm install && npm run build`
+2. `npm ci && npm run build` (there is a `package-lock.json`; `npm ci` installs exactly what the release used)
 3. Open `chrome://extensions`, enable **Developer mode**
 4. **Load unpacked** → select the project's `.output/chrome-mv3` directory
+
+### Local testing
+
+1. After loading, open any site you want to declutter and click the PageMask toolbar icon (pin it first if you like: puzzle icon → pin)
+2. After changing code and running `npm run build` again, click the **reload** button on the extension card in `chrome://extensions`; **reload open pages too** — the content script is only injected when a page loads
+3. To start over: 「一键清空」 (Reset) that site in the management page (this also revokes its permission), or remove the extension from `chrome://extensions`
+4. When something looks wrong, check two places: the page's DevTools Console (content-script errors land there) and 「服务工作进程」 → 「检查」 (service worker → Inspect) on the extension card
+
+If you had 0.1.0 loaded, just hit reload on the same folder — existing settings are kept. If old rules look off, reset that site and set it up again.
 
 ### How to use
 
 1. Open the site you want to declutter, click the PageMask toolbar icon, click 「为当前网站开启清爽模式」 (Enable clean mode for this site) and choose Allow in Chrome's prompt
 2. Click the elements to hide → 「预览」 (Preview) → 「保存」 (Save)
-3. To see the original page, click the small capsule at the bottom-right; to edit rules, click 「⋯」→「编辑规则」 (Edit rules) on the capsule, or 「编辑当前网站」 (Edit this site) in the popup
+3. To see the original page, use 「清爽 / 原样」 (Clean / Original) on the small capsule at the bottom-right; to edit rules, click 「⋯」→「编辑规则」 (Edit rules) on the capsule, or 「编辑当前网站」 (Edit this site) in the popup
 4. All site management (tab title / icon, one-click reset, export / import) is under 「管理全部网站」 (Manage all sites) in the popup
+
+### Known limitations
+
+- Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
+- Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
+- Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them
+- The in-page UI is Simplified Chinese for now (the extension name and description have an English locale and follow the browser language)
 
 ### Privacy & permissions (for Chrome Web Store review)
 
@@ -137,7 +173,7 @@ In one line: **a clean page without learning rules or switching layouts — and 
 ### Development
 
 ```bash
-npm install
+npm ci             # install exactly what the lockfile pins
 npm run dev        # dev mode
 npm run build      # build into .output/chrome-mv3
 npm run zip        # package a store upload zip
