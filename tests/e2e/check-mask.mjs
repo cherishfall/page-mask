@@ -163,13 +163,14 @@ async function main() {
     await page.setViewport({ width: 1000, height: 700 });
     await page.goto(`${ORIGIN}/blank`, { waitUntil: 'load' });
     await sendToBackground(ext.control, { t: 'enableSite', origin: ORIGIN, tabId: await tabIdOf(ext.control, `${ORIGIN}/*`) });
-    await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    // 冷启动：SW 刚被唤醒 + 内容脚本首次注入，机器忙时 8 秒会不够（实测偶发超时）
+    await page.waitForSelector(TOGGLE_HOST, { timeout: 15000 });
 
     // ===================== 后加载元素 + 滚动跟手 =====================
     console.log('\n--- 后加载元素与滚动跟手 ---');
     await page.goto(`${ORIGIN}/late`, { waitUntil: 'load' });
-    await waitFor(page, '内容脚本注入（悬浮按钮出现）', (h) => !!document.querySelector(h), [TOGGLE_HOST]);
-    await waitCovered(page, '.inner-ad', '滚动容器里的元素被遮住');
+    await waitFor(page, '内容脚本注入（悬浮按钮出现）', (h) => !!document.querySelector(h), [TOGGLE_HOST], { timeout: 15000 });
+    await waitCovered(page, '.inner-ad', '滚动容器里的元素被遮住', { timeout: 15000 });
     const covInner0 = await page.evaluate(coverage, '.inner-ad', MASK_HOST);
     check(covInner0 !== null && covInner0 <= 1, `已有元素被遮住（偏差 ${covInner0}px）`);
     check(!(await page.$('.late-ad')), '对照：2 秒前后加载元素还没出现');
