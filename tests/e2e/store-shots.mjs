@@ -297,7 +297,7 @@ try {
   const mp = await browser.newPage();
   await mp.setViewport({ width: 1280, height: 800 });
   await mp.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
-  await mp.waitForSelector('.site', { timeout: 8000 });
+  await mp.waitForSelector('.site-row', { timeout: 8000 });
   await new Promise((r) => setTimeout(r, 600));
   await shot(mp, path.join(OUT, 'screenshot-5-management.png'));
   await mp.close();

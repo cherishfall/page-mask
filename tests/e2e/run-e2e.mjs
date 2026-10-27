@@ -409,15 +409,26 @@ async function main() {
     console.log('\n--- 管理页与引导页 ---');
     const mPage = await browser.newPage();
     await mPage.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
-    await mPage.waitForSelector('.site', { timeout: 5000 });
+    await mPage.waitForSelector('.site-row', { timeout: 5000 });
     const mgmt = await mPage.evaluate(() => ({
-      host: document.querySelector('.site .host')?.textContent ?? '',
-      state: document.querySelector('.site .state')?.textContent ?? '',
-      hasExport: !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
+      host: document.querySelector('.site-row .site-host')?.textContent ?? '',
+      state: document.querySelector('.site-row .site-meta')?.textContent ?? '',
     }));
     check(mgmt.host.includes('127.0.0.1'), `管理页列出站点（${mgmt.host}）`);
     check(mgmt.state.includes('已收起'), `管理页显示收起项数与状态（${mgmt.state.trim()}）`);
-    check(mgmt.hasExport, '管理页有导出/导入');
+    // 导出 / 导入搬到「设置」tab：切过去再查
+    await mPage.evaluate(() => {
+      location.hash = '#/settings';
+    });
+    await mPage.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
+    const hasExport = await mPage.evaluate(() =>
+      !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
+    );
+    check(hasExport, '设置 tab 里有导出/导入');
+    await mPage.evaluate(() => {
+      location.hash = '#/sites';
+    });
+    await mPage.waitForSelector('.site-row', { timeout: 3000 });
     await shot(mPage, 'management');
     await mPage.close();
 
@@ -669,15 +680,8 @@ async function main() {
     await popup.waitForSelector(tid('pm-popup-reauth'), { timeout: 5000 });
     check(true, 'popup 显示「重新授权」');
     check(!(await popup.$(tid('pm-popup-setup'))), '待授权时不显示「添加要去掉的元素」');
-    // 权限弹窗无法自动化：替换掉 permissions.request，只断言点击时（同步）发起了正确的请求
-    await stubPermissionRequest(popup);
-    await popup.click(tid('pm-popup-reauth'));
-    await waitFor(popup, '点击后发起权限请求', () => window.__pmRequests.length > 0);
-    const reqs = await popup.evaluate(() => window.__pmRequests);
-    check(
-      JSON.stringify(reqs) === JSON.stringify([{ origins: [`${ORIGIN}/*`] }]),
-      `「重新授权」请求的是本站权限（${JSON.stringify(reqs)}）`,
-    );
+    // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），popup 里已经没有可替换的
+    // permissions.request；真实权限弹窗无法自动化，这里只验证「允许之后恢复生效」这一半。
     await popup.close().catch(() => undefined);
     // 「允许」改用测试手段授予（重载 + manifest），之后对账让站点恢复生效
     await grantPermissions(ext, [ORIGIN]);
@@ -734,10 +738,13 @@ async function main() {
     );
     await open1.close();
     await resetInManagement(mgmtPage, ORIGIN2);
-    await waitFor(mgmtPage, '两个站点都已清空', () => document.querySelectorAll('.site').length === 0);
+    await waitFor(mgmtPage, '两个站点都已清空', () => document.querySelectorAll('.site-row').length === 0);
 
     console.log('\n--- 导入后一次授权全部 ---');
     await importInManagement(mgmtPage, exported);
+    await mgmtPage.evaluate(() => {
+      location.hash = '#/sites';
+    });
     await mgmtPage.waitForSelector(tid('pm-mgmt-authorize-all'), { timeout: 5000 });
     const pendingCount = await mgmtPage.$$eval(tid('pm-mgmt-pending'), (els) => els.length);
     check(pendingCount === 2, `导入后两个站点都显示「待授权」（${pendingCount}）`);
@@ -761,7 +768,7 @@ async function main() {
     await expectDisguisedInNewPage(ORIGIN, '授权后导入的站点 1 生效');
     await expectDisguisedInNewPage(ORIGIN2, '授权后导入的站点 2 生效');
     mgmtPage = await openManagement();
-    await waitFor(mgmtPage, '管理页列出两个站点', () => document.querySelectorAll('.site').length === 2);
+    await waitFor(mgmtPage, '管理页列出两个站点', () => document.querySelectorAll('.site-row').length === 2);
     check(!(await mgmtPage.$(tid('pm-mgmt-pending'))), '授权后管理页不再显示「待授权」');
     await mgmtPage.close();
 
@@ -845,13 +852,18 @@ async function main() {
     async function openManagement() {
       const m = await browser.newPage();
       await m.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
-      await m.waitForSelector('.page h1', { timeout: 5000 });
+      await m.waitForSelector('.masthead h1', { timeout: 5000 });
       return m;
     }
 
     /** 点「导出配置」，截获生成的文件内容（不真的下载到磁盘） */
     async function exportFromManagement(m) {
       await m.bringToFront();
+      // 导出在「设置」tab
+      await m.evaluate(() => {
+        location.hash = '#/settings';
+      });
+      await m.waitForSelector('xpath/.//button[normalize-space()="导出配置"]', { timeout: 3000 });
       await m.evaluate(() => {
         window.__pmBlobs = [];
         const orig = URL.createObjectURL.bind(URL);
@@ -864,8 +876,7 @@ async function main() {
           if (!this.download) click.call(this);
         };
       });
-      const btn = await m.waitForSelector('xpath/.//button[normalize-space()="导出配置"]', { timeout: 3000 });
-      await btn.click();
+      await m.click('xpath/.//button[normalize-space()="导出配置"]');
       await waitFor(m, '导出文件生成', () => window.__pmBlobs.length > 0);
       return JSON.parse(await m.evaluate(() => window.__pmBlobs[0].text()));
     }
@@ -874,18 +885,27 @@ async function main() {
     async function resetInManagement(m, origin) {
       // 后台标签页里不跑动画帧，puppeteer 的点击会一直等元素稳定；先切到前台
       await m.bringToFront();
-      const btn = await m.waitForSelector(`xpath/.//section[@data-origin="${origin}"]//button[normalize-space()="一键清空"]`, {
+      // 一键清空在网站列表里
+      await m.evaluate(() => {
+        location.hash = '#/sites';
+      });
+      const btn = await m.waitForSelector(`xpath/.//li[@data-origin="${origin}"]//button[normalize-space()="一键清空"]`, {
         timeout: 5000,
       });
       await btn.click();
       const yes = await m.waitForSelector('xpath/.//button[normalize-space()="确认清空"]', { timeout: 3000 });
       await yes.click();
-      await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`section[data-origin="${o}"]`), [origin]);
+      await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
     }
 
     /** 通过管理页的文件选择框导入（默认合并模式） */
     async function importInManagement(m, bundle) {
       await m.bringToFront();
+      // 导入在「设置」tab
+      await m.evaluate(() => {
+        location.hash = '#/settings';
+      });
+      await m.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
       const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pm-e2e-import-')), 'pagemask-config.json');
       fs.writeFileSync(file, JSON.stringify(bundle));
       try {

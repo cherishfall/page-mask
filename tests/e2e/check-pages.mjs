@@ -301,17 +301,24 @@ async function main() {
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '为当前网站开启清爽模式', '新站点显示「为当前网站开启清爽模式」');
-    await stubDeferredRequest(popup);
+    // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），
+    // 这里替换 popup 的消息通道，验证「点击后进入处理中」与「后台回复 denied 时的界面表现」。
+    await popup.evaluate(() => {
+      chrome.runtime.sendMessage = (msg) =>
+        msg && msg.t === 'enableSite'
+          ? new Promise((res) => {
+              window.__pmReply = res;
+            })
+          : Promise.resolve(undefined);
+    });
     await popup.click(tid('pm-popup-setup'));
     await waitFor(popup, '处理中状态', (s) => document.querySelector(s).disabled, [tid('pm-popup-setup')]);
     const busy = await popup.evaluate((s) => ({
       text: document.querySelector(s).textContent.trim(),
       ariaBusy: document.querySelector('main').getAttribute('aria-busy'),
-      reqs: window.__pmRequests,
     }), tid('pm-popup-setup'));
     check(busy.text === '正在打开…' && busy.ariaBusy === 'true', `处理中：按钮禁用、显示「${busy.text}」、aria-busy=${busy.ariaBusy}`);
-    check(JSON.stringify(busy.reqs) === JSON.stringify([{ origins: [`${ORIGIN2}/*`] }]), '点击时请求的是本站权限');
-    await popup.evaluate(() => window.__pmResolve(false));
+    await popup.evaluate(() => window.__pmReply({ ok: false, code: 'denied' }));
     await popup.waitForSelector(tid('pm-popup-error'), { timeout: 5000 });
     const denied = await popup.evaluate((e, b) => ({
       text: document.querySelector(e).textContent,
