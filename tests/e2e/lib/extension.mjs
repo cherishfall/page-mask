@@ -23,6 +23,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { REPO_ROOT, launchWithExtension } from './browser.mjs';
 import { CheckError, poll } from './harness.mjs';
+import { removeTempDir } from './tmp.mjs';
 
 export const BUILD_DIR = path.join(REPO_ROOT, '.output/chrome-mv3');
 export const CONTROL_PAGE = 'e2e-control.html';
@@ -49,7 +50,7 @@ export function prepareExtension({ hostOrigins = [], hostPatterns = [], extraPer
   if (extraPermissions.length) manifest.permissions = [...new Set([...(manifest.permissions ?? []), ...extraPermissions])];
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(dir, CONTROL_PAGE), '<!doctype html><meta charset="utf-8"><title>PageMask E2E 控制页</title>');
-  return { dir, manifestPath, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
+  return { dir, manifestPath, cleanup: () => removeTempDir(dir) };
 }
 
 /**

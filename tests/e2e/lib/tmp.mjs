@@ -13,3 +13,15 @@ export const PROJECT_TMP = path.resolve(path.dirname(fileURLToPath(import.meta.u
 
 fs.mkdirSync(PROJECT_TMP, { recursive: true });
 if (!process.env.PM_KEEP_SYSTEM_TMP) process.env.TMPDIR = PROJECT_TMP;
+
+/**
+ * 尽力删除临时目录：失败只打印一行警告，不让收尾动作影响用例结论。
+ * （某些受管环境会拦截一次删除大量文件的调用，此时残留目录仍在 tmp/ 里，下次手动清即可）
+ */
+export function removeTempDir(dir) {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch (e) {
+    console.warn(`  清理临时目录失败（可忽略，留在 tmp/）：${path.basename(dir)}（${e.message}）`);
+  }
+}

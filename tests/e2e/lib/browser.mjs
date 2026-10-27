@@ -10,12 +10,14 @@
  *   CFT_BASE_URL   下载源，默认 Google 官方存储；国内可用
  *                  https://registry.npmmirror.com/-/binary/chrome-for-testing
  *   HEADFUL=1      有界面运行（默认新 headless，扩展可正常加载）
+ *   CHROME_ARGS    追加命令行参数（空格分隔），例如受限沙箱里跑要加 `--no-sandbox --disable-gpu`：
+ *                  外层沙箱不允许 Chrome 建立自己的进程沙箱，GPU 进程会反复崩溃拖死浏览器
  *
  * 用法：
  *   const { browser, cleanup } = await launchWithExtension({ extDir });
  *   try { ... } finally { await cleanup(); }
  */
-import './tmp.mjs'; // 临时文件统一落到 <仓库>/tmp/
+import { removeTempDir } from './tmp.mjs'; // 临时文件统一落到 <仓库>/tmp/
 import { Browser, detectBrowserPlatform, install, computeExecutablePath } from '@puppeteer/browsers';
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
@@ -75,6 +77,7 @@ export async function resolveChrome() {
 export async function launchWithExtension({ extDir, headless = !process.env.HEADFUL, args = [] } = {}) {
   const executablePath = await resolveChrome();
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-e2e-profile-'));
+  const extraArgs = process.env.CHROME_ARGS ? process.env.CHROME_ARGS.split(/\s+/).filter(Boolean) : [];
   const browser = await puppeteer.launch({
     executablePath,
     headless,
@@ -85,13 +88,13 @@ export async function launchWithExtension({ extDir, headless = !process.env.HEAD
     // 注意：不用 enableExtensions: [dir]（puppeteer 25 内部没有等待安装完成），改为手动 installExtension
     enableExtensions: true,
     defaultViewport: { width: 1280, height: 800 },
-    args: ['--no-first-run', '--no-default-browser-check', '--window-size=1280,900', ...args],
+    args: [...extraArgs, '--no-first-run', '--no-default-browser-check', '--window-size=1280,900', ...args],
   });
   await enableDeveloperMode(browser);
   const extensionId = await browser.installExtension(extDir);
   const cleanup = async () => {
     await browser.close().catch(() => undefined);
-    fs.rmSync(userDataDir, { recursive: true, force: true });
+    removeTempDir(userDataDir);
   };
   return { browser, extensionId, extOrigin: `chrome-extension://${extensionId}`, userDataDir, cleanup };
 }
