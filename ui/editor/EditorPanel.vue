@@ -38,18 +38,19 @@
 
         <fieldset class="pm-ed-field">
           <legend>收起方式</legend>
+          <!-- 原生单选组（同一 name = 一组）：方向键可切换，读屏报「3 选 1」；视觉上仍是一排分段 -->
           <div class="pm-ed-seg">
-            <button
-              v-for="s in STRATEGY_LIST"
-              :key="s"
-              type="button"
-              class="pm-ed-btn"
-              :aria-pressed="rule.strategy === s"
-              :data-testid="`pm-ed-strategy-${rule.id}-${s}`"
-              @click="setStrategy(rule, s)"
-            >
-              {{ STRATEGY_LABEL[s] }}
-            </button>
+            <label v-for="s in STRATEGY_LIST" :key="s" class="pm-ed-seg-opt">
+              <input
+                type="radio"
+                :name="`pm-ed-strategy-${rule.id}`"
+                :value="s"
+                :checked="rule.strategy === s"
+                :data-testid="`pm-ed-strategy-${rule.id}-${s}`"
+                @change="setStrategy(rule, s)"
+              />
+              <span>{{ STRATEGY_LABEL[s] }}</span>
+            </label>
           </div>
         </fieldset>
 
@@ -134,12 +135,11 @@ import { healthMessage } from '@/core/health';
 import { selectorHitsElement } from '@/core/selectors';
 import { isSafeSelector } from '@/core/validate';
 import { STRATEGY_LABEL, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
+import { useRuleUndo } from '../rule-undo';
 import { adoptEditorStyles } from './editor-styles';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER_MANUAL = { popover: 'manual' } as Record<string, string>;
-/** 删除后多久内可以撤销 */
-const UNDO_MS = 5000;
 
 const props = defineProps<{
   origin: string;
@@ -158,9 +158,6 @@ const dlg = ref<HTMLDialogElement | null>(null);
 const profile = ref<SiteProfile | null>(null);
 const advanced = reactive<Record<string, string>>({});
 const advError = reactive<Record<string, string>>({});
-/** 待撤销的删除：规则本体 + 原位置（撤销时放回原处） */
-const undo = ref<{ rule: HideRule; index: number; name: string } | null>(null);
-let undoTimer: ReturnType<typeof setTimeout> | null = null;
 
 const pattern = computed(() => deriveScopePattern(props.page.url));
 const scopeHint = computed(() => scopeUnavailableHint(props.page.url));
@@ -169,6 +166,13 @@ const rules = computed(() => {
   const p = profile.value;
   if (!p) return [] as HideRule[];
   return rulesApplicableAt(p.hideRules, props.page.url);
+});
+
+/** 删除与撤销（与管理页的站点设置共用同一套逻辑与 5 秒计时，core/rule-undo.ts） */
+const { pending: undo, remove: removeRuleById, undo: undoDelete } = useRuleUndo((update) => {
+  void persist((draft) => {
+    draft.hideRules = update(draft.hideRules);
+  });
 });
 
 onMounted(async () => {
@@ -188,7 +192,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   browser.storage.onChanged.removeListener(onChanged);
   document.removeEventListener('keydown', onDocKeyDown, true);
-  if (undoTimer) clearTimeout(undoTimer);
 });
 
 function onDocKeyDown(e: KeyboardEvent) {
@@ -241,28 +244,7 @@ function setScope(rule: HideRule, type: 'all' | 'include' | 'exclude') {
 
 /** 删除：立即从存储移除，约 5 秒内可撤销（撤销放回原位置） */
 function removeRule(rule: HideRule) {
-  const p = profile.value;
-  if (!p) return;
-  const index = p.hideRules.findIndex((r) => r.id === rule.id);
-  if (index < 0) return;
-  undo.value = { rule: JSON.parse(JSON.stringify(rule)) as HideRule, index, name: rule.elementName };
-  if (undoTimer) clearTimeout(undoTimer);
-  undoTimer = setTimeout(() => (undo.value = null), UNDO_MS);
-  void persist((draft) => {
-    draft.hideRules = draft.hideRules.filter((r) => r.id !== rule.id);
-  });
-}
-
-function undoDelete() {
-  const pending = undo.value;
-  if (!pending) return;
-  undo.value = null;
-  if (undoTimer) clearTimeout(undoTimer);
-  undoTimer = null;
-  void persist((p) => {
-    const at = Math.min(pending.index, p.hideRules.length);
-    p.hideRules.splice(at, 0, JSON.parse(JSON.stringify(pending.rule)) as HideRule);
-  });
+  removeRuleById(profile.value?.hideRules ?? [], rule.id);
 }
 
 /**

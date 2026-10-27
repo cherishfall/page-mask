@@ -34,7 +34,8 @@
               <span class="site-meta">
                 <span>{{ p.switchState === 'disguised' ? '清爽' : '原样' }}</span>
                 <span aria-hidden="true">·</span>
-                <span>已收起 {{ p.hideRules.length }} 项</span>
+                <!-- 0 条规则不写「已收起 0 项」 -->
+                <span>{{ p.hideRules.length > 0 ? `已收起 ${p.hideRules.length} 项` : '没有收起任何内容' }}</span>
                 <template v-if="staleCount(p) > 0">
                   <span aria-hidden="true">·</span>
                   <span class="stale" data-testid="pm-mgmt-row-stale">
@@ -53,66 +54,21 @@
               授权并启用
             </button>
           </div>
-
-          <div class="site-actions">
-            <span v-if="store.state.resetError[p.origin]" class="hint error" role="alert">
-              {{ store.state.resetError[p.origin] }}
-            </span>
-            <button type="button" class="ghost danger reset" @click="openReset(p)">一键清空</button>
-          </div>
         </li>
       </ul>
     </template>
-
-    <!-- 一键清空二次确认（原生模态对话框，安全按钮「取消」默认聚焦） -->
-    <dialog
-      ref="resetDialog"
-      aria-labelledby="pm-mgmt-reset-title"
-      data-testid="pm-mgmt-reset-dialog"
-      @close="onResetClose"
-    >
-      <template v-if="store.state.resetTarget">
-        <h2 id="pm-mgmt-reset-title">清空 {{ siteLabelOf(store.state.resetTarget.origin) }} 的全部设置？</h2>
-        <ul>
-          <li>{{ store.state.resetTarget.hideRules.length }} 个收起项会被删除</li>
-          <li>这个网站的标签页标题、图标设置会被删除</li>
-          <li>这个网站回到从未设置过的状态，页面上的悬浮按钮随之消失</li>
-          <li>浏览器对这个网站的访问权限会被收回（下次设置需要重新允许）</li>
-        </ul>
-      </template>
-      <form method="dialog" class="dialog-actions">
-        <button value="cancel" autofocus>取消</button>
-        <button value="confirm" class="primary danger">确认清空</button>
-      </form>
-    </dialog>
   </section>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
 import type { SiteProfile } from '@/core/types';
 import { siteHash } from '../router';
 import { siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { managementStore as store } from '../store';
 
-const resetDialog = ref<HTMLDialogElement | null>(null);
-
 const isPending = (p: SiteProfile) => store.state.pendingOrigins.includes(p.origin);
 const staleCount = (p: SiteProfile) => staleRulesOf(p).length;
 const initialOf = (origin: string) => siteLabelOf(origin).slice(0, 1).toUpperCase();
-
-async function openReset(p: SiteProfile) {
-  store.askReset(p);
-  await nextTick();
-  resetDialog.value?.showModal();
-}
-
-function onResetClose() {
-  const dialog = resetDialog.value;
-  const confirmed = dialog?.returnValue === 'confirm';
-  if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次
-  void store.confirmReset(confirmed);
-}
 </script>
 
 <style scoped>
@@ -144,7 +100,7 @@ function onResetClose() {
 
 .site-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   background: var(--pm-bg);
   border: 1px solid var(--pm-border);
@@ -228,21 +184,5 @@ function onResetClose() {
 
 .site-pending .hint {
   margin: 0;
-}
-
-.site-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--pm-space-2);
-  padding-right: var(--pm-space-3);
-}
-
-.site-actions .hint {
-  margin: 0;
-}
-
-.reset {
-  font-size: var(--pm-font-size-caption);
-  padding: 2px 10px;
 }
 </style>

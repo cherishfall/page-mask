@@ -31,3 +31,18 @@ export function scopeLabel(scope: Scope): string {
       return `除 ${scope.patterns.map((p) => p.label).join('、')} 外`;
   }
 }
+
+/**
+ * 给用户看的生效范围（管理页的收起项清单用）：与向导保存对话框同一套说法，
+ * 「整个网站 / 只在这类页面 / 除了这类页面」，不用「整站」「仅」「除外」这类缩写。
+ */
+export function scopeHumanLabel(scope: Scope): string {
+  switch (scope.type) {
+    case 'all':
+      return '整个网站';
+    case 'include':
+      return `只在这类页面：${scope.patterns.map((p) => p.label).join('、')}`;
+    case 'exclude':
+      return `除了这类页面：${scope.patterns.map((p) => p.label).join('、')}`;
+  }
+}

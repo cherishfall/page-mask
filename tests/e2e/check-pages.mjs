@@ -8,8 +8,11 @@
  *   不支持页面的说明、待授权、授权被拒、处理中（按钮禁用 + aria-busy）；h1 标题、装饰符号不进无障碍树
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
- *   站点设置页骨架（域名标题、开关、失效清单、占位说明）；设置 tab 的默认标题自动保存、编辑态不被存储变化覆盖；
- *   一键清空、整体替换导入用原生模态 <dialog>，默认聚焦「取消」、列出影响，取消不改数据；
+ *   站点设置页（#41）：标签页标题自动保存并可回读、图标上传与清除、收起项清单（名称 / 收起方式 / 人话范围）、
+ *   删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
+ *   页脚「一键清空」与二次确认、0 条规则时不出现「0 项」；列表行上不再有「一键清空」；
+ *   设置 tab 的默认标题自动保存、编辑态不被存储变化覆盖；
+ *   整体替换导入用原生模态 <dialog>，默认聚焦「取消」、列出影响，取消不改数据；
  *   导入失败用人话；待授权站点在行里给出「授权并启用」，两个以上出现「一次授权全部」；空状态有引导文案；
  *   所有表单控件都有关联的标签
  * - 引导页：4 步（含「固定到工具栏」），aria-current="step" 跟随「下一步」，无 🎭 与第三方品牌
@@ -24,11 +27,16 @@ import path from 'node:path';
 import { REPO_ROOT } from './lib/browser.mjs';
 import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
+import { waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
 const { check } = r;
 const tid = (id) => `[data-testid="${id}"]`;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/** 1×1 的合法 PNG（标签页图标上传用，走真实的解码 → 缩放 → 编码） */
+const PNG_1PX =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 // 与 styles/tokens.css 原始色值一致
 const TOKENS = {
@@ -352,11 +360,111 @@ async function main() {
     const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
     check(rowText.includes('原样') && rowText.includes('已收起 2 项'), `一行一站：${rowText.split('\n').join(' / ')}`);
     check((await m.$eval(tid('pm-mgmt-site-link'), (a) => a.getAttribute('href'))) === SITE_HASH, `行链接指向 ${SITE_HASH}`);
+    // #41：一键清空从列表行迁到站点设置页页脚
+    check(
+      !(await m.$(`xpath/.//li[@data-origin="${ORIGIN}"]//button[normalize-space()="一键清空"]`)),
+      '列表行上没有「一键清空」（入口只在站点设置页页脚）',
+    );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
-    console.log('\n--- 管理页：一键清空确认框 ---');
-    const resetBtn = await m.waitForSelector(`xpath/.//li[@data-origin="${ORIGIN}"]//button[normalize-space()="一键清空"]`);
-    await resetBtn.click();
+    console.log('\n--- 管理页：站点设置页（标题、图标、收起项、一键清空） ---');
+    await m.click(tid('pm-mgmt-site-link'));
+    await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
+    await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
+    check((await m.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST, `站点设置页标题显示域名（${HOST}）`);
+    const mgmtSwitch = await findSwitch(m);
+    check(mgmtSwitch.node?.name === '清爽模式', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
+    await checkCommon(m, '管理页 · 站点设置');
+
+    // 标签页标题：停止输入后自动保存；重新打开管理页值仍在
+    const siteTitle = tid('pm-mgmt-title');
+    check((await m.$$eval(`${tid('pm-mgmt-title-quick')} button`, (b) => b.length)) === 4, '标签页标题有 4 个快捷填入');
+    const SITE_TITLE = '工作台';
+    await m.click(siteTitle);
+    await m.type(siteTitle, SITE_TITLE);
+    await sleep(1200);
+    check(
+      (await getProfile(ext.control, ORIGIN)).disguisedTitle === SITE_TITLE,
+      `停止输入后站点标题自动保存到存储（${SITE_TITLE}）`,
+    );
+    await m.reload({ waitUntil: 'load' });
+    await m.waitForSelector(siteTitle, { timeout: 5000 });
+    check((await m.$eval(siteTitle, (i) => i.value)) === SITE_TITLE, '重新打开管理页，站点标题值仍在');
+
+    // 标签页图标：上传 → 预览，清除 → 回到「未设置」（真实的解码、缩放与编码）
+    const iconPng = path.join(tmp, 'icon.png');
+    fs.writeFileSync(iconPng, Buffer.from(PNG_1PX, 'base64'));
+    await (await m.$(tid('pm-mgmt-icon-input'))).uploadFile(iconPng);
+    await poll(
+      async () => String((await getProfile(ext.control, ORIGIN)).faviconDataUrl).startsWith('data:image/png'),
+      '上传图标后写入 PNG data URL',
+    );
+    check(!!(await m.waitForSelector(tid('pm-mgmt-favicon'), { timeout: 3000 })), '上传后显示图标预览');
+    await m.click(tid('pm-mgmt-icon-clear'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).faviconDataUrl === null, '清除图标后回到默认透明图标');
+    check(!!(await m.waitForSelector(tid('pm-mgmt-favicon-empty'), { timeout: 3000 })), '清除后显示「未设置」');
+
+    // 收起项清单：名称 + 收起方式 + 人话范围
+    check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '已收起的项按行列出（2 行）');
+    const ruleRowText = await m.$eval('li[data-rule-id="r1"]', (e) => e.innerText);
+    check(
+      ruleRowText.includes('页头') && ruleRowText.includes('消失') && ruleRowText.includes('整个网站'),
+      `每行有名称、收起方式与人话范围（${ruleRowText.split('\n').join(' / ')}）`,
+    );
+    await checkSchemes(m, '管理页 · 站点设置', 'bgSubtle');
+
+    // 另一处（模拟另一个标签页里的体检）回写 lastHealth：触发管理页 storage.onChanged
+    await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] });
+    await m.waitForSelector(tid('pm-mgmt-rule-stale'), { timeout: 5000 });
+    const staleRowText = await m.$eval('li[data-rule-id="r1"]', (e) => e.innerText);
+    check(
+      staleRowText.includes('可能失效') && staleRowText.includes('「页头」最近没找到'),
+      '「可能失效」写在那一行里，用可读文字说明（不只靠颜色）',
+    );
+
+    // 删除 → 5 秒内撤销：撤销后按原下标插回、id 不变
+    await m.click(tid('pm-mgmt-rule-delete-r1'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).hideRules.length === 1, '删除一条后只剩 1 条');
+    const undoText = await m.$eval(tid('pm-mgmt-undo'), (e) => e.innerText);
+    check(undoText.includes('已删除「页头」'), `出现可撤销提示（${undoText.trim()}）`);
+    await m.click(tid('pm-mgmt-undo-btn'));
+    const restored = await poll(async () => {
+      const p = await getProfile(ext.control, ORIGIN);
+      return p.hideRules.length === 2 ? p : null;
+    }, '撤销后规则回到 2 条');
+    check(
+      restored.hideRules.map((x) => x.id).join() === 'r1,r2',
+      `撤销按原下标插回、id 不变（${restored.hideRules.map((x) => x.id).join('、')}）`,
+    );
+
+    // 「在页面上编辑」：没有打开这个网站的页面时给出可理解的提示
+    await m.click(tid('pm-mgmt-edit-on-page'));
+    await waitFor(
+      m,
+      '没有打开的页面时给出提示',
+      (s) => (document.querySelector(s)?.innerText ?? '').includes('没有打开的标签页'),
+      [tid('pm-mgmt-edit-hint')],
+    );
+    check(true, '该站没有打开的标签页时，「在页面上编辑」给出可理解的提示');
+
+    // 有打开的页面时能打开编辑面板
+    const editorTab = await browser.newPage();
+    await editorTab.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await editorTab.waitForSelector('pagemask-toggle', { timeout: 8000 });
+    await m.bringToFront();
+    await m.click(tid('pm-mgmt-edit-on-page'));
+    await waitForShadow(editorTab, 'pagemask-editor', tid('pm-editor-panel'), { timeout: 8000 });
+    check(true, '「在页面上编辑」在该站的标签页里打开了编辑面板');
+    await editorTab.close();
+    await m.bringToFront();
+
+    // 开关
+    await m.click(tid('pm-mgmt-switch'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '站点设置页切换清爽模式写入存储');
+    check(true, '站点设置页切换清爽模式写入存储');
+
+    // 一键清空：入口在本页页脚，二次确认列明影响、默认聚焦「取消」、Esc 不清空
+    await m.click(tid('pm-mgmt-reset'));
     await waitFor(m, '清空确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
     const resetInfo = await m.evaluate((s) => {
       const d = document.querySelector(s);
@@ -364,25 +472,13 @@ async function main() {
       return { focus: document.activeElement?.textContent?.trim(), title: title?.textContent ?? '', list: d.querySelector('ul')?.innerText ?? '' };
     }, tid('pm-mgmt-reset-dialog'));
     check(resetInfo.focus === '取消', `原生模态 <dialog>，默认聚焦安全按钮「${resetInfo.focus}」`);
-    check(resetInfo.title.includes('127.0.0.1') && resetInfo.list.includes('2 个收起项会被删除'), `确认框有标题并列明影响（${resetInfo.list.split('\n')[0]}）`);
+    check(
+      resetInfo.title.includes('127.0.0.1') && resetInfo.list.includes('2 个收起项会被删除'),
+      `确认框有标题并列明影响（${resetInfo.list.split('\n')[0]}）`,
+    );
     await m.keyboard.press('Escape');
     await waitFor(m, 'Esc 关闭确认框', (s) => !document.querySelector(s).open, [tid('pm-mgmt-reset-dialog')]);
     check((await getProfile(ext.control, ORIGIN)) !== null, 'Esc 关闭确认框不清空');
-
-    console.log('\n--- 管理页：站点设置骨架 ---');
-    await m.click(tid('pm-mgmt-site-link'));
-    await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
-    await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
-    check((await m.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST, `站点设置页标题显示域名（${HOST}）`);
-    const mgmtSwitch = await findSwitch(m);
-    check(mgmtSwitch.node?.name === '清爽模式', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
-    // 另一处（模拟另一个标签页里的体检）回写 lastHealth：触发管理页 storage.onChanged
-    await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] });
-    await m.waitForSelector(tid('pm-mgmt-stale-list'), { timeout: 5000 });
-    check((await m.$eval(tid('pm-mgmt-stale-list'), (e) => e.innerText)).includes('「页头」最近没找到'), '失效清单以可读文字列出');
-    await m.click(tid('pm-mgmt-switch'));
-    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '站点设置页切换清爽模式写入存储');
-    check(true, '站点设置页切换清爽模式写入存储');
 
     // 浏览器后退回到列表
     await m.evaluate(() => history.back());
@@ -394,6 +490,31 @@ async function main() {
     await m.goto(`${extOrigin}/management.html${SITE_HASH}`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
     check((await hash()) === SITE_HASH, '直接粘贴站点设置地址能落在该站的设置页');
+
+    console.log('\n--- 管理页：0 条规则的站点 ---');
+    await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), disguisedTitle: SITE_TITLE, hideRules: [] });
+    await m.waitForSelector(tid('pm-mgmt-no-rules'), { timeout: 5000 });
+    const zeroCount = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
+    check(zeroCount.includes('没有收起任何内容') && !zeroCount.includes('0 项'), `0 条规则时本页说「${zeroCount}」`);
+    await m.click(tid('pm-mgmt-reset'));
+    await waitFor(m, '0 条规则的确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
+    const zeroImpact = await m.$eval(tid('pm-mgmt-reset-impact'), (e) => e.innerText);
+    check(
+      !/\d+\s*个收起项会被删除/.test(zeroImpact) && zeroImpact.includes('标签页标题与图标'),
+      `0 条规则时确认框不出现「0 个收起项会被删除」（${zeroImpact.split('\n').join(' / ')}）`,
+    );
+    await m.keyboard.press('Escape');
+    await waitFor(m, 'Esc 关闭确认框（0 条规则）', (s) => !document.querySelector(s).open, [tid('pm-mgmt-reset-dialog')]);
+    await m.evaluate(() => {
+      location.hash = '#/sites';
+    });
+    await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
+    const zeroRow = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
+    check(
+      zeroRow.includes('没有收起任何内容') && !zeroRow.includes('已收起 0 项'),
+      `列表行也不写「已收起 0 项」（${zeroRow.split('\n').join(' / ')}）`,
+    );
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
 
     console.log('\n--- 管理页：设置 tab（默认标题、关于） ---');
     await m.goto(`${extOrigin}/management.html#/settings`, { waitUntil: 'load' });
@@ -490,6 +611,32 @@ async function main() {
     const pendingRows = await m.$$eval(tid('pm-mgmt-pending'), (rows) => rows.length);
     check(pendingRows === 2, `待授权站点在行里给出「授权并启用」（${pendingRows} 行）`);
     await checkSchemes(m, '管理页 · 待授权', 'bgSubtle');
+
+    // 站点设置页顶部也能授权，授权成功后本页立即变为可用
+    await m.click(`li[data-origin="${ORIGIN}"] a[data-testid="pm-mgmt-site-link"]`);
+    await m.waitForSelector(tid('pm-mgmt-pending'), { timeout: 5000 });
+    check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === true, '待授权时「在页面上编辑」不可点（内容脚本还没注入）');
+    // 权限弹窗本身无法自动化：替换 contains / request 两个替身，验证「允许」之后本页立即刷新
+    await m.evaluate(() => {
+      window.__pmRequests = [];
+      chrome.permissions.contains = async () => true;
+      chrome.permissions.request = async (p) => {
+        window.__pmRequests.push(p);
+        return true;
+      };
+    });
+    await m.click(tid('pm-mgmt-authorize'));
+    await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
+    check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === false, '授权成功后本页立即变为可用');
+    const authReq = await m.evaluate(() => window.__pmRequests);
+    check(
+      authReq.length === 1 && authReq[0].origins.includes(`${ORIGIN}/*`),
+      `「授权并启用」为这个站点发起了权限请求（${JSON.stringify(authReq[0]?.origins)}）`,
+    );
+    await m.evaluate(() => {
+      location.hash = '#/sites';
+    });
+    await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
 
     console.log('\n--- 管理页：空状态 ---');
     await ext.control.evaluate(() => chrome.storage.local.clear());

@@ -901,20 +901,19 @@ async function main() {
       return JSON.parse(await m.evaluate(() => window.__pmBlobs[0].text()));
     }
 
-    /** 在管理页对某站点点「一键清空」并确认 */
+    /** 进某站点的设置页，点页脚的「一键清空」并确认（#41：入口从列表行迁到站点设置页） */
     async function resetInManagement(m, origin) {
       // 后台标签页里不跑动画帧，puppeteer 的点击会一直等元素稳定；先切到前台
       await m.bringToFront();
-      // 一键清空在网站列表里
-      await m.evaluate(() => {
-        location.hash = '#/sites';
-      });
-      const btn = await m.waitForSelector(`xpath/.//li[@data-origin="${origin}"]//button[normalize-space()="一键清空"]`, {
-        timeout: 5000,
-      });
+      const host = new URL(origin).host;
+      await m.evaluate((h) => {
+        location.hash = `#/sites/${h}`;
+      }, host);
+      const btn = await m.waitForSelector(tid('pm-mgmt-reset'), { timeout: 5000 });
       await btn.click();
       const yes = await m.waitForSelector('xpath/.//button[normalize-space()="确认清空"]', { timeout: 3000 });
       await yes.click();
+      // 清空后站点设置页自动回列表
       await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
     }
 
