@@ -3,16 +3,17 @@
  * 术语见 GLOSSARY.md：站点配置 / 隐藏规则 / 收起方案 / 生效范围。
  */
 
-/** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖 */
+/** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖（界面用词见下方 STRATEGY_LABEL） */
 export type StrategyId = 'remove' | 'blank' | 'mask';
 
 /** 站点开关两态：伪装态 / 原样态 */
 export type SwitchState = 'disguised' | 'original';
 
+/** 界面用词（GLOSSARY「收起方式」）：全项目唯一的三个名字，界面上一律用这三个 */
 export const STRATEGY_LABEL: Record<StrategyId, string> = {
-  remove: '彻底移除',
-  blank: '原地留白',
-  mask: '遮罩覆盖',
+  remove: '消失',
+  blank: '留空',
+  mask: '盖住',
 };
 
 /**

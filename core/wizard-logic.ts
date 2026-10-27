@@ -40,7 +40,7 @@ export interface DraftItem {
 export function unsavableDraftWarning(drafts: readonly { candidates: readonly string[] }[]): string | null {
   const idx = drafts.findIndex((d) => d.candidates.length === 0);
   if (idx < 0) return null;
-  return `第 ${idx + 1} 个元素没法稳定识别：请把它移出本次选择，再用「选大一点」重新选`;
+  return `第 ${idx + 1} 个元素没法稳定识别：请点它右边的 ✕ 不收起这一项，再用「选大一点」重新选`;
 }
 
 // ---------- 选择集（顺序 = 序号牌编号） ----------
@@ -64,7 +64,7 @@ export function replaceInSelection<T>(list: readonly T[], old: T, next: T): T[] 
   return out;
 }
 
-/** 移出本次选择（N11） */
+/** 删除这一项（N11） */
 export function removeFromSelection<T>(list: readonly T[], el: T): T[] {
   return list.filter((x) => x !== el);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countPageHits, healthMessage, probeRules, runHealthCheck, type RuleHealth } from './health';
+import { countCandidateHits, countPageHits, healthMessage, probeRules, runHealthCheck, type RuleHealth } from './health';
 import type { HideRule } from './types';
 
 const rule = (id: string, scope: HideRule['scope'] = { type: 'all' }): HideRule => ({
@@ -51,6 +51,20 @@ describe('countPageHits 排除插件自身节点', () => {
     expect(countPageHits(document, '.x')).toBe(1);
     expect(countPageHits(document, 'pagemask-toggle')).toBe(0);
     expect(countPageHits(document, '::invalid((')).toBe(0);
+    document.body.innerHTML = '';
+  });
+});
+
+describe('countCandidateHits 一组候选的命中数（向导「同类 N 处」）', () => {
+  it('多个候选命中同一个元素只算一次；排除插件自身；非法候选跳过', () => {
+    document.body.innerHTML = '<div class="card"></div><div class="card"></div><div class="other"></div>';
+    const host = document.createElement('pagemask-wizard');
+    host.className = 'card';
+    document.body.append(host);
+    expect(countCandidateHits(document, ['.card'])).toBe(2);
+    expect(countCandidateHits(document, ['.card', 'div'])).toBe(3);
+    expect(countCandidateHits(document, ['.card', '::invalid(('])).toBe(2);
+    expect(countCandidateHits(document, [])).toBe(0);
     document.body.innerHTML = '';
   });
 });

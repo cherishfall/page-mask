@@ -1,7 +1,7 @@
 /*
  * 设置向导样式（ui/wizard/wizard-styles.ts 注入到向导的 shadow root）。
  * 颜色只用 styles/tokens.css 里对比度已验证的组合；跟随 .pm-root 的 color-scheme 明暗切换。
- * 叠放（都在向导宿主内部比较）：捕获层 1 < 页内标记 2 < 工具条、提示 3；弹片和确认框在顶层（top layer）。
+ * 叠放（都在向导宿主内部比较）：捕获层 1 < 页内标记 2 < 工具条、提示 3；确认框在顶层（top layer）。
  */
 
 /* ── 按钮（与扩展页面 styles/base.css 同一套视觉） ── */
@@ -36,11 +36,7 @@
   background: var(--pm-accent-hover);
   border-color: var(--pm-accent-hover);
 }
-/* 危险动作：行内次级 = 红字红边；确认框里的主危险 = 实底红（与扩展页面的 .danger / .primary.danger 同一套） */
-.pm-wiz-btn.danger {
-  color: var(--pm-danger);
-  border-color: var(--pm-danger);
-}
+/* 危险动作：确认框里的主危险 = 实底红（与扩展页面的 .danger / .primary.danger 同一套） */
 .pm-wiz-btn.primary.danger {
   background: var(--pm-danger);
   border-color: var(--pm-danger);
@@ -49,16 +45,6 @@
 .pm-wiz-btn.primary.danger:hover:not(:disabled) {
   background: var(--pm-danger);
   border-color: var(--pm-danger);
-}
-.pm-wiz-btn.small {
-  min-block-size: 24px;
-  padding: 0 8px;
-  font-size: var(--pm-font-size-caption);
-}
-.pm-wiz-btn[aria-pressed='true'] {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
 }
 :focus-visible {
   outline: var(--pm-focus-ring);
@@ -136,34 +122,31 @@
   margin-top: var(--pm-space-2);
 }
 
-/* 预览阶段的草稿清单：调整入口都在这里（幽灵标记只是提示，N8） */
+/* 预览阶段的草稿清单：每一行就是一个完整的编辑单元，不用点开浮层 */
 .pm-wiz-drafts {
   list-style: none;
   margin: var(--pm-space-2) 0 0;
   padding: 0;
-  max-block-size: 136px;
+  max-block-size: 200px;
   overflow-y: auto;
   overscroll-behavior: contain;
   border-top: 1px solid var(--pm-border);
 }
 .pm-wiz-drafts li {
-  display: flex;
-  align-items: center;
-  gap: var(--pm-space-2);
-  padding: 4px 0;
+  padding: 5px 0;
   border-bottom: 1px solid var(--pm-border);
   font-size: var(--pm-font-size-caption);
 }
-.pm-wiz-drafts .name {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--pm-font-size-body);
+.pm-wiz-draft-main {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-1);
 }
-.pm-wiz-drafts .meta {
-  flex: none;
+.pm-wiz-draft-hint {
+  margin: 0;
+  /* 与名称左对齐（让开序号牌 + 间距） */
+  padding-inline-start: 26px;
+  font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
 }
 .pm-wiz-num {
@@ -177,6 +160,159 @@
   color: var(--pm-bg);
   font-size: var(--pm-font-size-caption);
   font-weight: var(--pm-font-weight-strong);
+}
+
+/* 名称：无边框文本框，悬停或聚焦才显形（清空后保存时回落到占位符里的自动命名） */
+.pm-wiz-name {
+  flex: 1 1 auto;
+  min-inline-size: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--pm-radius-control);
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-font-size-body);
+  text-overflow: ellipsis;
+}
+.pm-wiz-name:hover {
+  border-color: var(--pm-border-control);
+}
+.pm-wiz-name:focus-visible {
+  border-color: var(--pm-border-control);
+  background: var(--pm-bg);
+}
+.pm-wiz-name::placeholder {
+  color: var(--pm-fg-muted);
+}
+
+/* 收起方式：原生单选组（同一 name 一组），视觉上连体分段 */
+.pm-wiz-method {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+/* 只需要读屏读到，视觉上不出现 */
+.pm-wiz-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.pm-wiz-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+}
+.pm-wiz-seg-opt {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+/* 透明输入铺满整格：点击落在原生 radio 上，方向键与读屏语义都是原生行为 */
+.pm-wiz-seg-opt input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.pm-wiz-seg-opt span {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 24px;
+  padding: 0 7px;
+  border-inline-start: 1px solid var(--pm-border-control);
+  font-size: var(--pm-font-size-caption);
+  line-height: 1;
+  white-space: nowrap;
+}
+.pm-wiz-seg-opt:first-of-type span {
+  border-inline-start: 0;
+}
+.pm-wiz-seg-opt input:checked + span {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+.pm-wiz-seg-opt input:focus-visible + span {
+  outline: var(--pm-focus-ring);
+  outline-offset: -2px;
+}
+
+/* 范围标签：显示当前状态，点一下在「仅这一处」与「同类 N 处」之间切换 */
+.pm-wiz-range {
+  flex: none;
+  min-block-size: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-bg);
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pm-wiz-range:hover:not(:disabled) {
+  color: var(--pm-fg);
+  background: var(--pm-bg-subtle);
+}
+.pm-wiz-range:disabled {
+  border-color: var(--pm-border);
+  cursor: default;
+}
+
+/* 删除这一项：默认中性灰，悬停 / 键盘聚焦变红 */
+.pm-wiz-del {
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pm-radius-control);
+  background: transparent;
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  line-height: 1;
+  cursor: pointer;
+}
+.pm-wiz-del:hover,
+.pm-wiz-del:focus-visible {
+  color: var(--pm-danger);
+  background: var(--pm-bg-subtle);
+}
+
+/* 点页面上的号码牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除） */
+.pm-wiz-drafts li.flash {
+  animation: pm-wiz-flash 1.2s ease-out;
+}
+@keyframes pm-wiz-flash {
+  from {
+    background: var(--pm-bg-subtle);
+    box-shadow: inset 3px 0 0 var(--pm-accent);
+  }
+  to {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-wiz-drafts li.flash {
+    animation: none;
+    background: var(--pm-bg-subtle);
+    box-shadow: inset 3px 0 0 var(--pm-accent);
+  }
 }
 
 /* ── 提示条（读屏：polite 状态消息） ── */
@@ -226,7 +362,7 @@
 .pm-wiz-ghost {
   border: 0;
 }
-/* 号码牌：选择阶段不可点（点选落到捕获层上）；预览阶段可点，等同草稿清单里的「调整」 */
+/* 号码牌：选择阶段不可点（点选落到捕获层上）；预览阶段可点，点了滚到清单里对应的行并高亮 */
 .pm-wiz-badge {
   position: absolute;
   top: 0;
@@ -253,8 +389,7 @@ button.pm-wiz-badge {
   cursor: pointer;
 }
 
-/* ── 弹片（非模态，popover="auto"：点外面或 Esc 关闭）与确认框（模态 dialog） ── */
-.pm-wiz-pop,
+/* ── 确认框（模态 dialog） ── */
 .pm-wiz-dialog {
   box-sizing: border-box;
   pointer-events: auto;
@@ -264,16 +399,6 @@ button.pm-wiz-badge {
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
   padding: var(--pm-space-4);
-}
-.pm-wiz-pop {
-  inset: auto;
-  top: var(--pm-space-4);
-  right: var(--pm-space-4);
-  margin: 0;
-  inline-size: 280px;
-  max-inline-size: calc(100vw - 2 * var(--pm-space-4));
-}
-.pm-wiz-dialog {
   inline-size: min(360px, calc(100vw - 2 * var(--pm-space-4)));
 }
 .pm-wiz-dialog:modal {
@@ -284,7 +409,6 @@ button.pm-wiz-badge {
   overscroll-behavior: contain;
   background: rgb(0 0 0 / 0.32);
 }
-.pm-wiz-pop h2,
 .pm-wiz-dialog h2 {
   margin: 0 0 var(--pm-space-3);
   font-size: var(--pm-font-size-title);
@@ -301,25 +425,11 @@ button.pm-wiz-badge {
   padding: 0;
   border: 0;
 }
-.pm-wiz-field > label:first-child,
 .pm-wiz-field legend {
   padding: 0;
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
 }
-.pm-wiz-field input[type='text'] {
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  background: var(--pm-bg);
-  padding: 4px 8px;
-  font-size: var(--pm-font-size-body);
-}
-.pm-wiz-seg {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--pm-space-1);
-}
-.pm-wiz-check,
 .pm-wiz-radio {
   display: flex;
   gap: var(--pm-space-2);
@@ -336,9 +446,6 @@ button.pm-wiz-badge {
   gap: var(--pm-space-2);
   justify-content: flex-end;
   margin-top: var(--pm-space-3);
-}
-.pm-wiz-actions.split {
-  justify-content: space-between;
 }
 
 @media (pointer: coarse) {

@@ -458,7 +458,7 @@ async function main() {
     await waitFor(m, '替换确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-replace-dialog')]);
     const impact = await m.evaluate((s) => ({ text: document.querySelector(s).innerText, focus: document.activeElement?.textContent?.trim() }), tid('pm-mgmt-replace-impact'));
     check(
-      impact.text.includes('1 个网站、2 个收起项会全部被替换') && impact.text.includes('彻底移除') && impact.text.includes('127.0.0.1') && impact.text.includes('文件里的 1 个网站、1 个收起项'),
+      impact.text.includes('1 个网站、2 个收起项会全部被替换') && impact.text.includes('本机不再保留') && impact.text.includes('127.0.0.1') && impact.text.includes('文件里的 1 个网站、1 个收起项'),
       `替换确认框列出影响：\n      ${impact.text.split('\n').join('\n      ')}`,
     );
     check(impact.focus === '取消', '替换确认框默认聚焦「取消」');

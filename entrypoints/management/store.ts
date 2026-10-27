@@ -280,10 +280,10 @@ export function createManagementStore() {
     await reload();
   }
 
-  /** 如实报告导入结果：新增 / 更新 / 移除 / 跳过 */
+  /** 如实报告导入结果：新增 / 更新 / 删掉 / 跳过 */
   function describeImport(res: ImportResult): string {
     const parts = [`新增 ${res.added} 个网站`, `更新 ${res.updated} 个网站`];
-    if (res.removed) parts.push(`移除 ${res.removed} 个本机网站`);
+    if (res.removed) parts.push(`删掉 ${res.removed} 个本机网站`);
     if (res.skipped) parts.push(`跳过 ${res.skipped} 个无效网站`);
     if (res.skippedRules) parts.push(`忽略 ${res.skippedRules} 个无效收起项`);
     return `导入完成：${parts.join('，')}（${res.mode === 'merge' ? '合并' : '整体替换'}）`;

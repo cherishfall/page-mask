@@ -37,7 +37,7 @@
         </p>
 
         <fieldset class="pm-ed-field">
-          <legend>收起方案</legend>
+          <legend>收起方式</legend>
           <div class="pm-ed-seg">
             <button
               v-for="s in STRATEGY_LIST"

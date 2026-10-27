@@ -69,21 +69,56 @@
       </template>
 
       <template v-else>
-        <p class="pm-wiz-sub">滚动一下页面，确认效果符合预期（遮罩要能跟住元素）。点「调整」可以换收起方式。</p>
+        <p class="pm-wiz-sub">滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、改范围。</p>
         <ol class="pm-wiz-drafts" aria-label="本次要收起的内容" data-testid="pm-wiz-drafts">
           <li v-for="(d, i) in drafts" :key="i" :data-testid="`pm-draft-${i + 1}`">
-            <span class="pm-wiz-num" aria-hidden="true">{{ i + 1 }}</span>
-            <span class="name">{{ d.name }}</span>
-            <span class="meta">{{ STRATEGY_LABEL[d.strategy] }}{{ d.onlyThis ? ' · 只这一个' : '' }}</span>
-            <button
-              type="button"
-              class="pm-wiz-btn small"
-              :aria-label="`调整第 ${i + 1} 项：${d.name}`"
-              :data-testid="`pm-draft-edit-${i + 1}`"
-              @click="openEditor(d.el)"
-            >
-              调整
-            </button>
+            <div class="pm-wiz-draft-main">
+              <span class="pm-wiz-num" aria-hidden="true">{{ i + 1 }}</span>
+              <input
+                v-model="d.name"
+                class="pm-wiz-name"
+                type="text"
+                :placeholder="d.autoName"
+                :aria-label="`第 ${i + 1} 项的名称，留空则自动命名`"
+                :data-testid="`pm-draft-name-${i + 1}`"
+              />
+              <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
+              <fieldset class="pm-wiz-method">
+                <legend class="pm-wiz-sr">收起方式</legend>
+                <div class="pm-wiz-seg">
+                  <label v-for="s in STRATEGY_ORDER" :key="s" class="pm-wiz-seg-opt">
+                    <input
+                      type="radio"
+                      :name="`pm-strategy-${i + 1}`"
+                      :value="s"
+                      :checked="d.strategy === s"
+                      :data-testid="`pm-draft-${i + 1}-strategy-${s}`"
+                      @change="setStrategy(d, s)"
+                    />
+                    <span>{{ STRATEGY_LABEL[s] }}</span>
+                  </label>
+                </div>
+              </fieldset>
+              <button
+                type="button"
+                class="pm-wiz-range"
+                :disabled="!rangeClickable(d)"
+                :data-testid="`pm-draft-${i + 1}-range`"
+                @click="toggleOnlyThis(d)"
+              >
+                {{ rangeLabel(d) }}
+              </button>
+              <button
+                type="button"
+                class="pm-wiz-del"
+                aria-label="不收起这一项"
+                :data-testid="`pm-draft-${i + 1}-remove`"
+                @click="removeDraft(d)"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
+            <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ STRATEGY_HINT[d.strategy] }}</p>
           </li>
         </ol>
         <div class="pm-wiz-btns">
@@ -98,53 +133,6 @@
     <div class="pm-wiz-status" role="status">
       <span v-if="warnText" class="pm-wiz-toast" data-testid="pm-wizard-warn">{{ warnText }}</span>
     </div>
-
-    <!-- 单项调整弹片：非模态，点外面或 Esc 关闭（N9）；入口是草稿清单里的「调整」和预览里的号码牌 -->
-    <dialog
-      ref="editPop"
-      v-bind="POPOVER_AUTO"
-      class="pm-wiz-pop"
-      aria-labelledby="pm-pop-title"
-      data-testid="pm-wizard-popover"
-      @toggle="onEditToggle"
-    >
-      <template v-if="editing">
-        <h2 id="pm-pop-title">调整第 {{ editingIndex + 1 }} 项</h2>
-        <div class="pm-wiz-field">
-          <label for="pm-pop-name">名称</label>
-          <input id="pm-pop-name" v-model="editing.name" type="text" data-testid="pm-pop-name" />
-        </div>
-        <fieldset class="pm-wiz-field">
-          <legend>收起方式</legend>
-          <div class="pm-wiz-seg">
-            <button
-              v-for="s in STRATEGY_ORDER"
-              :key="s"
-              type="button"
-              class="pm-wiz-btn small"
-              :aria-pressed="editing.strategy === s"
-              :data-testid="`pm-pop-strategy-${s}`"
-              @click="setStrategy(editing, s)"
-            >
-              {{ STRATEGY_LABEL[s] }}
-            </button>
-          </div>
-        </fieldset>
-        <div class="pm-wiz-field">
-          <label class="pm-wiz-check">
-            <input type="checkbox" :checked="editing.onlyThis" data-testid="pm-pop-onlythis" @change="toggleOnlyThis(editing)" />
-            只收起点选的这一个
-          </label>
-          <span class="pm-wiz-hint">不勾选时，页面上同一类的内容会一起收起</span>
-        </div>
-        <div class="pm-wiz-actions split">
-          <button type="button" class="pm-wiz-btn danger" data-testid="pm-pop-remove" @click="removeDraft(editing)">
-            移出本次选择
-          </button>
-          <button type="button" class="pm-wiz-btn primary" data-testid="pm-pop-done" @click="closeEditor">完成</button>
-        </div>
-      </template>
-    </dialog>
 
     <!-- 放弃确认：模态；Esc = 继续编辑，焦点默认在「继续编辑」（危险动作实底红，N9） -->
     <dialog
@@ -216,7 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
+import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
 import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
@@ -225,6 +213,7 @@ import { STRATEGY_LABEL, newRuleId, type HideRule, type Scope, type StrategyId }
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
+import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
 import {
   clampToViewport,
@@ -237,11 +226,24 @@ import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
 import { ElementFollower } from '../follow';
 
-/** 草稿：DraftItem + 当前候选选择器 */
-type Draft = DraftItem & { candidates: string[] };
+/** 草稿：DraftItem + 当前候选选择器、自动命名、两种范围的实时命中数 */
+type Draft = DraftItem & {
+  candidates: string[];
+  /** 自动命名结果，清空名称时作为输入框的占位提示，保存时也回落到它 */
+  autoName: string;
+  /** 当前这组候选在页面上命中的元素数（范围标签的 N） */
+  hits: number;
+  /** 「同类一起收起」那组候选的命中数：切到「仅这一处」后据此判断还能不能切回去 */
+  sameHits: number;
+};
 
-/** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
-const POPOVER_AUTO = { popover: 'auto' } as Record<string, string>;
+/** 每种收起方式下面的一行白话解释（只显示当前选中的那一条） */
+const STRATEGY_HINT: Record<StrategyId, string> = {
+  remove: '下面的内容往上补',
+  blank: '位置留着不动',
+  mask: '盖一块和背景同色的板',
+};
+
 /** 方向键每次移动工具条的距离 */
 const KEY_STEP = 16;
 const ARROW_DIRS: Record<string, readonly [number, number]> = {
@@ -268,8 +270,6 @@ const lastSel = shallowRef<Element | null>(null);
 const warnText = ref('');
 const noticeText = ref('');
 const drafts = ref<Draft[]>([]);
-/** 正在调整的那一项（按元素记，不按下标：清单变化后不会指错） */
-const editEl = shallowRef<Element | null>(null);
 const scopeChoice = ref<'all' | 'include' | 'exclude'>('all');
 const tbPos = ref<{ left: number; top: number } | null>(null);
 const dragging = ref(false);
@@ -277,7 +277,6 @@ const dragging = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
 const overlayLayer = ref<HTMLElement | null>(null);
 const toolbarEl = ref<HTMLElement | null>(null);
-const editPop = ref<HTMLDialogElement | null>(null);
 const exitDlg = ref<HTMLDialogElement | null>(null);
 const saveDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
@@ -291,7 +290,7 @@ let hoverBox: HTMLElement | null = null;
 let markerBoxes: HTMLElement[] = [];
 /**
  * 进入预览那一刻每项的页面坐标（视口矩形 + 当时的滚动位置）。彻底移除后元素没有矩形，
- * 它的标记一直用这份缓存，改别的项、移出别的项都不会让它坍缩（N7）
+ * 它的标记一直用这份缓存，改别的项、删掉别的项都不会让它坍缩（N7）
  */
 const baseRects = new WeakMap<Element, { left: number; top: number; width: number; height: number }>();
 let saving = false;
@@ -301,8 +300,6 @@ const sitePattern = computed(() => deriveScopePattern(props.url));
 const scopeHint = computed(() => scopeUnavailableHint(props.url));
 const lastSelIndex = computed(() => (lastSel.value ? selEls.value.indexOf(lastSel.value) : -1));
 const lastSelName = computed(() => (lastSel.value ? describeElement(lastSel.value) : ''));
-const editing = computed(() => drafts.value.find((d) => d.el === editEl.value) ?? null);
-const editingIndex = computed(() => drafts.value.findIndex((d) => d.el === editEl.value));
 
 onMounted(() => {
   const root = rootEl.value?.getRootNode();
@@ -347,14 +344,9 @@ function showWarn(text: string) {
 
 // ---------- 键盘：向导级 Esc（N9） ----------
 
-/** 是否有浮层打开（弹片、确认框）：有就让浮层自己按原生行为处理 Esc */
+/** 是否有浮层打开（确认框）：有就让浮层自己按原生行为处理 Esc */
 function overlayOpen(): boolean {
-  return (
-    !!exitDlg.value?.open ||
-    !!saveDlg.value?.open ||
-    !!noticeDlg.value?.open ||
-    !!editPop.value?.matches(':popover-open')
-  );
+  return !!exitDlg.value?.open || !!saveDlg.value?.open || !!noticeDlg.value?.open;
 }
 
 function onKeyDown(e: KeyboardEvent) {
@@ -376,7 +368,6 @@ function requestExit() {
     void finish(false);
     return;
   }
-  closeEditor();
   exitDlg.value?.showModal();
 }
 
@@ -441,8 +432,8 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
   if (onClick) {
     const btn = tag as HTMLButtonElement;
     btn.type = 'button';
-    btn.tabIndex = -1; // 键盘入口是草稿清单里的「调整」，这里只是鼠标捷径
-    btn.setAttribute('aria-label', `调整第 ${seq} 项`);
+    btn.tabIndex = -1; // 鼠标捷径：跳转到清单里对应的行；键盘入口是清单本身，不在这里
+    btn.setAttribute('aria-label', `跳转到清单里的第 ${seq} 项`);
     btn.dataset.testid = `pm-marker-${seq}`;
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -469,11 +460,11 @@ function renderMarkers() {
     return;
   }
   drafts.value.forEach((d, i) => {
-    const open = () => openEditor(d.el);
+    const jump = () => flashRow(i);
     if (d.strategy === 'remove') {
       // 彻底移除：元素已没有矩形，用进入预览时缓存的页面坐标 + 滚动差值跟随，只显示号码牌（N7、N8）
       const box = makeBox('pm-wiz-ghost');
-      addBadge(box, i + 1, open);
+      addBadge(box, i + 1, jump);
       markerBoxes.push(box);
       const base = baseRects.get(d.el);
       if (base) {
@@ -484,29 +475,55 @@ function renderMarkers() {
       }
     } else if (d.strategy === 'blank') {
       const box = makeBox('pm-wiz-blank');
-      addBadge(box, i + 1, open);
+      addBadge(box, i + 1, jump);
       markerBoxes.push(box);
       follower.trackLive(d.el, box);
     } else {
-      // 方案 C 遮罩：覆盖盒本身就是预览（不拦截指针，调整入口在号码牌和草稿清单上）
+      // 方案 C 遮罩：覆盖盒本身就是预览（不拦截指针，跳转入口在号码牌上）
       const box = makeBox('pm-wiz-mask');
       box.style.background = '#f4f4f4';
-      addBadge(box, i + 1, open);
+      addBadge(box, i + 1, jump);
       markerBoxes.push(box);
       follower.trackLive(d.el, box);
     }
   });
 }
 
+/**
+ * 点页面上的号码牌 = 滚到清单里对应的行并高亮一下（原来打开弹片，弹片已删）。
+ * 动效只在用户没有要求减少动态时加；高亮由 animationend 撤掉，定时器兜底。
+ */
+function flashRow(index: number) {
+  const row = toolbarEl.value?.querySelector<HTMLElement>(`[data-testid="pm-draft-${index + 1}"]`);
+  if (!row) return;
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  row.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  row.classList.add('flash');
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const clear = () => {
+    row.classList.remove('flash');
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  row.addEventListener('animationend', clear, { once: true });
+  timer = setTimeout(clear, reduced ? 1500 : 2000);
+}
+
 // ---------- 预览 ----------
 
 function newDraft(el: Element): Draft {
+  const candidates = generateCandidates(el, { onlyThis: false });
+  const hits = countCandidateHits(document, candidates);
+  const autoName = describeElement(el);
   return {
     el: markRaw(el),
-    name: describeElement(el),
+    name: autoName,
+    autoName,
     strategy: 'remove',
     onlyThis: false,
-    candidates: generateCandidates(el, { onlyThis: false }),
+    candidates,
+    hits,
+    sameHits: hits,
   };
 }
 
@@ -521,6 +538,11 @@ async function enterPreview() {
   // 继续选择后回来：已有草稿（改过的名称、方案、同类设置）保留，只给新元素建草稿（N12）
   const existing = new Map(drafts.value.map((d) => [d.el, d] as const));
   drafts.value = [...reconcileDrafts(selEls.value, existing, newDraft).values()];
+  // 页面可能变过（滚动加载、懒渲染）：范围标签的数字按当前 DOM 重算
+  for (const d of drafts.value) {
+    d.hits = countCandidateHits(document, d.candidates);
+    if (!d.onlyThis) d.sameHits = d.hits;
+  }
 
   // 先确认没有预览样式（选择阶段本就没有），再量每项的位置，最后才应用预览
   await props.setDraft(null);
@@ -534,7 +556,6 @@ async function enterPreview() {
 }
 
 async function backToPick() {
-  closeEditor();
   phase.value = 'pick';
   clearMarkers();
   // 草稿不清空：回到预览时沿用（N12）
@@ -560,25 +581,7 @@ async function setDraftCss(css: string | null): Promise<boolean> {
   return res.ok;
 }
 
-// ---------- 单项调整弹片 ----------
-
-async function openEditor(el: Element) {
-  editEl.value = el;
-  await nextTick();
-  const pop = editPop.value;
-  if (pop && !pop.matches(':popover-open')) pop.showPopover();
-}
-
-function closeEditor() {
-  const pop = editPop.value;
-  if (pop?.matches(':popover-open')) pop.hidePopover();
-  editEl.value = null;
-}
-
-function onEditToggle() {
-  // toggle 事件是异步派发的：点另一项的「调整」时，旧的关闭事件可能晚于新的打开到达
-  if (!editPop.value?.matches(':popover-open')) editEl.value = null;
-}
+// ---------- 行内编辑 ----------
 
 function setStrategy(d: Draft, s: StrategyId) {
   if (d.strategy === s) return;
@@ -586,28 +589,38 @@ function setStrategy(d: Draft, s: StrategyId) {
   void applyPreview();
 }
 
-/** 「只收起点选的这一个」：换候选并立即刷新预览（N10） */
+/** 范围标签：显示当前状态（「仅这一处」或「同类 N 处」） */
+function rangeLabel(d: Draft): string {
+  return d.onlyThis || d.hits <= 1 ? '仅这一处' : `同类 ${d.hits} 处`;
+}
+
+/**
+ * 只有「切过去确实不一样」时才可点：同类只有一处时两边是同一件事，标签不可点；
+ * 切到「仅这一处」后仍要能切回来，所以这时看同类那组的命中数。
+ */
+function rangeClickable(d: Draft): boolean {
+  return d.onlyThis ? d.sameHits > 1 : d.hits > 1;
+}
+
+/** 范围标签：在「仅这一处」与「同类 N 处」之间切换，换候选并立即刷新预览（N10） */
 function toggleOnlyThis(d: Draft) {
+  if (!rangeClickable(d)) return;
   const want = !d.onlyThis;
   const next = generateCandidates(d.el, { onlyThis: want });
   if (next.length === 0) {
     // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
     showWarn('切换后没法稳定识别这个元素，已保持原来的设置');
-    // 复选框已被用户点变，按数据还原显示
-    if (editPop.value) {
-      const box = editPop.value.querySelector<HTMLInputElement>('[data-testid="pm-pop-onlythis"]');
-      if (box) box.checked = d.onlyThis;
-    }
     return;
   }
   d.onlyThis = want;
   d.candidates = next;
+  d.hits = countCandidateHits(document, next);
+  if (!want) d.sameHits = d.hits;
   void applyPreview();
 }
 
-/** 移出本次选择：草稿和选择集一起移除（N11） */
+/** 删除这一项：草稿和选择集一起移除；删到最后一项时回到点选阶段（N11） */
 function removeDraft(d: Draft) {
-  closeEditor();
   drafts.value = drafts.value.filter((x) => x.el !== d.el);
   pick.remove(d.el);
   if (drafts.value.length === 0) void backToPick();
@@ -662,7 +675,6 @@ function openSave() {
     showWarn(warn);
     return;
   }
-  closeEditor();
   scopeChoice.value = 'all';
   saveDlg.value?.showModal();
 }
@@ -692,7 +704,7 @@ async function doSave() {
     const now = Date.now();
     const rules: HideRule[] = drafts.value.map((d) => ({
       id: newRuleId(),
-      elementName: d.name.trim() || describeElement(d.el),
+      elementName: d.name.trim() || d.autoName,
       candidates: [...d.candidates],
       strategy: d.strategy,
       scope,

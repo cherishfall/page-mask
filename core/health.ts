@@ -43,6 +43,24 @@ export function countPageHits(doc: Document, selector: string): number {
   return n;
 }
 
+/**
+ * 一组候选选择器合计命中多少个页面元素（去重）。向导的同类范围标签用它算「同类 N 处」：
+ * 候选是一组"任一命中即算"的写法，同一个元素被多个候选命中只算一次。
+ */
+export function countCandidateHits(doc: Document, selectors: readonly string[]): number {
+  const hit = new Set<Element>();
+  for (const sel of selectors) {
+    let els: NodeListOf<Element>;
+    try {
+      els = doc.querySelectorAll(sel);
+    } catch {
+      continue;
+    }
+    for (const el of els) if (!isOwnUiNode(el)) hit.add(el);
+  }
+  return hit.size;
+}
+
 export interface HealthResult {
   id: string;
   status: 'ok' | 'stale';

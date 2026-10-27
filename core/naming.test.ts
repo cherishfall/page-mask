@@ -31,13 +31,35 @@ describe('describeElement 人话命名', () => {
     expect(describeElement(el).length).toBeLessThanOrEqual(9);
   });
 
-  it('只取自身文本，不被深层子树污染', () => {
-    const outer = document.createElement('div');
-    const child = document.createElement('p');
-    child.textContent = '很长的子元素文本内容不应该被采用';
-    outer.appendChild(child);
-    // outer 自身无直接文本 → 兜底到标签名
-    expect(describeElement(outer)).toBe('div 元素');
+  it('文字都在子元素里的容器：取后代文本前几字', () => {
+    const bar = document.createElement('div');
+    for (const t of ['首页', '书架', '发现']) {
+      const a = document.createElement('a');
+      a.textContent = t;
+      bar.appendChild(a);
+    }
+    expect(describeElement(bar)).toBe('首页书架发现');
+  });
+
+  it('自身有直接文本时优先用它，不拼接后代文本', () => {
+    const el = document.createElement('div');
+    el.appendChild(document.createTextNode('通知'));
+    const child = document.createElement('span');
+    child.textContent = '有 3 条新消息';
+    el.appendChild(child);
+    expect(describeElement(el)).toBe('通知');
+  });
+
+  it('后代文本过长（整段 / 整页内容）不采用，退回标签名', () => {
+    const main = document.createElement('div');
+    const p = document.createElement('p');
+    p.textContent = '这是一整段正文，前几个字并不能说明这个区域是什么，不应该被拿来当名字。'.repeat(2);
+    main.appendChild(p);
+    expect(describeElement(main)).toBe('div 元素');
+  });
+
+  it('真·空元素：兜底到标签名', () => {
+    expect(describeElement(document.createElement('div'))).toBe('div 元素');
   });
 
   it('兜底：标签名', () => {

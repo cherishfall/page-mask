@@ -1,15 +1,17 @@
 /**
- * 设置向导状态机验收（#34，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
+ * 设置向导状态机验收（#34、#44，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
  *
  * 运行：npm run build && node tests/e2e/check-wizard.mjs     （约 15 秒；HEADFUL=1 有界面运行）
  *
  * 覆盖：
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
- * - 预览：改第 1 项的方案后，第 2 项（彻底移除）的号码牌位置不变、不是 0×0、仍可点击打开调整弹片（N7、N8）；
- *   号码牌之外的标记不拦截点击（N8）
- * - Esc：预览阶段弹片打开时 Esc 只关弹片；没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续编辑（N9）
- * - 「继续选择」后已改的方案保留，只给新元素建草稿（N12）；「只收起点选的这一个」切换后同类其它元素立即恢复可见（N10）
- * - 「移出本次选择」后选择集同步减少（N11）；退出后预览样式撤掉（不允许免保存临时隐藏）
+ * - 预览：行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
+ *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
+ * - 范围标签：「同类 N 处」↔「仅这一处」切换后预览立即更新；同类只有一处时标签不可点
+ * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
+ * - Esc：保存对话框打开时 Esc 只关浮层；没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续编辑（N9）
+ * - 「继续选择」后已改的方案保留，只给新元素建草稿（N12）
+ * - 退出后预览样式撤掉（不允许免保存临时隐藏）
  * - 选择阶段：滚轮滚动后不移动鼠标直接点击，选中的是指针下的元素，悬停框也换到新元素（N14）
  * - 「选大一点」作用于最后选中的元素并原位替换（N13、N6）
  * - 工具条默认在底部、不挡页面顶部；拖动把手和方向键能移动且不出可视区（N15）
@@ -117,14 +119,28 @@ function waitVisible(page, label, sel, want = true) {
   );
 }
 
-const dialogOpen = (page, sel) =>
-  page.evaluate((h, s) => !!document.querySelector(h)?.shadowRoot?.querySelector(s)?.open, HOST, sel);
-const popoverOpen = (page) =>
-  page.evaluate(
-    (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-popover"]')?.matches(':popover-open'),
-    HOST,
-  );
 const wizardOpen = (page) => page.evaluate((h) => !!document.querySelector(h), HOST);
+
+/** 清单行数（每行一个列表项） */
+const draftCount = (page) =>
+  page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid="pm-wiz-drafts"] > li').length ?? 0, HOST);
+
+/** 第 n 行当前选中的收起方式（读原生 radio 的 checked value，而不是文本） */
+const checkedStrategy = (page, n) =>
+  page.evaluate(
+    (h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`input[name="pm-strategy-${i}"]:checked`)?.value ?? null,
+    HOST,
+    n,
+  );
+
+/** 第 n 行下面那行解释文字 */
+const rowHint = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-hint`)))[0] ?? '';
+/** 第 n 行范围标签的文字 */
+const rowRange = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-range`)))[0] ?? '';
+const rangeDisabled = (page, n) =>
+  page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-range"]`)?.disabled, HOST, n);
+const nameValue = (page, n) =>
+  page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
 
 /** 真实鼠标点页面元素（相对左上角的偏移，默认中心） */
 async function clickEl(page, sel, dx, dy) {
@@ -183,38 +199,69 @@ async function main() {
     const target = (await shadowTexts(page, tid('pm-wiz-adjust-target')))[0];
     check(target.includes('第 2 项'), `「选大一点」作用对象显示为最后选中的第 2 项（${target}）`);
 
-    // ===================== 预览：标记不坍缩、可点击（N7、N8） =====================
-    console.log('\n--- 预览：改第 1 项方案后，第 2 项的标记仍在、仍可点 ---');
+    // ===================== 预览：行内换方式、标记不坍缩、号码牌跳转（N7、N8、#44） =====================
+    console.log('\n--- 预览：行内换收起方式立即生效；号码牌跳到清单对应行 ---');
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：活动栏被移除', '#promo', false);
     await waitVisible(page, '预览：横幅被移除', '#banner', false);
-    const drafts = await shadowTexts(page, '[data-testid^="pm-draft-edit-"]');
-    check(drafts.length === 2, `草稿清单 2 项（实际 ${drafts.length}）`);
+    check((await draftCount(page)) === 2, `草稿清单是一行一项（实际 ${await draftCount(page)} 行）`);
+    check(
+      (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
+      '每一项的收起方式默认是「消失」（原生 radio 的选中值）',
+    );
+    check((await rowHint(page, 1)) === '下面的内容往上补', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
     const before = await shadowRect(page, tid('pm-marker-2'));
     check(before && before.w > 0 && before.h > 0, `第 2 项号码牌可见（${JSON.stringify(before)}）`);
 
-    await clickInShadow(page, HOST, tid('pm-draft-edit-1'));
-    await waitFor(page, '弹片打开', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-popover"]').matches(':popover-open'), [HOST]);
-    await clickInShadow(page, HOST, tid('pm-pop-strategy-blank'));
-    await waitFor(page, '活动栏改为原地留白', () => getComputedStyle(document.querySelector('#promo')).visibility === 'hidden');
+    // 行内切到「留空」：页面立刻变、解释跟着换
+    await clickInShadow(page, HOST, tid('pm-draft-1-strategy-blank'));
+    await waitFor(page, '活动栏改为留空', () => getComputedStyle(document.querySelector('#promo')).visibility === 'hidden');
+    check((await rowHint(page, 1)) === '位置留着不动', `切到「留空」后解释跟着变（${await rowHint(page, 1)}）`);
     const after = await shadowRect(page, tid('pm-marker-2'));
     check(
       after && after.w > 0 && after.h > 0 && Math.abs(after.x - before.x) < 1 && Math.abs(after.y - before.y) < 1,
-      `改第 1 项方案后，第 2 项号码牌位置不变、不是 0×0（前 ${JSON.stringify(before)} 后 ${JSON.stringify(after)}）`,
+      `改第 1 项方式后，第 2 项号码牌位置不变、不是 0×0（前 ${JSON.stringify(before)} 后 ${JSON.stringify(after)}）`,
     );
 
-    // N9：弹片打开时 Esc 只关弹片
-    await page.keyboard.press('Escape');
-    await waitFor(page, 'Esc 关掉弹片', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-popover"]').matches(':popover-open'), [HOST], { timeout: 3000 });
-    check((await wizardOpen(page)) && !(await dialogOpen(page, tid('pm-wizard-exit-confirm'))), '预览阶段弹片打开时按 Esc：只关弹片，向导还在、没弹退出确认');
+    // 行内切到「盖住」：元素不被移除，页面上出现遮盖板
+    await clickInShadow(page, HOST, tid('pm-draft-2-strategy-mask'));
+    await waitFor(
+      page,
+      '横幅改成盖住',
+      (h) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const bannerEl = document.querySelector('#banner');
+        return getComputedStyle(bannerEl).visibility === 'visible' && !!sr.querySelector('.pm-wiz-mask');
+      },
+      [HOST],
+    );
+    check((await rowHint(page, 2)) === '盖一块和背景同色的板', `「盖住」下面显示对应解释（${await rowHint(page, 2)}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-2-strategy-remove'));
+    await waitVisible(page, '改回消失：横幅又被移除', '#banner', false);
 
-    // 第 2 项的号码牌仍可点（真实鼠标点击经过命中测试）
+    // N9：有浮层（保存对话框）时 Esc 只关浮层
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(page, '保存对话框打开', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-save-pop"]').open, [HOST], { timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await waitFor(page, 'Esc 关掉保存对话框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-save-pop"]').open, [HOST], { timeout: 3000 });
+    check((await wizardOpen(page)) && !(await visible(page, '#banner')), '保存对话框打开时按 Esc：只关对话框，向导还在、预览照常');
+
+    // 点页面上的号码牌 = 滚到清单对应行并高亮，不再打开浮层
+    check(
+      await page.evaluate((h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-popover"]'), HOST),
+      '旧的「调整」弹片已经从 DOM 里删掉',
+    );
     await clickInShadow(page, HOST, tid('pm-marker-2'));
-    await waitFor(page, '点号码牌打开第 2 项', (h) => document.querySelector(h).shadowRoot.querySelector('#pm-pop-title')?.textContent.includes('第 2 项'), [HOST]);
-    check(true, '改过第 1 项后，第 2 项的号码牌仍可点击，打开「调整第 2 项」');
-    await page.keyboard.press('Escape');
+    await waitFor(
+      page,
+      '点号码牌后清单第 2 行高亮',
+      (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-2"]')?.classList.contains('flash'),
+      [HOST],
+      { timeout: 3000 },
+    );
+    check((await wizardOpen(page)) && !(await visible(page, '#banner')), '点号码牌：清单对应行高亮，向导与预览都不受影响');
 
-    // N8：原地留白后目标本身 visibility:hidden、不可命中；断言框中心命中页面，而不是扩展覆盖层
+    // N8：留空后目标本身 visibility:hidden、不可命中；断言框中心命中页面，而不是扩展覆盖层
     const promo = await rectOf(page, '#promo');
     const hit = await page.evaluate(
       (x, y) => {
@@ -227,7 +274,6 @@ async function main() {
     check(hit && !hit.own, `留白项上的虚线框不拦截点击（框中心命中页面元素 ${hit?.name ?? '无'}）`);
 
     // N9：没有浮层时 Esc = 请求退出（有草稿 → 确认框）；确认框上 Esc = 继续编辑
-    await waitFor(page, '弹片已关', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-popover"]').matches(':popover-open'), [HOST]);
     await page.keyboard.press('Escape');
     await waitFor(page, '预览阶段 Esc 弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     check(true, '预览阶段没有浮层时按 Esc：弹出退出确认');
@@ -237,44 +283,79 @@ async function main() {
     await waitFor(page, '确认框上 Esc 关掉确认框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     check((await wizardOpen(page)) && !(await visible(page, '#banner')), '退出确认框上按 Esc = 继续编辑：向导还在，预览照常');
 
-    // ===================== 继续选择保留已改方案（N12）、只藏这一个（N10） =====================
-    console.log('\n--- 继续选择后已改的方案保留；只收起这一个立即刷新预览 ---');
+    // ===================== 继续选择保留已改方式（N12）、范围标签切换（#44） =====================
+    console.log('\n--- 继续选择后已改的方式保留；范围标签在「仅这一处」与「同类 N 处」之间切换 ---');
     await clickInShadow(page, HOST, tid('pm-wiz-continue'));
     await waitVisible(page, '回到选择阶段：预览撤掉', '#banner');
     await clickEl(page, C2);
     await waitFor(page, '已选 3 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('3'), [HOST]);
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：卡片二被移除', C2, false);
-    const metas = await shadowTexts(page, '[data-testid^="pm-draft-"] .meta');
-    check(metas[0] === '原地留白' && metas[1] === '彻底移除' && metas[2] === '彻底移除', `继续选择后第 1 项仍是「原地留白」，新加的是默认方案（${JSON.stringify(metas)}）`);
+    check(
+      (await checkedStrategy(page, 1)) === 'blank' &&
+        (await checkedStrategy(page, 2)) === 'remove' &&
+        (await checkedStrategy(page, 3)) === 'remove',
+      `继续选择后第 1 项仍是「留空」，新加的是默认「消失」（${await checkedStrategy(page, 1)} / ${await checkedStrategy(page, 2)} / ${await checkedStrategy(page, 3)}）`,
+    );
     check(
       (await page.evaluate(() => getComputedStyle(document.querySelector('#promo')).visibility)) === 'hidden',
-      '第 1 项的原地留白预览照常生效',
+      '第 1 项的留空预览照常生效',
     );
     check(!(await visible(page, C1)) && !(await visible(page, C3)), '默认同类一起收起：卡片一、三也被预览移除');
-    await clickInShadow(page, HOST, tid('pm-draft-edit-3'));
-    await waitForShadow(page, HOST, tid('pm-pop-onlythis'));
-    await clickInShadow(page, HOST, tid('pm-pop-onlythis'));
-    await waitVisible(page, '只收起这一个：卡片一恢复可见', C1);
-    await waitVisible(page, '只收起这一个：卡片三恢复可见', C3);
-    check(!(await visible(page, C2)), '「只收起点选的这一个」切换后立即刷新预览：同类其它卡片恢复可见，卡片二仍被收起');
 
-    // N11：移出本次选择 → 选择集同步减少
-    await clickInShadow(page, HOST, tid('pm-pop-remove'));
-    await waitVisible(page, '移出后卡片二恢复', C2);
+    // 范围标签：三张卡片互为同类
+    check((await rowRange(page, 3)) === '同类 3 处', `范围标签显示实时命中数（${await rowRange(page, 3)}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-range'));
+    await waitVisible(page, '仅这一处：卡片一恢复可见', C1);
+    await waitVisible(page, '仅这一处：卡片三恢复可见', C3);
+    check(!(await visible(page, C2)), '切到「仅这一处」立即刷新预览：同类其它卡片恢复，卡片二仍被收起');
+    check((await rowRange(page, 3)) === '仅这一处', `切到「仅这一处」后标签显示「仅这一处」（${await rowRange(page, 3)}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-range'));
+    await waitVisible(page, '切回同类：卡片一又收起', C1, false);
+    await waitVisible(page, '切回同类：卡片三又收起', C3, false);
+    check((await rowRange(page, 3)) === '同类 3 处', `再点一次切回「同类 3 处」，另外两处同时收起（${await rowRange(page, 3)}）`);
+
+    // 页面上该类只有一处：标签显示「仅这一处」且点不动
+    check((await rowRange(page, 2)) === '仅这一处', `只有一处的项显示「仅这一处」（${await rowRange(page, 2)}）`);
+    check((await rangeDisabled(page, 2)) === true, '只有一处时范围标签不可点（button disabled）');
+
+    // 行内改名：不点开任何浮层，改名后清单重绘仍保留
+    await clickInShadow(page, HOST, tid('pm-draft-name-1'));
+    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-name-1"]').select(), HOST);
+    await page.keyboard.type('活动栏（改名）');
+    check((await nameValue(page, 1)) === '活动栏（改名）', `行内改名生效（${await nameValue(page, 1)}）`);
+
+    // N11：点 ✕ 删掉这一项 → 清单与选择集同步减少
+    await clickInShadow(page, HOST, tid('pm-draft-3-remove'));
+    await waitVisible(page, '删除后卡片二恢复', C2);
+    check((await draftCount(page)) === 2, '删除后清单少了一行');
+    check((await nameValue(page, 1)) === '活动栏（改名）', '清单重绘后行内改的名字还在');
     await clickInShadow(page, HOST, tid('pm-wiz-continue'));
     await waitFor(page, '回到选择阶段', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]'), [HOST]);
     const left = await shadowTexts(page, '[data-testid^="pm-badge-"]');
-    check(left.length === 2, `移出的那项没有带着序号牌回来（剩 ${left.length} 个）`);
+    check(left.length === 2, `删掉的那项没有带着序号牌回来（剩 ${left.length} 个）`);
 
-    // 退出：确认后预览样式撤掉
+    // 删到最后一项：回到点选阶段
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：横幅被移除', '#banner', false);
+    await clickInShadow(page, HOST, tid('pm-draft-2-remove'));
+    await waitVisible(page, '删掉第二项后横幅恢复', '#banner');
+    await clickInShadow(page, HOST, tid('pm-draft-1-remove'));
+    await waitFor(
+      page,
+      '删到最后一项回到点选阶段',
+      (h) => {
+        const sr = document.querySelector(h)?.shadowRoot;
+        return !!sr?.querySelector('[data-testid="pm-wiz-bigger"]') && !sr.querySelector('[data-testid="pm-wiz-drafts"]');
+      },
+      [HOST],
+    );
+    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 0, '删到 0 项：回到点选阶段，没有序号牌');
+    await waitVisible(page, '删到 0 项：活动栏恢复', '#promo');
+
+    // 没有已选内容时「取消」直接退出
     await clickInShadow(page, HOST, tid('pm-wiz-exit'));
-    await waitForShadow(page, HOST, tid('pm-wiz-exit-yes'));
-    await clickInShadow(page, HOST, tid('pm-wiz-exit-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
-    await waitVisible(page, '退出后横幅恢复', '#banner');
     check(await visible(page, '#promo'), '退出不保存：预览样式全部撤掉');
 
     // ===================== 滚动后按指针位置命中（N14）、选大一点（N13） =====================

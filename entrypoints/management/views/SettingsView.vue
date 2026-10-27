@@ -115,7 +115,7 @@
             本机现有的 {{ store.state.replaceImpact.localSites }} 个网站、{{ store.state.replaceImpact.localRules }} 个收起项会全部被替换
           </li>
           <li v-if="store.state.replaceImpact.removedOrigins.length > 0">
-            其中 {{ store.state.replaceImpact.removedOrigins.length }} 个网站在文件里没有，会被彻底移除（共
+            其中 {{ store.state.replaceImpact.removedOrigins.length }} 个网站在文件里没有，本机不再保留（共
             {{ store.state.replaceImpact.removedRules }} 个收起项）：{{ store.state.replaceImpact.removedOrigins.map(siteLabelOf).join('、') }}
           </li>
           <li>

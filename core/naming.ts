@@ -1,5 +1,5 @@
 /**
- * 元素自动命名（design.md 数据模型）：无障碍标签 > 元素文本前几字 > 位置描述。
+ * 元素自动命名（design.md 数据模型）：无障碍标签 > 元素自身文本 > 后代文本 > 标签名兜底。
  * 面向不懂 CSS 的用户，名字必须是人话。
  */
 
@@ -18,6 +18,12 @@ const TAG_NAMES: Record<string, string> = {
 };
 
 const MAX_TEXT_LEN = 8;
+
+/**
+ * 后代文本的上限：超过它说明这个元素装的是整段 / 整页内容（页面主区域、文章正文），
+ * 拿它的前几个字当名字只会得到一句没意义的话，这时宁可退回标签名。
+ */
+const MAX_DESCENDANT_TEXT_LEN = 40;
 
 export function describeElement(el: Element): string {
   // 1. 无障碍标签
@@ -47,7 +53,11 @@ export function describeElement(el: Element): string {
   const ownText = ownTextOf(el);
   if (ownText) return clip(ownText);
 
-  // 6. 兜底：标签名
+  // 6. 文字都在子元素里（如 <div><span>首页</span><span>书架</span></div>）：取后代文本的前几字
+  const nestedText = nestedTextOf(el);
+  if (nestedText) return clip(nestedText);
+
+  // 7. 兜底：标签名
   return `${tag} 元素`;
 }
 
@@ -67,6 +77,16 @@ function ownTextOf(el: Element): string {
     if (text.trim().length >= MAX_TEXT_LEN) break;
   }
   return text.trim();
+}
+
+/**
+ * 后代文本（含直接文本，但调用时元素没有直接文本）。整段 / 整页文字不采用——那样命中的是
+ * 页面主区域，名字会是正文开头几个字，反而不如「div 元素」好认。
+ */
+function nestedTextOf(el: Element): string | null {
+  const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length > MAX_DESCENDANT_TEXT_LEN) return null;
+  return text;
 }
 
 function clip(s: string): string {

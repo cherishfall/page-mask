@@ -38,6 +38,8 @@ import path from 'node:path';
 
 // 不用 0.1.0 的旧默认值「新建标签页」：#35 起它在没有版本标记时会被当作"没设置"迁移掉
 const DISGUISED_TITLE = '工作笔记';
+/** 预览清单里行内改的名字（#44）：保存后的规则名、编辑面板显示的都应是它 */
+const RENAMED_CARD = '推荐卡片（改名）';
 // 页内界面宿主是自定义元素（core/host-shield.ts HOST_TAGS）
 const TOGGLE_HOST = 'pagemask-toggle';
 const TOGGLE_BTN = '[title^="PageMask"]';
@@ -242,14 +244,29 @@ async function main() {
     check(isShown(await styleOf(page, '#page-title')), '预览：未选中的元素保持可见');
     await shot(page, 'wizard-preview');
 
-    // 点第一个号码牌 → 调整弹片 → 换成方案B（原地留白）→ 移出（#34：号码牌只是捷径，入口另见草稿清单）
+    // 点第一个号码牌 → 清单对应行高亮（#44）；行内切「留空」；行内改名；点 ✕ 删掉导航（#34、#44）
     await clickInShadow(page, WIZARD_HOST, tid('pm-marker-1'));
-    await waitForShadow(page, WIZARD_HOST, tid('pm-pop-strategy-blank'));
-    await clickInShadow(page, WIZARD_HOST, tid('pm-pop-strategy-blank'));
-    await waitStyle(page, '标记弹片换方案B', '.top-nav', 'visibility', 'hidden');
-    check(true, '标记弹片换方案B生效（visibility:hidden）');
-    await clickInShadow(page, WIZARD_HOST, tid('pm-pop-remove'));
-    await waitStyle(page, '移出后导航恢复', '.top-nav', 'visibility', 'visible');
+    await waitFor(
+      page,
+      '点号码牌后清单第 1 行高亮',
+      (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-draft-1"]')?.classList.contains('flash'),
+      [WIZARD_HOST],
+    );
+    check(true, '点页面上的号码牌：清单滚到对应行并高亮');
+    await clickInShadow(page, WIZARD_HOST, tid('pm-draft-1-strategy-blank'));
+    await waitStyle(page, '行内换「留空」', '.top-nav', 'visibility', 'hidden');
+    check(true, '行内换「留空」立即生效（visibility:hidden）');
+    // 行内改名：保存后规则名用的是改过的名字（#44）
+    await clickInShadow(page, WIZARD_HOST, tid('pm-draft-name-2'));
+    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-name-2"]').select(), WIZARD_HOST);
+    await page.keyboard.type(RENAMED_CARD);
+    check(
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-name-2"]').value, WIZARD_HOST)) === RENAMED_CARD,
+      `行内改名生效（${RENAMED_CARD}）`,
+    );
+    await clickInShadow(page, WIZARD_HOST, tid('pm-draft-1-remove'));
+    await waitStyle(page, '删掉后导航恢复', '.top-nav', 'visibility', 'visible');
+    check(true, '点 ✕ 不收起导航：这一项从清单消失、页面效果消失');
 
     // 保存（默认整站）
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-save'));
@@ -260,9 +277,10 @@ async function main() {
     await waitFor(page, '新站点保存后自动进入清爽态', (t) => document.title === t, [DISGUISED_TITLE]);
     await waitStyle(page, '正式规则生效', '.rec-card', 'display', 'none');
     check(true, '保存后向导关闭、悬浮按钮回归、自动进入清爽态、正式规则生效');
-    check((await styleOf(page, '.top-nav')).visibility === 'visible', '已移出的元素没有被保存成规则');
+    check((await styleOf(page, '.top-nav')).visibility === 'visible', '删掉的那项没有被保存成规则');
     const stored = await getProfile(ext.control, ORIGIN);
     check(stored.hideRules.length === 1, `规则落库 1 条（实际 ${stored.hideRules.length}）`);
+    check(stored.hideRules[0].elementName === RENAMED_CARD, `行内改的名字被保存（${stored.hideRules[0].elementName}）`);
     check(stored.switchState === 'disguised', '站点开关为清爽态');
     await shot(page, 'wizard-saved');
 
@@ -271,6 +289,8 @@ async function main() {
     await sendToTab(ext.control, tabId, { t: 'openEditor' });
     await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'));
     check(true, '编辑面板打开');
+    const shownName = (await shadowText(page, EDITOR_HOST, '.pm-ed-name')).trim();
+    check(shownName === RENAMED_CARD, `编辑面板显示行内改的名字（${shownName}）`);
     const ruleId = stored.hideRules[0].id;
     await clickInShadow(page, EDITOR_HOST, tid(`pm-ed-strategy-${ruleId}-mask`));
     await waitFor(

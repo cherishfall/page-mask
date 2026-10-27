@@ -75,7 +75,7 @@ export class PickController {
     this.setHover(null);
   }
 
-  /** 移出本次选择（预览里「移出本次选择」同步到这里，N11） */
+  /** 删除这一项（预览里点 ✕ 时同步到这里，N11） */
   remove(el: Element): void {
     if (!this.selection.includes(el)) return;
     this.selection = removeFromSelection(this.selection, el);
