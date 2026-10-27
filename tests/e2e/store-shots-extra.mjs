@@ -20,7 +20,7 @@ const clip = (w, h) => ({ x: 0, y: 0, width: w, height: h });
 
 try {
   const now = Date.now();
-  await control.evaluate((s) => chrome.storage.local.set({ settings: s }), { defaultTitle: '新建标签页' });
+  await control.evaluate((s) => chrome.storage.local.set({ settings: s }), { defaultTitle: '阅读' });
   await setProfile(control, ORIGIN, {
     formatVersion: 1, origin: ORIGIN, switchState: 'disguised', disguisedTitle: null, faviconDataUrl: null,
     floatingBtnPos: null, createdAt: now, updatedAt: now,

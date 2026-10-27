@@ -10,7 +10,7 @@
  */
 import type { ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
 import { createEmptyProfile } from './types';
-import { isValidOrigin, readSettings, sanitizeProfile } from './validate';
+import { isValidOrigin, readSettings, readStoredSettings, sanitizeProfile, toStoredSettings } from './validate';
 
 export interface KVArea {
   get(keys: string[] | null): Promise<Record<string, unknown>>;
@@ -149,11 +149,11 @@ export function createPageMaskStorage(area: KVArea) {
 
   async function getSettings(): Promise<GlobalSettings> {
     const obj = await area.get([SETTINGS_KEY]);
-    return readSettings(obj[SETTINGS_KEY]);
+    return readStoredSettings(obj[SETTINGS_KEY]);
   }
 
   function putSettings(settings: GlobalSettings): Promise<void> {
-    return serialize(area, () => area.set({ [SETTINGS_KEY]: readSettings(clone(settings)) }));
+    return serialize(area, () => area.set({ [SETTINGS_KEY]: toStoredSettings(clone(settings)) }));
   }
 
   async function exportBundle(): Promise<ExportBundle> {
@@ -202,6 +202,7 @@ export function createPageMaskStorage(area: KVArea) {
     if (incoming.size === 0) {
       throw new Error(`${INVALID_EXPORT_FILE}：里面没有可导入的站点配置，本地数据没有改动`);
     }
+    // 导出文件从 0.2.0 起才带全局设置，不存在 0.1.0 旧值的问题，按 schema 读取即可（不做旧版迁移）
     const importedSettings = isObject(bundle.settings) ? readSettings(bundle.settings) : null;
 
     // 2) 基于本地最新值构建新数据集，一次性写入
@@ -230,7 +231,7 @@ export function createPageMaskStorage(area: KVArea) {
         writes[profileKey(origin)] = next;
       }
       if (importedSettings && (mode === 'replace' || !(SETTINGS_KEY in all))) {
-        writes[SETTINGS_KEY] = importedSettings;
+        writes[SETTINGS_KEY] = toStoredSettings(importedSettings);
       }
 
       await area.set(writes);

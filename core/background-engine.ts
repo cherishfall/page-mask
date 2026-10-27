@@ -1,11 +1,21 @@
 /**
- * PageMask 后台注入引擎（可注入 browser 的工厂，供后台入口与单测共用）。
- * 职责：站点名单的动态内容脚本注册/注销、权限配套、隐藏样式（方案A/B）按文档的
- * insertCSS/removeCSS、安装后拉起首次引导。
+ * PageMask 后台引擎（可注入 browser 的工厂，供后台入口与单测共用）。
+ * 职责：
+ * - 站点生命周期对账（core/reconcile.ts）：让站点配置、站点授权、动态注册三者一致
+ * - 启用站点、一键清空、新站点向导取消
+ * - 隐藏样式（方案A/B）按文档的 insertCSS/removeCSS
+ * - 安装后拉起首次引导
  * 方案 C（遮罩）由内容脚本的覆盖层承担；标题/图标由内容脚本直接改写。
  *
  * 无状态：注入记录由内容脚本按文档持有，随请求带来（见 core/messages.ts 顶部说明），
- * SW 随时被回收都不影响还原。
+ * SW 随时被回收都不影响还原；对账每次都从存储、权限、注册表重新读取。
+ *
+ * 对账触发点（任何一个都可能在 SW 刚被唤醒时到来，都是幂等的）：
+ * - runtime.onInstalled（install / update / chrome_update）：扩展更新或重载会清空动态注册（REVIEW B1）
+ * - runtime.onStartup
+ * - permissions.onAdded / onRemoved（用户在扩展详情里收回或授予站点权限）
+ * - storage.onChanged 里站点配置被创建或删除（新站点向导保存、整体替换导入、一键清空）
+ * - 扩展页面发来的 reconcile 消息（管理页导入、授权之后，等结果再刷新界面）
  *
  * 消息回复统一用 sendResponse + 监听器同步 return true（"返回 Promise 即回复"要 Chrome 148+ 且灰度放量）。
  *
@@ -14,10 +24,19 @@
  *   单测：    createBackground({ browser: fakeBrowser })，再 fakeBrowser.runtime.onMessage.trigger(msg, sender, sendResponse)
  */
 import type { Browser, WxtBrowser } from 'wxt/browser';
-import { createPageMaskStorage } from './storage';
+import { PROFILE_PREFIX, createPageMaskStorage } from './storage';
 import { buildDisguiseCss } from './css-builder';
-import { registrationPlan } from './registration';
-import type { Ack, BgRequest, CssAck, EnableSiteResponse } from './messages';
+import { originPattern, registrationPlan } from './registration';
+import { planReconcile, type RegisteredScript } from './reconcile';
+import type {
+  Ack,
+  BgRequest,
+  CssAck,
+  EnableSiteRequest,
+  EnableSiteResponse,
+  OpenIntent,
+  ReconcileResponse,
+} from './messages';
 
 export interface BackgroundDeps {
   /** 扩展 API（生产传 wxt/browser 的 browser，单测传 fakeBrowser 并按需 stub scripting/permissions） */
@@ -26,51 +45,187 @@ export interface BackgroundDeps {
 
 type Sender = Browser.runtime.MessageSender;
 type CssTarget = Browser.scripting.InjectionTarget;
+type Reply = Ack | EnableSiteResponse | CssAck | ReconcileResponse;
+
+/** 一键清空时等待每个标签页还原的上限：页面卡住或内容脚本不在时不能让清空一直挂着 */
+export const SITE_RESET_TIMEOUT_MS = 1500;
+
+const FORBIDDEN = { ok: false, error: 'forbidden', code: 'forbidden' } as const;
+
+function originOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
 
 export function createBackground({ browser }: BackgroundDeps): void {
   const storage = createPageMaskStorage(browser.storage.local);
+  const extensionBase = browser.runtime.getURL('/');
 
-  async function registerSiteContentScript(origin: string): Promise<void> {
-    const plan = registrationPlan(origin);
-    const existing = await browser.scripting.getRegisteredContentScripts({
-      ids: [plan.id],
-    });
-    if (existing.length === 0) {
-      await browser.scripting.registerContentScripts([plan]);
+  /** 特权消息只接受本扩展自己的页面（popup / 管理页 / 引导页），网页里的内容脚本一律拒绝（REVIEW B26） */
+  function fromExtensionPage(sender: Sender): boolean {
+    return sender.id === browser.runtime.id && typeof sender.url === 'string' && sender.url.startsWith(extensionBase);
+  }
+
+  async function isGranted(origin: string): Promise<boolean> {
+    try {
+      return await browser.permissions.contains({ origins: [originPattern(origin)] });
+    } catch {
+      return false; // 非法来源（旧版导入的脏数据）当作没授权
     }
   }
 
-  async function enableSite(origin: string, tabId: number): Promise<EnableSiteResponse> {
+  // ---------- 对账 ----------
+
+  async function registerOne(plan: ReturnType<typeof registrationPlan>): Promise<void> {
     try {
-      await registerSiteContentScript(origin);
+      await browser.scripting.registerContentScripts([plan]);
+    } catch (e) {
+      // 别的触发点刚注册过同一 id：改为按当前计划更新（重复注册幂等，REVIEW B27）
+      if (!/duplicate/i.test(String(e))) throw e;
+      await browser.scripting.updateContentScripts([plan]);
+    }
+  }
+
+  async function reconcileOnce(): Promise<string[]> {
+    const profiles = await storage.listProfiles();
+    const configured = profiles.map((p) => p.origin);
+    const granted = (await Promise.all(configured.map(async (o) => ((await isGranted(o)) ? o : null)))).filter(
+      (o): o is string => o !== null,
+    );
+    const registered = (await browser.scripting.getRegisteredContentScripts()) as RegisteredScript[];
+    const plan = planReconcile({ configured, granted, registered });
+
+    // 每一项独立处理：一项失败不影响其余站点
+    const errors: unknown[] = [];
+    const attempt = async (fn: () => Promise<unknown>) => {
+      try {
+        await fn();
+      } catch (e) {
+        errors.push(e);
+      }
+    };
+    for (const id of plan.unregister) {
+      await attempt(() => browser.scripting.unregisterContentScripts({ ids: [id] }));
+    }
+    for (const p of plan.update) await attempt(() => browser.scripting.updateContentScripts([p]));
+    for (const p of plan.register) await attempt(() => registerOne(p));
+    if (errors.length) console.warn('[PageMask] 对账时部分站点未能注册/注销', errors);
+    return plan.pending;
+  }
+
+  /** 同一 SW 实例内的对账串行执行（多个触发点同时到来时不会交错注册） */
+  let reconcileChain: Promise<unknown> = Promise.resolve();
+  function reconcile(): Promise<string[]> {
+    const run = reconcileChain.then(reconcileOnce);
+    reconcileChain = run.catch(() => undefined);
+    return run;
+  }
+
+  function reconcileInBackground(reason: string): void {
+    reconcile().catch((e: unknown) => console.warn(`[PageMask] 对账失败（${reason}）`, e));
+  }
+
+  // ---------- 启用站点 ----------
+
+  async function enableSite(msg: EnableSiteRequest): Promise<EnableSiteResponse> {
+    const { origin, tabId } = msg;
+    const open: OpenIntent | undefined = msg.open === 'newSite' || msg.open === 'addElement' ? msg.open : undefined;
+    // 核对标签页当前确实停在这个站点：popup 打开后页面可能已跳走，授权不能落到别的站点（REVIEW B27）
+    let tabOrigin: string | null = null;
+    try {
+      tabOrigin = originOf((await browser.tabs.get(tabId))?.url);
+    } catch {
+      // 标签页已关闭
+    }
+    if (tabOrigin !== origin) return { ok: false, code: 'tabMismatch', error: 'tab is not on this site' };
+    if (!(await isGranted(origin))) return { ok: false, code: 'notGranted', error: 'site access not granted' };
+    try {
+      // 已配置的站点在这里补注册；新站点没有配置，不注册（保存向导时写入配置，再由对账注册）
+      await reconcile();
       // 已打开的标签页立即注入（registerContentScripts 只影响后续导航）。
       // 路径运行时动态确定，超出 WXT 静态 ScriptPublicPath 联合类型，此处断言。
       await browser.scripting.executeScript({
         target: { tabId },
         files: registrationPlan(origin).js as unknown as ScriptPublicPath[],
       });
+      if (open) {
+        // 内容脚本在同一隔离环境里登记了 window.__pagemask，注入完成后直接让它打开向导（不靠轮询重试）
+        const [res] = await browser.scripting.executeScript({
+          target: { tabId },
+          func: (mode: OpenIntent) =>
+            (window as unknown as { __pagemask?: { open(m: OpenIntent): boolean } }).__pagemask?.open(mode) ?? false,
+          args: [open],
+        });
+        if (res && res.result === false) return { ok: false, code: 'injectFailed', error: 'wizard did not open' };
+      }
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: String(e) };
+      return { ok: false, code: 'injectFailed', error: String(e) };
     }
   }
 
-  async function resetSite(origin: string): Promise<Ack> {
-    const plan = registrationPlan(origin);
+  // ---------- 一键清空 ----------
+
+  /** 通知某站点所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），带超时 */
+  async function restoreOpenTabs(origin: string): Promise<void> {
+    let tabs: Browser.tabs.Tab[] = [];
     try {
-      await browser.scripting.unregisterContentScripts({ ids: [plan.id] });
+      tabs = await browser.tabs.query({});
     } catch {
-      // 未注册过时忽略
+      return;
     }
+    const targets = tabs.filter((t) => t.id !== undefined && originOf(t.url) === origin);
+    await Promise.allSettled(
+      targets.map((t) =>
+        Promise.race([
+          browser.tabs.sendMessage(t.id!, { t: 'siteReset' }),
+          new Promise((resolve) => setTimeout(resolve, SITE_RESET_TIMEOUT_MS)),
+        ]),
+      ),
+    );
+  }
+
+  /** 顺序：先还原已打开页面（此时仍有站点授权，样式才删得掉），再收回授权、注销、删配置（REVIEW B7） */
+  async function resetSite(origin: string): Promise<Ack> {
+    await restoreOpenTabs(origin);
     try {
       // 非法 origin（如旧版导入的脏数据）会让这里抛错；不能因此删不掉配置
-      await browser.permissions.remove({ origins: plan.matches });
+      await browser.permissions.remove({ origins: [originPattern(origin)] });
     } catch {
       // 忽略
+    }
+    try {
+      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(origin).id] });
+    } catch {
+      // 未注册过时忽略
     }
     await storage.deleteProfile(origin);
     return { ok: true };
   }
+
+  /** 新站点首次向导被取消：站点仍没有配置时，收回刚给的授权与注册（有配置说明别处已保存，不动） */
+  async function cancelNewSite(sender: Sender): Promise<Ack> {
+    const origin = sender.tab ? originOf(sender.url) : null;
+    if (!origin) return { ok: false, error: 'no sender tab' };
+    if (await storage.getProfile(origin)) return { ok: true };
+    try {
+      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(origin).id] });
+    } catch {
+      // 新站点本来就没注册
+    }
+    try {
+      await browser.permissions.remove({ origins: [originPattern(origin)] });
+    } catch {
+      // 忽略
+    }
+    return { ok: true };
+  }
+
+  // ---------- 隐藏样式（按文档） ----------
 
   /**
    * 发送方文档：documentId 精确定位（bfcache / 预渲染 / 跨页时序都不会错位）；
@@ -136,12 +291,24 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
   }
 
-  function handle(msg: BgRequest, sender: Sender): Promise<Ack | EnableSiteResponse | CssAck> | null {
+  async function handleReconcile(): Promise<ReconcileResponse> {
+    try {
+      return { ok: true, pending: await reconcile() };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  function handle(msg: BgRequest, sender: Sender): Promise<Reply> | null {
     switch (msg?.t) {
       case 'enableSite':
-        return enableSite(msg.origin, msg.tabId);
+        return fromExtensionPage(sender) ? enableSite(msg) : Promise.resolve(FORBIDDEN);
       case 'resetSite':
-        return resetSite(msg.origin);
+        return fromExtensionPage(sender) ? resetSite(msg.origin) : Promise.resolve(FORBIDDEN);
+      case 'reconcile':
+        return fromExtensionPage(sender) ? handleReconcile() : Promise.resolve(FORBIDDEN);
+      case 'cancelNewSite':
+        return cancelNewSite(sender);
       case 'applyDisguise':
       case 'restoreOriginal':
       case 'draftCss':
@@ -158,9 +325,24 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return true; // 异步回复：保持通道直到 sendResponse
   });
 
+  // ---------- 生命周期事件 → 对账 ----------
+
   browser.runtime.onInstalled.addListener((details) => {
+    reconcileInBackground(`onInstalled:${details.reason}`);
     if (details.reason === 'install') {
       browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
     }
+  });
+  browser.runtime.onStartup.addListener(() => reconcileInBackground('onStartup'));
+  browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
+  browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    // 只关心站点配置的创建与删除；规则、开关、体检回写等修改不影响注册
+    const lifecycle = Object.entries(changes).some(
+      // Chrome 省略不存在的一侧；按 == null 判断，兼容给 null 的实现
+      ([k, c]) => k.startsWith(PROFILE_PREFIX) && (c.oldValue == null) !== (c.newValue == null),
+    );
+    if (lifecycle) reconcileInBackground('storage');
   });
 }

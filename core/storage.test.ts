@@ -83,17 +83,42 @@ describe('站点配置 CRUD', () => {
     await expect(store.updateProfile('javascript:alert(1)', () => undefined, { create: true })).rejects.toThrow();
   });
 
-  it('设置读写带默认值，按 schema 读取', async () => {
+  it('设置读写：没设置 / 类型不对 / 空白一律为 null（跟随界面语言默认），按 schema 读取', async () => {
     const area = memoryArea();
     const store = createPageMaskStorage(area);
-    expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
+    expect((await store.getSettings()).defaultTitle).toBeNull();
     await store.putSettings({ defaultTitle: '工作文档' });
     expect((await store.getSettings()).defaultTitle).toBe('工作文档');
+    await store.putSettings({ defaultTitle: '   ' });
+    expect((await store.getSettings()).defaultTitle).toBeNull();
     area.data.set(SETTINGS_KEY, { defaultTitle: 42 });
-    expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
+    expect((await store.getSettings()).defaultTitle).toBeNull();
     area.data.set(SETTINGS_KEY, { defaultTitle: '   ' });
-    expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
+    expect((await store.getSettings()).defaultTitle).toBeNull();
     area.data.set(SETTINGS_KEY, 'garbage');
+    expect((await store.getSettings()).defaultTitle).toBeNull();
+  });
+
+  it('0.1.0 旧数据迁移：无版本标记且等于旧默认「新建标签页」视为没设置；0.2.0 写入的不受影响', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    area.data.set(SETTINGS_KEY, { defaultTitle: '新建标签页' }); // 0.1.0 写入的形状
+    expect((await store.getSettings()).defaultTitle).toBeNull();
+    area.data.set(SETTINGS_KEY, { defaultTitle: '周报' }); // 0.1.0 用户自定义的值保留
+    expect((await store.getSettings()).defaultTitle).toBe('周报');
+    await store.putSettings({ defaultTitle: '新建标签页' }); // 0.2.0 用户主动选的快捷标题
+    expect(area.data.get(SETTINGS_KEY)).toEqual({ defaultTitle: '新建标签页', settingsVersion: 2 });
+    expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
+    expect((await store.exportBundle()).settings).toEqual({ defaultTitle: '新建标签页' }); // 版本标记不进导出文件
+  });
+
+  it('导入文件里的「新建标签页」按用户设置保留（导出文件 0.2.0 起才带设置，无旧值问题）', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    await store.importBundle(
+      bundleOf([createEmptyProfile('https://a.com')], { settings: { defaultTitle: '新建标签页' } }),
+      'replace',
+    );
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
   });
 

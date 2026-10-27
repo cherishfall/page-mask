@@ -12,6 +12,11 @@
  * 3. bfcache 恢复（pageshow.persisted）、预渲染激活（prerenderingchange）后按存储重新同步
  *
  * 隐藏样式的注入记录由本文档持有（core/doc-styles.ts），同一文档的所有状态刷新串行执行。
+ *
+ * 入口核对（REVIEW B28）：注册的匹配模式不写端口时会命中该主机的所有端口，所以启动后先按
+ * location.origin 读站点配置；没有配置（也不是新站点向导）就撤掉首屏遮挡、什么都不挂，保持休眠。
+ * 生命周期：一键清空前后台发 siteReset，本页立即移除样式、还原标题图标、卸载所有界面；
+ * 新站点首次向导取消时通知后台收回授权（cancelNewSite）。
  */
 import { createApp, type App } from 'vue';
 import { browser } from 'wxt/browser';
@@ -20,7 +25,7 @@ import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
 import { probeRules } from '@/core/health';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles } from '@/core/doc-styles';
-import type { BgRequest, CssAck } from '@/core/messages';
+import type { Ack, BgRequest, CssAck, OpenIntent } from '@/core/messages';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
@@ -57,7 +62,17 @@ function warnIfFailed(what: string, res: CssAck): void {
   if (!res.ok) console.warn(`[PageMask] ${what}未生效：${res.error ?? '未知原因'}`);
 }
 
-export function initContentRuntime(): void {
+/** 登记在隔离环境 window.__pagemask 上的句柄（entrypoints/content.ts、后台 enableSite 使用） */
+export interface ContentRuntimeHandle {
+  /** 打开设置向导；新站点（还没有配置）只能用 newSite。返回是否受理 */
+  open(mode: OpenIntent): boolean;
+  /** 本运行时所属的扩展上下文是否仍有效（扩展更新 / 重载后为 false） */
+  alive(): boolean;
+  /** 撤掉本运行时留在页面上的一切（只动 DOM，失联后也能调用） */
+  dispose(): void;
+}
+
+export function initContentRuntime(): ContentRuntimeHandle {
   const origin = location.origin;
   const storage = createPageMaskStorage(browser.storage.local);
   const guard = new TitleFaviconGuard(document);
@@ -70,7 +85,7 @@ export function initContentRuntime(): void {
   const uiReady = Promise.all([whenDomReady(), activated]).then(() => undefined);
 
   let profile: SiteProfile | null = null;
-  let settings: GlobalSettings = { defaultTitle: '新建标签页' };
+  let settings: GlobalSettings = { defaultTitle: null }; // null = 跟随界面语言默认（core/titles.ts）
   let host: HTMLDivElement | null = null;
   let app: App | null = null;
   let wizardHost: HTMLDivElement | null = null;
@@ -79,6 +94,15 @@ export function initContentRuntime(): void {
   let editorApp: App | null = null;
   let maskHost: HTMLDivElement | null = null;
   let wizardActive = false;
+  /** 入口核对通过（本页有站点配置或正在进行新站点向导），已挂上监听 */
+  let active = false;
+  /** 入口核对（读配置）是否已完成；完成前到来的打开请求先记下 */
+  let gateDone = false;
+  let pendingOpen: OpenIntent | null = null;
+  /** 收到 siteReset 后、配置真正删除前：不再按存储重新应用（避免体检回写等把样式注回来） */
+  let resetting = false;
+  let disposed = false;
+  let spaTimer: ReturnType<typeof setInterval> | null = null;
   let lastHref = location.href;
   let lastHealthFingerprint = '';
 
@@ -261,9 +285,23 @@ export function initContentRuntime(): void {
     editorApp.mount(mountPoint);
   }
 
-  /** 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程） */
-  async function openWizard(mode: 'newSite' | 'addElement') {
-    if (!profile || wizardActive) return;
+  function closeWizard(): void {
+    wizardApp?.unmount();
+    wizardApp = null;
+    wizardHost?.remove();
+    wizardHost = null;
+    wizardActive = false;
+  }
+
+  /**
+   * 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程）。
+   * 新站点（还没有配置）只能以 newSite 打开：保存时才写入配置；取消则通知后台收回授权。
+   */
+  async function openWizard(mode: OpenIntent) {
+    if (wizardActive) return;
+    // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
+    await exclusive(async () => undefined);
+    if (wizardActive || resetting || (!profile && mode !== 'newSite')) return;
     wizardActive = true;
     closeEditorPanel();
 
@@ -293,12 +331,12 @@ export function initContentRuntime(): void {
       url: location.href,
       // 预览样式同样按本文档记录（SW 回收后点「放弃」也能撤掉）
       setDraft: (css: string | null) => styles.setDraft(css),
-      onDone: () => {
-        wizardApp?.unmount();
-        wizardApp = null;
-        wizardHost?.remove();
-        wizardHost = null;
-        wizardActive = false;
+      onDone: (saved?: boolean) => {
+        closeWizard();
+        if (!saved && mode === 'newSite' && !profile) {
+          // 新站点首次向导被取消：还没写过配置，请后台收回刚给的授权（后台会再核对一次确实没有配置）
+          void browser.runtime.sendMessage({ t: 'cancelNewSite' } satisfies BgRequest).catch(() => undefined);
+        }
         // 保存路径已写入 storage；这里统一按当前配置恢复（保存触发 onChanged 但被向导屏蔽）
         void scheduleRefresh();
       },
@@ -382,22 +420,29 @@ export function initContentRuntime(): void {
     return exclusive(refreshState);
   }
 
+  /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
+  function clearPageUi(): void {
+    shield.release();
+    unmountToggle();
+    closeEditorPanel();
+    guard.restore();
+    clearMasks();
+  }
+
   async function refreshState(): Promise<void> {
     if (wizardActive) return; // 向导期间不动样式，退出时会再刷新
     const [p, s] = await Promise.all([storage.getProfile(origin), storage.getSettings()]);
     settings = s;
     if (wizardActive) return;
     if (!p) {
-      // 站点被一键清空：撤掉一切痕迹
+      // 站点被一键清空（或新站点向导取消）：撤掉一切痕迹
+      resetting = false;
       profile = null;
-      shield.release();
-      unmountToggle();
-      closeEditorPanel();
-      guard.restore();
-      clearMasks();
+      clearPageUi();
       await syncFormalStyles();
       return;
     }
+    if (resetting) return;
     profile = p;
     if (profile.switchState === 'disguised') {
       await applyAll();
@@ -406,43 +451,128 @@ export function initContentRuntime(): void {
     }
   }
 
-  // storage 变化驱动：开关切换、规则增删改、标题/图标修改、健康状态回写。
-  // 向导打开期间屏蔽（避免向导内的临时状态被真样式覆盖），退出时统一 refreshState
+  /** 一键清空：后台收回授权前先让本页还原（此时样式还删得掉），完成后回复 */
+  async function handleSiteReset(): Promise<Ack> {
+    resetting = true;
+    await exclusive(async () => {
+      closeWizard();
+      profile = null;
+      clearPageUi();
+      const draft = await styles.setDraft(null);
+      const formal = await styles.clearFormal();
+      warnIfFailed('还原', formal.ok ? draft : formal);
+    });
+    return { ok: true };
+  }
+
+  // ---------- 激活：入口核对通过后才挂监听 ----------
+
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-  browser.storage.onChanged.addListener((changes, area) => {
+
+  function onStorageChanged(changes: Record<string, unknown>, area: string): void {
+    // storage 变化驱动：开关切换、规则增删改、标题/图标修改、健康状态回写。
+    // 向导打开期间屏蔽（避免向导内的临时状态被真样式覆盖），退出时统一 refreshState
     if (area !== 'local' || wizardActive) return;
     const keys = Object.keys(changes);
     if (!keys.some((k) => k === profileKey(origin) || k === 'settings')) return;
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => void scheduleRefresh(), 150);
-  });
+  }
 
-  // SPA 路由变化：重评估每条规则的生效范围（微信读书翻页等场景）；向导期间屏蔽
-  setInterval(() => {
-    if (wizardActive) return;
-    if (location.href !== lastHref && profile?.switchState === 'disguised') {
-      lastHref = location.href;
-      void scheduleRefresh();
-    } else {
-      lastHref = location.href;
-    }
-  }, 1000);
-
-  // bfcache 恢复：样式随文档一起被保存，但期间存储可能变了（另一个页面切了开关、改了规则），按新状态增删
-  window.addEventListener('pageshow', (e) => {
+  function onPageShow(e: PageTransitionEvent): void {
+    // bfcache 恢复：样式随文档一起被保存，但期间存储可能变了（另一个页面切了开关、改了规则），按新状态增删
     if (e.persisted) void scheduleRefresh();
-  });
+  }
 
-  // 预渲染激活：预渲染期间已注入样式、压过标题（激活瞬间不闪），激活后再按最新状态同步一次并挂界面
-  if (prerendering) void activated.then(() => scheduleRefresh());
-
-  // popup 触发的入口消息
-  browser.runtime.onMessage.addListener((msg: { t?: string; mode?: 'newSite' | 'addElement' }) => {
+  function onRuntimeMessage(
+    msg: { t?: string; mode?: OpenIntent },
+    _sender: unknown,
+    sendResponse: (r: Ack) => void,
+  ): boolean {
+    // popup / 后台触发的入口消息
     if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'addElement');
-    if (msg?.t === 'openEditor') openEditorPanel();
-  });
+    else if (msg?.t === 'openEditor') openEditorPanel();
+    else if (msg?.t === 'siteReset') {
+      void handleSiteReset().then(sendResponse, () => sendResponse({ ok: false }));
+      return true; // 异步回复：后台等本页还原完再收回授权
+    }
+    return false;
+  }
 
-  // 首屏防闪：不等读配置，立即请求正式样式（未配置 / 原样态时后台什么也不插）
+  function activate(): void {
+    if (active || disposed) return;
+    active = true;
+    browser.storage.onChanged.addListener(onStorageChanged);
+    // SPA 路由变化：重评估每条规则的生效范围（微信读书翻页等场景）；向导期间屏蔽
+    spaTimer = setInterval(() => {
+      if (wizardActive) return;
+      if (location.href !== lastHref && profile?.switchState === 'disguised') {
+        lastHref = location.href;
+        void scheduleRefresh();
+      } else {
+        lastHref = location.href;
+      }
+    }, 1000);
+    window.addEventListener('pageshow', onPageShow);
+    // 预渲染激活：预渲染期间已注入样式、压过标题（激活瞬间不闪），激活后再按最新状态同步一次并挂界面
+    if (prerendering) void activated.then(() => scheduleRefresh());
+    browser.runtime.onMessage.addListener(onRuntimeMessage);
+    void scheduleRefresh();
+  }
+
+  // 首屏防闪：不等读配置，立即请求正式样式（未配置 / 原样态 / 端口不符时后台什么也不插）
   void syncFormalStyles();
-  void scheduleRefresh();
+
+  // 入口核对：本页来源有站点配置才激活；否则撤掉首屏遮挡，保持休眠（不挂任何界面和监听）
+  void (async () => {
+    let configured = false;
+    try {
+      configured = !!(await storage.getProfile(origin));
+    } catch {
+      // 读不到存储（扩展上下文已失效）按未配置处理
+    }
+    gateDone = true;
+    if (disposed) return;
+    if (configured || pendingOpen) activate();
+    else shield.release();
+    if (pendingOpen) {
+      const mode = pendingOpen;
+      pendingOpen = null;
+      void openWizard(mode);
+    }
+  })();
+
+  return {
+    open(mode) {
+      if (disposed) return false;
+      if (!gateDone) {
+        pendingOpen = mode;
+        return true;
+      }
+      activate();
+      void openWizard(mode);
+      return true;
+    },
+    alive() {
+      try {
+        return !disposed && !!browser.runtime?.id;
+      } catch {
+        return false;
+      }
+    },
+    dispose() {
+      disposed = true;
+      if (spaTimer) clearInterval(spaTimer);
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.removeEventListener('pageshow', onPageShow);
+      try {
+        browser.storage.onChanged.removeListener(onStorageChanged);
+        browser.runtime.onMessage.removeListener(onRuntimeMessage);
+      } catch {
+        // 扩展上下文已失效
+      }
+      closeWizard();
+      clearPageUi();
+    },
+  };
 }

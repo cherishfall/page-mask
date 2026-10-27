@@ -33,7 +33,7 @@ const shot = (p, name) => p.screenshot({ path: path.join(OUT, `${name}.png`), cl
 
 try {
   const now = Date.now();
-  await control.evaluate((s) => chrome.storage.local.set({ settings: s }), { defaultTitle: '新建标签页' });
+  await control.evaluate((s) => chrome.storage.local.set({ settings: s }), { defaultTitle: '阅读' });
   await setProfile(control, ORIGIN, {
     formatVersion: 1, origin: ORIGIN, switchState: 'disguised', disguisedTitle: null, faviconDataUrl: null,
     floatingBtnPos: null, createdAt: now, updatedAt: now,

@@ -5,8 +5,15 @@
  * 原样态完全还原：标题、图标一并还原。
  */
 
+export { effectiveTitle } from './titles';
+
+/**
+ * 默认图标：1×1 真正全透明 PNG（RGBA 全 0，单测解码校验）。图片能正常加载，Chrome 就照常
+ * 显示它——全透明即标签页图标位留空（不会变成地球；地球只在没有图标或加载失败时出现）。
+ * 不使用、也不复刻任何浏览器自带图标。
+ */
 export const TRANSPARENT_PNG =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 const ICON_SELECTOR = 'link[rel~="icon"]';
 
@@ -134,13 +141,4 @@ export class TitleFaviconGuard {
     this.observer?.disconnect();
     this.observer = null;
   }
-}
-
-/** 站点配置的生效标题：站点覆盖 > 全局默认 */
-export function effectiveTitle(
-  profile: { disguisedTitle: string | null },
-  settings: { defaultTitle: string },
-): string {
-  const t = profile.disguisedTitle ?? settings.defaultTitle;
-  return t.trim() ? t : settings.defaultTitle;
 }

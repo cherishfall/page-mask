@@ -34,7 +34,7 @@ async function main() {
   const { browser, control } = ext;
   try {
     console.log('✓ 扩展已加载（真机模式）');
-    await control.evaluate((st) => chrome.storage.local.set({ settings: st }), { defaultTitle: '新建标签页' });
+    await control.evaluate((st) => chrome.storage.local.set({ settings: st }), { defaultTitle: '阅读' });
 
     const failed = [];
     for (const site of SITES) {
@@ -123,7 +123,7 @@ async function main() {
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save-yes"]');
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save-yes"]');
         await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
-        await waitFor(page, '标题已伪装', () => document.title === '新建标签页');
+        await waitFor(page, '标题已伪装', () => document.title === '阅读');
         assert(true, `${site.name}：保存后向导关闭、标题已伪装`);
         assert(await page.$('#pagemask-floating-host'), `${site.name}：悬浮按钮在`);
 

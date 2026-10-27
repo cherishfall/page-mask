@@ -9,6 +9,8 @@
  *   await waitForServiceWorkerIdle(ext);                       // 让 SW 自然空闲回收（约 30 秒）
  *   await reloadExtension(ext);                                // chrome.runtime.reload()
  *   await removePermission(ext.control, origin);               // chrome.permissions.remove
+ *   await grantPermissions(ext, [origin]);                     // 不经弹窗授予站点权限（两次重载）
+ *   const popup = await openPopup(ext, page);                  // 以 page 为当前标签页打开 popup
  *   await ext.cleanup();
  *
  * 关于 SW：本文件里所有函数都不附加调试器（不调用 target.worker()），
@@ -33,7 +35,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * 同时放一个空白控制页 e2e-control.html，用来在扩展上下文里执行 chrome.* 调用。
  * 返回 { dir, manifestPath, cleanup }。
  */
-export function prepareExtension({ hostOrigins = [], hostPatterns = [], srcDir = BUILD_DIR } = {}) {
+export function prepareExtension({ hostOrigins = [], hostPatterns = [], extraPermissions = [], srcDir = BUILD_DIR } = {}) {
   if (!fs.existsSync(path.join(srcDir, 'manifest.json'))) {
     throw new Error(`找不到构建产物 ${srcDir}，请先运行 wxt build`);
   }
@@ -42,6 +44,9 @@ export function prepareExtension({ hostOrigins = [], hostPatterns = [], srcDir =
   const manifestPath = path.join(dir, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   manifest.host_permissions = [...hostOrigins.map((o) => `${o}/*`), ...hostPatterns];
+  // 仅测试拷贝：例如 'tabs'，让用 action.openPopup() 打开的 popup 读得到当前标签页网址
+  // （真实用户点工具栏图标时由 activeTab 提供；openPopup 不授予 activeTab）
+  if (extraPermissions.length) manifest.permissions = [...new Set([...(manifest.permissions ?? []), ...extraPermissions])];
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(dir, CONTROL_PAGE), '<!doctype html><meta charset="utf-8"><title>PageMask E2E 控制页</title>');
   return { dir, manifestPath, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
@@ -54,8 +59,14 @@ export function prepareExtension({ hostOrigins = [], hostPatterns = [], srcDir =
  * removePermission 撤销（必需权限调用 permissions.remove 会报 "You cannot remove required permissions"）。
  * 返回 ctx：{ browser, extensionId, extOrigin, extDir, control, cleanup }
  */
-export async function launchExtension({ hostOrigins = [], hostPatterns = [], revocable = true, srcDir } = {}) {
-  const prepared = prepareExtension({ hostOrigins, hostPatterns, srcDir });
+export async function launchExtension({
+  hostOrigins = [],
+  hostPatterns = [],
+  extraPermissions = [],
+  revocable = true,
+  srcDir,
+} = {}) {
+  const prepared = prepareExtension({ hostOrigins, hostPatterns, extraPermissions, srcDir });
   const patterns = [...hostOrigins.map((o) => `${o}/*`), ...hostPatterns];
   const launched = await launchWithExtension({ extDir: prepared.dir });
   if (process.env.PM_E2E_DEBUG) {
@@ -69,6 +80,7 @@ export async function launchExtension({ hostOrigins = [], hostPatterns = [], rev
     extensionId: launched.extensionId,
     extOrigin: launched.extOrigin,
     extDir: prepared.dir,
+    manifestPath: prepared.manifestPath,
     control: await openControlPage(launched.browser, launched.extOrigin),
     cleanup: async () => {
       await launched.cleanup();
@@ -194,6 +206,56 @@ export async function removePermission(control, origin) {
     await chrome.permissions.remove({ origins: [pattern] });
     return chrome.permissions.contains({ origins: [pattern] });
   }, `${origin}/*`);
+}
+
+/**
+ * 不经权限弹窗授予站点权限（弹窗无法自动化点击）：把来源临时写进拷贝 manifest 的 host_permissions 重载一次
+ * （必需权限安装即授予），再删掉并重载一次，权限保留为"可选权限、运行时已授予"，与真实用户点「允许」后一致、可再撤销。
+ * 注意：两次重载都会关闭所有扩展页面（popup、管理页、旧控制页），并各触发一次 onInstalled(update)；
+ * 已打开网页里的旧内容脚本随之失联，断言请用新开的页面。
+ * 用法：await grantPermissions(ext, [origin]);
+ */
+export async function grantPermissions(ctx, origins) {
+  const patterns = origins.map((o) => `${o}/*`);
+  const write = (hosts) => {
+    const manifest = JSON.parse(fs.readFileSync(ctx.manifestPath, 'utf8'));
+    if (hosts) manifest.host_permissions = hosts;
+    else delete manifest.host_permissions;
+    fs.writeFileSync(ctx.manifestPath, JSON.stringify(manifest, null, 2));
+  };
+  write(patterns);
+  await reloadExtension(ctx);
+  await waitForServiceWorker(ctx).catch(() => undefined);
+  write(null);
+  await reloadExtension(ctx);
+  await waitForServiceWorker(ctx).catch(() => undefined);
+  const granted = await ctx.control.evaluate((o) => chrome.permissions.contains({ origins: o }), patterns);
+  if (!granted) throw new CheckError(`grantPermissions：${patterns.join(', ')} 没有授予成功`);
+}
+
+/**
+ * 以 tabPage 为当前标签页打开扩展 popup（chrome.action.openPopup，与点工具栏图标打开的是同一个页面），返回 popup 的 Page。
+ * popup 里 tabs.query({ active, currentWindow }) 拿到的就是 tabPage。读网址需要启动时 extraPermissions: ['tabs']。
+ * 用法：const popup = await openPopup(ext, page);
+ */
+export async function openPopup(ctx, tabPage) {
+  await tabPage.bringToFront();
+  const url = `${ctx.extOrigin}/popup.html`;
+  const targetP = ctx.browser.waitForTarget((t) => t.url() === url, { timeout: 8000 });
+  await ctx.control.evaluate(() => chrome.action.openPopup());
+  const target = await targetP;
+  const popup = await target.asPage();
+  await popup.waitForFunction(() => document.readyState === 'complete');
+  return popup;
+}
+
+/**
+ * 安装时的权限警告：在扩展页面里调用 chrome.management.getPermissionWarningsByManifest（不需要 management 权限）。
+ * 传入 manifest 对象（通常是构建产物原样读出的 manifest.json）。
+ * 用法：const warnings = await permissionWarnings(ext.control, manifest);  // 期望 []
+ */
+export async function permissionWarnings(control, manifest) {
+  return control.evaluate((text) => chrome.management.getPermissionWarningsByManifest(text), JSON.stringify(manifest));
 }
 
 /** 读站点配置 */

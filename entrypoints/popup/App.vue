@@ -11,7 +11,12 @@
       <div v-if="profile" class="site">
         <div class="row">
           <span class="host">{{ host }}</span>
-          <button class="switch" :class="{ on: profile.switchState === 'disguised' }" @click="toggleSwitch">
+          <button
+            v-if="granted !== false"
+            class="switch"
+            :class="{ on: profile.switchState === 'disguised' }"
+            @click="toggleSwitch"
+          >
             {{ profile.switchState === 'disguised' ? '清爽中' : '原样' }}
           </button>
         </div>
@@ -22,7 +27,14 @@
       </div>
 
       <p v-if="setupError" class="hint error" role="alert">{{ setupError }}</p>
-      <button class="primary" @click="setup">{{ profile ? '＋ 添加要去掉的元素' : '为当前网站开启清爽模式' }}</button>
+      <template v-if="profile && granted === false">
+        <!-- 有配置、没授权：配置还在，只是浏览器收回了这个网站的访问权限 -->
+        <p class="hint" data-testid="pm-popup-pending">这个网站的授权已被收回，设置都还在。重新授权后立即恢复。</p>
+        <button class="primary" data-testid="pm-popup-reauth" @click="reauthorize">重新授权</button>
+      </template>
+      <button v-else class="primary" data-testid="pm-popup-setup" @click="setup">
+        {{ profile ? '＋ 添加要去掉的元素' : '为当前网站开启清爽模式' }}
+      </button>
     </template>
 
     <button class="ghost" @click="manage">管理全部站点</button>
@@ -34,13 +46,22 @@ import { computed, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
+import { originPattern } from '@/core/registration';
 import type { SiteProfile } from '@/core/types';
-import type { EnableSiteResponse } from '@/core/messages';
+import type { EnableSiteResponse, OpenIntent } from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
 const profile = ref<SiteProfile | null>(null);
+/** 当前网站的站点授权；null = 还没查 */
+const granted = ref<boolean | null>(null);
 const setupError = ref('');
-const SETUP_FAILED = '没能在这个页面启动，刷新页面后再试一次';
+
+/** 失败时给用户看的话（不暴露内部错误） */
+const ERROR_TEXT: Record<string, string> = {
+  tabMismatch: '页面已经换了，请回到要设置的网站再点一次 PageMask',
+  notGranted: '还没有拿到这个网站的授权，请再点一次并选择「允许」',
+  injectFailed: '没能在这个页面启动，刷新页面后再试一次',
+};
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -50,16 +71,25 @@ const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastH
 onMounted(async () => {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   tab.value = tabs[0] ?? null;
-  await refreshProfile();
+  await refresh();
   browser.storage.onChanged.addListener((_, area) => {
-    if (area === 'local') void refreshProfile();
+    if (area === 'local') void refresh();
   });
+  // 用户可能在扩展详情里改了站点访问权限
+  browser.permissions.onAdded.addListener(() => void refresh());
+  browser.permissions.onRemoved.addListener(() => void refresh());
 });
 
-async function refreshProfile() {
-  if (!origin.value) return;
+async function refresh() {
+  const o = origin.value;
+  if (!o) return;
   const storage = createPageMaskStorage(browser.storage.local);
-  profile.value = await storage.getProfile(origin.value);
+  const [p, g] = await Promise.all([
+    storage.getProfile(o),
+    browser.permissions.contains({ origins: [originPattern(o)] }).catch(() => false),
+  ]);
+  profile.value = p;
+  granted.value = g;
 }
 
 async function toggleSwitch() {
@@ -73,66 +103,59 @@ async function toggleSwitch() {
   profile.value = fresh;
 }
 
-/** 让后台为站点注册并向当前标签页注入内容脚本；失败返回 false（后台回复 ok:false 或根本没有回复） */
-async function enableSite(tabId: number): Promise<boolean> {
+/**
+ * 让后台核对标签页、对账注册并向当前标签页注入内容脚本，可选随即打开向导（后台注入完成后直接通知，无需等待重试）。
+ * 返回是否成功；失败时设置提示文字。
+ */
+async function enableSite(tabId: number, o: string, open?: OpenIntent): Promise<boolean> {
   const res: EnableSiteResponse | undefined = await browser.runtime
-    .sendMessage({ t: 'enableSite', origin: origin.value, tabId })
+    .sendMessage({ t: 'enableSite', origin: o, tabId, open })
     .catch(() => undefined);
-  return res?.ok === true;
+  if (res?.ok) return true;
+  setupError.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
+  return false;
 }
 
-/** 唯一入口：新站点授权并注入，随后打开设置向导 */
-async function setup() {
+/** 主按钮：新站点授权并打开设置向导；已配置站点打开「添加元素」向导 */
+function setup() {
   setupError.value = '';
-  const url = tab.value?.url;
+  const o = origin.value;
   const tabId = tab.value?.id;
-  if (!url || !origin.value || tabId === undefined) return;
+  if (!o || tabId === undefined) return;
 
   if (!profile.value) {
-    // 权限请求必须直接处于点击手势上下文中（先于任何 await）
-    const granted = await browser.permissions.request({ origins: [`${origin.value}/*`] });
-    if (!granted) return;
-
-    const storage = createPageMaskStorage(browser.storage.local);
-    // 已有则原样保留，没有则新建空配置
-    profile.value = await storage.updateProfile(origin.value, () => false, { create: true });
-    if (!(await enableSite(tabId))) {
-      setupError.value = SETUP_FAILED;
-      return;
-    }
-    // 内容脚本刚被注入，稍等后通知其打开向导（注入竞态重试）
-    for (let i = 0; i < 10; i++) {
-      await sleep(200);
-      try {
-        await browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'newSite' });
-        break;
-      } catch {
-        // 内容脚本尚未就绪，继续重试
-      }
-    }
-  } else {
-    try {
-      await browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'addElement' });
-    } catch {
-      // 页面脚本不在（如扩展刚重载），重新拉起后重试一次
-      if (!(await enableSite(tabId))) {
-        setupError.value = SETUP_FAILED;
-        return;
-      }
-      await sleep(400);
-      await browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'addElement' }).catch(() => undefined);
-    }
+    // 权限请求必须直接处于点击手势的同步上下文中：这里之前不能有任何 await
+    const request = browser.permissions.request({ origins: [originPattern(o)] });
+    void (async () => {
+      if (!(await request.catch(() => false))) return;
+      // 新站点：保存向导前不写配置；取消向导时后台会收回这次授权
+      if (await enableSite(tabId, o, 'newSite')) window.close();
+    })();
+    return;
   }
-  window.close();
+  void (async () => {
+    if (await enableSite(tabId, o, 'addElement')) window.close();
+  })();
+}
+
+/** 有配置、没授权：重新请求本站授权，拿到后让后台对账并注入当前页 */
+function reauthorize() {
+  setupError.value = '';
+  const o = origin.value;
+  const tabId = tab.value?.id;
+  if (!o || tabId === undefined) return;
+  // 同上：第一条语句就请求权限，保留用户手势
+  const request = browser.permissions.request({ origins: [originPattern(o)] });
+  void (async () => {
+    if (!(await request.catch(() => false))) return;
+    if (await enableSite(tabId, o)) granted.value = true;
+    await refresh();
+  })();
 }
 
 function manage() {
   browser.tabs.create({ url: browser.runtime.getURL('/management.html') });
   window.close();
-}
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
 }
 </script>
 

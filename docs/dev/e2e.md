@@ -21,7 +21,7 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 ## 工具函数（`tests/e2e/lib/`）
 
 - `browser.mjs`：`resolveChrome()`、`launchWithExtension()`、`enableDeveloperMode()`
-- `extension.mjs`：`launchExtension({ hostOrigins })`（拷贝产物 + 预授予主机权限 + 控制页）、`waitForServiceWorkerIdle()`、`stopServiceWorker()`、`reloadExtension()`、`removePermission()`、`getProfile / setProfile / patchProfile`、`sendToBackground / sendToTab / tabIdOf`
+- `extension.mjs`：`launchExtension({ hostOrigins, extraPermissions })`（拷贝产物 + 预授予主机权限 + 控制页；`extraPermissions` 只加在测试拷贝里）、`waitForServiceWorkerIdle()`、`stopServiceWorker()`、`reloadExtension()`、`removePermission()`、`grantPermissions(ext, origins)`（不经弹窗授予，两次重载）、`openPopup(ext, page)`（以 page 为当前标签页打开 popup）、`permissionWarnings(control, manifest)`（安装警告）、`getProfile / setProfile / patchProfile`、`sendToBackground / sendToTab / tabIdOf`
 - `shadow.mjs`：`clickInShadow(page, host, inner, { button })`（真实鼠标）、`waitForShadow`、`shadowText`
 - `harness.mjs`：`createReporter()`（`check`、`expectFail(name, issue, fn)`）、`startServer()`（随机端口）、`waitFor()`、`resultsDir()`
 
@@ -36,13 +36,25 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 5. CDP `ServiceWorker.stopAllWorkers`（在扩展页面的会话里发）能立即停掉扩展 SW，之后页面消息照常唤醒新实例；可作为快速版本，关键回归仍用自然回收。
 6. 打开的扩展页面（控制页）不会阻止 SW 空闲回收。
 7. 重载后必须等旧扩展页面真正关闭再打开新页面，否则新页面可能在卸载前加载、随后失效，`evaluate` 一直挂起。
+8. 权限弹窗（`permissions.request`）无法自动化。`chrome.developerPrivate.addHostPermission` 对"可选主机权限"不生效（调用成功但 `permissions.getAll` 里没有）。授予只能用 manifest 法：写进拷贝 manifest 的 `host_permissions` 重载一次，再删掉重载一次（`grantPermissions`）。用例里点「重新授权 / 一次授权全部」时先把页面里的 `chrome.permissions.request` 换成记录参数的替身，只断言请求内容；弹窗本身人工验收。
+9. `chrome.action.openPopup()` 能在 headless 下打开真实 popup（`target.asPage()`），但**不授予 activeTab**，popup 里 `tab.url` 为空。测试拷贝加 `tabs` 权限（`extraPermissions: ['tabs']`）代替用户点图标时的 activeTab。
+10. 后台标签页不跑动画帧，puppeteer 的 `click()` 会一直等元素稳定直到协议超时。点击扩展页面（管理页）前先 `bringToFront()`，断言另一个页面前再切回来。
+11. 扩展重载后，已打开网页里的旧内容脚本失联（`chrome.runtime.id` 变为 undefined），但它在隔离环境里登记的 `window.__pagemask` 还在；新注入的脚本据 `alive()` 判断并 `dispose()` 旧界面。断言"重载后生效"一律用新开页面。
 
 ## 当前预期失败
 
 | 用例 | 票 |
 |---|---|
 | 悬浮按钮右键菜单「编辑规则」打开编辑面板 | #25 |
-| `runtime.reload()` 后已配置站点仍然生效 | #21 |
+
+## 站点生命周期（#21）
+
+- `runtime.reload()` 后新开已配置站点仍是清爽态（onInstalled 对账补注册；原 #21 预期失败已转正）
+- `permissions.remove` 后：新开页面不注入、配置保留；popup 显示「重新授权」，点击发起本站权限请求；`grantPermissions` 授予后新开页面恢复，popup 不再显示「重新授权」
+- 导出 → 管理页一键清空（已打开页面不刷新即还原标题、图标、样式、悬浮按钮，配置与授权都已收回）→ 导入：两个站点「待授权」、授权前不生效、「一次授权全部」一次请求两个站点；授予后两个站点新开页面生效
+- 安装警告：`chrome.management.getPermissionWarningsByManifest(产物 manifest)` 为空数组
+
+人工验收：popup「重新授权」与管理页「授权并启用 / 一次授权全部」点击后的浏览器授权弹窗（选「允许」后站点立即恢复；选「拒绝」配置保留、提示可再试）。
 
 ## 注入引擎回归（#20）
 

@@ -25,6 +25,12 @@ export default defineConfig({
     // （<title> 优先于 meta manifest.default_title）。生成 manifest 后再改回多语言占位。
     'build:manifestGenerated': (_wxt, manifest) => {
       if (manifest.action) manifest.action.default_title = '__MSG_actionTitle__';
+      // 内容脚本只靠后台按站点动态注册（ADR-0001/0002）。entrypoints/content.ts 为了让 WXT 构建出
+      // content-scripts/content.js 写了一个占位 matches，这里把它从 manifest 删掉：
+      // 否则安装时会提示"读取和更改您在 pagemask.invalid 上的数据"（REVIEW B11）。
+      // 不用 registration:'runtime'：WXT 会把它的 matches 写进 host_permissions，同样产生安装提示。
+      // scripts/check-package.mjs 校验产物 manifest 里没有 content_scripts / host_permissions。
+      delete manifest.content_scripts;
     },
   },
 });

@@ -7,17 +7,42 @@
     <section class="card">
       <h2>全局默认</h2>
       <div class="row">
-        <label>默认标签页标题</label>
-        <input v-model="defaultTitle" placeholder="新建标签页" @change="saveSettings" />
-        <span class="hint">站点未单独设置时使用。不能为空白——空白会让 Chrome 显示网址反而泄露。</span>
+        <label for="default-title">默认标签页标题</label>
+        <input
+          id="default-title"
+          v-model="defaultTitle"
+          :placeholder="languageDefaultTitle"
+          aria-describedby="default-title-hint"
+          @change="saveSettings"
+        />
       </div>
+      <div class="row quick" role="group" aria-labelledby="default-title-quick">
+        <span id="default-title-quick" class="hint">快捷填入</span>
+        <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickDefaultTitle(q)">
+          {{ quickTitleValue(q, uiLanguage) }}
+        </button>
+      </div>
+      <p id="default-title-hint" class="hint">
+        站点未单独设置时使用；留空则用「{{ languageDefaultTitle }}」（跟随浏览器语言）。标签页标题不能是空白，空白时浏览器会显示网址。
+      </p>
     </section>
 
     <!-- 站点列表 -->
     <section v-if="profiles.length === 0" class="card empty">
       还没有配置任何站点。在目标网站点击浏览器工具栏的 PageMask 图标即可开始。
     </section>
-    <section v-for="p in profiles" :key="p.origin" class="card site">
+    <!-- 有配置、没授权的站点不少于 2 个（典型：刚导入）：一次请求全部授权 -->
+    <section v-if="pendingOrigins.length >= 2" class="card pending-all" data-testid="pm-mgmt-pending-all">
+      <span>{{ pendingOrigins.length }} 个站点待授权，授权前这些站点的设置不会生效。</span>
+      <button class="primary" data-testid="pm-mgmt-authorize-all" @click="authorize(pendingOrigins)">一次授权全部</button>
+    </section>
+    <p v-if="authError" class="hint error" role="alert">{{ authError }}</p>
+    <section v-for="p in profiles" :key="p.origin" class="card site" :data-origin="p.origin">
+      <div v-if="pendingOrigins.includes(p.origin)" class="row pending" data-testid="pm-mgmt-pending">
+        <span class="badge">待授权</span>
+        <span class="hint">浏览器没有这个网站的访问权限，设置都还在，授权后立即生效。</span>
+        <button class="primary" data-testid="pm-mgmt-authorize" @click="authorize([p.origin])">授权并启用</button>
+      </div>
       <div class="site-head">
         <span class="host">{{ hostOf(p.origin) }}</span>
         <span class="state" :class="p.switchState">
@@ -27,13 +52,24 @@
       </div>
       <div class="site-body">
         <div class="row">
-          <label>标签页标题</label>
-          <input v-model="p.disguisedTitle" :placeholder="defaultTitle" @change="saveTitle(p)" />
+          <label :for="titleInputId(p.origin)">标签页标题</label>
+          <input
+            :id="titleInputId(p.origin)"
+            v-model="p.disguisedTitle"
+            :placeholder="defaultTitle || languageDefaultTitle"
+            @change="saveTitle(p)"
+          />
+        </div>
+        <div class="row quick" role="group" :aria-labelledby="titleInputId(p.origin) + '-quick'">
+          <span :id="titleInputId(p.origin) + '-quick'" class="hint">快捷填入</span>
+          <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickSiteTitle(p, q)">
+            {{ quickTitleValue(q, uiLanguage) }}
+          </button>
         </div>
         <div class="row">
           <label>标签页图标</label>
           <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前标签页图标" />
-          <span v-else class="hint">未设置（中性默认）</span>
+          <span v-else class="hint">未设置（默认透明图标，标签页上图标位留空）</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
@@ -88,18 +124,27 @@ import { onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage, INVALID_EXPORT_FILE, type ImportResult } from '@/core/storage';
 import { isSafeFaviconDataUrl } from '@/core/validate';
+import { currentUiLanguage, defaultTitleFor, QUICK_TITLES, quickTitleValue, type QuickTitle } from '@/core/titles';
 import type { SiteProfile } from '@/core/types';
-import type { Ack } from '@/core/messages';
+import { originPattern } from '@/core/registration';
+import type { Ack, ReconcileResponse } from '@/core/messages';
 
 const storage = createPageMaskStorage(browser.storage.local);
 const profiles = ref<SiteProfile[]>([]);
-const defaultTitle = ref('新建标签页');
+/** 全局默认标题；null / 空 = 用户没设置，跟随浏览器界面语言默认 */
+const defaultTitle = ref<string | null>(null);
+/** 浏览器界面语言：决定默认标题与快捷标题填入中文还是英文 */
+const uiLanguage = currentUiLanguage();
+const languageDefaultTitle = defaultTitleFor(uiLanguage);
 const resetTarget = ref<SiteProfile | null>(null);
 const importMode = ref<'merge' | 'replace'>('merge');
 const importResult = ref('');
 const importInput = ref<HTMLInputElement | null>(null);
 const iconError = ref<Record<string, string>>({});
 const resetError = ref<Record<string, string>>({});
+/** 有配置、没授权的站点（待授权） */
+const pendingOrigins = ref<string[]>([]);
+const authError = ref('');
 
 onMounted(async () => {
   defaultTitle.value = (await storage.getSettings()).defaultTitle;
@@ -107,10 +152,42 @@ onMounted(async () => {
   browser.storage.onChanged.addListener((_, area) => {
     if (area === 'local') void reload();
   });
+  // 用户可能在扩展详情里收回或授予了站点访问权限
+  browser.permissions.onAdded.addListener(() => void reload());
+  browser.permissions.onRemoved.addListener(() => void reload());
 });
 
 async function reload() {
-  profiles.value = await storage.listProfiles();
+  const list = await storage.listProfiles();
+  const granted = await Promise.all(
+    list.map((p) => browser.permissions.contains({ origins: [originPattern(p.origin)] }).catch(() => false)),
+  );
+  profiles.value = list;
+  pendingOrigins.value = list.filter((_, i) => !granted[i]).map((p) => p.origin);
+}
+
+/** 请后台立即对账（导入、授权之后），让站点配置、授权、注册三者一致 */
+async function reconcileNow(): Promise<void> {
+  const res: ReconcileResponse | undefined = await browser.runtime.sendMessage({ t: 'reconcile' }).catch(() => undefined);
+  if (!res?.ok) console.warn('[PageMask] 对账失败', res?.error);
+}
+
+/**
+ * 授权并启用（单个站点或一次授权全部）：一次权限请求带上所有站点。
+ * 权限请求必须处在点击手势的同步上下文中，所以它是本函数的第一条语句，之前不能有 await。
+ */
+function authorize(origins: string[]) {
+  const request = browser.permissions.request({ origins: origins.map(originPattern) });
+  authError.value = '';
+  void (async () => {
+    const ok = await request.catch(() => false);
+    if (!ok) {
+      authError.value = '没有拿到授权，站点设置仍然保留；需要时再点一次并选择「允许」';
+      return;
+    }
+    await reconcileNow();
+    await reload();
+  })();
 }
 
 function hostOf(origin: string): string {
@@ -129,8 +206,28 @@ function staleList(p: SiteProfile): string {
 }
 
 async function saveSettings() {
-  const t = defaultTitle.value.trim();
-  await storage.putSettings({ defaultTitle: t || '新建标签页' });
+  const t = (defaultTitle.value ?? '').trim();
+  await storage.putSettings({ defaultTitle: t || null }); // 留空 = 跟随界面语言默认
+}
+
+/** 每个站点标题输入框的 id（label for / 快捷标题分组用）；origin 里的 :/. 换成 - */
+function titleInputId(origin: string): string {
+  return `site-title-${origin.replace(/[^a-z0-9]/gi, '-')}`;
+}
+
+/*
+ * 快捷标题：按钮上显示、点击填入的都是按浏览器界面语言取的值（中文浏览器「阅读」，
+ * 英文浏览器 "Reading"）——标签页标题给浏览器标签栏看，按钮上写什么就填什么，避免点了「笔记」却填进 "Notes"。
+ * 填入后沿用输入框的保存方式立即保存。
+ */
+async function pickDefaultTitle(q: QuickTitle) {
+  defaultTitle.value = quickTitleValue(q, uiLanguage);
+  await saveSettings();
+}
+
+async function pickSiteTitle(p: SiteProfile, q: QuickTitle) {
+  p.disguisedTitle = quickTitleValue(q, uiLanguage);
+  await saveTitle(p);
 }
 
 // 以下写入均为原子更新：基于最新存储值只改本次操作涉及的字段
@@ -214,6 +311,8 @@ async function doImport(e: Event) {
     }
     const res = await storage.importBundle(bundle, importMode.value);
     importResult.value = describeImport(res);
+    // 导入可能新增或移除了站点：立即对账（新站点在授权前显示「待授权」）
+    await reconcileNow();
   } catch (err) {
     importResult.value = `导入失败：${err instanceof Error ? err.message : String(err)}`;
   }
@@ -359,11 +458,47 @@ button.danger {
   color: #c33;
   border-color: #e5b4b4;
 }
+.row.quick {
+  gap: 6px;
+  margin-top: -2px;
+}
+button.chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: transparent;
+}
+button.chip:hover {
+  border-color: #3575e0;
+  color: #3575e0;
+}
+button:focus-visible {
+  outline: 2px solid #3575e0;
+  outline-offset: 2px;
+}
 .favicon {
   width: 20px;
   height: 20px;
   border-radius: 4px;
   vertical-align: middle;
+}
+.pending-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.row.pending {
+  margin: 0 0 10px;
+}
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff4e5;
+  color: #a35200;
+  border: 1px solid #f3c58a;
 }
 .mask {
   position: fixed;

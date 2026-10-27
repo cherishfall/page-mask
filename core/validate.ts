@@ -206,13 +206,40 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
   return { profile, droppedRules };
 }
 
-/** 全局设置按 schema 读取：类型不对或空白一律回落默认值 */
+/**
+ * 全局设置按 schema 读取：类型不对或空白一律视为"没设置"（null，跟随界面语言默认）。
+ * 用于导入文件与写入前的规整；读本机存储请用 readStoredSettings（含旧版迁移）。
+ */
 export function readSettings(v: unknown): GlobalSettings {
   const o = isObject(v) ? v : {};
   return {
     defaultTitle:
       typeof o.defaultTitle === 'string' && o.defaultTitle.trim() ? o.defaultTitle : DEFAULT_SETTINGS.defaultTitle,
   };
+}
+
+/** 0.1.0 的全局默认标题。0.2.0 起默认改为跟随界面语言（「阅读」/ "Reading"，#35） */
+export const LEGACY_DEFAULT_TITLE = '新建标签页';
+
+/** 本机存储里全局设置的版本标记：0.2.0 起每次写入都带上 */
+export const SETTINGS_VERSION = 2;
+
+/**
+ * 读本机存储里的全局设置，顺带做 0.1.0 → 0.2.0 的一次性迁移：
+ * 0.1.0 的管理页把「新建标签页」当默认值填在输入框里，清空输入框保存也会写回它，
+ * 用户分不清"自己设置的"和"默认的"。所以没有版本标记、且恰好等于旧默认值的记录视为"没设置"，
+ * 改为跟随界面语言默认。0.2.0 写入时带版本标记，之后用户主动选「新建标签页」（快捷标题）不受影响。
+ */
+export function readStoredSettings(v: unknown): GlobalSettings {
+  if (isObject(v) && v.settingsVersion !== SETTINGS_VERSION && v.defaultTitle === LEGACY_DEFAULT_TITLE) {
+    return { ...DEFAULT_SETTINGS };
+  }
+  return readSettings(v);
+}
+
+/** 写入本机存储的全局设置：规整后带上版本标记（见 readStoredSettings） */
+export function toStoredSettings(settings: unknown): GlobalSettings & { settingsVersion: number } {
+  return { ...readSettings(settings), settingsVersion: SETTINGS_VERSION };
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

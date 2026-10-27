@@ -7,11 +7,18 @@
  * - 启用站点走与 popup 相同的 enableSite 消息入口
  * - 截图写到 test-results/e2e/（已忽略）
  * - 已知缺陷以 expectFail 形式存在：失败打印「预期失败 → #NN」，意外通过则计为失败
+ * - 站点生命周期（#21）：重载后仍生效、撤销授权后 popup「重新授权」、一键清空即时还原、
+ *   导出 → 清空 → 导入后「一次授权全部」、安装警告为空。权限弹窗本身无法自动化：
+ *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
  */
 import { createReporter, resultsDir, startServer, waitFor } from './lib/harness.mjs';
 import {
+  BUILD_DIR,
   getProfile,
+  grantPermissions,
   launchExtension,
+  openPopup,
+  permissionWarnings,
   patchProfile,
   removePermission,
   reloadExtension,
@@ -24,9 +31,12 @@ import {
 } from './lib/extension.mjs';
 import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
 import { FIXTURE_TITLE, fixtureHandler } from './fixtures.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
-const DISGUISED_TITLE = '新建标签页';
+// 不用 0.1.0 的旧默认值「新建标签页」：#35 起它在没有版本标记时会被当作"没设置"迁移掉
+const DISGUISED_TITLE = '工作笔记';
 const TOGGLE_HOST = '#pagemask-floating-host';
 const TOGGLE_BTN = '[title^="PageMask"]';
 const WIZARD_HOST = '#pagemask-wizard-host';
@@ -110,11 +120,28 @@ function seedProfile(origin) {
   };
 }
 
+/** 在页面里替换 permissions.request：记录参数并返回 false（权限弹窗无法自动化；「允许」改用 grantPermissions） */
+function stubPermissionRequest(page) {
+  return page.evaluate(() => {
+    window.__pmRequests = [];
+    const fake = async (p) => {
+      window.__pmRequests.push(JSON.parse(JSON.stringify(p)));
+      return false;
+    };
+    chrome.permissions.request = fake;
+    if (globalThis.browser?.permissions) globalThis.browser.permissions.request = fake;
+  });
+}
+
 async function main() {
   const t0 = Date.now();
   const srv = await startServer(fixtureHandler);
+  const srv2 = await startServer(fixtureHandler);
   const ORIGIN = srv.origin;
-  const ext = await launchExtension({ hostOrigins: [ORIGIN] });
+  // 第二个测试站点（同主机不同端口）：导入后「一次授权全部」用
+  const ORIGIN2 = srv2.origin;
+  // tabs 仅加在测试拷贝里：openPopup() 打开的 popup 没有 activeTab，需要它才读得到当前标签页网址
+  const ext = await launchExtension({ hostOrigins: [ORIGIN, ORIGIN2], extraPermissions: ['tabs'] });
   const { browser } = ext;
   console.log(`✓ 扩展已加载（${ext.extensionId}），测试站点 ${ORIGIN}`);
 
@@ -450,21 +477,10 @@ async function main() {
     check(isShown(await styleOf(page, '#page-title')), '过渡遮挡已撤掉，普通内容正常显示');
 
     // ===================== 扩展重载（#21） =====================
+    console.log('\n--- runtime.reload() 后已配置站点仍然生效 ---');
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
-    await expectFail('runtime.reload() 后已配置站点仍然生效', 21, async () => {
-      await reloadExtension(ext);
-      const p2 = await browser.newPage();
-      try {
-        await p2.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
-        await p2.waitForSelector(TOGGLE_HOST, { timeout: 5000 }).catch(() => {
-          throw new Error('重载后新开页面没有悬浮按钮（内容脚本未注入）');
-        });
-        await waitStyle(p2, '重载后页头被移除', '#site-header', 'display', 'none');
-        check(true, '重载后新开页面仍处于清爽态');
-      } finally {
-        await p2.close();
-      }
-    });
+    await reloadExtension(ext);
+    await expectDisguisedInNewPage(ORIGIN, '重载后新开页面仍处于清爽态（onInstalled 对账补注册）');
 
     // ===================== 撤销授权（工具自检 + 零影响） =====================
     console.log('\n--- 撤销授权 ---');
@@ -483,7 +499,180 @@ async function main() {
     await new Promise((res) => setTimeout(res, 1000));
     check(!(await after.evaluate((h) => !!document.querySelector(h), TOGGLE_HOST)), '撤销后新开页面不再注入');
     check(isShown(await styleOf(after, '#site-header')), '撤销后页面保持原样');
+    check((await getProfile(ext.control, ORIGIN)) !== null, '撤销授权不删站点配置');
     await after.close();
+
+    // ===================== popup「重新授权」（#21） =====================
+    console.log('\n--- 撤销授权后 popup 显示「重新授权」 ---');
+    const site = await browser.newPage();
+    await site.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    let popup = await openPopup(ext, site);
+    await popup.waitForSelector(tid('pm-popup-reauth'), { timeout: 5000 });
+    check(true, 'popup 显示「重新授权」');
+    check(!(await popup.$(tid('pm-popup-setup'))), '待授权时不显示「添加要去掉的元素」');
+    // 权限弹窗无法自动化：替换掉 permissions.request，只断言点击时（同步）发起了正确的请求
+    await stubPermissionRequest(popup);
+    await popup.click(tid('pm-popup-reauth'));
+    await waitFor(popup, '点击后发起权限请求', () => window.__pmRequests.length > 0);
+    const reqs = await popup.evaluate(() => window.__pmRequests);
+    check(
+      JSON.stringify(reqs) === JSON.stringify([{ origins: [`${ORIGIN}/*`] }]),
+      `「重新授权」请求的是本站权限（${JSON.stringify(reqs)}）`,
+    );
+    await popup.close().catch(() => undefined);
+    // 「允许」改用测试手段授予（重载 + manifest），之后对账让站点恢复生效
+    await grantPermissions(ext, [ORIGIN]);
+    await expectDisguisedInNewPage(ORIGIN, '重新授权后站点恢复生效（新开页面清爽态）');
+    popup = await openPopup(ext, site);
+    await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
+    check(!(await popup.$(tid('pm-popup-reauth'))), '授权恢复后 popup 不再显示「重新授权」');
+    await popup.close().catch(() => undefined);
+    await site.close();
+
+    // ===================== 导出 → 一键清空 → 导入 → 一次授权全部（#21） =====================
+    console.log('\n--- 导出配置 ---');
+    await setProfile(ext.control, ORIGIN2, seedProfile(ORIGIN2));
+    await expectDisguisedInNewPage(ORIGIN2, '第二个站点配置后生效');
+    let mgmtPage = await openManagement();
+    const exported = await exportFromManagement(mgmtPage);
+    check(exported.profiles.length === 2, `导出包含 2 个站点（${exported.profiles.map((x) => x.origin).join('、')}）`);
+
+    console.log('\n--- 一键清空后已打开页面立即恢复原样 ---');
+    const open1 = await browser.newPage();
+    await open1.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await waitFor(open1, '清空前：标题已替换', (t) => document.title === t, [DISGUISED_TITLE]);
+    await waitStyle(open1, '清空前：页头被移除', '#site-header', 'display', 'none');
+    await open1.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    await resetInManagement(mgmtPage, ORIGIN);
+    await open1.bringToFront();
+    // 不刷新页面：样式、标题、图标、悬浮按钮应立即全部还原
+    await waitStyle(open1, '清空后页头立即可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    await waitStyle(open1, '清空后页脚立即可见', '#site-footer', 'visibility', 'visible', { timeout: 1000 });
+    await waitFor(open1, '清空后标题还原', (t) => document.title === t, [FIXTURE_TITLE], { timeout: 3000 });
+    await waitFor(open1, '清空后悬浮按钮消失', (h) => !document.querySelector(h), [TOGGLE_HOST], { timeout: 3000 });
+    const icons = await open1.evaluate(() =>
+      Array.from(document.querySelectorAll('link[rel~="icon"]')).map((l) => l.getAttribute('href')),
+    );
+    check(icons.length === 1 && icons[0].startsWith('data:image/png;base64,iVBOR'), `清空后标签页图标还原为网站自己的（${icons.length} 个）`);
+    check(
+      !(await open1.evaluate(() => !!document.querySelector('[id^="pagemask-"]'))),
+      '清空后页面上没有任何 PageMask 界面',
+    );
+    check(true, '一键清空后已打开页面立即恢复原样（标题、图标、样式、悬浮按钮）');
+    check((await getProfile(ext.control, ORIGIN)) === null, '站点配置已删除');
+    check(
+      !(await ext.control.evaluate((pt) => chrome.permissions.contains({ origins: [pt] }), `${ORIGIN}/*`)),
+      '站点授权已收回',
+    );
+    await open1.close();
+    await resetInManagement(mgmtPage, ORIGIN2);
+    await waitFor(mgmtPage, '两个站点都已清空', () => document.querySelectorAll('.site').length === 0);
+
+    console.log('\n--- 导入后一次授权全部 ---');
+    await importInManagement(mgmtPage, exported);
+    await mgmtPage.waitForSelector(tid('pm-mgmt-authorize-all'), { timeout: 5000 });
+    const pendingCount = await mgmtPage.$$eval(tid('pm-mgmt-pending'), (els) => els.length);
+    check(pendingCount === 2, `导入后两个站点都显示「待授权」（${pendingCount}）`);
+    check(true, '管理页出现「一次授权全部」');
+    const unregistered = await browser.newPage();
+    await unregistered.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await new Promise((res) => setTimeout(res, 1000)); // 负向断言：等过注入时机
+    check(!(await unregistered.evaluate((h) => !!document.querySelector(h), TOGGLE_HOST)), '授权前导入的站点不生效');
+    await unregistered.close();
+    await stubPermissionRequest(mgmtPage);
+    await mgmtPage.bringToFront();
+    await mgmtPage.click(tid('pm-mgmt-authorize-all'));
+    await waitFor(mgmtPage, '点击后发起权限请求', () => window.__pmRequests.length > 0);
+    const batch = await mgmtPage.evaluate(() => window.__pmRequests);
+    check(
+      batch.length === 1 && [...batch[0].origins].sort().join() === [`${ORIGIN}/*`, `${ORIGIN2}/*`].sort().join(),
+      `一次权限请求带上全部待授权站点（${JSON.stringify(batch)}）`,
+    );
+    await mgmtPage.close().catch(() => undefined);
+    await grantPermissions(ext, [ORIGIN, ORIGIN2]);
+    await expectDisguisedInNewPage(ORIGIN, '授权后导入的站点 1 生效');
+    await expectDisguisedInNewPage(ORIGIN2, '授权后导入的站点 2 生效');
+    mgmtPage = await openManagement();
+    await waitFor(mgmtPage, '管理页列出两个站点', () => document.querySelectorAll('.site').length === 2);
+    check(!(await mgmtPage.$(tid('pm-mgmt-pending'))), '授权后管理页不再显示「待授权」');
+    await mgmtPage.close();
+
+    // ===================== 安装警告（#21） =====================
+    console.log('\n--- 安装时权限警告 ---');
+    const prodManifest = JSON.parse(fs.readFileSync(path.join(BUILD_DIR, 'manifest.json'), 'utf8'));
+    check(!('content_scripts' in prodManifest) && !('host_permissions' in prodManifest), '产物 manifest 无 content_scripts / host_permissions');
+    const warnings = await permissionWarnings(ext.control, prodManifest);
+    check(Array.isArray(warnings) && warnings.length === 0, `安装警告为空数组（${JSON.stringify(warnings)}）`);
+
+    // 以上用到的页面辅助函数
+    async function expectDisguisedInNewPage(origin, label) {
+      const p = await browser.newPage();
+      try {
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.waitForSelector(TOGGLE_HOST, { timeout: 8000 }).catch(() => {
+          throw new Error(`${label}：新开页面没有悬浮按钮（内容脚本未注入）`);
+        });
+        await waitStyle(p, `${label}：页头被移除`, '#site-header', 'display', 'none');
+        check(true, label);
+      } finally {
+        await p.close();
+      }
+    }
+
+    async function openManagement() {
+      const m = await browser.newPage();
+      await m.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
+      await m.waitForSelector('.page h1', { timeout: 5000 });
+      return m;
+    }
+
+    /** 点「导出配置」，截获生成的文件内容（不真的下载到磁盘） */
+    async function exportFromManagement(m) {
+      await m.bringToFront();
+      await m.evaluate(() => {
+        window.__pmBlobs = [];
+        const orig = URL.createObjectURL.bind(URL);
+        URL.createObjectURL = (b) => {
+          window.__pmBlobs.push(b);
+          return orig(b);
+        };
+        const click = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function () {
+          if (!this.download) click.call(this);
+        };
+      });
+      const btn = await m.waitForSelector('xpath/.//button[normalize-space()="导出配置"]', { timeout: 3000 });
+      await btn.click();
+      await waitFor(m, '导出文件生成', () => window.__pmBlobs.length > 0);
+      return JSON.parse(await m.evaluate(() => window.__pmBlobs[0].text()));
+    }
+
+    /** 在管理页对某站点点「一键清空」并确认 */
+    async function resetInManagement(m, origin) {
+      // 后台标签页里不跑动画帧，puppeteer 的点击会一直等元素稳定；先切到前台
+      await m.bringToFront();
+      const btn = await m.waitForSelector(`xpath/.//section[@data-origin="${origin}"]//button[normalize-space()="一键清空"]`, {
+        timeout: 5000,
+      });
+      await btn.click();
+      const yes = await m.waitForSelector('xpath/.//button[normalize-space()="确认清空"]', { timeout: 3000 });
+      await yes.click();
+      await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`section[data-origin="${o}"]`), [origin]);
+    }
+
+    /** 通过管理页的文件选择框导入（默认合并模式） */
+    async function importInManagement(m, bundle) {
+      await m.bringToFront();
+      const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pm-e2e-import-')), 'pagemask-config.json');
+      fs.writeFileSync(file, JSON.stringify(bundle));
+      try {
+        const input = await m.$('input[type="file"][accept="application/json"]');
+        await input.uploadFile(file);
+        await waitFor(m, '导入完成', () => document.body.innerText.includes('导入完成'));
+      } finally {
+        fs.rmSync(path.dirname(file), { recursive: true, force: true });
+      }
+    }
 
     console.log(`\n用时 ${((Date.now() - t0) / 1000).toFixed(1)} 秒，截图在 ${path.relative(process.cwd(), OUT)}/`);
   } catch (e) {
@@ -491,6 +680,7 @@ async function main() {
   } finally {
     await ext.cleanup();
     await srv.close();
+    await srv2.close();
   }
   process.exitCode = r.summary();
 }

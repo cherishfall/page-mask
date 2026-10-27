@@ -1,12 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { effectiveTitle, TitleFaviconGuard } from './disguise';
+// @ts-ignore 项目不装 @types/node；vitest 跑在 Node 里，node:zlib 可用
+import { inflateSync } from 'node:zlib';
+import { TitleFaviconGuard, TRANSPARENT_PNG } from './disguise';
 
-describe('effectiveTitle 站点覆盖 > 全局默认', () => {
-  it('未覆盖用全局默认', () => {
-    expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: '新建标签页' })).toBe('新建标签页');
-  });
-  it('站点覆盖优先', () => {
-    expect(effectiveTitle({ disguisedTitle: '工作文档' }, { defaultTitle: '新建标签页' })).toBe('工作文档');
+/**
+ * 最小 PNG 解码：只支持本项目默认图标用到的 8 位 RGBA、非隔行格式。
+ * 拼接全部 IDAT → zlib 解压 → 按行去掉 filter（仅图标用到的 None/Sub/Up）→ RGBA 像素。
+ */
+function decodeRgbaPng(dataUrl: string): { width: number; height: number; pixels: Uint8Array } {
+  const bin = atob(dataUrl.replace(/^data:image\/png;base64,/, ''));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  const view = new DataView(bytes.buffer);
+  expect(Array.from(bytes.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  let width = 0;
+  let height = 0;
+  const idat: number[] = [];
+  for (let off = 8; off < bytes.length; ) {
+    const len = view.getUint32(off);
+    const type = String.fromCharCode(...bytes.slice(off + 4, off + 8));
+    const data = bytes.slice(off + 8, off + 8 + len);
+    if (type === 'IHDR') {
+      width = view.getUint32(off + 8);
+      height = view.getUint32(off + 12);
+      expect([data[8], data[9], data[12]]).toEqual([8, 6, 0]); // 8 位深、RGBA、非隔行
+    } else if (type === 'IDAT') idat.push(...data);
+    off += 12 + len;
+  }
+  const raw = new Uint8Array(inflateSync(Uint8Array.from(idat)));
+  const stride = width * 4;
+  const pixels = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    for (let x = 0; x < stride; x++) {
+      const v = raw[y * (stride + 1) + 1 + x]!;
+      const left = x >= 4 ? pixels[y * stride + x - 4]! : 0;
+      const up = y > 0 ? pixels[(y - 1) * stride + x]! : 0;
+      if (filter === 0) pixels[y * stride + x] = v;
+      else if (filter === 1) pixels[y * stride + x] = (v + left) & 255;
+      else if (filter === 2) pixels[y * stride + x] = (v + up) & 255;
+      else throw new Error(`测试解码器不支持 PNG filter ${filter}`);
+    }
+  }
+  return { width, height, pixels };
+}
+
+describe('默认图标 TRANSPARENT_PNG', () => {
+  it('解码后每个像素 alpha=0（真正全透明，不是半透明色块）', () => {
+    const { width, height, pixels } = decodeRgbaPng(TRANSPARENT_PNG);
+    expect(width * height).toBeGreaterThan(0);
+    expect(pixels).toHaveLength(width * height * 4);
+    for (let i = 3; i < pixels.length; i += 4) expect(pixels[i]).toBe(0);
   });
 });
 

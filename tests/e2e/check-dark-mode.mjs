@@ -39,7 +39,7 @@ async function main() {
   const { browser, control, extOrigin } = ext;
   try {
     const now = Date.now();
-    await control.evaluate((st) => chrome.storage.local.set({ settings: st }), { defaultTitle: '新建标签页' });
+    await control.evaluate((st) => chrome.storage.local.set({ settings: st }), { defaultTitle: '阅读' });
     await setProfile(control, ORIGIN, {
       formatVersion: 1,
       origin: ORIGIN,

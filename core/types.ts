@@ -15,9 +15,6 @@ export const STRATEGY_LABEL: Record<StrategyId, string> = {
   mask: '遮罩覆盖',
 };
 
-/** 默认伪装标题：不能为空——空白会让 Chrome 显示网址反而泄露（design.md） */
-export const DEFAULT_DISGUISED_TITLE = '新建标签页';
-
 /**
  * 一条生效范围模式：零专业输入，用 URL 前缀表达"这类页面"。
  * 匹配方式（match）：
@@ -61,9 +58,9 @@ export interface SiteProfile {
   /** 形如 https://weread.qq.com（含端口，如非默认） */
   origin: string;
   switchState: SwitchState;
-  /** 伪装标题；null = 用全局默认（DEFAULT_DISGUISED_TITLE，全局默认可改） */
+  /** 伪装标题；null = 用全局设置，全局也没设置时按界面语言取默认（core/titles.ts：「阅读」/ "Reading"） */
   disguisedTitle: string | null;
-  /** 伪装图标 data URL；null = 中性默认（透明图标，Chrome 显示通用地球） */
+  /** 伪装图标 data URL；null = 默认全透明图标（标签页上图标位显示为空白） */
   faviconDataUrl: string | null;
   hideRules: HideRule[];
   /** 悬浮按钮记住的位置（视口坐标）；null = 默认右下角 */
@@ -75,11 +72,15 @@ export interface SiteProfile {
 
 /** 全局设置（独立于各站点配置） */
 export interface GlobalSettings {
-  /** 全局默认伪装标题，站点未覆盖时使用 */
-  defaultTitle: string;
+  /**
+   * 全局默认伪装标题，站点未覆盖时使用。
+   * null = 用户没设置，跟随浏览器界面语言取默认（「阅读」/ "Reading"，见 core/titles.ts）。
+   * 不存空白：标题为空时 Chrome 会在标签页上显示网址。
+   */
+  defaultTitle: string | null;
 }
 
-export const DEFAULT_SETTINGS: GlobalSettings = { defaultTitle: DEFAULT_DISGUISED_TITLE };
+export const DEFAULT_SETTINGS: GlobalSettings = { defaultTitle: null };
 
 /** 导出文件结构：带版本号字段供未来迁移（ADR-0004） */
 export interface ExportBundle {

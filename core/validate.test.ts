@@ -3,6 +3,8 @@ import {
   isLexicallySafeSelector,
   isSafeFaviconDataUrl,
   isSafeSelector,
+  readStoredSettings,
+  toStoredSettings,
   isValidOrigin,
   isValidScope,
   isValidStrategy,
@@ -135,9 +137,25 @@ describe('sanitizeProfile', () => {
 });
 
 describe('readSettings', () => {
-  it('类型不对用默认值', () => {
-    expect(readSettings(undefined).defaultTitle).toBe('新建标签页');
-    expect(readSettings({ defaultTitle: null }).defaultTitle).toBe('新建标签页');
+  it('类型不对或空白视为没设置（null）', () => {
+    expect(readSettings(undefined).defaultTitle).toBeNull();
+    expect(readSettings({ defaultTitle: null }).defaultTitle).toBeNull();
+    expect(readSettings({ defaultTitle: 42 }).defaultTitle).toBeNull();
+    expect(readSettings({ defaultTitle: ' \t ' }).defaultTitle).toBeNull();
     expect(readSettings({ defaultTitle: '周报' }).defaultTitle).toBe('周报');
+    expect(readSettings({ defaultTitle: '新建标签页' }).defaultTitle).toBe('新建标签页'); // 不做旧版迁移
+  });
+});
+
+describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
+  it('无版本标记的旧默认值视为没设置，其余照常', () => {
+    expect(readStoredSettings({ defaultTitle: '新建标签页' }).defaultTitle).toBeNull();
+    expect(readStoredSettings({ defaultTitle: '周报' }).defaultTitle).toBe('周报');
+    expect(readStoredSettings(undefined).defaultTitle).toBeNull();
+  });
+  it('带版本标记的值原样保留', () => {
+    const stored = toStoredSettings({ defaultTitle: '新建标签页' });
+    expect(stored).toEqual({ defaultTitle: '新建标签页', settingsVersion: 2 });
+    expect(readStoredSettings(stored)).toEqual({ defaultTitle: '新建标签页' });
   });
 });

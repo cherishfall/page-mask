@@ -7,6 +7,8 @@
 //   - name/description/action.default_title 各语言文本不含禁用词（伪装、disguise、New Tab、新建标签页、摸鱼）
 //   - 有 _locales 时必须声明 default_locale；各语言 messages.json 键集合一致、每条都有 message 文本
 //   - icons 含 16/32/48/128，且对应文件在 zip 内存在
+//   - 安装时零站点权限（REVIEW B11）：无 content_scripts、无 host_permissions；
+//     动态注册引用的内容脚本 content-scripts/content.js（core/registration.ts）存在
 //   - zip 内无 *.map、.DS_Store、*.test.*、tests/ 路径；包含 THIRD_PARTY_NOTICES.txt
 //
 // 用法：node scripts/check-package.mjs [zip 路径]   默认 .output/<name>-<version>-chrome.zip
@@ -25,6 +27,8 @@ const zipPath = resolve(process.argv[2] ?? join(root, '.output', `${pkg.name}-${
 const LIMITS = { name: 45, description: 132 };
 const REQUIRED_ICON_SIZES = ['16', '32', '48', '128'];
 const NOTICES = 'THIRD_PARTY_NOTICES.txt';
+/** 与 core/registration.ts 的 CONTENT_SCRIPT_FILE 一致：后台按站点动态注册的就是这个文件 */
+const CONTENT_SCRIPT_FILE = 'content-scripts/content.js';
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -138,6 +142,14 @@ function checkManifest(label, manifest, readFile, listLocales, hasFile) {
   // Chrome 规则：有 _locales 必须声明 default_locale，反之亦然，否则拒绝加载
   if (!locale && locales.length > 0) fail(`[${label}] 包内有 _locales，但 manifest 缺少 default_locale`);
   checkLocaleKeys(label, locales, readFile);
+  // 安装时不得带任何站点权限：内容脚本只走动态注册，站点授权一律运行时申请
+  if ('content_scripts' in manifest) {
+    fail(`[${label}] manifest 不应包含 content_scripts（安装时会出现站点权限提示）：${JSON.stringify(manifest.content_scripts)}`);
+  }
+  if ('host_permissions' in manifest) {
+    fail(`[${label}] manifest 不应包含 host_permissions（站点授权应在运行时申请）：${JSON.stringify(manifest.host_permissions)}`);
+  }
+  if (!hasFile(CONTENT_SCRIPT_FILE)) fail(`[${label}] 缺少动态注册用的内容脚本 ${CONTENT_SCRIPT_FILE}`);
   const icons = manifest.icons ?? {};
   for (const size of REQUIRED_ICON_SIZES) {
     const path = icons[size];

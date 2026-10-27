@@ -2,6 +2,18 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.2.0 · #21 站点生命周期对账
+
+- **对账纯函数** `core/reconcile.ts`：输入 配置来源 + 其中已授权的来源 + 已注册脚本，输出 注册 / 更新 / 注销 / 待授权。授权按 `permissions.contains` 逐站判断（而不是解析 `getAll` 的匹配模式），用户在扩展详情里选「所有网站」时也算已授权。只处理 `pagemask:` 前缀的注册。写法与当前计划不同（升级后 runAt / 文件路径变了）时更新而不是重复注册。
+- **触发点**：onInstalled（全部 reason）、onStartup、permissions.onAdded/onRemoved、storage.onChanged 里站点配置的**创建或删除**（新站点保存、整体替换导入、一键清空），以及管理页导入/授权后发的 `reconcile` 消息（可以等结果再刷新界面）。两条路并存：消息保证界面拿到确定结果，storage 监听兜底（例如向导在页面里保存，内容脚本不能发特权消息）。同一 SW 内对账串行；"Duplicate script ID" 改为 update。
+- **已授权但没有配置不自动收回**：新站点向导进行中正是这个状态（预览样式需要站点授权）。收回只在两处发生：向导取消（`cancelNewSite`，后台再核对一次确实没有配置）、一键清空。遗留：用户在新站点向导中途直接关掉标签页，授权会留着（没有配置、也不注册，不影响页面）。
+- **新站点流程**：popup 点击 → 同步 `permissions.request` → `enableSite{ open:'newSite' }`；后台核对 `tabs.get(tabId)` 的来源、授权，对账，`executeScript(files)` 后再 `executeScript(func)` 调内容脚本登记在隔离环境里的 `window.__pagemask.open(mode)`。去掉了 popup 的 sleep 轮询。配置在向导保存时才 `create`。
+- **特权消息来源**：enableSite / resetSite / reconcile 要求 `sender.id === runtime.id` 且 `sender.url` 以扩展根地址开头。不要求"没有 sender.tab"：以标签页打开的管理页带 tab。
+- **内容脚本入口核对（B28）**：首屏遮挡与首个样式请求照旧立即发出（后台按 sender.url 的来源查配置，端口不符得到空样式），随后按 `location.origin` 读配置，没有配置也不是新站点向导就撤掉遮挡、保持休眠，不挂任何监听和界面。代价：同主机其他端口的页面会有几毫秒的整页透明（读配置的时间）；内容脚本拿不到同步配置，无法更早判断。
+- **一键清空**：后台先 `tabs.query({})` 找该来源的标签页逐个发 `siteReset`（每个最多等 1.5 秒），内容脚本关向导、撤预览与正式样式、还原标题图标、卸载界面后回复；之后收回授权、注销、删配置。内容脚本在配置真正删除前不再按存储重新应用（防止体检回写把样式注回来）。
+- **manifest 去占位脚本（B11）**：保留 `defineContentScript`（#22 要用 WXT 的 ctx），在 `build:manifestGenerated` 钩子里 `delete manifest.content_scripts`。WXT 对非 runtime 注册的内容脚本不写 host_permissions，产物里不需要额外清理。`check:package` 增加：无 content_scripts、无 host_permissions、`content-scripts/content.js` 存在。
+- **E2E 授予权限**：`developerPrivate.addHostPermission` 对可选主机权限无效（实测），只能用 manifest 两次重载法；popup 用 `action.openPopup()` 打开，测试拷贝加 `tabs` 权限代替 activeTab。详见 `docs/dev/e2e.md`。
+
 ## 0.2.0 · #20 注入引擎：按文档跟踪 + 首屏防闪
 - **消息协议**（`core/messages.ts`）：`applyDisguise {prev}`、`restoreOriginal {prev}`、`draftCss {prev, next}`，回复 `CssAck {ok, error?, css}`，css = 处理后文档里实际存在的文本。内容脚本侧记录在 `core/doc-styles.ts`，一条 promise 链串行。后台 `core/background-engine.ts` 不再有 Map。
 - **后台回复**统一 `sendResponse` + 同步 `return true`；非后台消息返回 false 不占通道。popup 的 enableSite、管理页的 resetSite 检查 `res?.ok` 并提示；内容脚本样式失败 `console.warn`；向导预览失败弹页内提示。
