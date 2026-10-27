@@ -25,7 +25,7 @@
     "compile": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs && node tests/e2e/check-pages.mjs",
+    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs && node tests/e2e/check-pages.mjs && node tests/e2e/check-mask.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "notices": "node scripts/gen-notices.mjs",
     "check:package": "node scripts/check-package.mjs"

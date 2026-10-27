@@ -35,13 +35,13 @@ import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles, type StyleRecord } from '@/core/doc-styles';
 import { applyKey } from '@/core/apply-key';
-import { TAKEOVER_EVENT, hostShieldPresent, isOwnUiNode } from '@/core/host-shield';
+import { TAKEOVER_EVENT, hostShieldPresent } from '@/core/host-shield';
 import type { Ack, BgRequest, CssAck, OpenIntent } from '@/core/messages';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
-import { ElementFollower } from './follow';
+import { MaskLayer } from './mask-layer';
 import { createPageHost, type PageHost } from './page-host';
 import { createFirstPaintShield } from './first-paint-shield';
 
@@ -105,7 +105,14 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       return () => clearTimeout(id);
     },
   });
-  const follower = new ElementFollower();
+  // 方案C遮罩覆盖层：重扫定时器交给 ctx 托管（失效后不再触发）
+  const masks = new MaskLayer({
+    createHost: () => createPageHost(ctx, 'mask'),
+    schedule: (fn, ms) => {
+      const id = ctx.setTimeout(fn, ms);
+      return () => clearTimeout(id);
+    },
+  });
   // 必须最先执行：在页面开始解析前挡住首帧
   const shield = createFirstPaintShield(document);
   const styles = createDocStyles((m: BgRequest) => browser.runtime.sendMessage(m), takeover);
@@ -126,7 +133,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let wizardApp: App | null = null;
   let editorHost: PageHost | null = null;
   let editorApp: App | null = null;
-  let maskHost: PageHost | null = null;
   let wizardActive = false;
   /** 入口核对通过（本页有站点配置或正在进行新站点向导），已挂上监听 */
   let active = false;
@@ -227,45 +233,20 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   // ---------- 方案C 遮罩覆盖层 ----------
 
   function clearMasks(): void {
-    follower.stop();
-    maskHost?.remove();
-    maskHost = null;
+    masks.clear();
   }
 
-  /** 方案C遮罩：对当前页面生效的每条 mask 规则，给命中元素盖上不透明贴纸（滚动跟手） */
+  /**
+   * 方案C遮罩：对当前页面生效的每条 mask 规则，给命中元素盖上与背后底色一致的不透明贴纸
+   * （ui/mask-layer.ts：后加载元素自动补上、滚动跟手、静止停帧、遮罩下不可点）。只在清爽态调用
+   */
   function rebuildMasks(): void {
     clearMasks();
     if (!profile || profile.switchState !== 'disguised') return;
-    const rules = maskRulesAt(profile.hideRules, location.href);
-    if (rules.length === 0) return;
+    const selectors = maskRulesAt(profile.hideRules, location.href).flatMap((r) => r.candidates);
+    if (selectors.length === 0) return;
     ensureHostShield();
-    maskHost = createPageHost(ctx, 'mask');
-    // 遮罩盒子不拦截指针（沿用原行为；可点穿的问题归 #23）
-    maskHost.root.style.pointerEvents = 'none';
-    const seen = new Set<Element>();
-    for (const rule of rules) {
-      for (const sel of rule.candidates) {
-        let els: NodeListOf<Element>;
-        try {
-          els = document.querySelectorAll(sel);
-        } catch {
-          continue;
-        }
-        for (const el of Array.from(els)) {
-          if (seen.has(el) || isOwnUiNode(el)) continue;
-          seen.add(el);
-          const box = document.createElement('div');
-          box.dataset.pmMask = '';
-          Object.assign(box.style, {
-            position: 'fixed',
-            background: '#f4f4f4',
-            boxSizing: 'border-box',
-          } as Partial<CSSStyleDeclaration>);
-          maskHost.root.appendChild(box);
-          follower.trackLive(el, box);
-        }
-      }
-    }
+    masks.show(selectors);
   }
 
   // ---------- 编辑面板 / 向导 ----------
