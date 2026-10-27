@@ -5,12 +5,13 @@
 
 ## 0. 提交前清单
 
-- [ ] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）
-- [ ] 版本号已改（`package.json`），`CHANGELOG.md` 有对应版本的双语条目
-- [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>
-- [ ] 4 张截图按 §8 重拍（当前 `docs/store-assets/*.png` 是 0.1.0 的旧界面，**不能直接用**）
-- [ ] §6 的测试步骤在全新 Chrome 配置里照走一遍
-- [ ] 隐私表单按 §5 填写
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）
+- [x] 版本号已改（`package.json` → `0.2.0`，产物 `page-mask-0.2.0-chrome.zip`，22 个文件），`CHANGELOG.md` 有对应版本的双语条目
+- [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
+- [x] 5 张截图与宣传图块已按 §8 重拍（`docs/store-assets/`，全部 1280×800 / 440×280）
+- [x] §6 的测试步骤已在真实 Chrome + Wikipedia 首页走通（结果见 §6 末）
+- [ ] 隐私表单按 §5 填写（在控制台操作）
+- [x] `npm run check:docs` 通过（用户可见文档无禁用词、内部链接有效）
 
 ## 1. 商店元数据
 
@@ -155,16 +156,24 @@ Test steps (no login needed):
 
 商店要求：截图 1280×800（或 640×400），3–5 张；小型宣传图块 440×280 可选但建议。
 
-| 素材 | 文件 | 现状 |
+| 素材 | 文件 | 说明 |
 |---|---|---|
-| 商店图标 128×128 | `public/icon/128.png` | ✅ 已在 manifest 里（`npm run icons` 从 `assets/icon/*.svg` 生成） |
-| 截图 1 | `docs/store-assets/screenshot-1-clean-page.png` | ⏳ 待重拍：首图为「之前 / 之后」对比 + ≥28px 大字说明 |
-| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ⏳ 待重拍：新版向导（号码牌 + 草稿清单 + 底部工具条） |
-| 截图 3 | `docs/store-assets/screenshot-3-popup.png` | ⏳ 待重拍：popup 正常状态（有规则、清爽模式开），不要用错误态 |
-| 截图 4 | `docs/store-assets/screenshot-4-management.png` | ⏳ 待重拍：管理页，用像样的虚构域名与数字 |
-| 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ⏳ 待重拍：用新图标，不用 emoji |
+| 商店图标 128×128 | `public/icon/128.png`（同步 `docs/store-assets/icon-128.png`） | ✅ 已在 manifest 里（`npm run icons` 从 `assets/icon/*.svg` 生成） |
+| 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
+| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：设置向导预览（号码牌 + 草稿清单 + 底部工具条） |
+| 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：popup 正常状态（有规则、清爽模式开、有编辑入口） |
+| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：管理页，虚构域名与数字 |
+| 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
-生成脚本：`node tests/e2e/store-shots.mjs`、`node tests/e2e/store-shots-extra.mjs`（输出到 `test-results/store-shots/`，人工挑图后放进 `docs/store-assets/`）。截图里不要出现真实第三方网站的商标、真人照片或用户内容。
+重新生成：`npm run build && node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`）。
+
+素材口径（避免误导）：
+
+- 页面截图是扩展在**虚构站点**「Acme 书房」上真实生效后的画面，站点名、书名、评分为占位内容，不含任何第三方商标、真人照片或用户内容。
+- 「之前 / 之后」与 popup 两张是拼版：每一块都来自上面的真实截图或扩展自己的图标资源，没有画假界面。
+- 标签栏那张的浏览器边框是拼版出来的示意（headless 截不到真实标签栏），但标题文字与图标就是扩展在该页面上实际设置的值（标题「阅读」、透明图标）。
+- 尺寸全部 1280×800（PNG）；宣传图块 440×280。
 
 ## 9. 已知限制（写给审核员，也写给用户）
 
@@ -172,3 +181,76 @@ Test steps (no login needed):
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
 - iframe 与 shadow DOM 内部的元素暂时无法点选。
 - 标签页悬停缩略图、浏览器历史记录里的标题是浏览器自身行为，扩展改不到。
+
+## 10. review-checklist 自查结论
+
+按 `chrome-extensions` skill 的 pre-publish checklist 逐项过了一遍（0.2.0，2026-10-27）：
+
+### Manifest 与打包
+
+| 项 | 结论 |
+|---|---|
+| manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
+| 版本号已递增 | ✅ `0.2.0`（0.1.0 从未提交商店，这是首次提交的版本） |
+| manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
+| 简介 ≤132 字符 | ✅ en 125 / zh_CN 54 |
+| ZIP 无多余文件 | ✅ 22 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置 |
+| ZIP < 2GB | ✅ 115 KB |
+| 无绝对路径 | ✅ manifest 内路径全部相对 |
+| 无 eval / 远程代码 | ✅ 全部 JS 打包在包内，无 `eval`/`new Function`，无远程脚本 |
+
+### 权限
+
+| 项 | 结论 |
+|---|---|
+| 最小权限 | ✅ 只有 `storage` / `scripting` / `activeTab`；`optional_host_permissions` 声明 `*://*/*` 但安装时不授予任何站点 |
+| 每个权限有具体理由 | ✅ §3 逐项 |
+| activeTab 用法正确 | ✅ 只用于 popup 读当前标签页网址；注入靠按站点授予的主机权限 |
+| 无多余权限 | ✅ 没有 `tabs`、`management`、`downloads` 等 |
+| 安装时无权限警告 | ✅ E2E 里 `getPermissionWarningsByManifest` 返回 `[]` |
+| 主机权限逐项说明 | ✅ §3 第 4 条解释了为什么声明 `*://*/*`、实际只申请单个 origin |
+
+### 商店文案
+
+| 项 | 结论 |
+|---|---|
+| 详细描述具体 | ✅ 逐条功能 + 怎么用 + 隐私，无空话 |
+| 单一用途窄 | ✅ §4 一句话 |
+| 无夸大/不实 | ✅ 已删掉「任何网站都可用」「无任何网络请求」等不实说法；改为「PageMask 自身不发起任何网络请求」 |
+| 无关键词堆砌 | ✅ 品牌词只出现在需要的地方 |
+| 无商标问题 | ✅ 截图与文案里没有第三方品牌、真人照片、用户内容 |
+| 联系邮箱有效 | ⚠️ `cherishfall@hotmail.com` 需用户确认能收到 CWS 通知 |
+
+### 图形素材
+
+| 项 | 结论 |
+|---|---|
+| 商店图标 128×128 | ✅ `public/icon/128.png`，四尺寸齐全（16/32/48/128） |
+| 至少 1 张 1280×800 | ✅ 5 张 |
+| 截图与当前界面一致 | ✅ 全部由 0.2.0 构建实拍/拼版 |
+| 不误导 | ✅ 虚构站点；标签栏为示意拼版（见 §8 口径说明） |
+| 无手机/平板样张 | ✅ 没有 |
+| 宣传图块 440×280 | ✅ |
+
+### 隐私与合规
+
+| 项 | 结论 |
+|---|---|
+| 数据披露与代码一致 | ✅ 只写 `chrome.storage.local`；不使用 `storage.sync`；无网络请求 |
+| 隐私政策 URL 可用 | ⚠️ 仓库公开后可用，提交前再点一次 |
+| 政策与表单一致 | ✅ 表单勾 Website content + Web history，政策里逐项写了对应数据 |
+| 不使用远程代码 | ✅ |
+| 代码未混淆 | ✅ 仅压缩（WXT 默认） |
+
+### 功能
+
+| 项 | 结论 |
+|---|---|
+| 功能可用 | ✅ `npm test` 427 项、`npm run test:e2e`（主流程 98 项 + 各界面专项 79/16/31/19/28）全绿 |
+| 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
+| 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
+| 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |
+| 卸载干净 | ✅ 卸载删除 storage.local 与动态注册；页面无残留（一键清空路径有 E2E） |
+| 资源占用 | ✅ 静止页面内容脚本 2 秒内 0 次 rAF；无 setInterval（单测守门） |
+
+**仍需人工完成**：真实授权弹窗点「允许」的完整路径（品牌版 Chrome）、隐私表单在控制台勾选、提交前的隐私政策 URL 点验。

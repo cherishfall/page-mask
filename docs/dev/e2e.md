@@ -27,7 +27,7 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 | `check-editor.mjs` | 编辑面板（#24：popup 入口、重选替换、开关不被覆盖、逐行校验、删除撤销） | 约 10 秒 |
 | `check-toggle.mjs` | 悬浮按钮与无障碍（#25：菜单不出屏/翻转/Esc/点外关闭、无右键菜单、Tab+回车、拖动贴边、三底色对比度、对话框在超高浮层之上） | 约 10 秒 |
 
-截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-i18n.mjs`、`check-dark-mode.mjs`、`store-shots*.mjs`（输出 `test-results/store-shots/`，正式素材由 #29 重做）、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）。
+截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-i18n.mjs`、`check-dark-mode.mjs`、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）、`store-shots.mjs`（生成商店素材，直接写 `docs/store-assets/`，见 CHROMEWEBSTORE.md §8）。
 
 ## 工具函数（`tests/e2e/lib/`）
 
