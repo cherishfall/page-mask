@@ -242,8 +242,8 @@ async function main() {
     check(isShown(await styleOf(page, '#page-title')), '预览：未选中的元素保持可见');
     await shot(page, 'wizard-preview');
 
-    // 点第一个标记 → 弹片 → 换成方案B（原地留白）→ 移出。标记 1 在页顶，点左侧避开顶部中央的工具条
-    await clickInShadow(page, WIZARD_HOST, tid('pm-marker-1'), { offset: { x: 20, y: 10 } });
+    // 点第一个号码牌 → 调整弹片 → 换成方案B（原地留白）→ 移出（#34：号码牌只是捷径，入口另见草稿清单）
+    await clickInShadow(page, WIZARD_HOST, tid('pm-marker-1'));
     await waitForShadow(page, WIZARD_HOST, tid('pm-pop-strategy-blank'));
     await clickInShadow(page, WIZARD_HOST, tid('pm-pop-strategy-blank'));
     await waitStyle(page, '标记弹片换方案B', '.top-nav', 'visibility', 'hidden');
@@ -368,7 +368,7 @@ async function main() {
       return { visible: tb.checkVisibility({ opacityProperty: true, visibilityProperty: true }), w: r.width, dir: getComputedStyle(tb).direction };
     }, WIZARD_HOST);
     check(wiz.visible && wiz.w > 100 && wiz.dir === 'ltr', `敌意页面：向导工具条可见、方向正常（${JSON.stringify(wiz)}）`);
-    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-cancel"]').focus(), WIZARD_HOST);
+    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').focus(), WIZARD_HOST);
     await hostile.keyboard.press('Escape');
     await waitFor(hostile, '焦点在向导内按 Esc 退出向导', (h) => !document.querySelector(h), [WIZARD_HOST], { timeout: 3000 });
     check(true, '按键隔离不影响向导自己的 Esc');
@@ -474,7 +474,7 @@ async function main() {
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-preview'));
     await waitStyle(page, '预览：推荐卡被移除', '.rec-card', 'display', 'none');
     await stopServiceWorker(ext);
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-giveup'));
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
     await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
