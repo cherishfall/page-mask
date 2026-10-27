@@ -28,6 +28,7 @@
     "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs && node tests/e2e/check-pages.mjs && node tests/e2e/check-mask.mjs && node tests/e2e/check-wizard.mjs && node tests/e2e/check-editor.mjs && node tests/e2e/check-toggle.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "notices": "node scripts/gen-notices.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
     "check:package": "node scripts/check-package.mjs"
   },
   "dependencies": {

@@ -38,6 +38,9 @@ jobs:
       - name: Third-party notices up to date
         run: node scripts/gen-notices.mjs --check
 
+      - name: User-facing docs clean & links valid
+        run: npm run check:docs
+
       - run: npm run zip
 
       - name: Package gate

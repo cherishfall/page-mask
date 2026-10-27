@@ -1,7 +1,7 @@
-# PageMask 页面面具
+# PageMask · 页面清爽模式
 
-> 让非工作网站在一瞥之下"看起来不像它自己"。
-> Make non-work sites stop looking like themselves at a glance.
+> 点选网页上让你分心的元素，一键收起；标签页标题和图标也能一起变低调。
+> Hide the distracting parts of a page with a click — and keep the tab low-key.
 
 [中文](#中文) · [English](#english)
 
@@ -9,20 +9,22 @@
 
 ## 中文
 
-**PageMask** 是一个 Chrome 浏览器扩展：上班期间浏览非工作网站（微信读书、得到、极客时间、微博、即刻等）时，把页面上显眼的元素收起来，并把标签页的标题和图标换成低调的样子——有人经过时的一瞥之下，它不再像它自己。
+**PageMask** 是一个 Chrome 扩展：你主动添加的网站，可以点选页面上让你分心的部分（推广位、推荐流、侧栏、页脚……）一键收起；标签页的标题和图标也可以换成低调的样子。适合想安静看内容、又不想学规则写法的场景。
 
-**核心原则：用户不主动设置，插件对任何网站零影响。** 不添加任何站点，PageMask 不会向任何页面注入任何脚本、样式或界面元素。
+**核心原则：你不主动设置，PageMask 对任何网站都没有影响。** 不添加任何网站，PageMask 不会向任何页面注入脚本、样式或界面。
 
 ### 功能
 
-- **站点名单制**：只有你主动添加的网站才会被处理；未配置的网站完全不受影响
-- **零专业知识点选**：鼠标悬停高亮、点击选中（可连选）、「选大一点 / 选小一点」调整层级——全程不需要懂 CSS
-- **三种收起方案**：彻底移除（内容上移补位）/ 原地留白（保留位置）/ 遮罩覆盖（不改网站任何样式，保底可用）
-- **标题与图标伪装**：标签页标题默认改为「新建标签页」，图标换为中性样式；网站动态改标题会被自动压回
-- **每站点独立开关**：原样态 / 伪装态一键切换，同一网站所有标签页联动，状态按站点记忆
-- **失效体检**：网站改版导致规则失配时，用人话提醒你重新设置
-- **导出 / 导入**：全部配置导出为一个 JSON 文件，换电脑不丢失
-- **完全本地**：所有配置只存在你自己的浏览器里，没有任何联网行为
+- **按网站生效**：只有你主动添加的网站才会被处理，其它网站完全不受影响
+- **零专业知识点选**：悬停高亮、点击选中（可连选），用「选大一点 / 选小一点」调整范围，不需要懂 CSS
+- **三种收起方式**：彻底移除（下方内容上移）/ 原地留白（位置保留）/ 遮罩覆盖（不改网站自身样式，保底可用）
+- **保存前预览**：每个元素都能单独换收起方式，满意再保存
+- **生效范围**：整站，或「只在这类页面 / 除了这类页面」（零输入，从当前地址推导）
+- **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标（默认透明），网站自己改标题会被自动改回
+- **每个网站一个开关**：页面右下角的小按钮一点即可切回原样，同一网站的所有标签页一起切换
+- **失效提醒**：网站改版导致某条规则找不到目标时，会用人话提醒你重新选择
+- **导出 / 导入**：全部配置导出为一个文件，换电脑后导入
+- **配置只存在本机**：没有账号、没有同步、PageMask 自身不发起任何网络请求
 
 ### 与同类工具：各自适合什么
 
@@ -33,7 +35,7 @@
 | 广告拦截器 | uBlock Origin | 系统性屏蔽广告与追踪、全局生效；愿意了解一点规则概念 | 只想收起某几个特定元素、完全不想碰规则 |
 | 阅读模式 | 简悦 SimpRead、Just Read | 长文沉浸阅读、杂志式排版、标注与同步等阅读增强 | 想保留原页面布局只做减法；首页、社区等非文章页 |
 | 信息流屏蔽 | News Feed Eradicator | 戒掉预置社交网站的信息流刷屏 | 其他网站、自选任意元素 |
-| **PageMask** | — | 零专业知识、鼠标点选任意元素即时预览；按站点独立开关、随时还原；标签页标题图标一起变低调；配置完全本地 | 拦截广告与追踪（请用广告拦截器）；重排版式的沉浸长文（请用阅读模式）；多设备自动同步（PageMask 提供导出/导入） |
+| **PageMask** | — | 零专业知识、鼠标点选任意元素即时预览；按网站独立开关、随时还原；标签页标题图标一起变低调；配置完全本地 | 拦截广告与追踪（请用广告拦截器）；重排版式的沉浸长文（请用阅读模式）；多设备自动同步（PageMask 提供导出/导入） |
 
 一句话：**页面要清爽，但不想学规则、不想换版式、还想让标签页一起变低调——这就是 PageMask。**
 
@@ -46,18 +48,20 @@
 
 ### 使用方法
 
-1. 打开你想伪装的网站，点浏览器工具栏的 PageMask 图标，点「为当前网站设置伪装」并允许授权
-2. 点选页面上要藏起来的东西 → 预览（可给每个元素换收起方案）→ 保存
-3. 完成。想临时还原，点页面右下角的小胶囊按钮；右键它可进入编辑面板
-4. 所有站点的管理（标题/图标设置、一键清空、导出导入）在工具栏图标的「管理全部站点」
+1. 打开想变清爽的网站，点工具栏的 PageMask 图标，点「为当前网站开启清爽模式」，在 Chrome 的授权提示里选「允许」
+2. 点选页面上要收起的东西 →「预览」→「保存」
+3. 想临时看原样，点页面右下角的小胶囊；想改规则，点胶囊上的「⋯」→「编辑规则」，或从 popup 点「编辑当前网站」
+4. 所有网站的管理（标签页标题 / 图标、一键清空、导出导入）在 popup 的「管理全部网站」
 
 ### 隐私与权限说明（Chrome 应用商店审核适用）
 
-- **不收集、不上传任何数据**。无网络请求、无统计、无第三方代码。配置仅存于 `chrome.storage.local`
-- 权限最小化设计：
-  - `storage`：本地保存你的站点配置
-  - `scripting` + `activeTab`：为当前标签页注入你设置的隐藏样式
-  - 可选主机权限（`optional_host_permissions`）：逐站点按需授权——你在弹窗里点「允许」时才针对该站点生效，随时可通过「一键清空」收回
+- **不收集、不上传任何数据**。PageMask 自身不发起任何网络请求，没有统计，没有第三方代码。配置仅存在 `chrome.storage.local`
+- 权限逐项说明：
+  - `storage`：在本机保存你的网站配置（收起规则、标签页标题与图标、开关状态）
+  - `scripting`：只对你已开启的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
+  - `activeTab`：打开 popup 时读取当前标签页的网址，用来判断是哪个网站、是否支持
+  - 可选主机权限：只在你点「为当前网站开启清爽模式」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
+- 收回权限：在管理页对该网站点「一键清空」（会同时删除该网站的配置），或在 Chrome 扩展详情页的「网站访问权限」里移除
 - 本仓库不作为任何配置分发通道，不提供预置规则
 
 ### 开发
@@ -71,24 +75,26 @@ npm test           # 单元测试（vitest）
 npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tests/e2e）
 ```
 
-设计文档见 [docs/design.md](docs/design.md)（最终设计共识）、[GLOSSARY.md](GLOSSARY.md)（术语表）、[docs/adr/](docs/adr/)（架构决策记录）。
+设计文档见 [docs/design.md](docs/design.md)（最终设计共识）、[GLOSSARY.md](GLOSSARY.md)（术语表）、[docs/adr/](docs/adr/)（架构决策记录）；商店提交材料见 [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md)。
 
 ## English
 
-**PageMask** is a Chrome extension that makes non-work websites stop looking like themselves at a glance. While browsing reading/community sites during work hours, it collapses conspicuous page elements and replaces the tab title & favicon with low-key ones — so a passing glance no longer gives you away.
+**PageMask** is a Chrome extension: on sites you add yourself, click the parts of a page that distract you (promos, feeds, sidebars, footers…) and they're gone. The tab title and icon can go low-key too. Built for quiet reading without learning rule syntax.
 
 **Core principle: zero impact until you opt in.** Until you explicitly add a site, PageMask injects no script, no style, and no UI into any page.
 
 ### Features
 
-- **Allowlist-based**: only sites you add are touched; everything else is completely unaffected
-- **Zero-expertise picking**: hover to highlight, click to select (multi-select supported), "pick bigger / pick smaller" to adjust levels — no CSS knowledge needed
-- **Three hiding strategies**: remove (content shifts up) / blank-in-place (space preserved) / overlay sticker (touches no site styles — always works)
-- **Title & favicon disguise**: tab title becomes "New Tab" by default with a neutral icon; sites that rewrite their title dynamically get suppressed automatically
-- **Per-site switch**: toggle between disguised / original with one click; all tabs of the same site switch together; state is remembered per site
-- **Rule health check**: when a site redesign breaks a rule, you get a plain-language heads-up
-- **Export / import**: all configs in one JSON file for moving between machines
-- **Fully local**: everything stays in your browser. No network calls, ever
+- **Works per site**: only sites you add are touched; everything else is completely unaffected
+- **Point-and-click, no expertise**: hover to highlight, click to select (multi-select supported), use "bigger / smaller" to adjust the range — no CSS knowledge needed
+- **Three ways to hide**: remove (content below moves up) / blank (space preserved) / cover (a solid patch over the element; the site's own styles are left untouched)
+- **Preview before saving**: change the hiding method per element, then save
+- **Scope**: whole site, or "only these pages / except these pages" (no typing — derived from the current address)
+- **Tab title & icon**: set a tab title (default "Reading") and icon (default transparent) per site; if the site rewrites its title, it is changed back automatically
+- **One switch per site**: a small button at the bottom-right flips back to the original page; all tabs of that site switch together
+- **Broken-rule notices**: when a site redesign means a rule no longer finds its target, you get a plain-language heads-up to re-pick it
+- **Export / import**: move all your settings to another computer as one file
+- **Settings stay on your device**: no account, no sync, and PageMask itself makes no network requests
 
 ### Compared to similar tools: which fits you
 
@@ -99,7 +105,7 @@ Different tools solve different problems — pick what suits yours:
 | Ad blockers | uBlock Origin | Systematically blocking ads & trackers, globally; okay with rule concepts | Hiding just a few specific elements with zero learning curve |
 | Reader modes | Just Read, SimpRead | Immersive long-form reading, magazine layout, highlights & sync | Keeping the original layout and only subtracting; non-article pages like homepages or forums |
 | Feed blockers | News Feed Eradicator | Breaking doom-scrolling on a preset list of social sites | Other sites; picking arbitrary elements yourself |
-| **PageMask** | — | Zero expertise — click any element with live preview; per-site switch, revert anytime; tab title & favicon go low-key too; fully local | Blocking ads & trackers (use an ad blocker); re-laid-out immersive reading (use a reader mode); automatic multi-device sync (PageMask offers export/import) |
+| **PageMask** | — | Zero expertise — click any element with live preview; per-site switch, revert anytime; tab title & icon go low-key too; settings fully local | Blocking ads & trackers (use an ad blocker); re-laid-out immersive reading (use a reader mode); automatic multi-device sync (PageMask offers export/import) |
 
 In one line: **a clean page without learning rules or switching layouts — and your tab goes low-key too.**
 
@@ -110,11 +116,36 @@ In one line: **a clean page without learning rules or switching layouts — and 
 3. Open `chrome://extensions`, enable **Developer mode**
 4. **Load unpacked** → select the project's `.output/chrome-mv3` directory
 
+### How to use
+
+1. Open the site you want to declutter, click the PageMask toolbar icon, click 「为当前网站开启清爽模式」 (Enable clean mode for this site) and choose Allow in Chrome's prompt
+2. Click the elements to hide → 「预览」 (Preview) → 「保存」 (Save)
+3. To see the original page, click the small capsule at the bottom-right; to edit rules, click 「⋯」→「编辑规则」 (Edit rules) on the capsule, or 「编辑当前网站」 (Edit this site) in the popup
+4. All site management (tab title / icon, one-click reset, export / import) is under 「管理全部网站」 (Manage all sites) in the popup
+
 ### Privacy & permissions (for Chrome Web Store review)
 
-- **No data collection, no network requests, no analytics, no third-party code.** Configs live only in `chrome.storage.local`
-- Minimal permissions: `storage` (save your configs), `scripting` + `activeTab` (inject the hiding styles you configured), optional host permissions granted per-site only when you click "Allow", revocable at any time
+- **No data collection, no uploads.** PageMask itself makes no network requests; there is no analytics and no third-party code. Settings live only in `chrome.storage.local`
+- Permissions, one by one:
+  - `storage`: saves your per-site settings (hide rules, tab title and icon, on/off state) on this device
+  - `scripting`: for sites you have enabled only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
+  - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
+  - Optional host permissions: requested for a single origin only when you click 「为当前网站开启清爽模式」, used to run the content script and apply your hiding styles and tab title/icon on that site
+- Revoking access: use 「一键清空」 (Reset) for that site in the management page (this also deletes its settings), or remove it under "Site access" in Chrome's extension details page
 - This repository distributes no site presets or configurations
+
+### Development
+
+```bash
+npm install
+npm run dev        # dev mode
+npm run build      # build into .output/chrome-mv3
+npm run zip        # package a store upload zip
+npm test           # unit tests (vitest)
+npm run test:e2e   # full E2E in real Chrome (needs Chrome for Testing; see tests/e2e)
+```
+
+Design docs: [docs/design.md](docs/design.md) (final design), [GLOSSARY.md](GLOSSARY.md) (glossary), [docs/adr/](docs/adr/) (architecture decisions); store submission material: [CHROMEWEBSTORE.md](CHROMEWEBSTORE.md).
 
 ## License
 

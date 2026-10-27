@@ -31,7 +31,9 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 |---|---|
 | `README.md` | 面向用户与 Chrome 商店审核：产品意图、安装、使用方法（中英双语） |
 | `CHANGELOG.md` | 版本发布说明（中英双语） |
-| `GLOSSARY.md` | 术语表（唯一权威） |
+| `GLOSSARY.md` | 术语表（唯一权威，含每个概念的「界面用词」） |
+| `PRIVACY.md` | 隐私政策（英文为准 + 中文译文），商店隐私政策 URL 指向它 |
+| `CHROMEWEBSTORE.md` | 商店提交材料：名称与简介、详细描述、权限逐项理由、单一用途、审核员备注与测试步骤、隐私表单填法、版本历史、截图清单 |
 | `docs/design.md` | 最终设计共识，实现的唯一依据 |
 | `docs/adr/` | 架构决策记录（ADR） |
 | `docs/dev/` | 开发过程文档（开发日志 `DEVLOG.md`、测试与验证记录等）。过程文档**不要**堆在仓库根目录 |
@@ -49,6 +51,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 - 每个功能配必要测试（单测 + 关键路径），测试不过不提交。
 - 最终阶段用浏览器自动化在真实网站验证：**微信读书、得到、极客时间、墨问**。
 - 真实网站验证只使用**匿名可访问页面**和专用测试浏览器配置；不使用用户的登录态、个人数据。
+- **真实网站截图不入库**；确需入库时，先对第三方人物、用户昵称头像与帖子内容、商标打码，并放在 `docs/dev/` 下（仓库就是商店主页，公开可见）。
 
 ## 临时文件
 
