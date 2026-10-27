@@ -127,6 +127,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     state: 'original',
     position: null,
   });
+  /**
+   * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
+   * 传一个响应式对象而不是字符串——手动 createApp 不会重渲染根组件，字符串快照永远停在打开那一刻
+   */
+  const pageState = reactive<{ url: string }>({ url: location.href });
   let toggleHost: PageHost | null = null;
   let toggleApp: App | null = null;
   let wizardHost: PageHost | null = null;
@@ -258,28 +263,24 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     editorHost = null;
   }
 
-  /** 悬浮按钮右键 → 编辑伪装。改动直接写库，storage 变化即时重应用＝即时预览 */
+  /** 悬浮按钮菜单 → 编辑规则。改动直接写库，storage 变化即时重应用＝即时预览 */
   function openEditorPanel(): void {
     if (!profile || wizardActive || editorHost || disposed) return;
     ensureHostShield();
+    pageState.url = location.href;
     editorHost = createPageHost(ctx, 'editor');
     editorApp = createApp(EditorPanel, {
       origin,
-      url: location.href,
+      page: pageState,
       onClose: closeEditorPanel,
       onAddElement: () => {
         closeEditorPanel();
         void openWizard('addElement');
       },
       onReselect: (ruleId: string) => {
-        // 重选元素 = 删除旧规则 + 进向导重新点选（v1 简化，记 DEVLOG）
-        if (!profile) return;
-        profile.hideRules = profile.hideRules.filter((r) => r.id !== ruleId);
-        void storage.updateProfile(origin, (p) => {
-          p.hideRules = p.hideRules.filter((r) => r.id !== ruleId);
-        });
+        // 重选元素：旧规则留到向导保存成功时再替换，取消向导不影响它（N5）
         closeEditorPanel();
-        void openWizard('addElement');
+        void openWizard('addElement', ruleId);
       },
     });
     editorApp.mount(editorHost.root);
@@ -296,8 +297,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /**
    * 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程）。
    * 新站点（还没有配置）只能以 newSite 打开：保存时才写入配置；取消则通知后台收回授权。
+   * replaceRuleId：重选元素时要在保存时替换掉的旧规则 id。
    */
-  async function openWizard(mode: OpenIntent) {
+  async function openWizard(mode: OpenIntent, replaceRuleId?: string) {
     if (wizardActive || disposed) return;
     // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
     await exclusive(async () => undefined);
@@ -321,6 +323,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     wizardApp = createApp(WizardApp, {
       mode,
       url: location.href,
+      replaceRuleId: replaceRuleId ?? null,
       // 预览样式同样按本文档记录（SW 回收后点「放弃」也能撤掉）
       setDraft: (css: string | null) => styles.setDraft(css),
       onDone: (saved?: boolean) => {
@@ -512,6 +515,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // SPA 路由变化（WXT 用 Navigation API 的 navigate 事件，没有轮询）：立即重评估生效范围、遮罩、体检；
     // 向导期间屏蔽（向导按打开时的地址工作，退出时会再刷新）
     ctx.addEventListener(window, 'wxt:locationchange', () => {
+      pageState.url = location.href; // 编辑面板里「本页生效的规则」跟着换页更新（N4）
       if (!wizardActive) void scheduleRefresh();
     });
     // bfcache 恢复：样式随文档一起被保存，但期间存储可能变了（另一个页面切了开关、改了规则），按新状态增删

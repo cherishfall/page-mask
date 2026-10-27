@@ -245,6 +245,8 @@ const ARROW_DIRS: Record<string, readonly [number, number]> = {
 const props = defineProps<{
   mode: 'newSite' | 'addElement';
   url: string;
+  /** 重选元素：保存时用新规则替换这条旧规则（取消则旧规则原样保留，N5） */
+  replaceRuleId?: string | null;
   /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
   setDraft: (css: string | null) => Promise<CssAck>;
 }>();
@@ -697,10 +699,14 @@ async function doSave() {
     let saved;
     try {
       // 原子追加：基于最新存储值只加规则。新站点的配置在这里才第一次写入（保存前不写，退出即不留痕迹）；
-      // 添加内容时站点若已被清空则不写入
+      // 添加内容时站点若已被清空则不写入。重选元素：同一次写入里用新规则换掉旧规则（旧规则不在就只追加）
       saved = await storage.updateProfile(
         origin,
         (p) => {
+          if (props.replaceRuleId) {
+            const i = p.hideRules.findIndex((r) => r.id === props.replaceRuleId);
+            if (i >= 0) p.hideRules.splice(i, 1);
+          }
           p.hideRules.push(...rules);
           if (props.mode === 'newSite') p.switchState = 'disguised'; // 新站点保存后自动开启清爽模式
         },

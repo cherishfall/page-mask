@@ -1,0 +1,238 @@
+/*
+ * 页面内编辑面板样式（ui/editor/editor-styles.ts 注入到编辑面板的 shadow root）。
+ * 颜色只用 styles/tokens.css 里对比度已验证的组合，跟随 .pm-root 的 color-scheme 明暗切换。
+ *
+ * 面板是「页面仍可操作」的非模态浮层：<dialog popover="manual">，进 top layer 因此不会被页面
+ * 的 z-index 压住，但不会让页面 inert（modern-web-guidance「dialog」Rule 2）。
+ */
+
+.pm-ed {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  margin: 0;
+  inline-size: min(340px, 92vw);
+  max-block-size: 100dvh;
+  border: none;
+  border-inline-start: 1px solid var(--pm-border);
+  padding: var(--pm-space-3);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow-overlay);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+/* popover 的 UA 样式带 max-inline-size/max-block-size 与居中定位，这里显式覆盖成右侧抽屉 */
+.pm-ed:popover-open {
+  display: block;
+}
+
+/* ── 头部 ── */
+.pm-ed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+  margin-block-end: var(--pm-space-1);
+}
+.pm-ed-title {
+  margin: 0;
+  font-size: var(--pm-font-size-title);
+  font-weight: var(--pm-font-weight-strong);
+}
+.pm-ed-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 28px;
+  min-block-size: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--pm-radius-control);
+  background: transparent;
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-title);
+  line-height: 1;
+  cursor: pointer;
+}
+.pm-ed-close:hover {
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+}
+
+.pm-ed-hint {
+  margin: 0 0 var(--pm-space-2);
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+.pm-ed-empty {
+  margin: 0;
+  padding: var(--pm-space-3) 0;
+  font-size: var(--pm-font-size-body);
+  color: var(--pm-fg-muted);
+}
+
+/* ── 规则卡片 ── */
+.pm-ed-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pm-ed-card {
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-card);
+  padding: var(--pm-space-2);
+  margin-block-end: var(--pm-space-2);
+}
+.pm-ed-cardhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+}
+.pm-ed-name {
+  font-size: var(--pm-font-size-body);
+  font-weight: var(--pm-font-weight-strong);
+  overflow-wrap: anywhere;
+}
+/* 「可能失效」不能只靠颜色：前面有 ● 加文字（REVIEW 对比度说明） */
+.pm-ed-stale {
+  flex: none;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-danger);
+}
+.pm-ed-stale-msg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+  margin: var(--pm-space-1) 0 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+
+/* ── 字段 ── */
+.pm-ed-field {
+  margin: var(--pm-space-2) 0 0;
+  padding: 0;
+  border: none;
+}
+.pm-ed-field > legend,
+.pm-ed-label {
+  padding: 0;
+  margin-block-end: var(--pm-space-1);
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+.pm-ed-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-1);
+}
+
+/* ── 按钮（与向导、扩展页面同一套视觉） ── */
+.pm-ed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 28px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: 2px 10px;
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pm-ed-btn:hover:not(:disabled) {
+  background: var(--pm-bg-subtle);
+}
+.pm-ed-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pm-ed-btn[aria-pressed='true'] {
+  background: var(--pm-accent);
+  border-color: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+.pm-ed-btn.danger {
+  color: var(--pm-danger);
+  border-color: var(--pm-danger);
+}
+.pm-ed-btn.primary {
+  background: var(--pm-accent);
+  border-color: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+.pm-ed-btn.primary:hover:not(:disabled) {
+  background: var(--pm-accent-hover);
+  border-color: var(--pm-accent-hover);
+}
+.pm-ed-actions {
+  display: flex;
+  gap: var(--pm-space-1);
+  margin-block-start: var(--pm-space-2);
+}
+
+/* ── 高级后门 ── */
+.pm-ed-adv {
+  margin-block-start: var(--pm-space-2);
+}
+.pm-ed-adv > summary {
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.pm-ed-textarea {
+  inline-size: 100%;
+  box-sizing: border-box;
+  margin-block-start: var(--pm-space-1);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: var(--pm-space-1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--pm-font-size-caption);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+.pm-ed-error {
+  margin: var(--pm-space-1) 0 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-danger);
+}
+
+.pm-ed-add {
+  inline-size: 100%;
+  min-block-size: 32px;
+  border: 1px dashed var(--pm-border-control);
+  border-radius: var(--pm-radius-card);
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+  font-size: var(--pm-font-size-body);
+  cursor: pointer;
+}
+
+/* ── 删除后的撤销条：常驻 live region，只有内容出现时才播报 ── */
+.pm-ed-undo {
+  position: sticky;
+  inset-block-end: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+  margin-block-start: var(--pm-space-2);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-card);
+  padding: var(--pm-space-1) var(--pm-space-2);
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+  font-size: var(--pm-font-size-body);
+}
+
+:focus-visible {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+}

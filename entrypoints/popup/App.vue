@@ -55,6 +55,17 @@
         <template v-else-if="profile"><span aria-hidden="true">＋</span> 收起更多内容</template>
         <template v-else>为当前网站开启清爽模式</template>
       </button>
+
+      <!-- 页面内编辑面板的第二个入口（普通按钮，不是右键菜单） -->
+      <button
+        v-if="phase === 'ready'"
+        class="ghost"
+        data-testid="pm-popup-edit"
+        :disabled="busy !== ''"
+        @click="editSite"
+      >
+        {{ busy === 'edit' ? '正在打开…' : '编辑当前网站' }}
+      </button>
     </template>
 
     <button class="ghost manage" @click="manage">管理全部网站</button>
@@ -68,7 +79,7 @@ import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
 import type { SiteProfile } from '@/core/types';
-import type { EnableSiteResponse, OpenIntent } from '@/core/messages';
+import type { EnableSiteResponse, OpenEditorMsg, OpenIntent } from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
 /** tabs.query 已返回（tab 可能仍为 null：没有活动标签页） */
@@ -77,7 +88,7 @@ const profile = ref<SiteProfile | null>(null);
 /** 当前网站的站点授权；null = 还没查 */
 const granted = ref<boolean | null>(null);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
-const busy = ref<'' | 'setup' | 'reauth' | 'toggle'>('');
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit'>('');
 /** 失败 / 授权被拒时给用户看的话 */
 const message = ref('');
 
@@ -89,6 +100,7 @@ const ERROR_TEXT: Record<string, string> = {
 };
 const DENIED_TEXT = '需要允许访问这个网站，才能开启清爽模式。可以再点一次并选择「允许」';
 const TOGGLE_FAILED_TEXT = '没能切换清爽模式，请稍后再试一次';
+const EDIT_FAILED_TEXT = '没能打开编辑面板，刷新这个页面后再试一次';
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -223,11 +235,36 @@ function reauthorize() {
   })();
 }
 
+/**
+ * 打开页面内的编辑面板。内容脚本可能还没注入（页面是刚打开、或扩展刚更新）：
+ * 发送失败时先让后台对账注入，再发一次
+ */
+async function editSite() {
+  const o = origin.value;
+  const tabId = tab.value?.id;
+  if (!o || tabId === undefined || busy.value) return;
+  message.value = '';
+  busy.value = 'edit';
+  try {
+    const send = () => browser.tabs.sendMessage(tabId, { t: 'openEditor' } satisfies OpenEditorMsg);
+    try {
+      await send();
+    } catch {
+      if (!(await enableSite(tabId, o))) return;
+      await send();
+    }
+    window.close();
+  } catch {
+    message.value = EDIT_FAILED_TEXT;
+  } finally {
+    busy.value = '';
+  }
+}
+
 async function manage() {
   await browser.tabs.create({ url: browser.runtime.getURL('/management.html') });
   window.close();
-}
-</script>
+}</script>
 
 <style>
 /* 共享样式（字体、颜色、按钮、开关、徽标）来自 @/styles/base.css；这里只写 popup 布局 */
