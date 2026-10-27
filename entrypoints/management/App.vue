@@ -1,86 +1,126 @@
 <template>
-  <div class="page">
+  <main class="page">
     <h1>PageMask · 页面清爽模式</h1>
-    <p class="sub">所有已配置站点在此总览。自定义各站点的标签页标题/图标、查看规则状态、一键清空、导出导入。</p>
+    <p class="sub">管理你设置过的网站：开关清爽模式、标签页标题和图标、收起项的状态，以及导出 / 导入。</p>
 
     <!-- 全局设置 -->
     <section class="card">
-      <h2>全局默认</h2>
+      <h2>标签页显示</h2>
+      <p class="hint">让标签栏更简洁，减少分心。</p>
       <div class="row">
         <label for="default-title">默认标签页标题</label>
         <input
           id="default-title"
-          v-model="defaultTitle"
+          v-model="drafts[DEFAULT_KEY]"
           :placeholder="languageDefaultTitle"
           aria-describedby="default-title-hint"
-          @change="saveSettings"
+          @focus="focusedKey = DEFAULT_KEY"
+          @blur="onBlur(DEFAULT_KEY)"
+          @input="onInput(DEFAULT_KEY)"
+          @change="saveDraft(DEFAULT_KEY)"
         />
       </div>
       <div class="row quick" role="group" aria-labelledby="default-title-quick">
         <span id="default-title-quick" class="hint">快捷填入</span>
-        <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickDefaultTitle(q)">
+        <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickTitle(DEFAULT_KEY, q)">
           {{ quickTitleValue(q, uiLanguage) }}
         </button>
       </div>
       <p id="default-title-hint" class="hint">
-        站点未单独设置时使用；留空则用「{{ languageDefaultTitle }}」（跟随浏览器语言）。标签页标题不能是空白，空白时浏览器会显示网址。
+        网站没有单独设置标题时使用；留空则用「{{ languageDefaultTitle }}」（跟随浏览器语言）。标签页标题不会留成空白：空白时 Chrome 会改为显示网址。
       </p>
     </section>
 
     <!-- 站点列表 -->
-    <section v-if="profiles.length === 0" class="card empty">
-      还没有配置任何站点。在目标网站点击浏览器工具栏的 PageMask 图标即可开始。
+    <section v-if="loaded && profiles.length === 0" class="card empty">
+      还没有设置任何网站。打开想变清爽的网站，点浏览器工具栏上的 PageMask 图标即可开始。
     </section>
     <!-- 有配置、没授权的站点不少于 2 个（典型：刚导入）：一次请求全部授权 -->
     <section v-if="pendingOrigins.length >= 2" class="card pending-all" data-testid="pm-mgmt-pending-all">
-      <span>{{ pendingOrigins.length }} 个站点待授权，授权前这些站点的设置不会生效。</span>
-      <button class="primary" data-testid="pm-mgmt-authorize-all" @click="authorize(pendingOrigins)">一次授权全部</button>
+      <span>{{ pendingOrigins.length }} 个网站待授权，授权前这些网站的设置不会生效。</span>
+      <button type="button" class="primary" data-testid="pm-mgmt-authorize-all" @click="authorize(pendingOrigins)">
+        一次授权全部
+      </button>
     </section>
     <p v-if="authError" class="hint error" role="alert">{{ authError }}</p>
+
     <section v-for="p in profiles" :key="p.origin" class="card site" :data-origin="p.origin">
       <div v-if="pendingOrigins.includes(p.origin)" class="row pending" data-testid="pm-mgmt-pending">
         <span class="badge">待授权</span>
         <span class="hint">浏览器没有这个网站的访问权限，设置都还在，授权后立即生效。</span>
-        <button class="primary" data-testid="pm-mgmt-authorize" @click="authorize([p.origin])">授权并启用</button>
+        <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="authorize([p.origin])">
+          授权并启用
+        </button>
       </div>
       <div class="site-head">
-        <span class="host">{{ hostOf(p.origin) }}</span>
-        <span class="state" :class="p.switchState">
-          {{ p.switchState === 'disguised' ? '清爽中' : '原样' }} · {{ p.hideRules.length }} 条规则
-          <template v-if="staleOf(p) > 0">· <span class="stale" :title="staleList(p)">● {{ staleOf(p) }} 条可能失效</span></template>
-        </span>
-      </div>
-      <div class="site-body">
-        <div class="row">
-          <label :for="titleInputId(p.origin)">标签页标题</label>
+        <h2 class="host">{{ hostOf(p.origin) }}</h2>
+        <div class="switch-row">
+          <label :for="idOf('switch', p.origin)">清爽模式</label>
           <input
-            :id="titleInputId(p.origin)"
-            v-model="p.disguisedTitle"
-            :placeholder="defaultTitle || languageDefaultTitle"
-            @change="saveTitle(p)"
+            :id="idOf('switch', p.origin)"
+            type="checkbox"
+            switch
+            role="switch"
+            data-testid="pm-mgmt-switch"
+            :checked="p.switchState === 'disguised'"
+            :disabled="!!toggling[p.origin]"
+            @change="(e) => toggleSite(p, e)"
           />
         </div>
-        <div class="row quick" role="group" :aria-labelledby="titleInputId(p.origin) + '-quick'">
-          <span :id="titleInputId(p.origin) + '-quick'" class="hint">快捷填入</span>
-          <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickSiteTitle(p, q)">
+      </div>
+      <p class="state">
+        已收起 {{ p.hideRules.length }} 项<template v-if="staleRules(p).length > 0">
+          ·
+          <span class="stale"><span aria-hidden="true">● </span>{{ staleRules(p).length }} 项可能失效</span>
+        </template>
+      </p>
+      <!-- 失效清单直接写出来（title 提示键盘和触屏都看不到，审查 N39） -->
+      <ul v-if="staleRules(p).length > 0" class="stale-list" data-testid="pm-mgmt-stale-list">
+        <li v-for="r in staleRules(p)" :key="r.id">「{{ r.elementName }}」最近没找到，可能网站改版了，可以打开这个网站重新选一次</li>
+      </ul>
+      <p v-if="toggleError[p.origin]" class="hint error" role="alert">{{ toggleError[p.origin] }}</p>
+
+      <div class="site-body">
+        <div class="row">
+          <label :for="idOf('title', p.origin)">标签页标题</label>
+          <input
+            :id="idOf('title', p.origin)"
+            v-model="drafts[p.origin]"
+            data-testid="pm-mgmt-title"
+            :placeholder="(drafts[DEFAULT_KEY] ?? '').trim() || languageDefaultTitle"
+            @focus="focusedKey = p.origin"
+            @blur="onBlur(p.origin)"
+            @input="onInput(p.origin)"
+            @change="saveDraft(p.origin)"
+          />
+        </div>
+        <div class="row quick" role="group" :aria-labelledby="idOf('quick', p.origin)">
+          <span :id="idOf('quick', p.origin)" class="hint">快捷填入</span>
+          <button v-for="q in QUICK_TITLES" :key="q.label" type="button" class="chip" @click="pickTitle(p.origin, q)">
             {{ quickTitleValue(q, uiLanguage) }}
           </button>
         </div>
-        <div class="row">
-          <label>标签页图标</label>
-          <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前标签页图标" />
-          <span v-else class="hint">未设置（默认透明图标，标签页上图标位留空）</span>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon"
-            @change="(e) => uploadFavicon(p, e)"
-          />
-          <button v-if="p.faviconDataUrl" class="ghost danger" @click="clearFavicon(p)">清除图标</button>
-          <span v-if="iconError[p.origin]" class="hint error" role="alert">{{ iconError[p.origin] }}</span>
+        <div class="row" role="group" :aria-labelledby="idOf('icon', p.origin)">
+          <span :id="idOf('icon', p.origin)" class="label">标签页图标</span>
+          <img v-if="p.faviconDataUrl" :src="p.faviconDataUrl" class="favicon" alt="当前标签页图标" data-testid="pm-mgmt-favicon" />
+          <span v-else class="hint">未设置：标签页上不显示图标</span>
+          <label class="button file-button" :class="{ busy: !!iconBusy[p.origin] }">
+            {{ iconBusy[p.origin] ? '正在处理…' : p.faviconDataUrl ? '换一张图标' : '上传图标' }}
+            <input
+              type="file"
+              data-testid="pm-mgmt-icon-input"
+              :accept="ICON_SOURCE_TYPES.join(',')"
+              :aria-describedby="idOf('icon-hint', p.origin)"
+              :disabled="!!iconBusy[p.origin]"
+              @change="(e) => uploadFavicon(p, e)"
+            />
+          </label>
+          <button v-if="p.faviconDataUrl" type="button" class="ghost danger" @click="clearFavicon(p)">清除图标</button>
         </div>
+        <p :id="idOf('icon-hint', p.origin)" class="hint">PNG、JPG、GIF、WebP 或 ICO，不超过 5MB，会自动缩小成 32×32。</p>
+        <p v-if="iconError[p.origin]" class="hint error" role="alert">{{ iconError[p.origin] }}</p>
         <div class="row actions">
-          <button class="ghost" @click="toggleSite(p)">{{ p.switchState === 'disguised' ? '切回原样' : '开启清爽' }}</button>
-          <button class="ghost danger" @click="askReset(p)">一键清空</button>
+          <button type="button" class="danger" @click="askReset(p)">一键清空</button>
           <span v-if="resetError[p.origin]" class="hint error" role="alert">{{ resetError[p.origin] }}</span>
         </div>
       </div>
@@ -89,34 +129,71 @@
     <!-- 导出 / 导入 -->
     <section class="card">
       <h2>导出 / 导入</h2>
-      <p class="hint">导出全部站点配置为一个 JSON 文件，换电脑/重装浏览器时导入。导入默认合并（同源规则并集），也可整体替换。</p>
+      <p class="hint">把全部网站的设置存成一个文件；换电脑或重装浏览器后导入，就能恢复。</p>
       <div class="row">
-        <button class="primary" @click="doExport">导出配置</button>
-        <input type="file" accept="application/json" ref="importInput" style="display: none" @change="doImport" />
-        <button class="ghost" @click="($refs.importInput as HTMLInputElement).click()">导入配置</button>
-        <label class="inline"><input type="radio" value="merge" v-model="importMode" /> 合并（默认）</label>
-        <label class="inline"><input type="radio" value="replace" v-model="importMode" /> 整体替换</label>
+        <button type="button" class="primary" @click="doExport">导出配置</button>
       </div>
-      <p v-if="importResult" class="hint">{{ importResult }}</p>
+      <!-- 先选导入方式，再选文件（审查 N20） -->
+      <fieldset class="import-mode">
+        <legend>导入方式</legend>
+        <div class="radio">
+          <input id="import-merge" v-model="importMode" type="radio" name="import-mode" value="merge" aria-describedby="import-merge-hint" />
+          <label for="import-merge">合并（推荐）</label>
+          <span id="import-merge-hint" class="hint">同一网站的收起项会合在一起，本机已有的设置不会丢</span>
+        </div>
+        <div class="radio">
+          <input id="import-replace" v-model="importMode" type="radio" name="import-mode" value="replace" aria-describedby="import-replace-hint" />
+          <label for="import-replace">整体替换</label>
+          <span id="import-replace-hint" class="hint">先删掉本机现有的全部设置，再换成文件里的（导入前会再确认一次）</span>
+        </div>
+      </fieldset>
+      <div class="row">
+        <label class="button file-button">
+          选择配置文件并导入
+          <input type="file" accept="application/json" data-testid="pm-mgmt-import-input" @change="doImport" />
+        </label>
+      </div>
+      <p class="hint" role="status" data-testid="pm-mgmt-import-result">{{ importResult }}</p>
     </section>
 
-    <!-- 一键清空二次确认 -->
-    <div v-if="resetTarget" class="mask" @click.self="resetTarget = null">
-      <div class="dialog">
-        <h3>清空 {{ hostOf(resetTarget.origin) }} 的全部配置？</h3>
+    <!-- 一键清空二次确认（原生模态对话框，安全按钮「取消」默认聚焦） -->
+    <dialog ref="resetDialog" aria-labelledby="reset-title" data-testid="pm-mgmt-reset-dialog" @close="onResetClose">
+      <template v-if="resetTarget">
+        <h2 id="reset-title">清空 {{ hostOf(resetTarget.origin) }} 的全部设置？</h2>
         <ul>
-          <li>{{ resetTarget.hideRules.length }} 条隐藏规则将被删除</li>
-          <li>标签页标题、图标设置将被删除</li>
-          <li>该站点恢复为"从未配置过"的状态，悬浮按钮随之消失</li>
-          <li>浏览器对该站点的授权会被收回（下次配置需重新允许）</li>
+          <li>{{ resetTarget.hideRules.length }} 个收起项会被删除</li>
+          <li>这个网站的标签页标题、图标设置会被删除</li>
+          <li>这个网站回到从未设置过的状态，页面上的悬浮按钮随之消失</li>
+          <li>浏览器对这个网站的访问权限会被收回（下次设置需要重新允许）</li>
         </ul>
-        <div class="row right">
-          <button class="ghost" @click="resetTarget = null">取消</button>
-          <button class="primary danger" @click="doReset">确认清空</button>
-        </div>
-      </div>
-    </div>
-  </div>
+      </template>
+      <form method="dialog" class="dialog-actions">
+        <button value="cancel" autofocus>取消</button>
+        <button value="confirm" class="primary danger">确认清空</button>
+      </form>
+    </dialog>
+
+    <!-- 整体替换导入确认：如实列出影响 -->
+    <dialog ref="replaceDialog" aria-labelledby="replace-title" data-testid="pm-mgmt-replace-dialog" @close="onReplaceClose">
+      <template v-if="replaceImpact">
+        <h2 id="replace-title">用这个文件整体替换现有设置？</h2>
+        <ul data-testid="pm-mgmt-replace-impact">
+          <li>本机现有的 {{ replaceImpact.localSites }} 个网站、{{ replaceImpact.localRules }} 个收起项会全部被替换</li>
+          <li v-if="replaceImpact.removedOrigins.length > 0">
+            其中 {{ replaceImpact.removedOrigins.length }} 个网站在文件里没有，会被彻底移除（共
+            {{ replaceImpact.removedRules }} 个收起项）：{{ replaceImpact.removedOrigins.map(hostOf).join('、') }}
+          </li>
+          <li>换成文件里的 {{ replaceImpact.incomingSites }} 个网站、{{ replaceImpact.incomingRules }} 个收起项</li>
+          <li v-if="replaceImpact.replacesSettings">默认标签页标题也会换成文件里的</li>
+          <li>这一步不能撤销；不放心的话，先取消并「导出配置」留一份</li>
+        </ul>
+      </template>
+      <form method="dialog" class="dialog-actions">
+        <button value="cancel" autofocus>取消</button>
+        <button value="confirm" class="primary danger">确认替换</button>
+      </form>
+    </dialog>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -125,29 +202,61 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage, INVALID_EXPORT_FILE, type ImportResult } from '@/core/storage';
 import { isSafeFaviconDataUrl } from '@/core/validate';
 import { currentUiLanguage, defaultTitleFor, QUICK_TITLES, quickTitleValue, type QuickTitle } from '@/core/titles';
-import type { SiteProfile } from '@/core/types';
+import type { HideRule, SiteProfile } from '@/core/types';
 import { originPattern } from '@/core/registration';
 import type { Ack, ReconcileResponse } from '@/core/messages';
+import { syncDrafts } from '@/core/drafts';
+import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
+import {
+  checkIconSource,
+  containRect,
+  ICON_ERROR,
+  ICON_SIZE,
+  ICON_SOURCE_TYPES,
+  MAX_ICON_DATA_URL_LENGTH,
+} from '@/core/icon';
 
 const storage = createPageMaskStorage(browser.storage.local);
+/** 存储态：每次存储变化后整体刷新（开关、规则数、体检结果、图标、待授权） */
 const profiles = ref<SiteProfile[]>([]);
-/** 全局默认标题；null / 空 = 用户没设置，跟随浏览器界面语言默认 */
-const defaultTitle = ref<string | null>(null);
+const loaded = ref(false);
 /** 浏览器界面语言：决定默认标题与快捷标题填入中文还是英文 */
 const uiLanguage = currentUiLanguage();
 const languageDefaultTitle = defaultTitleFor(uiLanguage);
-const resetTarget = ref<SiteProfile | null>(null);
+
+/*
+ * 编辑态（审查 N19）：标题输入框绑定 drafts，而不是直接绑存储对象。
+ * 键 = 站点来源；全局默认标题用 DEFAULT_KEY。
+ * 输入框聚焦中、或有还没保存的改动（dirty）时，存储变化不覆盖这个字段；其余部分照常刷新。
+ */
+const DEFAULT_KEY = '__default__';
+const drafts = ref<Record<string, string>>({});
+/** 最近一次从存储读到的值（失焦时用来同步聚焦期间别处写入的新值） */
+let stored: Record<string, string> = {};
+const dirty = new Set<string>();
+const focusedKey = ref<string | null>(null);
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** 打字停顿多久后自动保存（打完字直接关掉标签页也不丢，审查 N28） */
+const AUTOSAVE_MS = 800;
+
 const importMode = ref<'merge' | 'replace'>('merge');
 const importResult = ref('');
-const importInput = ref<HTMLInputElement | null>(null);
+const resetDialog = ref<HTMLDialogElement | null>(null);
+const replaceDialog = ref<HTMLDialogElement | null>(null);
+const resetTarget = ref<SiteProfile | null>(null);
+const replaceImpact = ref<ReplaceImpact | null>(null);
+/** 等待「确认替换」的导入文件内容 */
+let pendingBundle: unknown = null;
 const iconError = ref<Record<string, string>>({});
+const iconBusy = ref<Record<string, boolean>>({});
 const resetError = ref<Record<string, string>>({});
+const toggleError = ref<Record<string, string>>({});
+const toggling = ref<Record<string, boolean>>({});
 /** 有配置、没授权的站点（待授权） */
 const pendingOrigins = ref<string[]>([]);
 const authError = ref('');
 
 onMounted(async () => {
-  defaultTitle.value = (await storage.getSettings()).defaultTitle;
   await reload();
   browser.storage.onChanged.addListener((_, area) => {
     if (area === 'local') void reload();
@@ -157,13 +266,56 @@ onMounted(async () => {
   browser.permissions.onRemoved.addListener(() => void reload());
 });
 
+/** 正在编辑的字段：聚焦中或有未保存改动 */
+const isEditing = (key: string) => focusedKey.value === key || dirty.has(key);
+
 async function reload() {
-  const list = await storage.listProfiles();
+  const [list, settings] = await Promise.all([storage.listProfiles(), storage.getSettings()]);
   const granted = await Promise.all(
     list.map((p) => browser.permissions.contains({ origins: [originPattern(p.origin)] }).catch(() => false)),
   );
+  stored = { [DEFAULT_KEY]: settings.defaultTitle ?? '' };
+  for (const p of list) stored[p.origin] = p.disguisedTitle ?? '';
+  drafts.value = syncDrafts(drafts.value, stored, isEditing);
   profiles.value = list;
   pendingOrigins.value = list.filter((_, i) => !granted[i]).map((p) => p.origin);
+  loaded.value = true;
+}
+
+function onInput(key: string) {
+  dirty.add(key);
+  clearTimeout(saveTimers.get(key));
+  saveTimers.set(
+    key,
+    setTimeout(() => void saveDraft(key), AUTOSAVE_MS),
+  );
+}
+
+function onBlur(key: string) {
+  if (focusedKey.value === key) focusedKey.value = null;
+  // 没有未保存改动：同步聚焦期间别处写入的新值
+  if (!dirty.has(key) && key in stored) drafts.value[key] = stored[key]!;
+}
+
+/** 保存一个标题草稿；保存期间又有新输入时保持 dirty，等下一次保存 */
+async function saveDraft(key: string) {
+  clearTimeout(saveTimers.get(key));
+  saveTimers.delete(key);
+  const value = drafts.value[key] ?? '';
+  try {
+    if (key === DEFAULT_KEY) {
+      const t = value.trim();
+      await storage.putSettings({ defaultTitle: t || null }); // 留空 = 跟随界面语言默认
+    } else {
+      const title = value.trim() ? value : null;
+      await storage.updateProfile(key, (d) => {
+        d.disguisedTitle = title;
+      });
+    }
+    if ((drafts.value[key] ?? '') === value) dirty.delete(key);
+  } catch {
+    // 写入失败：保持 dirty，输入框保留用户输入，下一次输入或失焦时再试
+  }
 }
 
 /** 请后台立即对账（导入、授权之后），让站点配置、授权、注册三者一致 */
@@ -182,7 +334,7 @@ function authorize(origins: string[]) {
   void (async () => {
     const ok = await request.catch(() => false);
     if (!ok) {
-      authError.value = '没有拿到授权，站点设置仍然保留；需要时再点一次并选择「允许」';
+      authError.value = '没有拿到访问权限，网站设置仍然保留；需要时再点一次并选择「允许」';
       return;
     }
     await reconcileNow();
@@ -194,56 +346,42 @@ function hostOf(origin: string): string {
   return new URL(origin).hostname.replace(/^www\./, '');
 }
 
-function staleOf(p: SiteProfile): number {
-  return p.hideRules.filter((r) => r.lastHealth === 'stale').length;
+function staleRules(p: SiteProfile): HideRule[] {
+  return p.hideRules.filter((r) => r.lastHealth === 'stale');
 }
 
-function staleList(p: SiteProfile): string {
-  return p.hideRules
-    .filter((r) => r.lastHealth === 'stale')
-    .map((r) => `「${r.elementName}」最近没找到目标，可能网站改版了`)
-    .join('\n');
-}
-
-async function saveSettings() {
-  const t = (defaultTitle.value ?? '').trim();
-  await storage.putSettings({ defaultTitle: t || null }); // 留空 = 跟随界面语言默认
-}
-
-/** 每个站点标题输入框的 id（label for / 快捷标题分组用）；origin 里的 :/. 换成 - */
-function titleInputId(origin: string): string {
-  return `site-title-${origin.replace(/[^a-z0-9]/gi, '-')}`;
+/** 每个站点控件的 id（label for / aria 关联用）；origin 里的 :/. 换成 - */
+function idOf(kind: string, origin: string): string {
+  return `site-${kind}-${origin.replace(/[^a-z0-9]/gi, '-')}`;
 }
 
 /*
  * 快捷标题：按钮上显示、点击填入的都是按浏览器界面语言取的值（中文浏览器「阅读」，
- * 英文浏览器 "Reading"）——标签页标题给浏览器标签栏看，按钮上写什么就填什么，避免点了「笔记」却填进 "Notes"。
- * 填入后沿用输入框的保存方式立即保存。
+ * 英文浏览器 "Reading"）——标签页标题给浏览器标签栏看，按钮上写什么就填什么。填入后立即保存。
  */
-async function pickDefaultTitle(q: QuickTitle) {
-  defaultTitle.value = quickTitleValue(q, uiLanguage);
-  await saveSettings();
-}
-
-async function pickSiteTitle(p: SiteProfile, q: QuickTitle) {
-  p.disguisedTitle = quickTitleValue(q, uiLanguage);
-  await saveTitle(p);
+async function pickTitle(key: string, q: QuickTitle) {
+  drafts.value[key] = quickTitleValue(q, uiLanguage);
+  dirty.add(key);
+  await saveDraft(key);
 }
 
 // 以下写入均为原子更新：基于最新存储值只改本次操作涉及的字段
 
-async function saveTitle(p: SiteProfile) {
-  const title = p.disguisedTitle !== null && p.disguisedTitle.trim() ? p.disguisedTitle : null;
-  await storage.updateProfile(p.origin, (d) => {
-    d.disguisedTitle = title;
-  });
-}
-
-async function toggleSite(p: SiteProfile) {
-  const target = p.switchState === 'disguised' ? 'original' : 'disguised';
-  await storage.updateProfile(p.origin, (d) => {
-    d.switchState = target;
-  });
+async function toggleSite(p: SiteProfile, e: Event) {
+  const input = e.target as HTMLInputElement;
+  const target = input.checked ? 'disguised' : 'original';
+  toggling.value[p.origin] = true;
+  toggleError.value[p.origin] = '';
+  try {
+    await storage.updateProfile(p.origin, (d) => {
+      d.switchState = target;
+    });
+  } catch {
+    input.checked = p.switchState === 'disguised';
+    toggleError.value[p.origin] = '没能切换清爽模式，请稍后再试一次';
+  } finally {
+    toggling.value[p.origin] = false;
+  }
 }
 
 async function clearFavicon(p: SiteProfile) {
@@ -253,35 +391,78 @@ async function clearFavicon(p: SiteProfile) {
   });
 }
 
+/**
+ * 上传图标：限制原图大小，用 canvas 缩小成 32×32 PNG（data URL 远小于 20KB），再按 core/validate 校验后保存。
+ * 原图不保存，也不发起任何网络请求。
+ */
 async function uploadFavicon(p: SiteProfile, e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
+  input.value = ''; // 清空，之后再选同一个文件也会触发 change
   if (!file) return;
-  const dataUrl = await new Promise<string>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result));
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-  input.value = '';
-  if (!isSafeFaviconDataUrl(dataUrl)) {
-    iconError.value[p.origin] = '图标只支持 PNG、JPG、GIF、WebP、ICO 格式，且不超过 256KB';
+  iconError.value[p.origin] = '';
+  const bad = checkIconSource(file);
+  if (bad) {
+    iconError.value[p.origin] = bad;
     return;
   }
-  iconError.value[p.origin] = '';
-  await storage.updateProfile(p.origin, (d) => {
-    d.faviconDataUrl = dataUrl;
-  });
+  iconBusy.value[p.origin] = true;
+  try {
+    const dataUrl = await compressIcon(file);
+    if (typeof dataUrl !== 'string') {
+      iconError.value[p.origin] = dataUrl.error;
+      return;
+    }
+    await storage.updateProfile(p.origin, (d) => {
+      d.faviconDataUrl = dataUrl;
+    });
+  } catch {
+    iconError.value[p.origin] = ICON_ERROR.encode;
+  } finally {
+    iconBusy.value[p.origin] = false;
+  }
+}
+
+async function compressIcon(file: Blob): Promise<string | { error: string }> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return { error: ICON_ERROR.decode };
+  }
+  try {
+    const rect = containRect(bitmap.width, bitmap.height, ICON_SIZE);
+    if (!rect) return { error: ICON_ERROR.decode };
+    const canvas = document.createElement('canvas');
+    canvas.width = ICON_SIZE;
+    canvas.height = ICON_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return { error: ICON_ERROR.encode };
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, rect.dx, rect.dy, rect.dw, rect.dh);
+    const dataUrl = canvas.toDataURL('image/png');
+    if (dataUrl.length > MAX_ICON_DATA_URL_LENGTH || !isSafeFaviconDataUrl(dataUrl)) return { error: ICON_ERROR.encode };
+    return dataUrl;
+  } finally {
+    bitmap.close();
+  }
 }
 
 function askReset(p: SiteProfile) {
   resetTarget.value = p;
+  resetDialog.value?.showModal();
 }
 
-async function doReset() {
+function onResetClose() {
+  const dialog = resetDialog.value;
+  const confirmed = dialog?.returnValue === 'confirm';
+  if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次
   const p = resetTarget.value;
-  if (!p) return;
-  resetTarget.value = null;
+  if (confirmed && p) void doReset(p);
+}
+
+async function doReset(p: SiteProfile) {
   resetError.value[p.origin] = '';
   const res: Ack | undefined = await browser.runtime.sendMessage({ t: 'resetSite', origin: p.origin }).catch(() => undefined);
   if (!res?.ok) resetError.value[p.origin] = '没能清空，请稍后再试一次';
@@ -296,233 +477,191 @@ async function doExport() {
   a.href = url;
   a.download = `pagemask-config-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 async function doImport(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
   if (!file) return;
+  importResult.value = '';
+  let bundle: unknown;
   try {
-    let bundle: unknown;
-    try {
-      bundle = JSON.parse(await file.text());
-    } catch {
-      throw new Error(INVALID_EXPORT_FILE);
+    bundle = JSON.parse(await file.text());
+  } catch {
+    importResult.value = importErrorText(new Error(INVALID_EXPORT_FILE));
+    return;
+  }
+  if (importMode.value === 'replace') {
+    // 文件无效时 previewReplace 返回 null，直接交给 importBundle 报出具体原因（不会改动数据）
+    const impact = previewReplace(await storage.listProfiles(), bundle);
+    if (impact) {
+      pendingBundle = bundle;
+      replaceImpact.value = impact;
+      replaceDialog.value?.showModal();
+      return;
     }
-    const res = await storage.importBundle(bundle, importMode.value);
+  }
+  await runImport(bundle, importMode.value);
+}
+
+function onReplaceClose() {
+  const dialog = replaceDialog.value;
+  const confirmed = dialog?.returnValue === 'confirm';
+  if (dialog) dialog.returnValue = '';
+  const bundle = pendingBundle;
+  pendingBundle = null;
+  if (confirmed) void runImport(bundle, 'replace');
+  else importResult.value = '已取消导入，本机设置没有改动';
+}
+
+async function runImport(bundle: unknown, mode: 'merge' | 'replace') {
+  try {
+    const res = await storage.importBundle(bundle, mode);
     importResult.value = describeImport(res);
     // 导入可能新增或移除了站点：立即对账（新站点在授权前显示「待授权」）
     await reconcileNow();
   } catch (err) {
-    importResult.value = `导入失败：${err instanceof Error ? err.message : String(err)}`;
+    importResult.value = importErrorText(err);
   }
-  (e.target as HTMLInputElement).value = '';
-  defaultTitle.value = (await storage.getSettings()).defaultTitle;
   await reload();
 }
 
 /** 如实报告导入结果：新增 / 更新 / 移除 / 跳过 */
 function describeImport(res: ImportResult): string {
-  const parts = [`新增 ${res.added} 个站点`, `更新 ${res.updated} 个站点`];
-  if (res.removed) parts.push(`移除 ${res.removed} 个本地站点`);
-  if (res.skipped) parts.push(`跳过 ${res.skipped} 个无效站点`);
-  if (res.skippedRules) parts.push(`忽略 ${res.skippedRules} 条无效规则`);
+  const parts = [`新增 ${res.added} 个网站`, `更新 ${res.updated} 个网站`];
+  if (res.removed) parts.push(`移除 ${res.removed} 个本机网站`);
+  if (res.skipped) parts.push(`跳过 ${res.skipped} 个无效网站`);
+  if (res.skippedRules) parts.push(`忽略 ${res.skippedRules} 个无效收起项`);
   return `导入完成：${parts.join('，')}（${res.mode === 'merge' ? '合并' : '整体替换'}）`;
 }
 </script>
 
 <style>
+/* 共享样式（字体、颜色、按钮、输入框、开关、徽标、对话框）来自 @/styles/base.css；这里只写管理页布局 */
 body {
-  margin: 0;
-  background: #f6f7f9;
-  font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
-  color: #222;
+  background: var(--pm-bg-subtle);
 }
 .page {
   max-width: 720px;
-  margin: 24px auto;
-  padding: 0 16px 60px;
+  margin: var(--pm-space-6) auto;
+  padding: 0 var(--pm-space-4) 60px;
 }
 h1 {
-  font-size: 20px;
+  font-size: var(--pm-font-size-heading);
+  margin: 0;
 }
-h2 {
-  font-size: 15px;
-  margin: 0 0 10px;
-}
-h3 {
-  font-size: 15px;
-  margin: 0 0 8px;
+.card h2 {
+  font-size: var(--pm-font-size-title);
+  margin: 0 0 var(--pm-space-2);
 }
 .sub {
-  color: #777;
-  font-size: 13px;
-  margin: 4px 0 18px;
+  color: var(--pm-fg-muted);
+  margin: var(--pm-space-1) 0 18px;
 }
 .card {
-  background: #fff;
-  border: 1px solid #e8eaee;
-  border-radius: 12px;
-  padding: 16px;
   margin-bottom: 14px;
 }
 .card.empty {
-  color: #888;
-  font-size: 14px;
+  color: var(--pm-fg-muted);
 }
 .site-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: var(--pm-space-3);
 }
-.host {
-  font-size: 15px;
-  font-weight: 600;
+.site-head .host {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+  flex: none;
+}
+.switch-row label {
+  cursor: pointer;
 }
 .state {
-  font-size: 12px;
-  color: #888;
-}
-.state.disguised {
-  color: #3575e0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+  margin: var(--pm-space-1) 0 var(--pm-space-2);
 }
 .stale {
-  color: #e5484d;
-  cursor: help;
-  white-space: pre-line;
+  color: var(--pm-danger);
+}
+.stale-list {
+  margin: 0 0 var(--pm-space-2);
+  padding-left: 18px;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg);
 }
 .row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 8px 0;
+  margin: var(--pm-space-2) 0;
   flex-wrap: wrap;
 }
-.row.right {
-  justify-content: flex-end;
+.row > label,
+.row > .label {
+  color: var(--pm-fg);
+  min-width: 96px;
 }
-.row label {
-  font-size: 13px;
-  color: #555;
-  min-width: 70px;
-}
-.row input[type='text'],
 .row input:not([type]) {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
   flex: 1;
   min-width: 180px;
-}
-.hint {
-  font-size: 12px;
-  color: #999;
-}
-.hint.error {
-  color: #c33;
-}
-.inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #555;
-}
-.actions {
-  margin-top: 10px;
-}
-button {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  background: #fafafa;
-  color: #333;
-}
-button.primary {
-  background: #3575e0;
-  border-color: #3575e0;
-  color: #fff;
-}
-button.primary.danger {
-  background: #d33;
-  border-color: #d33;
-}
-button.ghost {
-  background: transparent;
-}
-button.danger {
-  color: #c33;
-  border-color: #e5b4b4;
 }
 .row.quick {
   gap: 6px;
   margin-top: -2px;
 }
-button.chip {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: transparent;
-}
-button.chip:hover {
-  border-color: #3575e0;
-  color: #3575e0;
-}
-button:focus-visible {
-  outline: 2px solid #3575e0;
-  outline-offset: 2px;
+.actions {
+  margin-top: 10px;
 }
 .favicon {
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  vertical-align: middle;
+}
+.file-button.busy {
+  cursor: progress;
 }
 .pending-all {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
+  gap: var(--pm-space-3);
 }
 .row.pending {
   margin: 0 0 10px;
 }
-.badge {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #fff4e5;
-  color: #a35200;
-  border: 1px solid #f3c58a;
+.import-mode {
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-control);
+  margin: var(--pm-space-3) 0 var(--pm-space-2);
+  padding: var(--pm-space-2) var(--pm-space-3);
 }
-.mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+.import-mode legend {
+  padding: 0 var(--pm-space-1);
+}
+.radio {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--pm-space-1) 0;
 }
-.dialog {
-  background: #fff;
-  border-radius: 14px;
-  padding: 20px;
-  width: 380px;
-  max-width: 90vw;
+.radio input {
+  margin: 0;
+  align-self: center;
 }
-.dialog ul {
-  padding-left: 18px;
-  font-size: 13px;
-  color: #555;
-  margin: 8px 0 14px;
-}
-.dialog li {
-  margin: 4px 0;
+.radio .hint {
+  margin: 0;
+  flex-basis: 100%;
+  padding-left: 22px;
 }
 </style>

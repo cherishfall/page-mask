@@ -1,44 +1,64 @@
 <template>
-  <div class="popup">
+  <!-- aria-busy：读取中、处理中时告诉读屏这里的内容还会变（modern-web-guidance「accessibility」） -->
+  <main class="popup" :aria-busy="phase === 'loading' || busy !== '' ? 'true' : 'false'">
     <header class="head">
-      <span class="logo">PageMask</span>
-      <span v-if="staleCount > 0" class="dot" :title="`${staleCount} 条规则可能失效`">●</span>
+      <h1 class="logo">PageMask</h1>
     </header>
 
-    <p v-if="!tab" class="hint">正在读取当前标签页…</p>
-    <p v-else-if="!supported.ok" class="hint">{{ supported.reason }}</p>
+    <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">正在读取当前网页…</p>
+    <p v-else-if="phase === 'unsupported'" class="hint" data-testid="pm-popup-unsupported">
+      {{ supported.reason || '这个页面无法使用清爽模式' }}
+    </p>
+
     <template v-else>
-      <div v-if="profile" class="site">
-        <div class="row">
-          <span class="host">{{ host }}</span>
-          <button
-            v-if="granted !== false"
-            class="switch"
-            :class="{ on: profile.switchState === 'disguised' }"
-            @click="toggleSwitch"
-          >
-            {{ profile.switchState === 'disguised' ? '清爽中' : '原样' }}
-          </button>
+      <div class="site">
+        <div class="site-head">
+          <h2 class="host">{{ host }}</h2>
+          <span v-if="phase === 'pending'" class="badge" data-testid="pm-popup-pending-badge">待授权</span>
         </div>
-        <div class="meta">
-          {{ profile.hideRules.length }} 条隐藏规则
-          <span v-if="staleCount > 0" class="stale">● {{ staleCount }} 条可能失效</span>
+
+        <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"（modern-web-guidance「switch」） -->
+        <div v-if="phase === 'ready' && profile" class="switch-row">
+          <label for="pm-popup-switch">清爽模式</label>
+          <input
+            id="pm-popup-switch"
+            type="checkbox"
+            switch
+            role="switch"
+            data-testid="pm-popup-switch"
+            :checked="profile.switchState === 'disguised'"
+            :disabled="busy !== ''"
+            @change="toggleSwitch"
+          />
         </div>
+
+        <p v-if="profile" class="meta">
+          已收起 {{ profile.hideRules.length }} 项<template v-if="staleCount > 0">
+            ·
+            <span class="stale" data-testid="pm-popup-stale"><span aria-hidden="true">● </span>{{ staleCount }} 项可能失效</span>
+          </template>
+        </p>
+        <p v-else class="hint">这个网站还没有设置过，开启后 PageMask 才会处理它。</p>
       </div>
 
-      <p v-if="setupError" class="hint error" role="alert">{{ setupError }}</p>
-      <template v-if="profile && granted === false">
+      <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
+
+      <template v-if="phase === 'pending'">
         <!-- 有配置、没授权：配置还在，只是浏览器收回了这个网站的访问权限 -->
-        <p class="hint" data-testid="pm-popup-pending">这个网站的授权已被收回，设置都还在。重新授权后立即恢复。</p>
-        <button class="primary" data-testid="pm-popup-reauth" @click="reauthorize">重新授权</button>
+        <p class="hint" data-testid="pm-popup-pending">浏览器收回了这个网站的访问权限，设置都还在，重新授权后立即恢复。</p>
+        <button class="primary" data-testid="pm-popup-reauth" :disabled="busy !== ''" @click="reauthorize">
+          {{ busy === 'reauth' ? '正在授权…' : '重新授权' }}
+        </button>
       </template>
-      <button v-else class="primary" data-testid="pm-popup-setup" @click="setup">
-        {{ profile ? '＋ 添加要去掉的元素' : '为当前网站开启清爽模式' }}
+      <button v-else class="primary" data-testid="pm-popup-setup" :disabled="busy !== ''" @click="setup">
+        <template v-if="busy === 'setup'">正在打开…</template>
+        <template v-else-if="profile"><span aria-hidden="true">＋</span> 收起更多内容</template>
+        <template v-else>为当前网站开启清爽模式</template>
       </button>
     </template>
 
-    <button class="ghost" @click="manage">管理全部站点</button>
-  </div>
+    <button class="ghost manage" @click="manage">管理全部网站</button>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -51,26 +71,46 @@ import type { SiteProfile } from '@/core/types';
 import type { EnableSiteResponse, OpenIntent } from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
+/** tabs.query 已返回（tab 可能仍为 null：没有活动标签页） */
+const tabLoaded = ref(false);
 const profile = ref<SiteProfile | null>(null);
 /** 当前网站的站点授权；null = 还没查 */
 const granted = ref<boolean | null>(null);
-const setupError = ref('');
+/** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle'>('');
+/** 失败 / 授权被拒时给用户看的话 */
+const message = ref('');
 
 /** 失败时给用户看的话（不暴露内部错误） */
 const ERROR_TEXT: Record<string, string> = {
   tabMismatch: '页面已经换了，请回到要设置的网站再点一次 PageMask',
-  notGranted: '还没有拿到这个网站的授权，请再点一次并选择「允许」',
+  notGranted: '还没有拿到这个网站的访问权限，请再点一次并选择「允许」',
   injectFailed: '没能在这个页面启动，刷新页面后再试一次',
 };
+const DENIED_TEXT = '需要允许访问这个网站，才能开启清爽模式。可以再点一次并选择「允许」';
+const TOGGLE_FAILED_TEXT = '没能切换清爽模式，请稍后再试一次';
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
 const host = computed(() => (origin.value ? new URL(origin.value).hostname.replace(/^www\./, '') : ''));
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
 
+/**
+ * 界面状态：
+ * loading 读取中 / unsupported 不支持的页面 / new 没有配置 / pending 有配置、没授权（待授权）/ ready 有配置、已授权
+ */
+const phase = computed<'loading' | 'unsupported' | 'new' | 'pending' | 'ready'>(() => {
+  if (!tabLoaded.value) return 'loading';
+  if (!supported.value.ok || !origin.value) return 'unsupported';
+  if (granted.value === null) return 'loading';
+  if (!profile.value) return 'new';
+  return granted.value ? 'ready' : 'pending';
+});
+
 onMounted(async () => {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   tab.value = tabs[0] ?? null;
+  tabLoaded.value = true;
   await refresh();
   browser.storage.onChanged.addListener((_, area) => {
     if (area === 'local') void refresh();
@@ -82,7 +122,7 @@ onMounted(async () => {
 
 async function refresh() {
   const o = origin.value;
-  if (!o) return;
+  if (!o || !supported.value.ok) return;
   const storage = createPageMaskStorage(browser.storage.local);
   const [p, g] = await Promise.all([
     storage.getProfile(o),
@@ -92,15 +132,24 @@ async function refresh() {
   granted.value = g;
 }
 
-async function toggleSwitch() {
-  if (!profile.value || !origin.value) return;
-  // 目标态 = 当前显示状态的反面；只改开关字段，不覆盖页面里刚写入的体检结果等
-  const target = profile.value.switchState === 'disguised' ? 'original' : 'disguised';
-  const storage = createPageMaskStorage(browser.storage.local);
-  const fresh = await storage.updateProfile(origin.value, (p) => {
-    p.switchState = target;
-  });
-  profile.value = fresh;
+async function toggleSwitch(e: Event) {
+  const input = e.target as HTMLInputElement;
+  if (!profile.value || !origin.value || busy.value) return;
+  // 目标态 = 用户刚拨到的位置；只改开关字段，不覆盖页面里刚写入的体检结果等
+  const target = input.checked ? 'disguised' : 'original';
+  busy.value = 'toggle';
+  message.value = '';
+  try {
+    const storage = createPageMaskStorage(browser.storage.local);
+    profile.value = await storage.updateProfile(origin.value, (p) => {
+      p.switchState = target;
+    });
+  } catch {
+    input.checked = profile.value?.switchState === 'disguised'; // 写入失败：开关拨回实际状态
+    message.value = TOGGLE_FAILED_TEXT;
+  } finally {
+    busy.value = '';
+  }
 }
 
 /**
@@ -112,140 +161,143 @@ async function enableSite(tabId: number, o: string, open?: OpenIntent): Promise<
     .sendMessage({ t: 'enableSite', origin: o, tabId, open })
     .catch(() => undefined);
   if (res?.ok) return true;
-  setupError.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
+  message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
   return false;
 }
 
 /** 主按钮：新站点授权并打开设置向导；已配置站点打开「添加元素」向导 */
 function setup() {
-  setupError.value = '';
   const o = origin.value;
   const tabId = tab.value?.id;
-  if (!o || tabId === undefined) return;
-
+  if (!o || tabId === undefined || busy.value) return;
   if (!profile.value) {
     // 权限请求必须直接处于点击手势的同步上下文中：这里之前不能有任何 await
     const request = browser.permissions.request({ origins: [originPattern(o)] });
+    message.value = '';
+    busy.value = 'setup';
     void (async () => {
-      if (!(await request.catch(() => false))) return;
-      // 新站点：保存向导前不写配置；取消向导时后台会收回这次授权
-      if (await enableSite(tabId, o, 'newSite')) window.close();
+      try {
+        if (!(await request.catch(() => false))) {
+          message.value = DENIED_TEXT;
+          return;
+        }
+        // 新站点：保存向导前不写配置；取消向导时后台会收回这次授权
+        if (await enableSite(tabId, o, 'newSite')) window.close();
+      } finally {
+        busy.value = '';
+      }
     })();
     return;
   }
+  message.value = '';
+  busy.value = 'setup';
   void (async () => {
-    if (await enableSite(tabId, o, 'addElement')) window.close();
+    try {
+      if (await enableSite(tabId, o, 'addElement')) window.close();
+    } finally {
+      busy.value = '';
+    }
   })();
 }
 
 /** 有配置、没授权：重新请求本站授权，拿到后让后台对账并注入当前页 */
 function reauthorize() {
-  setupError.value = '';
   const o = origin.value;
   const tabId = tab.value?.id;
-  if (!o || tabId === undefined) return;
+  if (!o || tabId === undefined || busy.value) return;
   // 同上：第一条语句就请求权限，保留用户手势
   const request = browser.permissions.request({ origins: [originPattern(o)] });
+  message.value = '';
+  busy.value = 'reauth';
   void (async () => {
-    if (!(await request.catch(() => false))) return;
-    if (await enableSite(tabId, o)) granted.value = true;
-    await refresh();
+    try {
+      if (!(await request.catch(() => false))) {
+        message.value = DENIED_TEXT;
+        return;
+      }
+      if (await enableSite(tabId, o)) granted.value = true;
+      await refresh();
+    } finally {
+      busy.value = '';
+    }
   })();
 }
 
-function manage() {
-  browser.tabs.create({ url: browser.runtime.getURL('/management.html') });
+async function manage() {
+  await browser.tabs.create({ url: browser.runtime.getURL('/management.html') });
   window.close();
 }
 </script>
 
 <style>
-/* body 的字体、前景、背景来自 @/styles/base.css（tokens 示例接入，#33）；其余尺寸 / 结构的整改见 #26 */
+/* 共享样式（字体、颜色、按钮、开关、徽标）来自 @/styles/base.css；这里只写 popup 布局 */
 .popup {
-  width: 280px;
-  padding: 12px;
+  width: 320px;
+  box-sizing: border-box;
+  padding: var(--pm-space-3);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--pm-space-3);
 }
 .head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-weight: 600;
-  font-size: 14px;
 }
 .logo {
+  font-size: var(--pm-font-size-title);
+  margin: 0;
   letter-spacing: 0.2px;
 }
-.dot {
-  color: var(--pm-danger);
-  cursor: help;
+.popup > .hint {
+  font-size: var(--pm-font-size-body);
+  margin: 0;
 }
-.hint {
-  font-size: 13px;
-  color: var(--pm-fg-muted);
-  margin: 4px 0;
+.site {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
 }
-.hint.error {
-  color: var(--pm-danger);
-}
-.site .row {
+.site-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--pm-space-2);
 }
 .host {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--pm-font-size-body);
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.switch {
-  border: 1px solid var(--pm-border-control);
-  background: var(--pm-bg-subtle);
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--pm-fg);
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
 }
-.switch.on {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
+.switch-row label {
+  cursor: pointer;
 }
 .meta {
-  font-size: 12px;
+  font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
-  margin-top: 4px;
+  margin: 0;
 }
 .stale {
   color: var(--pm-danger);
 }
-.primary {
-  border: none;
-  background: var(--pm-accent);
-  color: var(--pm-on-accent);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13px;
-  cursor: pointer;
+.site .hint {
+  margin: 0;
 }
-.primary:hover {
-  background: var(--pm-accent-hover);
+.popup > button.primary {
+  padding: 8px 12px;
 }
-.ghost {
-  border: none;
-  background: transparent;
+.manage {
   color: var(--pm-fg-muted);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: center;
-  padding: 4px;
+  font-size: var(--pm-font-size-caption);
 }
-.ghost:hover {
+button.manage:hover:not(:disabled) {
   color: var(--pm-fg);
 }
 </style>
