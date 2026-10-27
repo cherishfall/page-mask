@@ -6,7 +6,7 @@
  * - 授权：权限弹窗无法自动化点击，测试来源通过拷贝 manifest 预授予（见 lib/extension.mjs）
  * - 启用站点走与 popup 相同的 enableSite 消息入口
  * - 截图写到 test-results/e2e/（已忽略）
- * - 已知缺陷以 expectFail 形式存在：失败打印「预期失败 → #NN」，意外通过则计为失败
+ * - 已知缺陷以 expectFail 形式存在：失败打印「预期失败 → #NN」，意外通过则计为失败（当前已无）
  * - 站点生命周期（#21）：重载后仍生效、撤销授权后 popup「重新授权」、一键清空即时还原、
  *   导出 → 清空 → 导入后「一次授权全部」、安装警告为空。权限弹窗本身无法自动化：
  *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
@@ -48,7 +48,7 @@ const ALL_HOSTS = [TOGGLE_HOST, WIZARD_HOST, EDITOR_HOST, MASK_HOST].join(', ');
 const tid = (id) => `[data-testid="${id}"]`;
 
 const r = createReporter();
-const { check, expectFail } = r;
+const { check } = r;
 const OUT = resultsDir('e2e');
 const shot = (page, name) => page.screenshot({ path: path.join(OUT, `${name}.png`) });
 
@@ -292,18 +292,16 @@ async function main() {
     await waitFor(page, '编辑面板关闭', (h) => !document.querySelector(h), [EDITOR_HOST]);
     check(true, '编辑面板关闭');
 
-    // ===================== 悬浮按钮右键菜单（真实鼠标） =====================
-    await expectFail('悬浮按钮右键菜单「编辑规则」打开编辑面板', 25, async () => {
-      await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN, { button: 'right' });
-      await waitForShadow(page, TOGGLE_HOST, `${TOGGLE_BTN} > div > div:first-child`, { timeout: 3000 });
-      await clickInShadow(page, TOGGLE_HOST, `${TOGGLE_BTN} > div > div:first-child`);
-      await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'), { timeout: 3000 });
-      check(true, '编辑面板打开');
-      check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单不应切换开关');
-    });
-    // 无论结果如何，把状态复位给后续用例
+    // ===================== 悬浮按钮菜单（真实鼠标，#25） =====================
+    console.log('\n--- 悬浮按钮「⋯」菜单打开编辑面板 ---');
+    await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE_HOST, '[data-testid="pm-toggle-menu"]', { timeout: 3000 });
+    await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-edit'));
+    await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'), { timeout: 5000 });
+    check(true, '点菜单「编辑规则」打开编辑面板');
+    check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
     await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-editor-close"]')?.click(), EDITOR_HOST);
-    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await waitFor(page, '编辑面板关闭（复位）', (h) => !document.querySelector(h), [EDITOR_HOST]);
     await waitStyle(page, '复位到清爽态', '.rec-card', 'display', 'none', { not: true });
 
     // ===================== 页面样式隔离（#22） =====================

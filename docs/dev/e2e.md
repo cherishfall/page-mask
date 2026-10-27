@@ -16,9 +16,18 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 | `HEADFUL=1` | 有界面运行（默认新 headless） |
 | `PM_E2E_DEBUG=1` | 打印所有 target（页面 / SW）的创建、变化、销毁 |
 
-`test:e2e` 依次运行 `run-e2e.mjs`（主流程）与 `check-pages.mjs`（#26 扩展页面质量：switch 角色、编辑态、图标压缩、确认框、深色与对比度，约 20 秒）。
+`test:e2e` 依次运行：
 
-截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-dark-mode.mjs`、`store-shots*.mjs`（输出 `test-results/store-shots/`，正式素材由 #29 重做）、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）。
+| 脚本 | 覆盖 | 用时 |
+|---|---|---|
+| `run-e2e.mjs` | 主流程（注入、开关、向导、编辑面板、SPA、生命周期、导入导出、授权） | 约 45 秒 |
+| `check-pages.mjs` | 扩展页面质量（#26：switch 角色、编辑态、图标压缩、确认框、深色与对比度） | 约 3 秒 |
+| `check-mask.mjs` | 方案C遮罩（#23：后加载元素、跟手、深色页面、不可点、静止停帧、原样态不观察） | 约 5 秒 |
+| `check-wizard.mjs` | 向导状态机（#34：序号重编号、标记不坍缩、Esc 状态机、继续选择、滚动命中、工具条拖动） | 约 8 秒 |
+| `check-editor.mjs` | 编辑面板（#24：popup 入口、重选替换、开关不被覆盖、逐行校验、删除撤销） | 约 10 秒 |
+| `check-toggle.mjs` | 悬浮按钮与无障碍（#25：菜单不出屏/翻转/Esc/点外关闭、无右键菜单、Tab+回车、拖动贴边、三底色对比度、对话框在超高浮层之上） | 约 10 秒 |
+
+截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-i18n.mjs`、`check-dark-mode.mjs`、`store-shots*.mjs`（输出 `test-results/store-shots/`，正式素材由 #29 重做）、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）。
 
 ## 工具函数（`tests/e2e/lib/`）
 
@@ -48,9 +57,7 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 
 ## 当前预期失败
 
-| 用例 | 票 |
-|---|---|
-| 悬浮按钮右键菜单「编辑规则」打开编辑面板 | #25 |
+无（#25 的「点菜单打开编辑面板」已转正，见 `check-toggle.mjs` 与 `run-e2e.mjs` 的悬浮按钮菜单段）。
 
 ## 站点生命周期（#21）
 
