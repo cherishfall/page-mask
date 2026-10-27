@@ -284,6 +284,25 @@ export async function patchProfile(control, origin, patch) {
   );
 }
 
+/** 读全局设置（键 settings） */
+export async function getSettings(control) {
+  return control.evaluate(async () => (await chrome.storage.local.get('settings')).settings ?? null);
+}
+
+/**
+ * 局部修改全局设置（读 → 浅合并 patch 对象 → 写），触发管理页的 storage.onChanged。
+ * 用法：await patchSettings(ctl, { defaultTitle: '别处改的标题' });
+ */
+export async function patchSettings(control, patch) {
+  await control.evaluate(
+    async (pt) => {
+      const s = (await chrome.storage.local.get('settings')).settings ?? {};
+      await chrome.storage.local.set({ settings: { ...s, ...pt } });
+    },
+    patch,
+  );
+}
+
 /** 从扩展页面向后台发消息（与 popup 走同一条消息入口），返回后台回复 */
 export async function sendToBackground(control, msg) {
   return control.evaluate((m) => chrome.runtime.sendMessage(m), msg);

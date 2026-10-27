@@ -2,6 +2,15 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.3.0 · #40 管理页骨架与 hash 路由
+
+- **路由手写、不引 vue-router**：`#/sites`、`#/sites/<host>`、`#/settings`；`parseRoute` 是纯函数（`entrypoints/management/router.ts`），首次进入没有 hash（或 hash 认不出来）时用 `history.replaceState` 落到 `#/sites`，不新增历史记录。两个 tab 用普通 `<a href="#/…">` + `aria-current="page"`，前进后退与深链交给浏览器。
+- **路由参数用 host 而不是 hostname**：站点身份是 origin（含协议与非默认端口），`#/sites/127.0.0.1:8080` 才不会和另一端口的站点相撞；展示名仍去掉 `www.` 并转回 Unicode。同一主机不同协议会落到同一个 hash，这是「域名」这层抽象的已知歧义，当前取列表里的第一个。
+- **状态抽成 `entrypoints/management/store.ts`**：`profiles / drafts / dirty / pendingOrigins`、标题自动保存（800ms 防抖 + dirty 防覆盖）、授权、一键清空、导入导出全部搬进去，三个视图共用；用工厂 `createManagementStore` 让单测各建一份，页面用模块级单例。
+- **一键清空暂时留在列表行**：#41 才在站点设置页做页脚入口；本票不丢这个能力，行的链接与清空按钮是兄弟节点（按钮不能嵌在 `<a>` 里），二次确认框原样保留。
+- **站点设置页只做骨架**：标题输入、图标上传、规则清单与一键清空由 #41 补，页面里留一句说明。`core/icon.ts` 暂时没有生产调用方，保留给 #41。
+- **E2E 跟着 DOM 调整**：图标上传与站点级标题输入暂无可测 UI，相关断言随 #41 补回；默认标题的自动保存、dirty 防覆盖改在设置 tab 上测；新增 tab / 深链 / 后退 / 待授权 / 空状态的断言。
+
 ## 0.2.0 · #25 悬浮按钮与页内无障碍
 
 - **胶囊拆成三段**：拖动把手（专用 handle，`setPointerCapture`，方向键可移动）/ 主按钮（`aria-pressed` + 可见文字「清爽」「原样」+ 状态点）/ 「⋯」菜单按钮。原来整根胶囊是一个 `div`，`pointerdown.prevent` 同时承担拖动与点击，菜单项挂在它的子节点上：点菜单项时 `pointerdown` 先冒泡到根节点把菜单关掉，`pointerup` 又发出 `toggle` —— 这既是 N1 的成因，也是键盘完全用不了的原因。现在菜单项与主按钮是兄弟节点，不再经过拖动逻辑。
