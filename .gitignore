@@ -11,3 +11,5 @@ coverage/
 test-results/
 # E2E 浏览器下载缓存（tests/e2e/lib/browser.mjs）
 .cache/
+# 项目内临时文件（agent 与脚本的临时产物统一放这里，可随时清空）
+tmp/

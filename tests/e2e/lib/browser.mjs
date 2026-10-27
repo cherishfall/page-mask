@@ -15,6 +15,7 @@
  *   const { browser, cleanup } = await launchWithExtension({ extDir });
  *   try { ... } finally { await cleanup(); }
  */
+import './tmp.mjs'; // 临时文件统一落到 <仓库>/tmp/
 import { Browser, detectBrowserPlatform, install, computeExecutablePath } from '@puppeteer/browsers';
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';

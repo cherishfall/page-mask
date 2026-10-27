@@ -12,8 +12,7 @@
 //   node scripts/gen-notices.mjs --check   仅校验入库文件是否最新，过期则非零退出（CI 使用）
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -63,7 +62,10 @@ const KNOWN_UPSTREAM = {
 
 /** 以 sourcemap 构建到临时目录，返回产物引用到的 node_modules 包名集合。 */
 function detectBundledPackages() {
-  const tmp = mkdtempSync(join(tmpdir(), 'page-mask-notices-'));
+  // 临时目录放在 <仓库>/tmp/（已被 git 忽略），不散落到系统 /tmp
+  const tmpRoot = join(root, 'tmp');
+  mkdirSync(tmpRoot, { recursive: true });
+  const tmp = mkdtempSync(join(tmpRoot, 'page-mask-notices-'));
   // 临时配置放在 .wxt/（已被 git 忽略），复用正式配置，只改输出目录并打开 sourcemap。
   const cfg = join(root, '.wxt', 'notices-sourcemap.config.ts');
   writeFileSync(
