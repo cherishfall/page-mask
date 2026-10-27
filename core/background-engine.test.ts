@@ -10,6 +10,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { createBackground } from './background-engine';
 import { registrationPlan } from './registration';
 import { createEmptyProfile, type SiteProfile } from './types';
+import { HOST_SHIELD_CSS } from './host-shield';
 
 const ORIGIN = 'https://reader.example';
 const OTHER = 'https://other.example';
@@ -142,6 +143,53 @@ describe('后台引擎（fakeBrowser）', () => {
 
       await eventually(() => expect([...stubs.registered.keys()].sort()).toEqual([idOf(OTHER), idOf(ORIGIN)]));
       expect(stubs.registered.get(idOf(ORIGIN))).toEqual(registrationPlan(ORIGIN));
+    });
+
+    it('扩展更新 / 重载后向已配置且已授权站点的已打开标签页重新注入内容脚本（新实例接管，旧脚本收尾）', async () => {
+      await configure(ORIGIN);
+      await configure(OTHER, { grant: false });
+      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
+      const portTab = (await fakeBrowser.tabs.create({ url: 'https://reader.example:8443/x' })).id!;
+      await eventually(() => expect(stubs.registered.size).toBe(1));
+      stubs.scripting.executeScript.mockClear();
+
+      await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update', previousVersion: '0.1.0' } as never);
+
+      await eventually(() =>
+        expect(stubs.scripting.executeScript).toHaveBeenCalledWith({
+          target: { tabId: siteTabId },
+          files: ['content-scripts/content.js'],
+        }),
+      );
+      const targets = stubs.scripting.executeScript.mock.calls.map(([inj]) => (inj.target as { tabId: number }).tabId);
+      expect(targets).not.toContain(otherTab); // 未授权站点不注入
+      expect(targets).not.toContain(portTab); // 同主机其他端口不是这个站点
+    });
+
+    it('重新注入失败（标签页已休眠 / 不可访问）不影响其余标签页', async () => {
+      await configure(ORIGIN);
+      const second = (await fakeBrowser.tabs.create({ url: `${ORIGIN}/book/2` })).id!;
+      await eventually(() => expect(stubs.registered.size).toBe(1));
+      stubs.scripting.executeScript.mockClear();
+      stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Frame with ID 0 was removed'));
+
+      await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update', previousVersion: '0.1.0' } as never);
+
+      await eventually(() => expect(stubs.scripting.executeScript).toHaveBeenCalledTimes(2));
+      const targets = stubs.scripting.executeScript.mock.calls.map(([inj]) => (inj.target as { tabId: number }).tabId);
+      expect(targets.sort()).toEqual([siteTabId, second].sort());
+    });
+
+    it('首次安装、浏览器升级时不重新注入', async () => {
+      await configure(ORIGIN);
+      await eventually(() => expect(stubs.registered.size).toBe(1));
+      stubs.scripting.executeScript.mockClear();
+
+      await fakeBrowser.runtime.onInstalled.trigger({ reason: 'chrome_update' } as never);
+      await eventually(() => expect(stubs.scripting.getRegisteredContentScripts).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
     });
 
     it('浏览器启动（onStartup）时对账', async () => {
@@ -359,7 +407,7 @@ describe('后台引擎（fakeBrowser）', () => {
     });
   });
 
-  it('applyDisguise：生效范围按 sender.url 判断（不信任消息里的地址）', async () => {
+  it('applyDisguise：消息里的地址与 sender.url 同源时按它判断生效范围（SPA 路由刚变化，sender.url 可能还是旧的）', async () => {
     const p = disguisedProfile();
     p.hideRules[0]!.scope = { type: 'include', patterns: [{ label: '书架', prefix: `${ORIGIN}/shelf` }] };
     await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: p });
@@ -369,8 +417,54 @@ describe('后台引擎（fakeBrowser）', () => {
       { ...DOC_SENDER, url: `${ORIGIN}/home` },
     )) as { ok: boolean; css: string | null };
 
+    expect(res.ok).toBe(true);
+    expect(res.css).toContain('#promo-banner');
+  });
+
+  it('applyDisguise：消息里的地址与 sender.url 不同源时不采用（拿不到别的站点的样式）', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${OTHER}`]: disguisedProfile(OTHER) });
+
+    const res = (await send(
+      { t: 'applyDisguise', prev: null, url: `${OTHER}/home` },
+      { ...DOC_SENDER, url: `${ORIGIN}/home` },
+    )) as { ok: boolean; css: string | null };
+
     expect(res).toEqual({ ok: true, css: null });
     expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
+  });
+
+  it('hostShield：按文档注入 / 移除固定的宿主保护样式（内容脚本不能改写文本）', async () => {
+    const on = (await send({ t: 'hostShield', on: true, prev: null, css: 'evil' }, DOC_SENDER)) as { ok: boolean; css: string };
+    expect(on.ok).toBe(true);
+    expect(on.css).toBe(HOST_SHIELD_CSS);
+    expect(stubs.scripting.insertCSS).toHaveBeenCalledWith({
+      target: { tabId: TAB.id, documentIds: ['doc-A'] },
+      css: HOST_SHIELD_CSS,
+      origin: 'USER',
+    });
+
+    const off = await send({ t: 'hostShield', on: false, prev: HOST_SHIELD_CSS }, DOC_SENDER);
+    expect(off).toEqual({ ok: true, css: null });
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: HOST_SHIELD_CSS, origin: 'USER' }));
+  });
+
+  it('releaseOrphanCss：按当前配置与地址各撤一份旧实例留下的保护样式与正式样式，不插任何东西', async () => {
+    await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: disguisedProfile() });
+    const formal = ((await send({ t: 'applyDisguise', prev: null }, DOC_SENDER)) as { css: string }).css;
+    stubs.scripting.insertCSS.mockClear();
+
+    const res = await send({ t: 'releaseOrphanCss', url: `${ORIGIN}/home` }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: null });
+    expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
+    const removed = (stubs.scripting.removeCSS.mock.calls as unknown as [{ css: string }][]).map(([a]) => a.css);
+    expect(removed.sort()).toEqual([HOST_SHIELD_CSS, formal].sort());
+  });
+
+  it('hostShield：交接来的旧版本文本换成当前版本', async () => {
+    const res = (await send({ t: 'hostShield', on: true, prev: 'OLD-SHIELD' }, DOC_SENDER)) as { css: string };
+    expect(res.css).toBe(HOST_SHIELD_CSS);
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'OLD-SHIELD' }));
   });
 
   it('applyDisguise：文本与本文档已注入的相同则跳过（不闪）', async () => {

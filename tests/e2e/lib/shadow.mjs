@@ -2,10 +2,10 @@
  * Shadow DOM 工具：PageMask 的页内界面（悬浮按钮、向导、编辑面板）都挂在 open shadow root 里。
  *
  * 用法：
- *   await waitForShadow(page, '#pagemask-wizard-host', '[data-testid="pm-wiz-save"]');
- *   await clickInShadow(page, '#pagemask-floating-host', '[title^="PageMask"]');                 // 真实左键
- *   await clickInShadow(page, '#pagemask-floating-host', '[title^="PageMask"]', { button: 'right' }); // 真实右键
- *   const txt = await shadowText(page, '#pagemask-wizard-host', '[data-testid="pm-wiz-preview"]');
+ *   await waitForShadow(page, 'pagemask-wizard', '[data-testid="pm-wiz-save"]');
+ *   await clickInShadow(page, 'pagemask-toggle', '[title^="PageMask"]');                 // 真实左键
+ *   await clickInShadow(page, 'pagemask-toggle', '[title^="PageMask"]', { button: 'right' }); // 真实右键
+ *   const txt = await shadowText(page, 'pagemask-wizard', '[data-testid="pm-wiz-preview"]');
  */
 import { CheckError, waitFor } from './harness.mjs';
 

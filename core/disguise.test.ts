@@ -131,6 +131,90 @@ describe('TitleFaviconGuard（jsdom）', () => {
     ]);
   });
 
+  it('只观察 <head>（外加 <html> 的直接子节点，用来发现 head 出现 / 被替换），不观察整页 subtree', () => {
+    const spy = vi.spyOn(MutationObserver.prototype, 'observe');
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('t', null);
+    const calls = spy.mock.calls.map(([target, opts]) => ({ target, opts }));
+    spy.mockRestore();
+    expect(calls.length).toBeGreaterThan(0);
+    for (const { target, opts } of calls) {
+      if (target === doc.head) continue;
+      expect(target).toBe(doc.documentElement);
+      expect(opts).toEqual({ childList: true });
+    }
+    expect(calls.some((c) => c.target === doc.head)).toBe(true);
+    guard.restore();
+  });
+
+  it('正文里的大量变化不会让守卫重写标题', async () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('t', null);
+    const setter = vi.spyOn(doc, 'title', 'set');
+    for (let i = 0; i < 20; i++) doc.body.appendChild(doc.createElement('p'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(setter).not.toHaveBeenCalled();
+    setter.mockRestore();
+    guard.restore();
+  });
+
+  it('SPA 翻页：伪装期间站点写入的最新标题，在还原时生效', async () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('阅读', null);
+    doc.title = '第 2 章';
+    await vi.waitFor(() => expect(doc.title).toBe('阅读'));
+    doc.title = '第 3 章';
+    await vi.waitFor(() => expect(doc.title).toBe('阅读'));
+    guard.restore();
+    expect(doc.title).toBe('第 3 章');
+  });
+
+  it('补刀限频：站点自己的守卫与我们来回抢时，一秒内补刀次数有上限，退避后再压回一次', async () => {
+    let now = 0;
+    const timers: (() => void)[] = [];
+    const guard = new TitleFaviconGuard(doc, {
+      maxForcesPerSecond: 5,
+      backoffMs: 2000,
+      now: () => now,
+      setTimer: (fn) => {
+        timers.push(fn);
+        return () => undefined;
+      },
+    });
+    guard.apply('阅读', null);
+    const setter = vi.spyOn(doc, 'title', 'set');
+    // 站点的守卫：每次被改都立即改回自己的标题
+    const siteGuard = new MutationObserver(() => {
+      if (doc.title !== '站点') doc.title = '站点';
+    });
+    siteGuard.observe(doc.head, { childList: true, subtree: true, characterData: true });
+    doc.title = '站点';
+    await new Promise((r) => setTimeout(r, 20));
+    siteGuard.disconnect();
+    const ours = setter.mock.calls.filter(([v]) => v === '阅读').length;
+    expect(ours).toBeLessThanOrEqual(5);
+    expect(timers.length).toBe(1); // 退避后只安排一次补刀
+
+    now += 2000;
+    timers[0]!();
+    expect(doc.title).toBe('阅读');
+    setter.mockRestore();
+    guard.restore();
+    expect(doc.title).toBe('站点');
+  });
+
+  it('运行时已失效（扩展被更新 / 重载）：不再补刀，标题保持站点写入的值', async () => {
+    let alive = true;
+    const guard = new TitleFaviconGuard(doc, { isAlive: () => alive });
+    guard.apply('阅读', null);
+    alive = false;
+    doc.title = '第 5 章';
+    await new Promise((r) => setTimeout(r, 0));
+    expect(doc.title).toBe('第 5 章');
+    guard.restore();
+    expect(doc.title).toBe('第 5 章');
+  });
+
   it('自定义图标生效', () => {
     const guard = new TitleFaviconGuard(doc);
     guard.apply('t', 'data:image/png;base64,CUSTOM');

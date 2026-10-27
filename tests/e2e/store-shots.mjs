@@ -45,20 +45,20 @@ try {
   await p1.setViewport({ width: 1280, height: 800 });
   await p1.goto(`${ORIGIN}/`, { waitUntil: 'load' });
   await sendToBackground(control, { t: 'enableSite', origin: ORIGIN, tabId: await tabIdOf(control, `${ORIGIN}/*`) });
-  await p1.waitForSelector('#pagemask-floating-host');
+  await p1.waitForSelector('pagemask-toggle');
   await waitFor(p1, '页头被移除', () => getComputedStyle(document.getElementById('site-header')).display === 'none');
   await shot(p1, 'screenshot-1-clean-page');
 
   // 2. 向导预览（点选推荐卡 → 预览幽灵标记）
   await sendToTab(control, await tabIdOf(control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
-  await waitForShadow(p1, '#pagemask-wizard-host', '[data-testid="pm-wizard-toolbar"]');
+  await waitForShadow(p1, 'pagemask-wizard', '[data-testid="pm-wizard-toolbar"]');
   const pt = await p1.evaluate(() => {
     const rc = document.querySelector('.rec-card').getBoundingClientRect();
     return { x: rc.x + rc.width / 2, y: rc.y + rc.height / 2 };
   });
   await p1.mouse.click(pt.x, pt.y);
-  await clickInShadow(p1, '#pagemask-wizard-host', '[data-testid="pm-wiz-preview"]');
-  await waitForShadow(p1, '#pagemask-wizard-host', '[data-testid="pm-marker-1"]');
+  await clickInShadow(p1, 'pagemask-wizard', '[data-testid="pm-wiz-preview"]');
+  await waitForShadow(p1, 'pagemask-wizard', '[data-testid="pm-marker-1"]');
   await shot(p1, 'screenshot-2-wizard');
   await p1.close();
 

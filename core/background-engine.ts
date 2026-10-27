@@ -3,7 +3,8 @@
  * 职责：
  * - 站点生命周期对账（core/reconcile.ts）：让站点配置、站点授权、动态注册三者一致
  * - 启用站点、一键清空、新站点向导取消
- * - 隐藏样式（方案A/B）按文档的 insertCSS/removeCSS
+ * - 隐藏样式（方案A/B）与宿主保护样式（core/host-shield.ts）按文档的 insertCSS/removeCSS
+ * - 扩展更新 / 重载后向已配置站点的已打开标签页重新注入内容脚本（#22，新实例接管失联的旧实例）
  * - 安装后拉起首次引导
  * 方案 C（遮罩）由内容脚本的覆盖层承担；标题/图标由内容脚本直接改写。
  *
@@ -26,7 +27,8 @@
 import type { Browser, WxtBrowser } from 'wxt/browser';
 import { PROFILE_PREFIX, createPageMaskStorage } from './storage';
 import { buildDisguiseCss } from './css-builder';
-import { originPattern, registrationPlan } from './registration';
+import { CONTENT_SCRIPT_FILE, originPattern, registrationPlan } from './registration';
+import { HOST_SHIELD_CSS } from './host-shield';
 import { planReconcile, type RegisteredScript } from './reconcile';
 import type {
   Ack,
@@ -168,6 +170,34 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
   }
 
+  // ---------- 扩展更新后重新注入（#22） ----------
+
+  /**
+   * 向已配置且已授权站点的已打开标签页注入内容脚本（Dark Reader 同类做法：更新后不必刷新页面）。
+   * 只注入顶层框架，与动态注册一致；某个标签页失败（休眠、正在跳走）不影响其余。
+   */
+  async function reinjectOpenTabs(): Promise<void> {
+    const profiles = await storage.listProfiles();
+    const origins = new Set<string>();
+    for (const p of profiles) if (await isGranted(p.origin)) origins.add(p.origin);
+    if (origins.size === 0) return;
+    let tabs: Browser.tabs.Tab[] = [];
+    try {
+      tabs = await browser.tabs.query({});
+    } catch {
+      return;
+    }
+    const targets = tabs.filter((t) => t.id !== undefined && !t.discarded && origins.has(originOf(t.url) ?? ''));
+    await Promise.allSettled(
+      targets.map((t) =>
+        browser.scripting.executeScript({
+          target: { tabId: t.id! },
+          files: [CONTENT_SCRIPT_FILE] as unknown as ScriptPublicPath[],
+        }),
+      ),
+    );
+  }
+
   // ---------- 一键清空 ----------
 
   /** 通知某站点所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），带超时 */
@@ -266,6 +296,15 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return profile && profile.switchState === 'disguised' ? buildDisguiseCss(profile.hideRules, url) : null;
   }
 
+  /**
+   * 判断生效范围用的地址：内容脚本报上来的本页地址（SPA 路由刚变化时 sender.url 可能还是旧的），
+   * 但只在与 sender.url 同源时采用——来源一律以浏览器给的 sender.url 为准
+   */
+  function scopeUrl(sender: Sender, claimed: unknown): string | undefined {
+    if (typeof claimed === 'string' && sender.url && originOf(claimed) === originOf(sender.url)) return claimed;
+    return sender.url;
+  }
+
   async function handleCss(msg: BgRequest, sender: Sender): Promise<CssAck> {
     const prev = 'prev' in msg && typeof msg.prev === 'string' ? msg.prev : null;
     const tabId = sender.tab?.id;
@@ -273,10 +312,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const target = documentTarget(sender, tabId);
     switch (msg.t) {
       case 'applyDisguise': {
-        if (!sender.url) return { ok: false, error: 'no sender url', css: prev };
+        const url = scopeUrl(sender, msg.url);
+        if (!url) return { ok: false, error: 'no sender url', css: prev };
         let next: string | null;
         try {
-          next = await disguiseCssFor(sender.url);
+          next = await disguiseCssFor(url);
         } catch (e) {
           return { ok: false, error: String(e), css: prev };
         }
@@ -286,6 +326,28 @@ export function createBackground({ browser }: BackgroundDeps): void {
         return swapCss(target, prev, null);
       case 'draftCss':
         return swapCss(target, prev, typeof msg.next === 'string' && msg.next ? msg.next : null);
+      case 'hostShield':
+        // 文本固定由后台决定（core/host-shield.ts）；交接来的旧版本文本在这里换成当前版本
+        return swapCss(target, prev, msg.on === true ? HOST_SHIELD_CSS : null);
+      case 'releaseOrphanCss': {
+        // 失联旧实例留下的样式各撤一份（文本按当前版本与配置重算；对不上时 removeCSS 是空操作）
+        const url = scopeUrl(sender, msg.url);
+        let formal: string | null = null;
+        try {
+          formal = url ? await disguiseCssFor(url) : null;
+        } catch {
+          // 地址异常：只撤保护样式
+        }
+        for (const css of [HOST_SHIELD_CSS, formal]) {
+          if (!css) continue;
+          try {
+            await browser.scripting.removeCSS({ target, css, origin: 'USER' });
+          } catch {
+            // 文档已不在 / 没有这份样式
+          }
+        }
+        return { ok: true, css: null };
+      }
       default:
         return { ok: false, error: 'unknown message', css: prev };
     }
@@ -312,6 +374,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
       case 'applyDisguise':
       case 'restoreOriginal':
       case 'draftCss':
+      case 'hostShield':
+      case 'releaseOrphanCss':
         return handleCss(msg, sender);
       default:
         return null;
@@ -328,7 +392,15 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 生命周期事件 → 对账 ----------
 
   browser.runtime.onInstalled.addListener((details) => {
-    reconcileInBackground(`onInstalled:${details.reason}`);
+    if (details.reason === 'update') {
+      // 扩展更新 / 重载：已打开页面里的旧内容脚本失联了（界面还在、标题守卫还在压标题，却连不上扩展）。
+      // 对账补注册后，向这些标签页注入新脚本：新实例接管（旧实例收尾、交出样式记录，见 entrypoints/content.ts）
+      reconcile()
+        .then(reinjectOpenTabs)
+        .catch((e: unknown) => console.warn('[PageMask] 更新后对账 / 重新注入失败', e));
+    } else {
+      reconcileInBackground(`onInstalled:${details.reason}`);
+    }
     if (details.reason === 'install') {
       browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
     }

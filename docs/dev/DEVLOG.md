@@ -2,6 +2,18 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.2.0 · #22 内容脚本生命周期与界面隔离
+
+- **WXT ctx**：`main(ctx)`；监听、定时器、空闲回调全部 `ctx.addEventListener` / `ctx.setTimeout` / `ctx.requestIdleCallback`，storage / runtime 监听在 `ctx.onInvalidated` 里移除；失效即 teardown：冻结样式记录（`styles.handover()`）、停体检、关向导与编辑面板、撤悬浮按钮与遮罩、标题守卫断开并还原。
+- **实测：扩展重载后旧脚本留下的用户样式表仍然生效**，新扩展实例按原文 `removeCSS` 能删掉；**同一文本注入几次就要删几次**。另外，重新注入的新脚本落在**另一个**隔离环境（`window.__pagemask` 看不到旧实例，#21 时 e2e.md 第 11 条的说法不成立），WXT 的「新脚本启动」CustomEvent 靠 `detail` 识别，`detail` 跨环境读不到，旧实例收不到通知。由此定下两条接管路径（ADR-0006）：同环境走 `handover()` 交接记录；跨环境广播 `pagemask:takeover` 让旧实例自检收尾，样式靠保护样式里的标记属性 `--pagemask-shield` 探测、先插后删（`releaseOrphanCss`）。
+- **更新后重新注入**：`onInstalled(update)` 对账后向已配置且已授权站点的已打开标签页 `executeScript`（参考 Dark Reader），不注入休眠标签页、同主机其他端口。没被重新注入的旧页面：标题守卫要补刀时、页面重新可见时、点悬浮按钮时读一次 `ctx.isValid`（WXT 在 `runtime.id` 消失时就地触发失效）。
+- **SPA 路由**：删掉每秒轮询，改 `ctx.addEventListener(window, 'wxt:locationchange')`。WXT 0.21 用 Navigation API 的 `navigate` 事件，pushState / replaceState / 后退都会触发；该事件在 URL 真正更新前派发，所以 `applyDisguise` 带上 `location.href`（后台只在与 sender.url 同源时采用），不依赖 sender.url 是否已更新。
+- **宿主**：自定义元素 `pagemask-toggle / -editor / -wizard / -mask`（`core/host-shield.ts`），`ui/page-host.ts` 统一创建：open shadow、共享可构造样式表、`<div class="pm-root" lang="zh-CN">` 根容器、shadow root 上拦 keydown/keyup/keypress 冒泡。宿主保护样式由后台注入，文本固定（内容脚本只能开 / 关）。因为保护样式把宿主 `all:initial !important`，shadow 内 `:host` 上的作者层声明全部失效，界面基准字体 / 颜色 / color-scheme 改设在 `.pm-root`。遮罩覆盖层也进了 shadow（`pointer-events:none` 沿用原行为，可点穿归 #23）。
+- **悬浮按钮响应式**：根组件是渲染函数读 `reactive` 状态，存储变化只改状态。整页重应用的判据 `core/apply-key.ts`：不含体检字段、按钮坐标、修改时间；原样态不含地址。
+- **体检**（`runHealthCheck`）：宽限 3 秒后等空闲回调体检一次，有没找到的再隔 5 秒空闲时查第二次，两次都没找到才判 stale；第二次时已不在生效范围内的规则不下结论；路由变化、切原样、进向导、收尾都会作废进行中的体检；`countPageHits` 排除插件宿主。没有改数据模型（同一页面内两个时间点确认）。
+- **标题守卫**：只观察 `<head>` 的 subtree + `<html>` 的直接子节点（发现 head 出现 / 被替换）；补刀每秒最多 10 次，超过退避 2 秒再补一次；先记录站点写入的值、再判断运行时是否有效，失效收尾时还原到站点最新的标题。
+- **构建坑**：`entrypoints/content.ts` 顶层如果还引用某个导入（哪怕只是类型和值写在同一条 `import` 里），WXT 读入口选项时会把它连带加载，`?inline` 样式在那里加载失败（`Cannot read properties of undefined (reading 'get')`）。类型单独 `import type`。
+
 ## 0.2.0 · #21 站点生命周期对账
 
 - **对账纯函数** `core/reconcile.ts`：输入 配置来源 + 其中已授权的来源 + 已注册脚本，输出 注册 / 更新 / 注销 / 待授权。授权按 `permissions.contains` 逐站判断（而不是解析 `getAll` 的匹配模式），用户在扩展详情里选「所有网站」时也算已授权。只处理 `pagemask:` 前缀的注册。写法与当前计划不同（升级后 runAt / 文件路径变了）时更新而不是重复注册。

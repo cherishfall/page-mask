@@ -7,12 +7,24 @@ export const FIXTURE_TITLE = 'Acme 书房 · 示例阅读站';
 const FAVICON =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
+/**
+ * 「敌意」页面样式（/hostile 开头的路径附带，REVIEW N40）：页面作者层 !important 规则会命中直接挂在
+ * <html> 下的元素、空元素、全部元素，以及跟在 <body> 后面的一切（插件界面宿主正挂在那里）。
+ * 插件界面应当照常可见、外观与普通页面一致。
+ */
+export const HOSTILE_CSS = `html > div{display:none!important} div:empty{display:none!important}
+* { line-height:3 !important; direction:rtl !important; color:red !important }
+body ~ * { display:none !important; opacity:0 !important; visibility:hidden !important }`;
+
 export function fixtureHtml(pathname = '/') {
   const isArticle = pathname.startsWith('/article/');
+  const hostile = pathname.startsWith('/hostile');
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>${FIXTURE_TITLE}</title>
 <link rel="icon" href="${FAVICON}">
-<style>body{font-family:system-ui,sans-serif;margin:0}header,footer,aside,main{padding:12px 16px}header{background:#eef}aside{background:#ffe}</style>
+<style>body{font-family:system-ui,sans-serif;margin:0}header,footer,aside,main{padding:12px 16px}header{background:#eef}aside{background:#ffe}</style>${
+    hostile ? `\n<style>${HOSTILE_CSS}</style>` : ''
+  }
 </head><body>
 <header id="site-header" data-testid="site-header"><nav class="top-nav">首页 书架 发现 我的</nav></header>
 <main><h1 id="page-title">${isArticle ? '示例章节：第一章' : '今日推荐'}</h1>

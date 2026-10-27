@@ -28,6 +28,7 @@ import {
   stopServiceWorker,
   tabIdOf,
   waitForServiceWorkerIdle,
+  evalInContentWorld,
 } from './lib/extension.mjs';
 import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
 import { FIXTURE_TITLE, fixtureHandler } from './fixtures.mjs';
@@ -37,10 +38,13 @@ import path from 'node:path';
 
 // 不用 0.1.0 的旧默认值「新建标签页」：#35 起它在没有版本标记时会被当作"没设置"迁移掉
 const DISGUISED_TITLE = '工作笔记';
-const TOGGLE_HOST = '#pagemask-floating-host';
+// 页内界面宿主是自定义元素（core/host-shield.ts HOST_TAGS）
+const TOGGLE_HOST = 'pagemask-toggle';
 const TOGGLE_BTN = '[title^="PageMask"]';
-const WIZARD_HOST = '#pagemask-wizard-host';
-const EDITOR_HOST = '#pagemask-editor-host';
+const WIZARD_HOST = 'pagemask-wizard';
+const EDITOR_HOST = 'pagemask-editor';
+const MASK_HOST = 'pagemask-mask';
+const ALL_HOSTS = [TOGGLE_HOST, WIZARD_HOST, EDITOR_HOST, MASK_HOST].join(', ');
 const tid = (id) => `[data-testid="${id}"]`;
 
 const r = createReporter();
@@ -269,14 +273,18 @@ async function main() {
     check(true, '编辑面板打开');
     const ruleId = stored.hideRules[0].id;
     await clickInShadow(page, EDITOR_HOST, tid(`pm-ed-strategy-${ruleId}-mask`));
-    await waitFor(page, '遮罩覆盖层出现', () => (document.getElementById('pagemask-mask-host')?.children.length ?? 0) >= 1);
+    await waitFor(
+      page,
+      '遮罩覆盖层出现',
+      (h) => (document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-pm-mask]').length ?? 0) >= 1,
+      [MASK_HOST],
+    );
     await waitStyle(page, '方案C不移除元素', '.rec-card', 'display', 'none', { not: true });
-    const maskState = await page.evaluate(() => {
-      const maskHost = document.getElementById('pagemask-mask-host');
+    const maskState = await page.evaluate((h) => {
       const first = document.querySelector('.rec-card').getBoundingClientRect();
-      const box = maskHost.children[0].getBoundingClientRect();
+      const box = document.querySelector(h).shadowRoot.querySelector('[data-pm-mask]').getBoundingClientRect();
       return box.top <= first.top + 2 && box.bottom >= first.bottom - 2 && box.width > 10;
-    });
+    }, MASK_HOST);
     check(maskState, '方案C：遮罩出现且覆盖元素，元素本身不再被移除');
     check((await getProfile(ext.control, ORIGIN)).hideRules[0].strategy === 'mask', '方案C 写入存储');
     await shot(page, 'mask');
@@ -298,6 +306,107 @@ async function main() {
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
     await waitStyle(page, '复位到清爽态', '.rec-card', 'display', 'none', { not: true });
 
+    // ===================== 页面样式隔离（#22） =====================
+    console.log('\n--- 敌意页面样式：插件界面可见、外观不变 ---');
+    await patchProfile(ext.control, ORIGIN, { hideRules: seedProfile(ORIGIN).hideRules, switchState: 'disguised' });
+    await page.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    const normalUi = await snapshotUi(page, tabId);
+    const hostile = await browser.newPage();
+    await hostile.goto(`${ORIGIN}/hostile.html`, { waitUntil: 'load' });
+    await hostile.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    const hostileTab = await tabIdOf(ext.control, `${ORIGIN}/hostile.html`);
+    const hostileUi = await snapshotUi(hostile, hostileTab);
+    check(
+      (await hostile.evaluate(() => getComputedStyle(document.getElementById('page-title')).direction)) === 'rtl',
+      '对照：敌意样式确实作用在页面上（正文 direction:rtl）',
+    );
+    check(
+      hostileUi.toggleVisible && hostileUi.toggleHit,
+      `敌意页面：悬浮按钮可见且点得到（宿主未被 html>*、body~* 规则藏掉；可见=${hostileUi.toggleVisible} 命中=${hostileUi.toggleHit}）`,
+    );
+    check(hostileUi.editorVisible, '敌意页面：编辑面板可见');
+    check(hostileUi.lang === 'zh-CN', `shadow 内根容器 lang=zh-CN（${hostileUi.lang}）`);
+    for (const part of ['toggle', 'editorClose', 'editorTitle']) {
+      check(
+        JSON.stringify(hostileUi[part]) === JSON.stringify(normalUi[part]),
+        `敌意页面：${part} 的 line-height / direction / color / 字体与普通页面一致（${JSON.stringify(hostileUi[part])}）`,
+      );
+    }
+    check(normalUi.editorClose.direction === 'ltr' && normalUi.editorClose.color !== 'rgb(255, 0, 0)', '界面文字 ltr、不是页面的红色');
+
+    console.log('\n--- 输入框按键不冒泡到页面（不触发站点快捷键） ---');
+    await sendToTab(ext.control, hostileTab, { t: 'openEditor' });
+    await waitForShadow(hostile, EDITOR_HOST, '[data-testid^="pm-ed-selector-"]');
+    await hostile.evaluate((h) => {
+      window.__pmKeys = [];
+      document.addEventListener('keydown', (e) => window.__pmKeys.push(e.key));
+      const ta = document.querySelector(h).shadowRoot.querySelector('[data-testid^="pm-ed-selector-"]');
+      ta.closest('details').open = true;
+      ta.value = '';
+      ta.focus();
+    }, EDITOR_HOST);
+    await hostile.keyboard.type('jk ');
+    const typed = await hostile.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid^="pm-ed-selector-"]').value,
+      EDITOR_HOST,
+    );
+    check(typed === 'jk ', `输入框照常收到按键（${JSON.stringify(typed)}）`);
+    check((await hostile.evaluate(() => window.__pmKeys.length)) === 0, '页面 document 上的 keydown 监听一次都没触发');
+    await hostile.evaluate(() => document.activeElement?.blur?.());
+    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.blur(), EDITOR_HOST);
+    await hostile.keyboard.press('j');
+    check((await hostile.evaluate(() => window.__pmKeys)).includes('j'), '对照：焦点不在插件界面时页面照常收到按键');
+    await clickInShadow(hostile, EDITOR_HOST, tid('pm-editor-close'));
+
+    console.log('\n--- 敌意页面上的向导工具条与 Esc ---');
+    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'addElement' });
+    await waitForShadow(hostile, WIZARD_HOST, tid('pm-wizard-toolbar'));
+    const wiz = await hostile.evaluate((h) => {
+      const tb = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-toolbar"]');
+      const r = tb.getBoundingClientRect();
+      return { visible: tb.checkVisibility({ opacityProperty: true, visibilityProperty: true }), w: r.width, dir: getComputedStyle(tb).direction };
+    }, WIZARD_HOST);
+    check(wiz.visible && wiz.w > 100 && wiz.dir === 'ltr', `敌意页面：向导工具条可见、方向正常（${JSON.stringify(wiz)}）`);
+    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-cancel"]').focus(), WIZARD_HOST);
+    await hostile.keyboard.press('Escape');
+    await waitFor(hostile, '焦点在向导内按 Esc 退出向导', (h) => !document.querySelector(h), [WIZARD_HOST], { timeout: 3000 });
+    check(true, '按键隔离不影响向导自己的 Esc');
+    await hostile.close();
+
+    // ===================== SPA 路由变化（#22） =====================
+    console.log('\n--- SPA 路由切换：生效范围立即重评估 ---');
+    await page.bringToFront();
+    await page.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await waitStyle(page, '首页页头被移除', '#site-header', 'display', 'none');
+    check(isShown(await styleOf(page, '#side-promo')), '首页：仅章节页生效的 #side-promo 可见');
+    check(
+      (await evalInContentWorld(page, ext.extOrigin, "typeof navigation?.addEventListener === 'function'")) === true,
+      '内容脚本隔离环境里有 Navigation API（WXT 路由事件不退回 1 秒轮询）',
+    );
+    for (let i = 1; i <= 3; i++) {
+      await page.evaluate((n) => history.pushState({}, '', `/article/${n}`), i);
+      await waitStyle(page, `pushState 到章节页 ${i} 后 #side-promo 立即被藏`, '#side-promo', 'display', 'none', { timeout: 600 });
+      await page.evaluate(() => history.pushState({}, '', '/index.html'));
+      await waitStyle(page, `pushState 回首页后 #side-promo 立即可见`, '#side-promo', 'display', 'none', { not: true, timeout: 600 });
+    }
+    check(true, 'pushState 往返 3 次，每次 600ms 内按新地址重评估（不等轮询）');
+    await page.evaluate(() => history.back());
+    await waitStyle(page, '浏览器后退（popstate）到章节页同样重评估', '#side-promo', 'display', 'none', { timeout: 600 });
+    check(true, '后退（同文档历史）后同样立即重评估');
+
+    console.log('\n--- 清爽期间翻页后切回原样：标题为最新页标题 ---');
+    await page.evaluate(() => {
+      history.pushState({}, '', '/article/9');
+      document.title = '示例章节：第九章';
+    });
+    await waitFor(page, '翻页后标题仍被压成伪装标题', (t) => document.title === t, [DISGUISED_TITLE]);
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await waitFor(page, '切回原样后标题为最新页标题', () => document.title === '示例章节：第九章', [], { timeout: 3000 });
+    check(true, '切回原样：标题是翻页后站点写入的「示例章节：第九章」');
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await page.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+
     // ===================== 管理页 / 引导页 =====================
     console.log('\n--- 管理页与引导页 ---');
     const mPage = await browser.newPage();
@@ -309,7 +418,7 @@ async function main() {
       hasExport: !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
     }));
     check(mgmt.host.includes('127.0.0.1'), `管理页列出站点（${mgmt.host}）`);
-    check(mgmt.state.includes('规则'), `管理页显示规则数与状态（${mgmt.state.trim()}）`);
+    check(mgmt.state.includes('已收起'), `管理页显示收起项数与状态（${mgmt.state.trim()}）`);
     check(mgmt.hasExport, '管理页有导出/导入');
     await shot(mPage, 'management');
     await mPage.close();
@@ -317,7 +426,7 @@ async function main() {
     const oPage = await browser.newPage();
     await oPage.goto(`${ext.extOrigin}/onboarding.html`, { waitUntil: 'load' });
     await oPage.waitForSelector('.step', { timeout: 5000 });
-    check((await oPage.$$('.step')).length === 3, '引导页 3 步图文');
+    check((await oPage.$$('.step')).length === 4, '引导页 4 步（含固定到工具栏）');
     const next = await oPage.waitForSelector('xpath/.//button[normalize-space()="下一步"]', { timeout: 3000 });
     await next.click();
     await waitFor(oPage, '引导页切到第 2 步', () => document.querySelector('.step.active .num')?.textContent === '2');
@@ -479,13 +588,65 @@ async function main() {
     // ===================== 扩展重载（#21） =====================
     console.log('\n--- runtime.reload() 后已配置站点仍然生效 ---');
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    // 已打开的清爽态页面：给旧实例的按钮打上标记，重载后检查它是否被撤下
+    await page.bringToFront();
+    await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    await page.evaluate((h) => (document.querySelector(h).dataset.e2eOld = '1'), TOGGLE_HOST);
     await reloadExtension(ext);
     await expectDisguisedInNewPage(ORIGIN, '重载后新开页面仍处于清爽态（onInstalled 对账补注册）');
+
+    // 约定：扩展更新 / 重载后，后台向已打开页面重新注入新脚本；旧实例收尾（撤下按钮、还原标题、
+    // 交出样式记录），新实例接管。断言：旧按钮不在、只有一个按钮且属于活着的新实例；页面改标题后
+    // 由新实例压回（没有两个守卫来回改）；用新按钮切回原样时标题为页面最新写入的值、旧实例注入的隐藏样式被撤掉
+    console.log('\n--- 扩展重载后已打开页面：旧实例收尾、新实例接管 ---');
+    await page.bringToFront();
+    await waitFor(page, '旧实例的悬浮按钮被撤下', (h) => !document.querySelector(`${h}[data-e2e-old]`), [TOGGLE_HOST]);
+    await waitFor(page, '新实例挂上悬浮按钮', (h) => document.querySelectorAll(h).length === 1, [TOGGLE_HOST]);
+    check(true, '旧页面里没有僵尸按钮：旧按钮已撤下，只剩新实例的一个');
+    check(
+      (await evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive?.() === true')) === true,
+      'window.__pagemask 登记的是活着的新实例',
+    );
+    await waitFor(page, '新实例保持清爽态标题', (t) => document.title === t, [DISGUISED_TITLE]);
+    const fight = await page.evaluate(async () => {
+      let mutations = 0;
+      const mo = new MutationObserver((list) => (mutations += list.length));
+      mo.observe(document.head, { childList: true, subtree: true, characterData: true });
+      document.title = '重载后的新章节';
+      await new Promise((res) => setTimeout(res, 1000));
+      mo.disconnect();
+      return { mutations, title: document.title };
+    });
+    check(
+      fight.title === DISGUISED_TITLE && fight.mutations < 10,
+      `页面改标题后只被新实例压回一次，没有互相改（1 秒内 head 变化 ${fight.mutations} 次）`,
+    );
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await waitFor(page, '用新按钮切回原样：标题为页面最新写入的值', () => document.title === '重载后的新章节', [], { timeout: 3000 });
+    await waitStyle(page, '旧实例注入的隐藏样式被新实例撤掉', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    check(true, '新实例接管：切回原样后标题为页面最新写入值，旧实例留下的隐藏样式也被撤掉');
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
 
     // ===================== 撤销授权（工具自检 + 零影响） =====================
     console.log('\n--- 撤销授权 ---');
     // 确保动态注册存在（重载可能把它清掉），并用一个新页面做正向对照
     await sendToBackground(ext.control, { t: 'enableSite', origin: ORIGIN, tabId: await tabIdOf(ext.control, `${ORIGIN}/*`) });
+    // 上面的 enableSite 对已有运行时的页面又 executeScript 了一次（同一隔离环境的重复注入）：
+    // 旧实例交出样式记录、新实例接管。只剩一个按钮；切回原样时隐藏样式被撤干净（同文本注入几次要删几次，
+    // 没交接的话会多出一份删不掉）
+    console.log('\n--- 同一页面被重复注入：新实例接管、样式记录交接 ---');
+    await page.bringToFront();
+    await waitStyle(page, '重复注入前后保持清爽态', '#site-header', 'display', 'none');
+    await waitFor(page, '重复注入后只有一个悬浮按钮', (h) => document.querySelectorAll(h).length === 1, [TOGGLE_HOST]);
+    check(
+      (await evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive?.() === true')) === true,
+      '重复注入后 window.__pagemask 指向活着的新实例，界面未被误撤',
+    );
+    await clickInShadow(page, TOGGLE_HOST, TOGGLE_BTN);
+    await waitStyle(page, '切回原样后页头可见（没有多出删不掉的样式）', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    check(true, '重复注入后切回原样：隐藏样式被撤干净');
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await waitStyle(page, '切回清爽态', '#site-header', 'display', 'none');
     const before = await browser.newPage();
     await before.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
     await before.waitForSelector(TOGGLE_HOST, { timeout: 5000 });
@@ -555,9 +716,18 @@ async function main() {
     );
     check(icons.length === 1 && icons[0].startsWith('data:image/png;base64,iVBOR'), `清空后标签页图标还原为网站自己的（${icons.length} 个）`);
     check(
-      !(await open1.evaluate(() => !!document.querySelector('[id^="pagemask-"]'))),
+      !(await open1.evaluate((sel) => !!document.querySelector(sel), ALL_HOSTS)),
       '清空后页面上没有任何 PageMask 界面',
     );
+    // 宿主保护样式也已撤掉：页面自己造一个同名元素，不再被设成 fixed
+    const shieldLeft = await open1.evaluate((tag) => {
+      const probe = document.createElement(tag);
+      document.body.append(probe);
+      const pos = getComputedStyle(probe).position;
+      probe.remove();
+      return pos;
+    }, MASK_HOST);
+    check(shieldLeft !== 'fixed', `清空后宿主保护样式已撤掉（同名探针 position=${shieldLeft}）`);
     check(true, '一键清空后已打开页面立即恢复原样（标题、图标、样式、悬浮按钮）');
     check((await getProfile(ext.control, ORIGIN)) === null, '站点配置已删除');
     check(
@@ -617,6 +787,61 @@ async function main() {
       } finally {
         await p.close();
       }
+    }
+
+    /**
+     * 打开编辑面板，采集悬浮按钮与编辑面板里元素的计算样式、可见性（含祖先宿主的 display/opacity/visibility）
+     * 与命中测试，然后关掉面板。用于对比普通页面与敌意页面。
+     */
+    async function snapshotUi(p, tab) {
+      // 先采悬浮按钮（编辑面板是右侧抽屉，打开后会盖住右下角的按钮），再打开编辑面板采面板
+      const collect = (part) =>
+        p.evaluate(
+          (which, th, tb, eh) => {
+            const pick = (el) => {
+              if (!el) return null;
+              const cs = getComputedStyle(el);
+              return {
+                lineHeight: cs.lineHeight,
+                direction: cs.direction,
+                color: cs.color,
+                fontFamily: cs.fontFamily,
+                fontSize: cs.fontSize,
+                letterSpacing: cs.letterSpacing,
+              };
+            };
+            const visible = (el) => !!el && el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
+            if (which === 'toggle') {
+              const toggleHost = document.querySelector(th);
+              const btn = toggleHost?.shadowRoot?.querySelector(tb);
+              const r = btn?.getBoundingClientRect();
+              return {
+                toggleVisible: visible(btn) && r.width > 0 && r.height > 0,
+                toggleHit: !!r && document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === toggleHost,
+                lang: toggleHost?.shadowRoot?.querySelector('.pm-root')?.lang ?? null,
+                toggle: pick(btn),
+              };
+            }
+            const editorRoot = document.querySelector(eh)?.shadowRoot;
+            const panel = editorRoot?.querySelector('[data-testid="pm-editor-panel"]');
+            return {
+              editorVisible: visible(panel),
+              editorClose: pick(editorRoot?.querySelector('[data-testid="pm-editor-close"]')),
+              editorTitle: pick(panel?.querySelector('span')),
+            };
+          },
+          part,
+          TOGGLE_HOST,
+          TOGGLE_BTN,
+          EDITOR_HOST,
+        );
+      const toggle = await collect('toggle');
+      await sendToTab(ext.control, tab, { t: 'openEditor' });
+      await waitForShadow(p, EDITOR_HOST, tid('pm-editor-panel'));
+      const editor = await collect('editor');
+      await clickInShadow(p, EDITOR_HOST, tid('pm-editor-close'));
+      await waitFor(p, '编辑面板关闭', (h) => !document.querySelector(h), [EDITOR_HOST]);
+      return { ...toggle, ...editor };
     }
 
     async function openManagement() {

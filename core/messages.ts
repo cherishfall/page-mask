@@ -65,6 +65,32 @@ export interface ApplyDisguiseRequest {
   t: 'applyDisguise';
   /** 本文档当前已注入的正式样式文本（null = 没有） */
   prev: string | null;
+  /**
+   * 本页当前地址（SPA 路由变化后 sender.url 可能还没更新）。后台只在与 sender.url 同源时采用，
+   * 否则仍按 sender.url 计算——内容脚本不能借此拿到别的站点的样式
+   */
+  url?: string;
+}
+
+/**
+ * 内容脚本 → 后台：开 / 关本文档的宿主保护样式（core/host-shield.ts，固定文本由后台决定）。
+ * 页内界面存在期间一直开着，与伪装态 / 原样态无关
+ */
+export interface HostShieldRequest {
+  t: 'hostShield';
+  on: boolean;
+  prev: string | null;
+}
+
+/**
+ * 内容脚本 → 后台：本文档里有失联旧实例（扩展更新 / 重载前的）留下的用户样式表，新实例已经注入了
+ * 自己的一份，请把旧的各撤一份：宿主保护样式、按当前配置与地址算出的正式样式。
+ * 同一文本注入几次就要删几次才会消失（实测），所以新实例先插、再请后台删旧的，中间不闪。
+ * 旧实例的样式文本拿不到（不在同一隔离环境），只能按当前配置重算；对不上的删除是空操作。
+ */
+export interface ReleaseOrphanCssRequest {
+  t: 'releaseOrphanCss';
+  url?: string;
 }
 
 /** 内容脚本 → 后台：移除本文档的正式隐藏样式（例如进入向导前临时还原） */
@@ -113,5 +139,7 @@ export type BgRequest =
   | CancelNewSiteRequest
   | ApplyDisguiseRequest
   | RestoreOriginalRequest
-  | DraftCssRequest;
+  | DraftCssRequest
+  | HostShieldRequest
+  | ReleaseOrphanCssRequest;
 export type ContentMsg = OpenWizardMsg | OpenEditorMsg | SiteResetMsg;

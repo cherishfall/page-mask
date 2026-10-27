@@ -54,7 +54,7 @@ async function main() {
     const page = await browser.newPage();
     await page.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
     await sendToBackground(control, { t: 'enableSite', origin: ORIGIN, tabId: await tabIdOf(control, `${ORIGIN}/*`) });
-    await page.waitForSelector('#pagemask-floating-host', { timeout: 8000 });
+    await page.waitForSelector('pagemask-toggle', { timeout: 8000 });
     const popup = await browser.newPage();
     await popup.goto(`${extOrigin}/popup.html`, { waitUntil: 'networkidle0' });
 
@@ -64,7 +64,7 @@ async function main() {
       await popup.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
 
       const shadow = await page.evaluate(() => {
-        const host = document.getElementById('pagemask-floating-host');
+        const host = document.querySelector('pagemask-toggle');
         const root = host.shadowRoot;
         const mount = root.firstElementChild;
         const cs = getComputedStyle(mount);

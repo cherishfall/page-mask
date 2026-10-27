@@ -293,6 +293,34 @@ export async function sendToTab(control, tabId, msg) {
   return control.evaluate((id, m) => chrome.tabs.sendMessage(id, m), tabId, msg);
 }
 
+/**
+ * 在页面里「本扩展内容脚本的隔离环境」中求值（CDP Runtime.evaluate + 隔离环境的 contextId），
+ * 用来检查网页脚本看不到的东西：window.__pagemask 登记、隔离环境里的 Navigation API 等。
+ * 扩展重载后隔离环境沿用同一个（实测 contextId 不变），旧实例与新实例共享 window。
+ * expression 是字符串表达式，结果须可 JSON 序列化；找不到隔离环境（内容脚本没注入）时抛错。
+ * 用法：await evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive()')
+ */
+export async function evalInContentWorld(page, extOrigin, expression) {
+  const session = await page.createCDPSession();
+  try {
+    const contexts = [];
+    session.on('Runtime.executionContextCreated', (e) => contexts.push(e.context));
+    await session.send('Runtime.enable'); // 启用时把已有的执行环境逐个报上来
+    const ctx = contexts.find((c) => c.origin === extOrigin && c.auxData?.type === 'isolated');
+    if (!ctx) throw new CheckError('页面里没有本扩展内容脚本的隔离环境');
+    const { result, exceptionDetails } = await session.send('Runtime.evaluate', {
+      expression,
+      contextId: ctx.id,
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    if (exceptionDetails) throw new CheckError(`隔离环境求值出错：${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
+    return result.value;
+  } finally {
+    await session.detach().catch(() => undefined);
+  }
+}
+
 /** 查找 URL 匹配的标签页 id（url 为匹配模式，如 `${origin}/*`） */
 export async function tabIdOf(control, urlPattern) {
   const id = await control.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0]?.id ?? -1, urlPattern);

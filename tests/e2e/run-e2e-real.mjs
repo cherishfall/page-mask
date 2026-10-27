@@ -11,7 +11,7 @@ import { getProfile, launchExtension, sendToBackground, sendToTab, setProfile, t
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
 const OUT = resultsDir('real');
-const WIZARD_HOST = '#pagemask-wizard-host';
+const WIZARD_HOST = 'pagemask-wizard';
 
 /** 每个站点：入口 URL 与一个"可点选目标"的取点策略（匿名页面稳定存在的元素）。名称直接用域名 */
 const SITES = [
@@ -69,7 +69,7 @@ async function main() {
         const tabId = await tabIdOf(control, `${origin}/*`);
         const res = await sendToBackground(control, { t: 'enableSite', origin, tabId });
         assert(res?.ok, `${site.name}：enableSite 成功`);
-        await page.waitForSelector('#pagemask-floating-host', { timeout: 10000 });
+        await page.waitForSelector('pagemask-toggle', { timeout: 10000 });
 
         // 打开向导（新站点）
         await sendToTab(control, tabId, { t: 'openWizard', mode: 'newSite' });
@@ -125,7 +125,7 @@ async function main() {
         await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
         await waitFor(page, '标题已伪装', () => document.title === '阅读');
         assert(true, `${site.name}：保存后向导关闭、标题已伪装`);
-        assert(await page.$('#pagemask-floating-host'), `${site.name}：悬浮按钮在`);
+        assert(await page.$('pagemask-toggle'), `${site.name}：悬浮按钮在`);
 
         // 硬校验：保存的规则候选在页面真实命中且已被隐藏
         const candidates = (await getProfile(control, origin))?.hideRules?.[0]?.candidates ?? null;

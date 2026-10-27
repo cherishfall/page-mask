@@ -17,7 +17,14 @@ function fakeBackground() {
     await new Promise((r) => setTimeout(r, Math.random() * 5)); // 打乱时序
     if (state.fail) return { ok: false, error: 'boom', css: 'prev' in msg ? msg.prev : null };
     const prev = 'prev' in msg ? msg.prev : null;
-    const next = msg.t === 'applyDisguise' ? state.formalNext : msg.t === 'draftCss' ? msg.next : null;
+    const next =
+      msg.t === 'applyDisguise'
+        ? state.formalNext
+        : msg.t === 'draftCss'
+          ? msg.next
+          : msg.t === 'hostShield' && msg.on
+            ? 'SHIELD'
+            : null;
     if (prev !== next) {
       if (next) sheets.push(next);
       if (prev) {
@@ -96,5 +103,89 @@ describe('createDocStyles 按文档记录已注入样式', () => {
     expect((await styles.syncFormal()).ok).toBe(false);
     mode = 'undefined';
     expect((await styles.setDraft('D1')).ok).toBe(false);
+  });
+});
+
+describe('宿主保护样式（第三份记录）', () => {
+  it('开启后注入一份，重复开启不再请求；关闭时按记录移除', async () => {
+    const bg = fakeBackground();
+    const styles = createDocStyles(bg.send);
+
+    await styles.syncShield(true);
+    await styles.syncShield(true);
+    expect(bg.sheets).toEqual(['SHIELD']);
+    expect(bg.log.filter((m) => m.t === 'hostShield')).toHaveLength(1);
+
+    await styles.clearFormal(); // 正式样式的进退不影响保护样式
+    expect(bg.sheets).toEqual(['SHIELD']);
+
+    await styles.syncShield(false);
+    expect(bg.sheets).toEqual([]);
+    expect(bg.log.at(-1)).toEqual({ t: 'hostShield', on: false, prev: 'SHIELD' });
+  });
+});
+
+describe('正式样式带上本页地址（SPA 路由变化后后台按新地址判断生效范围）', () => {
+  it('syncFormal(url) 把地址放进请求', async () => {
+    const bg = fakeBackground();
+    const styles = createDocStyles(bg.send);
+    await styles.syncFormal('https://site.test/chapter/2');
+    expect(bg.log.at(-1)).toEqual({ t: 'applyDisguise', prev: null, url: 'https://site.test/chapter/2' });
+  });
+});
+
+describe('扩展更新 / 重复注入时的交接', () => {
+  it('handover 等进行中的请求结束后交出记录，之后旧实例的请求一律不再发出', async () => {
+    const bg = fakeBackground();
+    const old = createDocStyles(bg.send);
+    void old.syncFormal();
+    void old.syncShield(true);
+    const record = await old.handover();
+    expect(record).toEqual({ formal: 'F1', draft: null, shield: 'SHIELD' });
+
+    const sent = bg.log.length;
+    const late = await old.setDraft('D9');
+    expect(late.ok).toBe(false);
+    expect(bg.log.length).toBe(sent);
+  });
+
+  it('新实例用交接来的记录继续：同样的样式不重复注入，旧预览被撤掉，没有孤儿', async () => {
+    const bg = fakeBackground();
+    const old = createDocStyles(bg.send);
+    await old.syncFormal();
+    await old.syncShield(true);
+    await old.setDraft('D1');
+
+    const next = createDocStyles(bg.send, old.handover());
+    await next.syncFormal();
+    await next.syncShield(true);
+    await next.setDraft(null);
+    expect(bg.sheets.sort()).toEqual(['F1', 'SHIELD']);
+
+    bg.state.formalNext = null;
+    await next.syncFormal();
+    await next.syncShield(false);
+    expect(bg.sheets).toEqual([]);
+  });
+
+  it('交接记录拿不到（旧实例异常）时按空记录开始', async () => {
+    const bg = fakeBackground();
+    const next = createDocStyles(bg.send, Promise.reject(new Error('x')));
+    await next.syncFormal();
+    expect(bg.sheets).toEqual(['F1']);
+  });
+});
+
+describe('releaseOrphans（扩展更新后，旧实例在另一个隔离环境、交不出记录）', () => {
+  it('排在本实例的注入之后发出（先插新的，再请后台删旧的，中间不闪）；本实例记录不变', async () => {
+    const bg = fakeBackground();
+    const styles = createDocStyles(bg.send);
+    void styles.syncFormal();
+    void styles.syncShield(true);
+    const ok = await styles.releaseOrphans('https://site.test/a');
+    expect(ok).toBe(true);
+    expect(bg.log.map((m) => m.t)).toEqual(['applyDisguise', 'hostShield', 'releaseOrphanCss']);
+    expect(bg.log.at(-1)).toEqual({ t: 'releaseOrphanCss', url: 'https://site.test/a' });
+    expect((await styles.handover()).formal).toBe('F1');
   });
 });

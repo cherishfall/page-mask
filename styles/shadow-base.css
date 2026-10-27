@@ -2,27 +2,43 @@
  * 页内 shadow root 共享基础样式（经 ui/shadow-styles.ts 以字符串形式引入）。
  *
  * shadow 边界挡得住网页的选择器，但挡不住「继承属性」：line-height、letter-spacing、
- * text-transform、font-weight 等会从网页的 <html> 一路继承进来。所以先在 :host 上
- * all: initial 切断继承，再用 tokens 重新设定字体、颜色、明暗。
+ * text-transform、font-weight、direction 等会从网页的 <html> 一路继承进来。
+ * 宿主本身由「宿主保护样式」（core/host-shield.ts，用户样式表 !important）设成 all: initial，
+ * 页面任何 !important 规则都改不了它；这里的 :host { all: initial } 只是保护样式还没注入时的兜底
+ * （它属于作者层普通优先级，打不过页面命中宿主的 !important 规则）。
+ *
+ * 因为宿主上的作者层声明会被保护样式整体覆盖，字体、颜色、明暗这些「界面基准」设在 shadow 内的
+ * 根容器 .pm-root 上（ui/page-host.ts 创建，带 lang），界面其余部分从它继承。
  * 注意：all 不影响自定义属性（--pm-*），所以 tokens 不会被清掉；但它会把 color-scheme
- * 重置为 normal，因此必须在其后重新声明 color-scheme。
- * 局限：网页里直接命中宿主元素的规则优先级高于 :host，宿主本身的防护见 #25（N40）。
+ * 重置为 normal，因此根容器上必须重新声明 color-scheme。
  */
 @import './tokens.css';
 
 :host {
   all: initial;
+}
+
+.pm-root {
   color-scheme: light dark;
+  direction: ltr;
   font-family: var(--pm-font-family);
   font-size: var(--pm-font-size-body);
+  font-weight: normal;
+  font-style: normal;
   line-height: var(--pm-line-height);
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: start;
+  white-space: normal;
+  word-break: normal;
   color: var(--pm-fg);
 }
 
-/* 原生表单控件默认不继承字体 */
+/* 原生表单控件默认不继承字体与文字颜色（modern-web-guidance「styling-web-components」） */
 button,
 input,
 select,
 textarea {
   font: inherit;
+  color: inherit;
 }
