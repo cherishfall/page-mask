@@ -17,12 +17,14 @@
 
 - **按网站生效**：只有你主动添加的网站才会被处理，其它网站完全不受影响
 - **零专业知识点选**：悬停高亮、点击选中（可连选），用「选大一点 / 选小一点」调整范围，不需要懂 CSS
-- **三种收起方式**：彻底移除（下方内容上移）/ 原地留白（位置保留）/ 遮罩覆盖（不改网站自身样式，保底可用）
+- **三种收起方式**：消失（下方内容上移）/ 留空（位置保留）/ 盖住（不改网站自身样式，任何网站都可用）
 - **保存前预览**：每个元素都能单独换收起方式，满意再保存
 - **生效范围**：整站，或「只在这类页面 / 除了这类页面」（零输入，从当前地址推导）
+- **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标（默认透明），网站自己改标题会被自动改回
 - **每个网站一个开关**：页面右下角的小按钮一点即可切回原样，同一网站的所有标签页一起切换
 - **失效提醒**：网站改版导致某条规则找不到目标时，会用人话提醒你重新选择
+- **幕布**：一键把整页连同标签页标题一起遮住，再一键回到点击前的样子；没添加过的网站也能用（popup「遮住本页」）
 - **导出 / 导入**：全部配置导出为一个文件，换电脑后导入
 - **配置只存在本机**：没有账号、没有同步、PageMask 自身不发起任何网络请求
 
@@ -69,6 +71,7 @@
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
 - iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
 - 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
+- 幕布只挡眼睛不挡输入：视频全屏、页面里的对话框会盖住幕布；键盘焦点仍在页面里，继续打字仍会改内容；刷新或离开页面后幕布消失
 - 界面目前是简体中文（扩展名称与简介有英文包，按浏览器语言切换）
 
 ### 隐私与权限说明（Chrome 应用商店审核适用）
@@ -105,12 +108,14 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 
 - **Works per site**: only sites you add are touched; everything else is completely unaffected
 - **Point-and-click, no expertise**: hover to highlight, click to select (multi-select supported), use "bigger / smaller" to adjust the range — no CSS knowledge needed
-- **Three ways to hide**: remove (content below moves up) / blank (space preserved) / cover (a solid patch over the element; the site's own styles are left untouched)
+- **Three ways to hide**: disappear (content below moves up) / keep space (the gap stays) / cover (a solid patch over the element; the site's own styles are left untouched)
 - **Preview before saving**: change the hiding method per element, then save
 - **Scope**: whole site, or "only these pages / except these pages" (no typing — derived from the current address)
+- **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon (default transparent) per site; if the site rewrites its title, it is changed back automatically
 - **One switch per site**: a small button at the bottom-right flips back to the original page; all tabs of that site switch together
 - **Broken-rule notices**: when a site redesign means a rule no longer finds its target, you get a plain-language heads-up to re-pick it
+- **Curtain**: cover the whole page and the tab title in one click, then go straight back to what it was; it works on sites you have not added too ("Cover this page" in the popup)
 - **Export / import**: move all your settings to another computer as one file
 - **Settings stay on your device**: no account, no sync, and PageMask itself makes no network requests
 
@@ -157,6 +162,7 @@ If you had 0.1.0 loaded, just hit reload on the same folder — existing setting
 - Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
 - Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
 - Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them
+- The curtain blocks sight, not input: fullscreen video and in-page dialogs render above it; keyboard focus stays in the page, so typing still edits content; the curtain disappears on reload or navigation
 - The in-page UI is Simplified Chinese for now (the extension name and description have an English locale and follow the browser language)
 
 ### Privacy & permissions (for Chrome Web Store review)

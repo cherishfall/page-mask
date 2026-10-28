@@ -1,6 +1,6 @@
 {
   "name": "page-mask",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "PageMask —— 页面清爽模式：收起网页干扰元素，专注阅读 / Clean & focused pages: tuck away distracting page elements",
   "private": true,
   "type": "module",

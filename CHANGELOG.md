@@ -5,6 +5,54 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.3.0] - 2026-10-28
+
+真实使用一周后的反馈批次：加不进去的网站、只想改标题的网站、向导不好用的地方，以及一个应急能力。/ A batch of fixes and features from a week of real use: sites that could not be added, sites that only needed a new tab title, wizard friction, and one emergency capability.
+
+### 中文
+
+#### 修复
+
+- **新站点授权后直接进入设置向导**：原来点「允许」之后什么都不发生，得再点一次扩展图标（权限确认框会关闭扩展弹窗，后面的步骤没能继续）。现在弹窗只发一条消息，由后台在用户手势里请求权限并接着完成注入与开向导，一次点击即可
+- **「已收起 0 项」这类写法**：只想改标题的网站没有任何收起项，现在显示「没有收起任何内容」
+
+#### 新增
+
+- **只想改标签页标题也可以**：popup 新增「设置标题和图标」，直接进管理页把标题、图标填好保存，一个元素都不用收起
+- **管理页拆成「网站」与「设置」两个 tab**：网站是已添加网站的列表，点进去是这个网站的设置页（开关、标签页标题、图标、已收起的项、一键清空）；设置里放全局默认标题与导出 / 导入
+- **站点设置页**：已收起的项可以删除（5 秒内可撤销），换收起方式与重选元素仍然在页面上做（那里才有上下文）
+- **设置向导更顺手**：点选阶段新增「清空」，一步清掉已选；「退出」改叫「取消」，确认框里危险按钮改成红色实底，安全按钮默认聚焦
+- **预览清单行内编辑**：每一行直接换收起方式、改名、删除；范围标签显示「同类 3 处」这样的命中数，点一下只收起这一处
+- **三种收起方式的界面叫法改为「消失 / 留空 / 盖住」**：消失 = 下面的内容往上补；留空 = 位置留着不动；盖住 = 盖一块和背景同色的板
+- **幕布**：一键把整页连同标签页标题一起遮住，再一键回到点击前的样子（原来是什么状态就回什么状态）。没添加过的网站也能用：popup 点「遮住本页」，当场遮住，不留任何配置
+
+#### 工程
+
+- 元素命名改进：文字都在子元素里的容器不再叫「div 元素」
+- E2E 覆盖管理页三视图、预览清单、幕布（含未添加站点的一次性脚本）；测试收尾失败不再影响用例结论
+
+### English
+
+#### Fixed
+
+- **Adding a new site now opens the setup wizard right away**: after clicking "Allow" nothing used to happen and you had to click the extension icon again (the permission prompt closes the popup, so the following steps never ran). The popup now only sends a message; the background asks for permission inside the user gesture and then injects and opens the wizard in one go
+- **Wording like "0 items hidden"**: a site that only changes its tab title has nothing hidden — it now says "nothing hidden"
+
+#### Added
+
+- **Tab title only is fine**: the popup gains "Set tab title & icon" — open the management page, fill in the title and icon, save, and not a single element is hidden
+- **The management page splits into "Sites" and "Settings" tabs**: Sites lists the sites you added; clicking one opens its settings page (switch, tab title, icon, hidden items, reset). Settings holds the default title and export / import
+- **Site settings page**: hidden items can be deleted (undo for 5 seconds); changing the hide method and re-picking an element still happen on the page itself, where the context is
+- **A smoother wizard**: "Clear" empties your selection in one click; "Exit" is now "Cancel"; the destructive button in the confirmation is solid red and the safe button has focus
+- **Inline editing in the preview list**: change the hide method, rename and delete right on each row; the scope label shows how many match ("3 alike"), and one click hides just this one
+- **Hide methods are now "Disappear / Keep space / Cover"**: disappear pulls the following content up; keep space leaves the gap; cover puts a sticker the colour of the background over it
+- **Curtain**: cover the whole page and the tab title in one click, and go back exactly to what it was before. It works on sites you have not added too — "Cover this page" in the popup covers it on the spot and leaves no configuration behind
+
+#### Engineering
+
+- Better element names: containers whose text lives in child elements no longer become "div element"
+- E2E now covers the three management views, the preview list, and the curtain (including the one-shot script for un-added sites); cleanup failures no longer affect the verdict
+
 ## [0.2.0] - 2026-10-27
 
 上架前的质量加固：可用性缺陷、无障碍、文档一致性。/ Pre-release quality pass: usability defects, accessibility, documentation consistency.

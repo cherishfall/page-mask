@@ -2,6 +2,39 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.3.0 · #46 幕布：没添加过的网站
+
+- **一次性脚本 `entrypoints/curtain-oneshot.ts`**（`defineUnlistedScript`）：产物在扩展根 `curtain-oneshot.js`，**不进 manifest**、不注册、不写配置，由 popup 发消息、后台用 `activeTab` 注入当前标签页。幂等要**同步**判——脚本主体要动态导入模块，两次注入可能同批到达，只靠「已经遮住了」会放过第二次，所以先占位（`__pagemaskCurtainPending`）再换成真正的句柄。
+- 动态导入是必须的：WXT 构建期会读入口定义，顶层引入会把 Vue 单文件组件与 `?inline` 样式拉进那个环境（`entrypoints/content.ts` 记过这个坑）。
+- 与 #45 共用 `ui/curtain.ts` 覆盖层、`core/curtain.ts` 底色、`core/disguise.ts` 标题守卫；`createPageHost` 支持 `ctx = null`（一次性脚本没有 WXT ctx）。
+- **E2E 绕不开 activeTab**：`chrome.action.openPopup()` 不授予 activeTab（`tests/e2e/lib/extension.mjs` 的注释里记过），所以用例直接从控制页 `scripting.executeScript` 注入脚本本体；「popup 点击」那一步留人工验证。
+
+## 0.3.0 · #45 幕布（已添加站点）
+
+- 幕布是**页面内临时状态**：不进 `SiteProfile`、不改 `switchState`、只作用于当前标签页（ADR-0007）。
+- **恢复分支最容易写错**：进入前是清爽态就还原成清爽标题（`guard.apply(effectiveTitle(...))`），只有进入前是原样态才 `guard.restore()`。一律 restore 会让清爽态当场露馅。
+- 生命周期要显式接进 `applyAll` / `restoreAll`（它们会重新调 `guard`，把幕布的标题盖掉）、`openWizard`、`openEditorPanel`、`handleSiteReset`、`clearPageUi` / `teardown`。
+- 幕布期间开关被别处改掉时，点「恢复」先按进入前分支执行，再强制重应用一次对齐最新开关态。
+- 已知边角：bfcache 后退返回时文档连 JS 状态一起恢复，幕布会保持遮住；要「离开即撤」可在 `pageshow.persisted` 补一刀。
+
+## 0.3.0 · #43 点选工具条与危险色
+
+- 「退出」改叫「取消」：它实际是放弃这次设置，不是退出点选模式。确认框标题「放弃这些设置？」，默认焦点在「继续编辑」，「放弃」实底红。
+- 新增「清空（N）」：一次去掉全部已选、留在点选模式。
+- 危险色收敛成两条：行内次级 = 红字红边，确认框主危险 = 实底红；向导、编辑面板、管理页三处统一。
+
+## 0.3.0 · #42 只想改标题
+
+- **不在向导里加逃生口**：向导的语义是「进入全屏点选」，而且里面根本没有标题输入，放开 0 条也只存得下默认标题。改走管理页的「待添加」页。
+- 路由用 `#/add/<encodeURIComponent(origin)>` 而不是给 `#/sites/<host>` 加参数：新建配置需要完整来源（http / https 看 host 看不出来），`#/add/` 把「这个网站还不在名单里」直接写在地址上。
+- 「添加这个网站」是新站点唯一落库的路径：在**普通标签页**里请求权限（popup 会被权限框销毁），写一份 0 条规则的配置（清爽态、标题取输入值或全局默认）。
+
+## 0.3.0 · #39 权限请求改由后台发起
+
+- 根因：popup 里 `await permissions.request`，权限框弹出会销毁 popup 文档，`await` 之后的 `enableSite` 从未发出；第二次点击能进只是因为权限已在、promise 立即返回。
+- 修法：popup 只发消息，后台 `onMessage` 监听器里**第一句**同步调 `permissions.request`——用户手势可跨 `runtime.sendMessage` 传到后台，但只在同一个同步回合内有效。请求返回后由后台继续对账、注入、开向导。
+- `denied`（用户拒绝）与 `gestureLost`（后台没拿到手势）分开报错；真实权限弹窗无法自动化，E2E 只覆盖「允许之后恢复生效」，请求 payload 由后台单测覆盖。
+
 ## 0.3.0 · #41 站点设置页
 
 - **撤销抽成「纯逻辑 + 组合式函数」两层**：列表运算（`detachRule` / `reattachRule`，按原下标插回、id 不变）放 `core/rule-undo.ts`，无 Vue、无存储、有单测；「最近一次删除 + 5 秒计时器 + 何时结束」放 `ui/rule-undo.ts` 的 `useRuleUndo`。写入通道由调用方传入：编辑面板给 `storage.updateProfile`，管理页给 `store.updateRules`。两处共用同一份逻辑，行为不会再分叉。

@@ -40,10 +40,12 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上让你分�
 
 【功能】
 • 点选收起：鼠标悬停高亮、点击选中（可连选），用「选大一点 / 选小一点」调整范围，不需要懂任何代码
-• 三种收起方式：彻底移除（下方内容上移）、原地留白（保留位置）、遮罩覆盖（盖一块与背景同色的贴片，不改网站自身样式）
+• 三种收起方式：消失（下方内容上移）、留空（保留位置）、盖住（盖一块与背景同色的贴片，不改网站自身样式）
 • 保存前预览：每个元素都能单独换收起方式，满意再保存
 • 生效范围：整站，或只在 / 排除某一类页面
+• 只想改标题也可以：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样保存成一份设置
 • 标签页标题与图标：可为该网站自定义标签页标题和图标
+• 幕布：一键把整页连同标签页标题一起遮住（例如有人走近时），再一键回到点击前的样子；没添加过的网站也能用
 • 每个网站一个开关：页面右下角的小胶囊显示当前是「清爽」还是「原样」，点一下即可切换，同一网站的所有标签页一起切换
 • 页面内编辑规则：改收起方式、改生效范围、重选元素、删除（5 秒内可撤销）、编辑选择器原文
 • 失效提醒：网站改版导致某条规则找不到目标时，会提醒你重新选择
@@ -74,10 +76,12 @@ PageMask declutters the sites you choose: point at the distracting parts of a pa
 
 FEATURES
 • Point-and-click hiding: hover to highlight, click to select (multi-select), use "bigger / smaller" to adjust the selection. No code needed
-• Three ways to hide: Remove (content below moves up), Blank (keeps the space), Cover (a solid patch matching the background; the site's own styles are left untouched)
+• Three hide methods: disappear (content below moves up), keep space (position preserved), cover (a patch the colour of the background over the element, leaving the site's own styles untouched)
 • Preview before saving: change the hiding method per element, then save
 • Scope: the whole site, only a type of page, or everything except a type of page
-• Tab title & icon: set a custom tab title and icon for the site
+• Title only is fine: change just the tab title or icon without hiding anything — that saves as a real setup too
+• Tab title & icon: custom tab title and icon per site
+• Curtain: cover the whole page and the tab title in one click (say, when someone walks over), then go straight back; works on sites you have not added either
 • One switch per site: the small capsule at the bottom-right shows 「清爽」 (Clean) or 「原样」 (Original); one click flips it, and all tabs of that site switch together
 • On-page rule editor: change the hiding method or scope, re-pick an element, delete (undo within 5 seconds), or edit the raw selectors
 • Broken-rule notices: if a site redesign means a rule no longer finds its target, you're asked to re-pick it
@@ -153,6 +157,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.3.0 | 2026-10-28 | 真实使用反馈批次：新站点授权后直接进入向导、只想改标题也能配置、管理页拆成「网站 / 设置」两个 tab 与站点设置页、向导清空与取消、预览清单行内编辑、幕布（含未添加网站）。详见 `CHANGELOG.md` |
 | 0.2.0 | 2026-10-27 | 上架前质量加固：遮罩覆盖、设置向导、编辑规则、悬浮按钮的可用性修复，无障碍与对比度，文档一致性。构建产物 `.output/page-mask-0.2.0-chrome.zip`（22 个文件 / 115 KB），tag `v0.2.0`。详见 `CHANGELOG.md` |
 | 0.1.0 | 2026-10-26 | 首个功能完整版本（未提交商店） |
 
@@ -164,13 +169,15 @@ Test steps (no login needed):
 |---|---|---|
 | 商店图标 128×128 | `public/icon/128.png`（同步 `docs/store-assets/icon-128.png`） | ✅ 已在 manifest 里（`npm run icons` 从 `assets/icon/*.svg` 生成） |
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
-| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：设置向导预览（号码牌 + 草稿清单 + 底部工具条） |
+| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ⚠️ 需重拍：设置向导预览已改成行内编辑（收起方式 / 同类范围 / 删除都在清单行上） |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
 | 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：popup 正常状态（有规则、清爽模式开、有编辑入口） |
-| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：管理页，虚构域名与数字 |
+| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ⚠️ 需重拍：管理页已拆成「网站 / 设置」两个 tab，站点设置页是新的 |
+| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ⚠️ 需补：幕布遮住整页 + 恢复入口（可与「之前 / 之后」拼成一张） |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
 重新生成：`npm run build && node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`）。
+⚠️ 0.3.0 的界面（管理页三视图、预览清单行内化）还没进 store-shots.mjs，重拍前先让它跟上新结构。
 
 素材口径（避免误导）：
 
@@ -185,6 +192,7 @@ Test steps (no login needed):
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
 - iframe 与 shadow DOM 内部的元素暂时无法点选。
 - 标签页悬停缩略图、浏览器历史记录里的标题是浏览器自身行为，扩展改不到。
+- 幕布只挡视线不挡输入：视频全屏、页面内对话框会盖住幕布；键盘焦点仍在页面中，继续打字仍会改动页面内容；刷新或离开页面后幕布消失。
 
 ## 10. 审核员可能问的问题（提交前先想好答案）
 
