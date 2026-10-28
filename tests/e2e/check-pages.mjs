@@ -621,8 +621,11 @@ async function main() {
     await checkSchemes(m, '管理页 · 待授权', 'bgSubtle');
 
     // 站点设置页顶部也能授权，授权成功后本页立即变为可用
-    await m.click(`li[data-origin="${ORIGIN}"] a[data-testid="pm-mgmt-site-link"]`);
-    await m.waitForSelector(tid('pm-mgmt-pending'), { timeout: 5000 });
+    // （直接落到站点设置页：列表行里也有 pm-mgmt-pending，等它会误判成"已经在设置页上"）
+    await m.evaluate((o) => {
+      location.hash = `#/sites/${new URL(o).host}`;
+    }, ORIGIN);
+    await m.waitForSelector(tid('pm-mgmt-edit-on-page'), { timeout: 5000 });
     check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === true, '待授权时「在页面上编辑」不可点（内容脚本还没注入）');
     // 权限弹窗本身无法自动化：替换 contains / request 两个替身，验证「允许」之后本页立即刷新
     await m.evaluate(() => {
