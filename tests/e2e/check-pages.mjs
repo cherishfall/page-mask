@@ -15,6 +15,9 @@
  *   整体替换导入用原生模态 <dialog>，默认聚焦「取消」、列出影响，取消不改数据；
  *   导入失败用人话；待授权站点在行里给出「授权并启用」，两个以上出现「一次授权全部」；空状态有引导文案；
  *   所有表单控件都有关联的标签
+ * - 只想改标题（#42）：未配置站点 popup 次按钮是「设置标题和图标」→ 待添加页（#/add/<来源>，深链直接打开也不报错）
+ *   →「添加这个网站」写下一份 0 条规则的清爽态配置 → 悬浮按钮出现、标题生效、页面上没有元素被收起，
+ *   已配置站点的次按钮回到「编辑当前网站」、0 条规则不说「已收起 0 项」
  * - 引导页：4 步（含「固定到工具栏」），aria-current="step" 跟随「下一步」，无 🎭 与第三方品牌
  * - 三个页面：lang="zh-CN"、color-scheme meta；浅色 / 深色下 body 背景与前景等于 tokens 值；
  *   所有可见文字与其背景的对比度 ≥ 4.5、字号 ≥ 12px；可见文案（以及模板源码）里没有「伪装 / 泄露」
@@ -26,7 +29,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { REPO_ROOT } from './lib/browser.mjs';
 import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
-import { getProfile, getSettings, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
+import { getProfile, getSettings, grantPermissions, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
 import { waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
@@ -309,6 +312,11 @@ async function main() {
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '为当前网站开启清爽模式', '新站点显示「为当前网站开启清爽模式」');
+    check(
+      (await popup.$eval(tid('pm-popup-title-settings'), (b) => b.textContent.trim())) === '设置标题和图标',
+      '未配置站点的次按钮是「设置标题和图标」',
+    );
+    check(!(await popup.$(tid('pm-popup-edit'))), '未配置站点不显示「编辑当前网站」（那个按钮只在已配置时才有意义）');
     // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），
     // 这里替换 popup 的消息通道，验证「点击后进入处理中」与「后台回复 denied 时的界面表现」。
     await popup.evaluate(() => {
@@ -645,6 +653,80 @@ async function main() {
     check(emptyText.includes('还没有添加任何网站') && emptyText.includes('PageMask 图标'), '没有网站时给出引导文案');
     await checkSchemes(m, '管理页 · 空状态', 'bgSubtle');
     await m.close();
+
+    // ===================== 只想改标题（#42） =====================
+    console.log('\n--- 只想改标题：popup 次按钮 → 待添加页 → 添加 ---');
+    // 真实权限弹窗无法自动化：先用测试手段授予 ORIGIN2（这一步会重载扩展，之前的扩展页面全部关闭）
+    await grantPermissions(ext, [ORIGIN2]);
+
+    // 深链：直接打开待添加地址也要落到「添加这个网站」，不能是一个空白/报错页
+    const directAdd = await browser.newPage();
+    await directAdd.goto(`${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`, { waitUntil: 'load' });
+    await directAdd.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
+    check(true, '直接打开待添加地址（深链）不报错，显示「添加这个网站」');
+    await directAdd.close();
+
+    const titleSite = await browser.newPage();
+    await titleSite.goto(`${ORIGIN2}/index.html`, { waitUntil: 'load' });
+    check(!(await titleSite.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
+
+    const popupNew = await openPopup(ext, titleSite);
+    await popupNew.waitForSelector(tid('pm-popup-title-settings'), { timeout: 5000 });
+    // tabs.create 会打开一个新的管理页标签（popup 随即关闭）：先挂上等待，再点
+    const openedAdd = browser.waitForTarget((t) => t.url().includes('/management.html#/add/'), { timeout: 8000 });
+    await popupNew.click(tid('pm-popup-title-settings'));
+    const addPage = await (await openedAdd).asPage();
+    const HOST2 = new URL(ORIGIN2).host;
+    const ADD_URL = `${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`;
+    await poll(async () => addPage.url() === ADD_URL, 'popup 次按钮落到该网站的待添加页');
+    check(true, `popup 次按钮落到待添加页（${addPage.url()}）`);
+
+    await addPage.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
+    await addPage.bringToFront();
+    check((await addPage.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST2, `待添加页显示域名（${HOST2}）`);
+    const addHint = await addPage.$eval(tid('pm-mgmt-add-hint'), (e) => e.innerText);
+    check(addHint.includes('还没有添加') && addHint.includes('一项都不收起'), `待添加页说明这条路的用途（${addHint}）`);
+    await checkCommon(addPage, '管理页 · 待添加');
+    await checkSchemes(addPage, '管理页 · 待添加', 'bgSubtle');
+
+    const ADD_TITLE = '工作台';
+    await addPage.click(tid('pm-mgmt-add-title'));
+    await addPage.type(tid('pm-mgmt-add-title'), ADD_TITLE);
+    await addPage.click(tid('pm-mgmt-add-site'));
+    // 权限已预先授予 → 请求立即返回；添加成功后本页地址换成正常的站点设置地址
+    const SITE_HASH2 = `#/sites/${HOST2}`;
+    await poll(async () => (await addPage.evaluate(() => location.hash)) === SITE_HASH2, '添加后本页转为站点设置');
+    await addPage.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
+    const added = await getProfile(ext.control, ORIGIN2);
+    check(
+      !!added && added.hideRules.length === 0 && added.switchState === 'disguised' && added.disguisedTitle === ADD_TITLE,
+      `添加后写入 0 条规则的清爽态配置，标题是填的值（${JSON.stringify(added && { rules: added.hideRules.length, state: added.switchState, title: added.disguisedTitle })}）`,
+    );
+    const addedCount = await addPage.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
+    check(addedCount.includes('没有收起任何内容'), `添加后站点设置页说「${addedCount}」`);
+
+    // 已打开的页面：悬浮按钮出现、标签页标题生效、一个元素都没被收起（不需要刷新）
+    await titleSite.bringToFront();
+    await titleSite.waitForSelector('pagemask-toggle', { timeout: 8000 });
+    await waitFor(titleSite, '添加后标签页标题生效', (t) => document.title === t, [ADD_TITLE]);
+    const hidden = await titleSite.evaluate(
+      () => [...document.querySelectorAll('#site-header, main, h1, p')].filter((el) => !el.checkVisibility()).length,
+    );
+    check(hidden === 0, '页面上没有任何元素被收起（全部仍然可见）');
+
+    // 已配置的站点：次按钮回到「编辑当前网站」，0 条规则不说「已收起 0 项」
+    const popupAdded = await openPopup(ext, titleSite);
+    await popupAdded.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
+    check(
+      (await popupAdded.$eval(tid('pm-popup-edit'), (b) => b.textContent.trim())) === '编辑当前网站',
+      '添加后 popup 次按钮是「编辑当前网站」',
+    );
+    check(!(await popupAdded.$(tid('pm-popup-title-settings'))), '已配置站点不再显示「设置标题和图标」');
+    const zeroMeta = await popupAdded.$eval('.meta', (e) => e.innerText.trim());
+    check(zeroMeta.includes('没有收起任何内容') && !zeroMeta.includes('已收起 0 项'), `popup 0 条规则说「${zeroMeta}」`);
+    await popupAdded.close().catch(() => undefined);
+    await titleSite.close();
+    await addPage.close();
 
     // ===================== 引导页 =====================
     console.log('\n--- 引导页 ---');

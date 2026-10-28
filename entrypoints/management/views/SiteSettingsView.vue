@@ -4,6 +4,62 @@
 
     <p v-if="!store.state.loaded" class="hint">正在读取…</p>
 
+    <!-- 待添加（#/add/<来源>）：只想改标题、不想收起任何内容的网站从这里开始（#42） -->
+    <template v-else-if="!profile && addOrigin">
+      <h2 id="pm-site-title" class="host add-title">{{ siteLabelOf(addOrigin) }}</h2>
+      <p class="hint" data-testid="pm-mgmt-add-hint">
+        这个网站还没有添加。添加后只改它的标签页标题和图标，页面上的内容一项都不收起。
+      </p>
+
+      <section class="card">
+        <h3>标签页标题</h3>
+        <p class="hint">清爽模式下，这个网站的标签页显示这段文字。</p>
+        <div class="row">
+          <label class="visually-hidden" for="pm-add-title-input">标签页标题</label>
+          <input
+            id="pm-add-title-input"
+            v-model="addTitle"
+            class="title-input"
+            data-testid="pm-mgmt-add-title"
+            :placeholder="titlePlaceholder"
+            aria-describedby="pm-add-title-hint"
+          />
+        </div>
+        <div class="row quick" role="group" aria-labelledby="pm-add-title-quick">
+          <span id="pm-add-title-quick" class="hint">快捷填入</span>
+          <button
+            v-for="q in QUICK_TITLES"
+            :key="q.label"
+            type="button"
+            class="chip"
+            @click="addTitle = quickTitleValue(q, store.uiLanguage)"
+          >
+            {{ quickTitleValue(q, store.uiLanguage) }}
+          </button>
+        </div>
+        <p id="pm-add-title-hint" class="hint">
+          留空则用「{{ fallbackTitle }}」；标题不会留成空白——空白时 Chrome 会改为显示网址。
+        </p>
+      </section>
+
+      <p v-if="store.state.addError" class="hint error" role="alert" data-testid="pm-mgmt-add-error">
+        {{ store.state.addError }}
+      </p>
+
+      <div class="row">
+        <button
+          type="button"
+          class="primary"
+          data-testid="pm-mgmt-add-site"
+          :disabled="store.state.adding"
+          @click="addSite"
+        >
+          {{ store.state.adding ? '正在添加…' : '添加这个网站' }}
+        </button>
+      </div>
+      <p class="hint">添加时需要允许 PageMask 访问这个网站，浏览器会弹出一次权限确认。</p>
+    </template>
+
     <div v-else-if="!profile" class="card empty" data-testid="pm-mgmt-site-missing">
       <h2 id="pm-site-title">没有这个网站的设置</h2>
       <p class="hint">打开这个网站，点浏览器工具栏上的 PageMask 图标，就能为它开启清爽模式。</p>
@@ -240,15 +296,24 @@ import { scopeHumanLabel } from '@/core/scope';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { STRATEGY_LABEL, type HideRule } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
-import { SITES_HASH } from '../router';
+import { replaceHash, siteHash, SITES_HASH } from '../router';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
 import { fileToIconDataUrl } from '../tab-icon';
 
-const props = defineProps<{ host: string }>();
+/**
+ * `host` = 已在名单里的网站（`#/sites/<host>`）；`origin` = 还没添加的网站（`#/add/<来源>`）。
+ * 后者带着完整来源，添加时才能请求到正确的站点权限。
+ */
+const props = defineProps<{ host?: string; origin?: string }>();
+
+const addOrigin = computed(() => props.origin ?? null);
+const addTitle = ref('');
 
 const profile = computed(() => {
-  const host = normalizeSiteHost(props.host);
+  // 待添加按完整来源比对（同主机不同协议是两个站点）；名单里的网站按 host 比对
+  if (props.origin) return store.state.profiles.find((p) => p.origin === props.origin) ?? null;
+  const host = normalizeSiteHost(props.host ?? '');
   return store.state.profiles.find((p) => siteHostOf(p.origin) === host) ?? null;
 });
 
@@ -273,6 +338,18 @@ const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
 
 function onToggle(e: Event) {
   if (profile.value) void store.toggleSite(profile.value, e);
+}
+
+/**
+ * 「添加这个网站」：授权 → 写一份 0 条规则的配置（清爽态、标题取输入值或全局默认）→ 本页转为正常站点设置。
+ * 权限请求在 store 里的第一条语句发起（用户手势只在同一个同步回合内有效）。
+ */
+async function addSite() {
+  const o = addOrigin.value;
+  if (!o || store.state.adding) return;
+  const res = await store.addSite(o, addTitle.value);
+  // 添加成功后地址换成正常站点设置地址，本页立即成为可编辑状态（不在历史里留下「待添加」这一步）
+  if (res === 'added') replaceHash(siteHash(siteHostOf(o)));
 }
 
 function removeRule(rule: HideRule) {
@@ -363,6 +440,12 @@ async function onResetClose() {
 
 .site-head .host {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 待添加页直接以域名为标题（没有开关那一行） */
+.add-title {
+  margin: 0 0 var(--pm-space-2);
   overflow-wrap: anywhere;
 }
 

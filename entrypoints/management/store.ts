@@ -34,6 +34,9 @@ export interface ManagementState {
   /** 有配置、没授权的站点（待授权） */
   pendingOrigins: string[];
   authError: string;
+  /** 「添加这个网站」正在请求权限 / 写入配置 */
+  adding: boolean;
+  addError: string;
   /** 正在切换开关的站点 */
   toggling: Record<string, boolean>;
   toggleError: Record<string, string>;
@@ -62,6 +65,8 @@ export function createManagementStore() {
     focusedKey: null,
     pendingOrigins: [],
     authError: '',
+    adding: false,
+    addError: '',
     toggling: {},
     toggleError: {},
     ruleError: {},
@@ -183,6 +188,64 @@ export function createManagementStore() {
       await reconcileNow();
       await reload();
     })();
+  }
+
+  /**
+   * 添加一个还没配置的网站（#42：只想改标签页标题、不收起任何内容的入口）。
+   *
+   * 写下的是一份合法的「0 条规则」站点配置：清爽态、标题取用户填的值（留空 = 全局默认），
+   * 因此页面上的元素一个都不会被收起。这也是新站点唯一会落库的路径——用户在「待添加」页
+   * 点了「添加这个网站」，就是那次保存。
+   *
+   * 权限请求必须处在点击手势的同步上下文中：它是本函数的第一件事，之前不能有 await。
+   * 用户在权限框上拒绝时什么都不写，停在「待添加」状态。
+   */
+  function addSite(origin: string, title: string): Promise<'added' | 'denied' | 'failed'> {
+    let request: Promise<boolean>;
+    try {
+      request = browser.permissions.request({ origins: [originPattern(origin)] });
+    } catch {
+      request = Promise.resolve(false);
+    }
+    state.adding = true;
+    state.addError = '';
+    return (async () => {
+      try {
+        const granted = await request.catch(() => false);
+        if (!granted) {
+          state.addError = '需要允许访问这个网站，才能添加它。可以再点一次「添加这个网站」并选择「允许」';
+          return 'denied';
+        }
+        await storage.updateProfile(
+          origin,
+          (d) => {
+            d.switchState = 'disguised';
+            d.disguisedTitle = title.trim() ? title : null;
+            d.hideRules = [];
+          },
+          { create: true },
+        );
+        await reconcileNow();
+        await reload();
+        // 已经打开着的页面要立即拿到悬浮按钮与标签页标题，不必刷新
+        await injectOpenTabs(origin);
+        return 'added';
+      } catch {
+        state.addError = '没能添加这个网站，请稍后再试一次';
+        return 'failed';
+      } finally {
+        state.adding = false;
+      }
+    })();
+  }
+
+  /** 给某个站点已打开的标签页注入内容脚本（与 popup 的启用流程走同一条消息） */
+  async function injectOpenTabs(origin: string): Promise<void> {
+    const tabs = await browser.tabs.query({}).catch(() => []);
+    for (const t of tabs) {
+      if (t.id === undefined || !sameOrigin(t.url, origin)) continue;
+      await browser.runtime.sendMessage({ t: 'enableSite', origin, tabId: t.id }).catch(() => undefined);
+    }
   }
 
   // 写入均为原子更新：基于最新存储值只改本次操作涉及的字段
@@ -360,6 +423,7 @@ export function createManagementStore() {
     saveDraft,
     pickTitle,
     authorize,
+    addSite,
     toggleSite,
     updateRules,
     setIcon,

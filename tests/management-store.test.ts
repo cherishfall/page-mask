@@ -31,6 +31,8 @@ function stubBrowser() {
     onRemoved: fakeEvent(),
   });
   Object.assign(fakeBrowser.runtime, { sendMessage: vi.fn(async () => ({ ok: true, pending: [] })) });
+  // 默认没有打开的标签页；需要断言注入的用例自己替换
+  Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => []) });
 }
 
 function profileOf(origin: string, over: Partial<SiteProfile> = {}): SiteProfile {
@@ -156,6 +158,61 @@ describe('管理页 store', () => {
 
     await vi.waitFor(() => expect(store.state.authError).toContain('允许'), { timeout: 1000, interval: 5 });
     expect(store.state.pendingOrigins).toEqual([A]);
+  });
+
+  it('添加只改标题的网站：0 条规则、清爽态、标题按用户填的值写入', async () => {
+    await seed([], null);
+    const store = createManagementStore();
+    await store.reload();
+
+    const res = await store.addSite(A, '  工作台  ');
+
+    expect(res).toBe('added');
+    expect(request).toHaveBeenCalledWith({ origins: [pattern(A)] });
+    const saved = (await fakeBrowser.storage.local.get(`profile:${A}`))[`profile:${A}`] as SiteProfile;
+    expect(saved.hideRules).toEqual([]);
+    expect(saved.switchState).toBe('disguised');
+    expect(saved.disguisedTitle).toBe('  工作台  '); // 非空白就原样保留，与标题自动保存一致
+    expect(store.state.profiles.map((p) => p.origin)).toEqual([A]);
+    expect(store.state.adding).toBe(false);
+  });
+
+  it('标题留空 = 全局默认（null）；拒绝授权则不写配置、给出提示', async () => {
+    await seed([], null);
+    const store = createManagementStore();
+    await store.reload();
+
+    await store.addSite(A, '   ');
+    const saved = (await fakeBrowser.storage.local.get(`profile:${A}`))[`profile:${A}`] as SiteProfile;
+    expect(saved.disguisedTitle).toBeNull();
+
+    request.mockResolvedValueOnce(false);
+    const res = await store.addSite(B, '工作台');
+
+    expect(res).toBe('denied');
+    expect(store.state.addError).toContain('允许');
+    expect(await fakeBrowser.storage.local.get(`profile:${B}`)).toEqual({});
+  });
+
+  it('添加后给该站已打开的标签页发送启用消息（悬浮按钮与标题立即生效）', async () => {
+    await seed([], null);
+    const store = createManagementStore();
+    await store.reload();
+    const send = vi.fn(async (_msg: unknown) => ({ ok: true }));
+    Object.assign(fakeBrowser.runtime, { sendMessage: send });
+    Object.assign(fakeBrowser.tabs, {
+      query: vi.fn(async () => [
+        { id: 7, url: `${A}/article/1` },
+        { id: 8, url: `${B}/index.html` },
+      ]),
+    });
+
+    await store.addSite(A, '工作台');
+
+    const enabled = send.mock.calls
+      .map(([m]) => m as { t?: string; tabId?: number; origin?: string })
+      .filter((m) => m.t === 'enableSite');
+    expect(enabled).toEqual([{ t: 'enableSite', origin: A, tabId: 7 }]);
   });
 
   it('导入：坏文件用人话报错；整体替换先给影响预览，取消不改数据', async () => {

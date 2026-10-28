@@ -703,8 +703,10 @@ async function main() {
     // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），popup 里已经没有可替换的
     // permissions.request；真实权限弹窗无法自动化，这里只验证「允许之后恢复生效」这一半。
     await popup.close().catch(() => undefined);
-    // 「允许」改用测试手段授予（重载 + manifest），之后对账让站点恢复生效
-    await grantPermissions(ext, [ORIGIN]);
+    // 「允许」改用测试手段授予（重载 + manifest），之后对账让站点恢复生效。
+    // 连 ORIGIN2 一起授予：这一步的重载会让只写 ORIGIN 的 manifest 丢掉 ORIGIN2 的运行时授权，
+    // 而下面还要断言 ORIGIN2 配置后生效。
+    await grantPermissions(ext, [ORIGIN, ORIGIN2]);
     await expectDisguisedInNewPage(ORIGIN, '重新授权后站点恢复生效（新开页面清爽态）');
     popup = await openPopup(ext, site);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
@@ -801,6 +803,15 @@ async function main() {
 
     // 以上用到的页面辅助函数
     async function expectDisguisedInNewPage(origin, label) {
+      // 先等后台把内容脚本注册好：写入配置 → 对账注册之间有毫秒级空隙，
+      // 直接开页面有时撞上「还没注册」，就会表现成内容脚本没注入。
+      await waitFor(
+        ext.control,
+        `${label}：内容脚本已注册`,
+        (o) => chrome.scripting.getRegisteredContentScripts().then((list) => list.some((s) => s.id === `pagemask:${o}`)),
+        [origin],
+        { timeout: 8000 },
+      );
       const p = await browser.newPage();
       try {
         await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -913,7 +924,9 @@ async function main() {
       await btn.click();
       const yes = await m.waitForSelector('xpath/.//button[normalize-space()="确认清空"]', { timeout: 3000 });
       await yes.click();
-      // 清空后站点设置页自动回列表
+      // 清空后站点设置页自动回列表：先等地址变回列表，再等这一行消失
+      // （不先等地址的话，停在设置页上「行不存在」会被误判成清空成功）
+      await waitFor(m, '清空后回到网站列表', () => location.hash === '#/sites', [], { timeout: 5000 });
       await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
     }
 

@@ -33,7 +33,7 @@
         </div>
 
         <p v-if="profile" class="meta">
-          已收起 {{ profile.hideRules.length }} 项<template v-if="staleCount > 0">
+          {{ ruleSummary }}<template v-if="staleCount > 0">
             ·
             <span class="stale" data-testid="pm-popup-stale"><span aria-hidden="true">● </span>{{ staleCount }} 项可能失效</span>
           </template>
@@ -66,6 +66,16 @@
       >
         {{ busy === 'edit' ? '正在打开…' : '编辑当前网站' }}
       </button>
+      <!-- 还没添加的网站：只想改标签页标题和图标的路（不进向导），见 #42 -->
+      <button
+        v-else-if="phase === 'new'"
+        class="ghost"
+        data-testid="pm-popup-title-settings"
+        :disabled="busy !== ''"
+        @click="openTitleSettings"
+      >
+        {{ busy === 'title' ? '正在打开…' : '设置标题和图标' }}
+      </button>
     </template>
 
     <button class="ghost manage" @click="manage">管理全部网站</button>
@@ -78,6 +88,7 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
+import { addHash } from '@/entrypoints/management/router';
 import type { SiteProfile } from '@/core/types';
 import type { EnableSiteResponse, OpenEditorMsg, OpenIntent } from '@/core/messages';
 
@@ -88,7 +99,7 @@ const profile = ref<SiteProfile | null>(null);
 /** 当前网站的站点授权；null = 还没查 */
 const granted = ref<boolean | null>(null);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
-const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit'>('');
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'title'>('');
 /** 失败 / 授权被拒时给用户看的话 */
 const message = ref('');
 
@@ -108,6 +119,11 @@ const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
 const host = computed(() => (origin.value ? new URL(origin.value).hostname.replace(/^www\./, '') : ''));
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
+/** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
+const ruleSummary = computed(() => {
+  const n = profile.value?.hideRules.length ?? 0;
+  return n > 0 ? `已收起 ${n} 项` : '没有收起任何内容';
+});
 
 /**
  * 界面状态：
@@ -250,6 +266,24 @@ async function editSite() {
   } catch {
     message.value = EDIT_FAILED_TEXT;
   } finally {
+    busy.value = '';
+  }
+}
+
+/**
+ * 未配置站点的次按钮：打开管理页的「待添加」页（`#/add/<来源>`），在那里授权、填标题，
+ * 写下一份 0 条规则的配置。不能把授权放进 popup——权限框弹出会销毁 popup。
+ */
+async function openTitleSettings() {
+  const o = origin.value;
+  if (!o || busy.value) return;
+  message.value = '';
+  busy.value = 'title';
+  try {
+    await browser.tabs.create({ url: browser.runtime.getURL('/management.html') + addHash(o) });
+    window.close();
+  } catch {
+    message.value = '没能打开管理页，请再点一次 PageMask';
     busy.value = '';
   }
 }
