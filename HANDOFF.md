@@ -39,7 +39,7 @@
 2. **商店截图重拍**：`docs/store-assets/` 里的截图 2（向导）与截图 5（管理页）是旧界面，还需要补一张幕布。
    `tests/e2e/store-shots.mjs` 还没跟上 0.3.0 的新结构，重拍前先改它（`CHROMEWEBSTORE.md` §8 里标了 ⚠️）。
 3. **提交商店**：`CHROMEWEBSTORE.md` 是逐字段粘贴用的材料。权限与 0.2.0 一致（storage、scripting、activeTab + 按站点可选主机权限），隐私政策已复核、无变化。
-4. **发 release**：0.2.0 那次是打 tag + 建 GitHub Release（附 zip）。0.3.0 同样做即可：`npm run zip` 后 `gh release create v0.3.0 .output/page-mask-0.3.0-chrome.zip --notes-file <CHANGELOG 的 0.3.0 段>`。
+4. ~~**发 release**~~：已发 —— https://github.com/cherishfall/page-mask/releases/tag/v0.3.0 （tag `v0.3.0`，附 `page-mask-0.3.0-chrome.zip`，23 个文件 / 132 KB）。
 
 ## 建议下一步调用的 skill
 
