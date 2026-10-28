@@ -2,6 +2,7 @@
  * 遮罩外观（读 DOM 的一侧，纯计算见 core/mask-color.ts）。运行时遮罩（ui/mask-layer.ts）与
  * 向导预览（ui/wizard/WizardApp.vue）共用，保证「预览所见 = 保存所得」（REVIEW N25）。
  */
+import { curtainColor } from '@/core/curtain';
 import { canvasIsDark, parseCssColor, resolveMaskColor } from '@/core/mask-color';
 
 /** 祖先链：父元素起由近到远；跨过 shadow 边界回到宿主（页面自己的 Web Component 里的元素） */
@@ -39,4 +40,12 @@ export function maskColorFor(el: Element): string {
 export function applyMaskAppearance(box: HTMLElement, el: Element): void {
   box.style.background = maskColorFor(el);
   box.style.borderRadius = getComputedStyle(el).borderRadius;
+}
+
+/** 幕布底色（#45）：html / body 上第一个不透明的背景色，取不到按画布兜底（core/curtain.ts） */
+export function curtainBackgroundFor(doc: Document): string {
+  const root = doc.documentElement;
+  const htmlBg = root ? getComputedStyle(root).backgroundColor : '';
+  const bodyBg = doc.body ? getComputedStyle(doc.body).backgroundColor : '';
+  return curtainColor(htmlBg, bodyBg, pageCanvasIsDark(doc));
 }

@@ -1,7 +1,7 @@
 /**
  * 内容脚本运行时：生命周期编排。
  * - 已配置站点伪装态：请求后台注入隐藏样式（方案A/B）+ 标题/图标伪装 + 体检 +
- *   方案C遮罩覆盖层 + 悬浮按钮
+ *   方案C遮罩覆盖层 + 幕布（#45，临时整页遮蔽）+ 悬浮按钮
  * - 原样态：完全还原（样式、标题、图标、遮罩），悬浮按钮保留（切回入口）
  * - storage.onChanged 驱动同站多标签页联动；SPA 路由变化（WXT `wxt:locationchange`）立即重评估生效范围
  *
@@ -31,6 +31,7 @@ import { browser } from 'wxt/browser';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
+import { curtainRestoreAction } from '@/core/curtain';
 import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles, type StyleRecord } from '@/core/doc-styles';
@@ -42,6 +43,7 @@ import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
 import { MaskLayer } from './mask-layer';
+import { CurtainLayer } from './curtain';
 import { createPageHost, type PageHost } from './page-host';
 import { createFirstPaintShield } from './first-paint-shield';
 
@@ -113,6 +115,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       return () => clearTimeout(id);
     },
   });
+  // 幕布（#45）：页面内的临时状态，只活在本实例里——不写存储、刷新 / 整页跳转即消失
+  const curtain = new CurtainLayer({ createHost: () => createPageHost(ctx, 'curtain') });
   // 必须最先执行：在页面开始解析前挡住首帧
   const shield = createFirstPaintShield(document);
   const styles = createDocStyles((m: BgRequest) => browser.runtime.sendMessage(m), takeover);
@@ -123,9 +127,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let profile: SiteProfile | null = null;
   let settings: GlobalSettings = { defaultTitle: null }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
-  const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos'] }>({
+  const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos']; curtain: boolean }>({
     state: 'original',
     position: null,
+    curtain: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -149,6 +154,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let disposed = false;
   /** 上次整页应用时的判据（core/apply-key.ts）；null = 下次必须重新应用 */
   let appliedKey: string | null = null;
+  /** 幕布开启前的开关态（恢复分支的判据）；null = 幕布没开（#45，不写存储） */
+  let curtainEntryState: SiteProfile['switchState'] | null = null;
   /** 体检代次：路由变化、切原样、进向导、收尾时加一，进行中的体检随之作废 */
   let healthGen = 0;
   let handoverRecord: Promise<StyleRecord> | null = null;
@@ -165,6 +172,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
+    toggleState.curtain = curtain.active;
   }
 
   function mountToggle(): void {
@@ -178,10 +186,13 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
+          curtain: toggleState.curtain,
           onToggle: handleToggle,
           onMoved: handleMoved,
           onEdit: handleEdit,
           onResetPos: handleResetPos,
+          onCover: handleCover,
+          onRestore: handleRestore,
         }),
     });
     toggleApp.mount(toggleHost.root);
@@ -266,6 +277,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 悬浮按钮菜单 → 编辑规则。改动直接写库，storage 变化即时重应用＝即时预览 */
   function openEditorPanel(): void {
     if (!profile || wizardActive || editorHost || disposed) return;
+    hideCurtain(); // 幕布期间进编辑界面前先撤幕布（#45）
     ensureHostShield();
     pageState.url = location.href;
     editorHost = createPageHost(ctx, 'editor');
@@ -306,6 +318,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (wizardActive || resetting || disposed || (!profile && mode !== 'newSite')) return;
     wizardActive = true;
     healthGen++;
+    hideCurtain(); // 进向导前先撤幕布（#45）
     closeEditorPanel();
 
     // 排在进行中的状态刷新之后，避免刷新在向导打开后又把正式样式注回去
@@ -356,7 +369,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     const ok = await syncFormalStyles();
     shield.release();
     await uiReady;
-    if (disposed || !profile || profile.switchState !== 'disguised' || wizardActive) return ok;
+    if (disposed || wizardActive) return ok;
+    // 幕布开着时重新压住标题与覆盖层（#45）
+    reassertCurtain();
+    if (!profile || profile.switchState !== 'disguised') return ok;
     rebuildMasks();
     mountToggle();
     scheduleHealthCheck();
@@ -370,9 +386,65 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     clearMasks();
     const ok = await syncFormalStyles();
     await uiReady;
-    if (disposed || !profile || wizardActive) return ok;
+    if (disposed || wizardActive) return ok;
+    // 幕布开着时 guard.restore() 刚把真实标题放了出来：重新压住标题与覆盖层（#45）
+    reassertCurtain();
+    if (!profile) return ok;
     mountToggle();
     return ok;
+  }
+
+  // ---------- 幕布（#45，临时状态：不进配置、不改 switchState、只作用于当前标签页） ----------
+
+  /** 幕布开着时重新压住标题与覆盖层（applyAll / restoreAll 里的 guard 调用会把幕布的标题盖掉） */
+  function reassertCurtain(): void {
+    if (!curtain.active || !profile) return;
+    guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    curtain.reassert();
+  }
+
+  /** 遮住整页：铺覆盖层 + 压住标题与图标（与清爽态同一套规则）；记下进入前的开关态供恢复分支 */
+  function showCurtain(): void {
+    if (!profile || curtain.active) return;
+    curtainEntryState = profile.switchState;
+    ensureHostShield();
+    curtain.show();
+    guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    syncToggleState();
+  }
+
+  /**
+   * 撤幕布并按进入前的开关态恢复标题与图标（#45，最容易写错的地方）：
+   * 进入前是清爽态 → 回到清爽标题与图标；进入前是原样态 → 才还原真实标题与图标。
+   * 一律 guard.restore() 会让清爽态当场露馅（真实标题放出来）。
+   */
+  function hideCurtain(): void {
+    if (!curtain.active) return;
+    const entry = curtainEntryState;
+    curtainEntryState = null;
+    curtain.hide();
+    if (entry && curtainRestoreAction(entry) === 'disguise' && profile) {
+      guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    } else {
+      guard.restore();
+    }
+    syncToggleState();
+  }
+
+  /** 悬浮按钮「遮住」 */
+  function handleCover(): void {
+    if (!profile || !ctx.isValid) return;
+    showCurtain();
+  }
+
+  /** 悬浮按钮「恢复」：回到点击「遮住」之前的状态 */
+  function handleRestore(): void {
+    if (!ctx.isValid) return;
+    const entry = curtainEntryState;
+    hideCurtain();
+    // 幕布期间开关被其他标签页 / popup 改过时，进入前的状态已不等于当前：按最新配置重应用对齐
+    // （正常情形二者相同，不会走到这；点「恢复」回到的仍是点击「遮住」之前的样子）
+    if (profile && entry !== profile.switchState) void scheduleRefresh({ force: true });
   }
 
   // ---------- 体检 ----------
@@ -420,6 +492,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
   function clearPageUi(): void {
+    hideCurtain(); // 先撤幕布再继续（#45；teardown 也走这里）
     healthGen++;
     shield.release();
     unmountToggle();
@@ -458,6 +531,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function handleSiteReset(): Promise<Ack> {
     resetting = true;
     await exclusive(async () => {
+      hideCurtain(); // 先撤幕布再继续（#45）
       closeWizard();
       profile = null;
       clearPageUi();

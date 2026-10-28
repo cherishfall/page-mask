@@ -1,7 +1,8 @@
 /*
  * 页内悬浮按钮样式（ui/toggle/toggle-styles.ts 注入到悬浮按钮的 shadow root）。
  *
- * 布局：一根小胶囊，三段——拖动把手 / 主按钮（切换）/ 「⋯」（菜单）。
+ * 布局：一根小胶囊，四段——拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」（菜单）；
+ * 遮住整页期间收起成单个「恢复」按钮（#45）。
  * 胶囊本体用 tokens 的不透明底色 + 控件描边：半透明灰在深浅页面上都无法同时满足
  * 「本体 ≥3:1、文字 ≥4.5:1」，而这里是常驻控件，必须稳定可辨。
  * 菜单是 popover（进 top layer，不会被页面浮层压住），位置由脚本按视口算（Chrome 116
@@ -101,6 +102,55 @@
 .pm-tg-more[aria-expanded='true'] {
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
+}
+
+/* ── 「遮住」按钮（图标即可，读屏文案「遮住整页」） ── */
+.pm-tg-cover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 22px;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--pm-fg-muted);
+  cursor: pointer;
+}
+.pm-tg-cover:hover {
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+}
+.pm-tg-cover-icon {
+  inline-size: 13px;
+  block-size: 13px;
+}
+
+/* ── 幕布态：整根胶囊收起成单个「恢复」按钮（#45）。
+      默认低对比度（白屏上只剩一个极小的入口），指针移上去 / 键盘聚焦才显出完整按钮 ── */
+.pm-tg-on-curtain {
+  opacity: 0.35;
+}
+.pm-tg-on-curtain:hover,
+.pm-tg-on-curtain:focus-within {
+  opacity: 1;
+}
+.pm-tg-restore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--pm-radius-pill);
+  padding: 4px 12px;
+  background: transparent;
+  color: inherit;
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pm-tg-restore:hover {
+  background: var(--pm-bg-subtle);
 }
 
 /* ── 菜单（popover） ── */

@@ -1,7 +1,7 @@
 /**
  * 页内界面宿主与「宿主保护样式」（REVIEW N40、#22）。
  *
- * 页内界面（悬浮切换按钮、页面内编辑面板、设置向导、遮罩覆盖层）各挂在一个自定义元素宿主上，
+ * 页内界面（悬浮切换按钮、页面内编辑面板、设置向导、幕布、遮罩覆盖层）各挂在一个自定义元素宿主上，
  * 界面本身在宿主的 shadow root 里。shadow 边界挡得住页面选择器命中内部元素，但挡不住：
  * - 命中宿主自身的规则：`html > div{display:none!important}`、`div:empty`、`*{filter/transform}` ……
  * - 从宿主继承进 shadow 的属性：line-height、direction、color、letter-spacing ……
@@ -24,6 +24,7 @@ export const HOST_TAGS = {
   toggle: 'pagemask-toggle',
   editor: 'pagemask-editor',
   wizard: 'pagemask-wizard',
+  curtain: 'pagemask-curtain',
   mask: 'pagemask-mask',
 } as const;
 
@@ -34,7 +35,8 @@ export const HOST_Z_INDEX: Record<HostKind, number> = {
   wizard: 2147483647,
   editor: 2147483646,
   toggle: 2147483645,
-  mask: 2147483644,
+  curtain: 2147483644,
+  mask: 2147483643,
 };
 
 const ALL_HOSTS = Object.values(HOST_TAGS).join(', ');

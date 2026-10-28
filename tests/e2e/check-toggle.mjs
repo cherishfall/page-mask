@@ -1,5 +1,6 @@
 /**
  * 悬浮按钮与页内无障碍验收（#25，审查 N1、N16–N18、N29–N34、对比度表）：真实鼠标 / 键盘。
+ * 幕布（#45）：一键遮住整页的入口、恢复分支、生命周期，也在这里验。
  *
  * 运行：npm run build && node tests/e2e/check-toggle.mjs     （约 15 秒；HEADFUL=1 有界面运行）
  *
@@ -10,12 +11,15 @@
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
  * - 拖动：专用把手 + setPointerCapture，拖出左上角时贴边不出视口，松手后位置落库（贴边 + 纵向坐标）
  * - 对比度：白底 / 深色 / 灰底三种页面上，胶囊本体（底色 vs 页面底色）≥3:1、文字 ≥4.5:1
+ * - 幕布：清爽态 / 原样态的恢复分支（进哪态回哪态）、页面内容不可见、标题与图标替换、
+ *   底色取页面画布底色（深色页面不发白）、刷新即消失、进向导先撤幕布、
+ *   遮住期间别的标签页切开关后幕布仍在、不写配置不改开关
  * - 叠放：页面里有 z-index:2147483647 的固定浮层时，向导的模态 <dialog> 仍在最上层
  *
  * 不写截图、不留临时文件。
  */
 import { createReporter, startServer, waitFor } from './lib/harness.mjs';
-import { getProfile, launchExtension, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
+import { getProfile, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
@@ -58,7 +62,7 @@ const profileOf = (origin) => ({
   formatVersion: 1,
   origin,
   switchState: 'disguised',
-  disguisedTitle: null,
+  disguisedTitle: '低调阅读', // 幕布用例断言标题时用固定值，不依赖浏览器界面语言
   faviconDataUrl: null,
   hideRules: [
     {
@@ -304,6 +308,135 @@ async function main() {
       );
       check(c.textVsPill >= 4.5, `${meta.label}：文字对胶囊底 ≥4.5:1（${c.textVsPill}:1）`);
     }
+
+    // ===================== 幕布：一键遮住整页（#45） =====================
+    console.log('\n--- 幕布：遮住 / 恢复（#45） ---');
+    await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+
+    // ---- 清爽态遮住：内容不可见、标题替换、胶囊收起成「恢复」、不写配置 ----
+    const beforeCover = await getProfile(ext.control, ORIGIN);
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    const covered = await page.evaluate(() => {
+      const cover = document.querySelector('pagemask-curtain')?.shadowRoot?.querySelector('[data-pm-curtain]');
+      const r = cover?.getBoundingClientRect();
+      const sr = document.querySelector('pagemask-toggle')?.shadowRoot;
+      return {
+        present: !!cover,
+        w: r?.width ?? 0,
+        h: r?.height ?? 0,
+        bg: cover ? getComputedStyle(cover).backgroundColor : '',
+        hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
+        title: document.title,
+        iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
+        onlyRestore: !sr?.querySelector('[data-testid="pm-toggle-main"]') && !sr?.querySelector('[data-testid="pm-toggle-more"]'),
+      };
+    });
+    check(covered.present, '幕布覆盖层已铺上');
+    check(covered.w >= 1000 && covered.h >= 700, `覆盖层铺满视口（${Math.round(covered.w)}×${Math.round(covered.h)}）`);
+    check(covered.bg === 'rgb(255, 255, 255)', `白底页面的幕布取页面画布底色（${covered.bg}）`);
+    check(covered.hit === 'pagemask-curtain', `页面内容不可见（视口中心命中落在幕布宿主上：${covered.hit}）`);
+    check(covered.title === '低调阅读', `标签页标题换成清爽标题（${covered.title}）`);
+    check(covered.iconLinks === 1, `图标换成伪装图标（icon link ×${covered.iconLinks}）`);
+    check(covered.onlyRestore, '胶囊收起成单个「恢复」，清爽/原样与「编辑规则」都不再可点');
+    const afterCover = await getProfile(ext.control, ORIGIN);
+    check(afterCover.switchState === beforeCover.switchState, `遮住不改开关状态（${afterCover.switchState}）`);
+    check(JSON.stringify(afterCover) === JSON.stringify(beforeCover), '遮住不写配置（站点配置逐字段没变）');
+
+    // ---- 清爽态「恢复」：回到清爽态（不是原样态），隐藏规则仍生效 ----
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    const restored = await page.evaluate(() => ({
+      title: document.title,
+      ad: getComputedStyle(document.querySelector('#ad')).display,
+    }));
+    check(restored.title === '低调阅读', `清爽态「恢复」后仍是清爽标题（${restored.title}）`);
+    check(restored.ad === 'none', `隐藏规则仍生效（#ad display=${restored.ad}）`);
+    const afterRestore = await getProfile(ext.control, ORIGIN);
+    check(afterRestore.switchState === 'disguised', `遮住前后开关状态不变（${afterRestore.switchState}）`);
+
+    // ---- 原样态遮住再「恢复」：标题被替换，恢复回到真实标题与图标 ----
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitFor(page, '切到原样', (h) => document.title === 'Acme 阅读', [], { timeout: 5000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    const coveredOriginal = await page.evaluate(() => ({
+      title: document.title,
+      iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
+    }));
+    check(coveredOriginal.title === '低调阅读', `原样态遮住后标题被替换（${coveredOriginal.title}）`);
+    check(coveredOriginal.iconLinks === 1, `原样态遮住后图标被替换（icon link ×${coveredOriginal.iconLinks}）`);
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    const restoredOriginal = await page.evaluate(() => ({
+      title: document.title,
+      iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
+    }));
+    check(restoredOriginal.title === 'Acme 阅读', `原样态「恢复」回到真实标题（${restoredOriginal.title}）`);
+    check(restoredOriginal.iconLinks === 0, `原样态「恢复」回到真实图标（icon link ×${restoredOriginal.iconLinks}）`);
+
+    // ---- 深色页面的幕布取深色画布底色；刷新即消失（临时语义，不做跨刷新保持） ----
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await page.goto(`${ORIGIN}/dark`, { waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    const darkBg = await page.evaluate(
+      () => getComputedStyle(document.querySelector('pagemask-curtain').shadowRoot.querySelector('[data-pm-curtain]')).backgroundColor,
+    );
+    check(darkBg === 'rgb(17, 17, 17)', `深色页面里幕布取页面画布底色，不是纯白（${darkBg}）`);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    const afterReload = await page.evaluate(() => ({
+      curtain: !!document.querySelector('pagemask-curtain'),
+      hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
+    }));
+    check(!afterReload.curtain, '刷新后幕布消失、没有残留覆盖层');
+    check(afterReload.hit !== 'pagemask-curtain', `刷新后页面内容正常可见（命中 ${afterReload.hit}）`);
+
+    // ---- 进向导前先撤幕布 ----
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
+    const wizardState = await page.evaluate(() => ({
+      curtain: !!document.querySelector('pagemask-curtain'),
+      hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
+    }));
+    check(!wizardState.curtain, '进向导前幕布先撤掉');
+    check(wizardState.hit !== 'pagemask-curtain', `向导打开后页面可见（命中 ${wizardState.hit}）`);
+    // 没有选中任何元素，点退出直接关掉向导
+    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').click(), WIZARD);
+    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+
+    // ---- 遮住期间别的标签页切开关：幕布仍在、标题仍是低调查 ----
+    await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    const page2 = await ext.browser.newPage();
+    await page2.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitFor(
+      page,
+      '幕布仍在且标题仍低调',
+      () => !!document.querySelector('pagemask-curtain') && document.title === '低调阅读',
+      [],
+      { timeout: 5000 },
+    );
+    check(true, '遮住期间别的标签页切开关：幕布仍在、标题仍是低调查');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    await page2.close();
+    const finalProfile = await getProfile(ext.control, ORIGIN);
+    check(finalProfile.switchState === 'original', `开关以存储为准（${finalProfile.switchState}）`);
+    check(
+      JSON.stringify(Object.keys(finalProfile).sort()) === JSON.stringify(Object.keys(beforeCover).sort()),
+      '存储里没有任何新字段',
+    );
+    // 复位开关，不让幕布用例影响后面的叠放用例
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
 
     // ===================== 叠放：页面超高浮层之上的模态对话框 =====================
     console.log('\n--- 页面浮层 z-index:2147483647 时，向导对话框仍在最上层 ---');
