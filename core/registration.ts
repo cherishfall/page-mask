@@ -7,6 +7,12 @@
 
 export const CONTENT_SCRIPT_FILE = 'content-scripts/content.js' as const;
 
+/**
+ * 一次性幕布脚本（#46）：未添加过的网站里没有内容脚本，popup 点「遮住本页」时由后台
+ * 用 activeTab 注入这一份。**不注册**（不是动态注册计划的一部分），也不写进 manifest。
+ */
+export const CURTAIN_ONESHOT_FILE = 'curtain-oneshot.js' as const;
+
 /** 本扩展动态注册 id 的命名空间；对账只处理带这个前缀的注册 */
 export const REGISTRATION_ID_PREFIX = 'pagemask:';
 

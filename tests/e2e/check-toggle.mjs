@@ -463,6 +463,57 @@ async function main() {
       WIZARD,
     );
     check(top.open && top.onTop, `确认框在页面 z-index:2147483647 浮层之上（命中测试落在向导宿主上：${top.onTop}）`);
+
+    // ===================== 幕布：未添加网站的一次性脚本（#46） =====================
+    console.log('\n--- 幕布：未添加网站的一次性脚本（#46） ---');
+    // 删掉配置：这个网站从此"没添加过"，页面里没有内容脚本、没有悬浮胶囊
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await new Promise((res) => setTimeout(res, 800)); // 负向断言：等过注入时机
+    check(!(await page.$(TOGGLE)), '没添加的网站上没有悬浮按钮');
+
+    /** 用 activeTab 同款的路径注入一次性脚本（E2E 的 openPopup 不授予 activeTab，只能直接注入） */
+    const injectOnce = async () => {
+      const tabId = await tabIdOf(ext.control, `${ORIGIN}/*`);
+      await ext.control.evaluate(async (id) => {
+        await chrome.scripting.executeScript({ target: { tabId: id }, files: ['curtain-oneshot.js'] });
+      }, tabId);
+    };
+
+    await injectOnce();
+    await waitForShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'), { timeout: 5000 });
+    const oneShot = await page.evaluate(() => ({
+      title: document.title,
+      cover: !!document.querySelector('pagemask-curtain'),
+      hit: document.elementFromPoint(500, 300)?.shadowRoot ? 'pagemask-curtain' : (document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null),
+    }));
+    check(oneShot.cover, '一次性幕布覆盖层已铺上');
+    check(oneShot.hit === 'pagemask-curtain', `页面内容不可见（视口中心命中 ${oneShot.hit}）`);
+    check(oneShot.title !== 'Acme 阅读', `标签页标题已换成低调标题（${oneShot.title}）`);
+    check(!(await page.$(TOGGLE)), '幕布上没有悬浮胶囊（没添加的网站本来就没有）');
+
+    // 幂等：重复注入不叠加第二层
+    await injectOnce();
+    await injectOnce();
+    const layers = await page.evaluate(() => document.querySelectorAll('pagemask-curtain').length);
+    check(layers === 1, `重复注入不叠加（实际 ${layers} 层）`);
+
+    await clickInShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'));
+    await waitFor(page, '点「恢复」后幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    const back = await page.evaluate(() => ({ title: document.title, hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null }));
+    check(back.title === 'Acme 阅读', `恢复后标题回到原值（${back.title}）`);
+    check(back.hit !== 'pagemask-curtain', `恢复后页面内容正常可见（命中 ${back.hit}）`);
+    check(
+      (await ext.control.evaluate(async (o) => (await chrome.storage.local.get(`profile:${o}`))[`profile:${o}`], ORIGIN)) === undefined,
+      '没有留下任何站点配置',
+    );
+
+    // 刷新后脚本随文档消失：即使之前遮住过，新文档也是干净的
+    await injectOnce();
+    await waitForShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'), { timeout: 5000 });
+    await page.reload({ waitUntil: 'load' });
+    await new Promise((res) => setTimeout(res, 500));
+    check(!(await page.$('pagemask-curtain')), '刷新后一次性幕布随之消失');
   } catch (e) {
     r.fail(e);
   } finally {

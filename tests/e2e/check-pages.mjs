@@ -28,6 +28,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { REPO_ROOT } from './lib/browser.mjs';
+import { removeTempDir } from './lib/tmp.mjs';
 import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, grantPermissions, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
 import { waitForShadow } from './lib/shadow.mjs';
@@ -312,6 +313,8 @@ async function main() {
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '为当前网站开启清爽模式', '新站点显示「为当前网站开启清爽模式」');
+    check(!!(await popup.$(tid('pm-popup-title-settings'))), '未配置站点有「设置标题和图标」（只想改标题的入口）');
+    check(!!(await popup.$(tid('pm-popup-cover'))), '未配置站点有「遮住本页」（应急幕布的入口）');
     check(
       (await popup.$eval(tid('pm-popup-title-settings'), (b) => b.textContent.trim())) === '设置标题和图标',
       '未配置站点的次按钮是「设置标题和图标」',
@@ -771,7 +774,7 @@ async function main() {
     await ext.cleanup();
     await srv.close();
     await srv2.close();
-    fs.rmSync(tmp, { recursive: true, force: true });
+    removeTempDir(tmp); // 收尾失败不改用例结论（受管环境会拦一次删大量文件的调用）
   }
   process.exitCode = r.summary();
 }

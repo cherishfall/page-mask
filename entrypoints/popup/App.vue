@@ -66,16 +66,20 @@
       >
         {{ busy === 'edit' ? '正在打开…' : '编辑当前网站' }}
       </button>
-      <!-- 还没添加的网站：只想改标签页标题和图标的路（不进向导），见 #42 -->
-      <button
-        v-else-if="phase === 'new'"
-        class="ghost"
-        data-testid="pm-popup-title-settings"
-        :disabled="busy !== ''"
-        @click="openTitleSettings"
-      >
-        {{ busy === 'title' ? '正在打开…' : '设置标题和图标' }}
-      </button>
+      <!-- 还没添加的网站：只想改标签页标题和图标的路（不进向导），以及应急的「遮住本页」（#42、#46） -->
+      <template v-else-if="phase === 'new'">
+        <button
+          class="ghost"
+          data-testid="pm-popup-title-settings"
+          :disabled="busy !== ''"
+          @click="openTitleSettings"
+        >
+          {{ busy === 'title' ? '正在打开…' : '设置标题和图标' }}
+        </button>
+        <button class="ghost" data-testid="pm-popup-cover" :disabled="busy !== ''" @click="coverPage">
+          {{ busy === 'cover' ? '正在遮住…' : '遮住本页' }}
+        </button>
+      </template>
     </template>
 
     <button class="ghost manage" @click="manage">管理全部网站</button>
@@ -99,7 +103,7 @@ const profile = ref<SiteProfile | null>(null);
 /** 当前网站的站点授权；null = 还没查 */
 const granted = ref<boolean | null>(null);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
-const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'title'>('');
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'title' | 'cover'>('');
 /** 失败 / 授权被拒时给用户看的话 */
 const message = ref('');
 
@@ -284,6 +288,29 @@ async function openTitleSettings() {
     window.close();
   } catch {
     message.value = '没能打开管理页，请再点一次 PageMask';
+    busy.value = '';
+  }
+}
+
+/**
+ * 未配置站点的「遮住本页」（#46）：让后台用 activeTab 注入一次性幕布脚本。
+ * 未添加的网站里没有内容脚本，这是唯一的遮法；幕布上自己有一个「恢复」入口。
+ */
+async function coverPage() {
+  const tabId = tab.value?.id;
+  if (tabId === undefined || busy.value) return;
+  message.value = '';
+  busy.value = 'cover';
+  try {
+    const res: { ok?: boolean } | undefined = await browser.runtime
+      .sendMessage({ t: 'coverPage', tabId })
+      .catch(() => undefined);
+    if (!res?.ok) {
+      message.value = '没能遮住这个页面，刷新这个页面后再试一次';
+      return;
+    }
+    window.close();
+  } finally {
     busy.value = '';
   }
 }

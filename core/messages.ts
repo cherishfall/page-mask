@@ -148,11 +148,22 @@ export interface SiteResetMsg {
   t: 'siteReset';
 }
 
+/**
+ * popup → 后台：给当前标签页铺一次幕布（#46，未添加过的网站）。
+ * 未添加的网站里没有内容脚本，只能由后台用 activeTab 注入一次性脚本
+ * （entrypoints/curtain-oneshot.ts），不注册、不写配置。
+ */
+export interface CoverPageRequest {
+  t: 'coverPage';
+  tabId: number;
+}
+
 export type BgRequest =
   | EnableSiteRequest
   | ResetSiteRequest
   | ReconcileRequest
   | CancelNewSiteRequest
+  | CoverPageRequest
   | ApplyDisguiseRequest
   | RestoreOriginalRequest
   | DraftCssRequest

@@ -27,7 +27,7 @@
 import type { Browser, WxtBrowser } from 'wxt/browser';
 import { PROFILE_PREFIX, createPageMaskStorage } from './storage';
 import { buildDisguiseCss } from './css-builder';
-import { CONTENT_SCRIPT_FILE, originPattern, registrationPlan } from './registration';
+import { CONTENT_SCRIPT_FILE, CURTAIN_ONESHOT_FILE, originPattern, registrationPlan } from './registration';
 import { HOST_SHIELD_CSS } from './host-shield';
 import { planReconcile, type RegisteredScript } from './reconcile';
 import type {
@@ -196,6 +196,26 @@ export function createBackground({ browser }: BackgroundDeps): void {
       return { ok: true };
     } catch (e) {
       return { ok: false, code: 'injectFailed', error: String(e) };
+    }
+  }
+
+  // ---------- 未添加网站的幕布（#46） ----------
+
+  /**
+   * popup 的「遮住本页」：把一次性幕布脚本注入当前标签页。
+   * 未添加的网站里没有内容脚本（ADR-0001：未配置零注入），只能走这条——activeTab 在用户点
+   * 工具栏图标时授予，注入不需要站点授权，也不注册、不写配置；脚本随文档消失。
+   * 幂等由脚本自己保证：已遮住时再注入一次什么都不做。
+   */
+  async function coverPage(tabId: number): Promise<Ack> {
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId },
+        files: [CURTAIN_ONESHOT_FILE] as unknown as ScriptPublicPath[],
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e) };
     }
   }
 
@@ -394,6 +414,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
     switch (msg?.t) {
       case 'enableSite':
         return fromExtensionPage(sender) ? enableSite(msg) : Promise.resolve(FORBIDDEN);
+      case 'coverPage':
+        return fromExtensionPage(sender) ? coverPage(msg.tabId) : Promise.resolve(FORBIDDEN);
       case 'resetSite':
         return fromExtensionPage(sender) ? resetSite(msg.origin) : Promise.resolve(FORBIDDEN);
       case 'reconcile':

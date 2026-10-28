@@ -40,6 +40,11 @@ export class CurtainLayer {
     return this.host !== null;
   }
 
+  /** 幕布宿主的根容器：需要在幕布上放额外控件时用（例如一次性脚本的「恢复」入口） */
+  get root(): HTMLElement | null {
+    return this.host?.root ?? null;
+  }
+
   /** 铺开幕布（已开着时无操作） */
   show(): void {
     if (this.host) return;

@@ -11,6 +11,7 @@
  *   导出 → 清空 → 导入后「一次授权全部」、安装警告为空。权限弹窗本身无法自动化：
  *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
  */
+import { removeTempDir } from './lib/tmp.mjs';
 import { createReporter, resultsDir, startServer, waitFor } from './lib/harness.mjs';
 import {
   BUILD_DIR,
@@ -945,7 +946,7 @@ async function main() {
         await input.uploadFile(file);
         await waitFor(m, '导入完成', () => document.body.innerText.includes('导入完成'));
       } finally {
-        fs.rmSync(path.dirname(file), { recursive: true, force: true });
+        removeTempDir(path.dirname(file)); // 收尾失败不改用例结论
       }
     }
 

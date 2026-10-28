@@ -26,7 +26,12 @@ export interface PageHost {
   remove(): void;
 }
 
-export function createPageHost(ctx: ContentScriptContext, kind: HostKind): PageHost {
+/**
+ * 创建页内界面宿主。
+ * `ctx` 为 null 时不接 WXT 的生命周期（一次性脚本没有 ctx，幕布随文档一起消失即可）：
+ * 按键隔离照常，只是不挂 onInvalidated，收尾由调用方自己做。
+ */
+export function createPageHost(ctx: ContentScriptContext | null, kind: HostKind): PageHost {
   const host = document.createElement(HOST_TAGS[kind]);
   Object.assign(host.style, {
     display: 'block',
@@ -48,7 +53,7 @@ export function createPageHost(ctx: ContentScriptContext, kind: HostKind): PageH
   // 冒泡阶段在 shadow root 上截住：shadow 内自己的监听（Vue @keydown 等）照常先收到；
   // 向导的 Esc 监听挂在 window 捕获阶段（pick-controller），先于这里执行，不受影响
   for (const type of ISOLATED_EVENTS) {
-    shadow.addEventListener(type, (e) => e.stopPropagation(), { signal: ctx.signal });
+    shadow.addEventListener(type, (e) => e.stopPropagation(), ctx ? { signal: ctx.signal } : undefined);
   }
   document.documentElement.appendChild(host);
   let removed = false;
@@ -57,7 +62,7 @@ export function createPageHost(ctx: ContentScriptContext, kind: HostKind): PageH
     removed = true;
     host.remove();
   };
-  const off = ctx.onInvalidated(remove);
+  const off = ctx ? ctx.onInvalidated(remove) : () => undefined;
   return {
     host,
     shadow,

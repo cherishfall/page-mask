@@ -432,6 +432,36 @@ describe('后台引擎（fakeBrowser）', () => {
     });
   });
 
+  // ---------- 未添加网站的幕布（#46：activeTab 注入一次性脚本） ----------
+
+  describe('coverPage', () => {
+    it('popup 发来：注入一次性幕布脚本', async () => {
+      const res = await send({ t: 'coverPage', tabId: siteTabId });
+
+      expect(res).toEqual({ ok: true });
+      expect(stubs.scripting.executeScript).toHaveBeenCalledWith({
+        target: { tabId: siteTabId },
+        files: ['curtain-oneshot.js'],
+      });
+    });
+
+    it('注入失败时回复错误，不吞掉原因', async () => {
+      stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Cannot access a chrome:// URL'));
+
+      const res = (await send({ t: 'coverPage', tabId: siteTabId })) as { ok: boolean; error?: string };
+
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain('chrome://');
+    });
+
+    it('网页里的内容脚本发来：拒绝', async () => {
+      const res = (await send({ t: 'coverPage', tabId: siteTabId }, DOC_SENDER)) as { ok: boolean; code?: string };
+
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'forbidden' }));
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+  });
+
   // ---------- 回复通道 ----------
 
   it('回调式回复：只支持 sendResponse 的浏览器下也能拿到结果（监听器同步返回 true，而不是 Promise）', async () => {
