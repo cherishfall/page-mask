@@ -1,4 +1,4 @@
-# HANDOFF · 0.4.0 进行中（2 / 10）
+# HANDOFF · 0.4.0 进行中（3 / 10）
 
 > 本文件只在批次进行中临时放根目录（见 `AGENTS.md`），批次收尾后删除。设计共识在 `docs/design.md`，术语在 `GLOSSARY.md`，过程记录在 `docs/dev/`。
 
@@ -10,8 +10,8 @@
 |---|---|---|---|
 | [#49](https://github.com/cherishfall/page-mask/issues/49) | 标题与图标不再和网站对抢 | — | ✅ `e28530f` |
 | [#50](https://github.com/cherishfall/page-mask/issues/50) | 遮住可开可关 + 统一恢复按钮 | — | ✅ `c87afab` |
-| [#55](https://github.com/cherishfall/page-mask/issues/55) | 插件设置独立成页 | — | ⏭ 下一个 |
-| [#51](https://github.com/cherishfall/page-mask/issues/51) | 向导三步骨架 + 第 1 步 | #49 ✅ | 已解锁 |
+| [#55](https://github.com/cherishfall/page-mask/issues/55) | 插件设置独立成页 | — | ✅ `9e158ca` |
+| [#51](https://github.com/cherishfall/page-mask/issues/51) | 向导三步骨架 + 第 1 步 | #49 ✅ | ⏭ 下一个 |
 | [#52](https://github.com/cherishfall/page-mask/issues/52) | 点选这一步清单化 | #51 | 等待 |
 | [#53](https://github.com/cherishfall/page-mask/issues/53) | 看效果收编范围、保存即完成 | #52 | 等待 |
 | [#54](https://github.com/cherishfall/page-mask/issues/54) | 面板只留三件事 | #50 #55 | 等待 |
@@ -19,7 +19,7 @@
 | [#57](https://github.com/cherishfall/page-mask/issues/57) | 中英双语 | #51–#56 | 等待 |
 | [#58](https://github.com/cherishfall/page-mask/issues/58) | 文档、引导、截图 | #57 | 等待 |
 
-**建议顺序**：49 ✅ → 50 ✅ → 55 → 51 → 52 → 53 → 54 → 56 → 57 → 58。50 和 55 互不依赖，但同一台机器上并行跑会抢 git index，**串行做**。
+**建议顺序**：49 ✅ → 50 ✅ → 55 ✅ → 51 → 52 → 53 → 54 → 56 → 57 → 58。50 和 55 互不依赖，但同一台机器上并行跑会抢 git index，**串行做**。
 
 ## 换模型或换工具之后怎么接着跑
 
