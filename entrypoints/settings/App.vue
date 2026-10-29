@@ -95,7 +95,7 @@
           <p class="hint">把全部网站的设置和这里的插件设置存成一个文件；换电脑或重装浏览器后导入，就能恢复。</p>
           <div class="row">
             <button type="button" class="primary" data-testid="pm-settings-export" @click="store.doExport">
-              导出配置
+              导出全部设置
             </button>
           </div>
           <!-- 先选导入方式，再选文件（审查 N20） -->
@@ -177,7 +177,7 @@
             换成文件里的 {{ store.state.replaceImpact.incomingSites }} 个网站、{{ store.state.replaceImpact.incomingRules }} 个收起项
           </li>
           <li v-if="store.state.replaceImpact.replacesSettings">插件设置（默认标题、默认图标）也会换成文件里的</li>
-          <li>这一步不能撤销；不放心的话，先取消并「导出配置」留一份</li>
+          <li>这一步不能撤销；不放心的话，先取消并「导出全部设置」留一份</li>
         </ul>
       </template>
       <form method="dialog" class="dialog-actions">
