@@ -145,6 +145,15 @@ describe('readSettings', () => {
     expect(readSettings({ defaultTitle: '周报' }).defaultTitle).toBe('周报');
     expect(readSettings({ defaultTitle: '新建标签页' }).defaultTitle).toBe('新建标签页'); // 不做旧版迁移
   });
+
+  it('「遮住」按钮位置（#50）：合法坐标保留，缺字段 / 类型不对一律回落 null', () => {
+    expect(readSettings({ curtainBtnPos: { x: 1.5, y: 2 } }).curtainBtnPos).toEqual({ x: 1.5, y: 2 });
+    expect(readSettings(undefined).curtainBtnPos).toBeNull();
+    expect(readSettings({ curtainBtnPos: null }).curtainBtnPos).toBeNull();
+    expect(readSettings({ curtainBtnPos: { x: NaN, y: 2 } }).curtainBtnPos).toBeNull();
+    expect(readSettings({ curtainBtnPos: { x: 1, y: '2' } }).curtainBtnPos).toBeNull();
+    expect(readSettings({ curtainBtnPos: 'left' }).curtainBtnPos).toBeNull();
+  });
 });
 
 describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
@@ -155,7 +164,7 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
   });
   it('带版本标记的值原样保留', () => {
     const stored = toStoredSettings({ defaultTitle: '新建标签页' });
-    expect(stored).toEqual({ defaultTitle: '新建标签页', settingsVersion: 2 });
-    expect(readStoredSettings(stored)).toEqual({ defaultTitle: '新建标签页' });
+    expect(stored).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null, settingsVersion: 2 });
+    expect(readStoredSettings(stored)).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null });
   });
 });

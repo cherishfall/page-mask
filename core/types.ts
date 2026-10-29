@@ -53,6 +53,12 @@ export interface HideRule {
   lastHealthAt?: number;
 }
 
+/** 视口坐标（像素，锚点是按钮左上角） */
+export interface ButtonPos {
+  x: number;
+  y: number;
+}
+
 /** 站点配置（按域名，一个网站一份） */
 export interface SiteProfile {
   formatVersion: 1;
@@ -65,7 +71,7 @@ export interface SiteProfile {
   faviconDataUrl: string | null;
   hideRules: HideRule[];
   /** 悬浮按钮记住的位置（视口坐标）；null = 默认右下角 */
-  floatingBtnPos: { x: number; y: number } | null;
+  floatingBtnPos: ButtonPos | null;
   createdAt: number;
   /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */
   updatedAt: number;
@@ -79,9 +85,15 @@ export interface GlobalSettings {
    * 不存空白：标题为空时 Chrome 会在标签页上显示网址。
    */
   defaultTitle: string | null;
+  /**
+   * 没添加过的网站（一次性脚本）上「遮住」按钮记住的位置（视口坐标）；null = 默认右下角。
+   * 这是本机界面状态（屏幕相关），与站点配置的 floatingBtnPos 同一口径：
+   * 导入时保留本机的值，不被导入文件覆盖。
+   */
+  curtainBtnPos: ButtonPos | null;
 }
 
-export const DEFAULT_SETTINGS: GlobalSettings = { defaultTitle: null };
+export const DEFAULT_SETTINGS: GlobalSettings = { defaultTitle: null, curtainBtnPos: null };
 
 /** 导出文件结构：带版本号字段供未来迁移（ADR-0004） */
 export interface ExportBundle {

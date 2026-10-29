@@ -212,9 +212,11 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
  */
 export function readSettings(v: unknown): GlobalSettings {
   const o = isObject(v) ? v : {};
+  const pos = o.curtainBtnPos;
   return {
     defaultTitle:
       typeof o.defaultTitle === 'string' && o.defaultTitle.trim() ? o.defaultTitle : DEFAULT_SETTINGS.defaultTitle,
+    curtainBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
   };
 }
 

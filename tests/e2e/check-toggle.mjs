@@ -14,12 +14,15 @@
  * - 幕布：清爽态 / 原样态的恢复分支（进哪态回哪态）、页面内容不可见、标题与图标替换、
  *   底色取页面画布底色（深色页面不发白）、刷新即消失、进向导先撤幕布、
  *   遮住期间别的标签页切开关后幕布仍在、不写配置不改开关
+ * - 幕布恢复按钮（#50）：胶囊整体不渲染、位置与该站胶囊同一锚点、常态 85% 不透明度且只显示图标、
+ *   悬停 / 键盘聚焦升到 100% 并显字且不位移、拖动不恢复且落库、查询 / 撤掉幕布两条消息
+ * - 一次性脚本（#46 / #50）：同一颗按钮与同一套样式、幂等注入、全局位置记忆、待授权站点用自己的标题
  * - 叠放：页面里有 z-index:2147483647 的固定浮层时，向导的模态 <dialog> 仍在最上层
  *
  * 不写截图、不留临时文件。
  */
 import { createReporter, startServer, waitFor } from './lib/harness.mjs';
-import { getProfile, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
+import { getProfile, getSettings, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
@@ -27,6 +30,8 @@ const { check } = r;
 const TOGGLE = 'pagemask-toggle';
 const WIZARD = 'pagemask-wizard';
 const EDITOR = 'pagemask-editor';
+/** 幕布宿主：遮住后「恢复」按钮住在这里（#50 起不再由胶囊渲染） */
+const CURTAIN = 'pagemask-curtain';
 const tid = (id) => `[data-testid="${id}"]`;
 
 /** 三种底色的页面：白底、深色、灰底；都带一个 >2147483646 的固定浮层 */
@@ -309,19 +314,36 @@ async function main() {
       check(c.textVsPill >= 4.5, `${meta.label}：文字对胶囊底 ≥4.5:1（${c.textVsPill}:1）`);
     }
 
-    // ===================== 幕布：一键遮住整页（#45） =====================
-    console.log('\n--- 幕布：遮住 / 恢复（#45） ---');
+    // ===================== 幕布：一键遮住整页（#45 / #50） =====================
+    console.log('\n--- 幕布：遮住 / 恢复（#45 / #50） ---');
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
 
-    // ---- 清爽态遮住：内容不可见、标题替换、胶囊收起成「恢复」、不写配置 ----
+    // 先把胶囊放到一个已知坐标：幕布恢复按钮与该站胶囊共用同一个锚点（遮住前后不跳位）
+    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 300, y: 220 } });
+    await waitFor(
+      page,
+      '胶囊挪到指定坐标',
+      (h) => {
+        const r = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle"]')?.getBoundingClientRect();
+        return !!r && Math.round(r.x) === 300 && Math.round(r.y) === 220;
+      },
+      [TOGGLE],
+      { timeout: 5000 },
+    );
+
+    // ---- 清爽态遮住：内容不可见、标题替换、胶囊整体卸掉、恢复按钮与胶囊同款（#50）、不写配置 ----
     const beforeCover = await getProfile(ext.control, ORIGIN);
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
     const covered = await page.evaluate(() => {
-      const cover = document.querySelector('pagemask-curtain')?.shadowRoot?.querySelector('[data-pm-curtain]');
+      const sr = document.querySelector('pagemask-curtain')?.shadowRoot;
+      const cover = sr?.querySelector('[data-pm-curtain]');
+      const btn = sr?.querySelector('[data-testid="pm-curtain-restore"]');
+      const label = btn?.querySelector('.pm-curtain-restore-label');
       const r = cover?.getBoundingClientRect();
-      const sr = document.querySelector('pagemask-toggle')?.shadowRoot;
+      const b = btn?.getBoundingClientRect();
+      const cs = btn ? getComputedStyle(btn) : null;
       return {
         present: !!cover,
         w: r?.width ?? 0,
@@ -330,7 +352,14 @@ async function main() {
         hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
         title: document.title,
         iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
-        onlyRestore: !sr?.querySelector('[data-testid="pm-toggle-main"]') && !sr?.querySelector('[data-testid="pm-toggle-more"]'),
+        capsule: !!document.querySelector('pagemask-toggle'),
+        btn: b ? { x: Math.round(b.x), y: Math.round(b.y), w: b.width, h: b.height } : null,
+        opacity: cs?.opacity ?? '',
+        radius: cs?.borderRadius ?? '',
+        btnBg: cs?.backgroundColor ?? '',
+        labelText: label?.textContent ?? '',
+        labelOpacity: label ? getComputedStyle(label).opacity : '',
+        aria: btn?.getAttribute('aria-label') ?? null,
       };
     });
     check(covered.present, '幕布覆盖层已铺上');
@@ -339,36 +368,150 @@ async function main() {
     check(covered.hit === 'pagemask-curtain', `页面内容不可见（视口中心命中落在幕布宿主上：${covered.hit}）`);
     check(covered.title === '低调阅读', `标签页标题换成清爽标题（${covered.title}）`);
     check(covered.iconLinks === 1, `图标换成伪装图标（icon link ×${covered.iconLinks}）`);
-    check(covered.onlyRestore, '胶囊收起成单个「恢复」，清爽/原样与「编辑规则」都不再可点');
+    check(!covered.capsule, '幕布期间整根小胶囊不渲染（一个页面上只有一套恢复入口）');
+    check(
+      covered.btn !== null && covered.btn.x === 300 && covered.btn.y === 220,
+      `恢复按钮与该站胶囊共用同一锚点（${JSON.stringify(covered.btn)}，胶囊原本在 300,220）`,
+    );
+    check(covered.opacity === '0.85', `恢复按钮常态不透明度 85%（${covered.opacity}）`);
+    check(
+      covered.labelText === '恢复' && covered.labelOpacity === '0',
+      `常态只显示图标：「恢复」在 DOM 里但不显示（文字不透明度 ${covered.labelOpacity}）`,
+    );
+    check(covered.radius === '999px' && covered.btnBg === 'rgb(255, 255, 255)', `与胶囊同一套材质（圆角 ${covered.radius}、底色 ${covered.btnBg}）`);
+    check(!!covered.aria && covered.aria.includes('撤掉幕布'), `按钮有可读名字（${covered.aria}）`);
+
+    // 悬停 / 键盘聚焦：整体升到 100% 并显出「恢复」，而且不产生位移（#50 的硬指标）
+    const restBox = covered.btn;
+    await page.mouse.move(restBox.x + restBox.w / 2, restBox.y + restBox.h / 2);
+    await new Promise((res) => setTimeout(res, 250)); // 等不透明度过渡结束
+    const hovered = await page.evaluate(() => {
+      const btn = document.querySelector('pagemask-curtain')?.shadowRoot?.querySelector('[data-testid="pm-curtain-restore"]');
+      const label = btn?.querySelector('.pm-curtain-restore-label');
+      const r = btn?.getBoundingClientRect();
+      return {
+        opacity: btn ? getComputedStyle(btn).opacity : '',
+        labelOpacity: label ? getComputedStyle(label).opacity : '',
+        x: Math.round(r?.x ?? -1),
+        y: Math.round(r?.y ?? -1),
+        w: r?.width ?? 0,
+      };
+    });
+    check(hovered.opacity === '1', `悬停时整体升到 100%（${hovered.opacity}）`);
+    check(hovered.labelOpacity === '1', `悬停时显出「恢复」（文字不透明度 ${hovered.labelOpacity}）`);
+    check(
+      hovered.x === restBox.x && hovered.y === restBox.y && Math.round(hovered.w) === Math.round(restBox.w),
+      `显字不引起位移或挤压（${hovered.x},${hovered.y} / 宽 ${Math.round(hovered.w)} 与常态一致）`,
+    );
+
+    // 键盘可达：Tab 聚焦后同样升到 100%、显出「恢复」，焦点环可见
+    await page.mouse.click(60, 400); // 焦点回页面
+    await page.keyboard.press('Tab');
+    const focusState = await page.evaluate((h) => {
+      const host = document.querySelector(h);
+      const active = host?.shadowRoot?.activeElement;
+      return { testid: active?.dataset.testid ?? null, tag: active?.tagName?.toLowerCase() ?? null };
+    }, CURTAIN);
+    check(
+      focusState.testid === 'pm-curtain-restore' && focusState.tag === 'button',
+      `Tab 能聚焦到恢复按钮（${focusState.tag} / ${focusState.testid}）`,
+    );
+    await new Promise((res) => setTimeout(res, 250));
+    const focusStyle = await page.evaluate((h) => {
+      const btn = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-curtain-restore"]');
+      return {
+        opacity: btn ? getComputedStyle(btn).opacity : '',
+        labelOpacity: btn ? getComputedStyle(btn.querySelector('.pm-curtain-restore-label')).opacity : '',
+        outlineWidth: btn ? getComputedStyle(btn).outlineWidth : '',
+      };
+    }, CURTAIN);
+    check(focusStyle.opacity === '1' && focusStyle.labelOpacity === '1', `键盘聚焦时同样升到 100% 并显出「恢复」（${focusStyle.opacity}）`);
+    check(parseFloat(focusStyle.outlineWidth) > 0, `键盘聚焦时焦点环可见（outline ${focusStyle.outlineWidth}）`);
+
     const afterCover = await getProfile(ext.control, ORIGIN);
     check(afterCover.switchState === beforeCover.switchState, `遮住不改开关状态（${afterCover.switchState}）`);
     check(JSON.stringify(afterCover) === JSON.stringify(beforeCover), '遮住不写配置（站点配置逐字段没变）');
 
-    // ---- 清爽态「恢复」：回到清爽态（不是原样态），隐藏规则仍生效 ----
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
-    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    // ---- 清爽态「恢复」：回到清爽态（不是原样态），隐藏规则仍生效，胶囊回到原位 ----
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     const restored = await page.evaluate(() => ({
       title: document.title,
       ad: getComputedStyle(document.querySelector('#ad')).display,
     }));
     check(restored.title === '低调阅读', `清爽态「恢复」后仍是清爽标题（${restored.title}）`);
     check(restored.ad === 'none', `隐藏规则仍生效（#ad display=${restored.ad}）`);
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    const capsuleBack = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(
+      Math.round(capsuleBack.x) === 300 && Math.round(capsuleBack.y) === 220,
+      `撤幕后胶囊按原坐标挂回来（${Math.round(capsuleBack.x)},${Math.round(capsuleBack.y)}）`,
+    );
     const afterRestore = await getProfile(ext.control, ORIGIN);
     check(afterRestore.switchState === 'disguised', `遮住前后开关状态不变（${afterRestore.switchState}）`);
+
+    // ---- 幕布恢复按钮可拖动：位移超过阈值算拖动（不恢复），坐标写回该站胶囊的同一个字段 ----
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
+    const dragFrom = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
+    await page.mouse.move(dragFrom.x + dragFrom.w / 2, dragFrom.y + dragFrom.h / 2);
+    await page.mouse.down();
+    await page.mouse.move(dragFrom.x + dragFrom.w / 2 - 200, dragFrom.y + dragFrom.h / 2 + 120, { steps: 8 });
+    await page.mouse.up();
+    await new Promise((res) => setTimeout(res, 400));
+    check(!!(await page.$(CURTAIN)), '拖动时不恢复：松手后幕布还在');
+    const draggedProfile = await (async () => {
+      const deadline = Date.now() + 4000;
+      while (Date.now() < deadline) {
+        const p = await getProfile(ext.control, ORIGIN);
+        if (p?.floatingBtnPos && p.floatingBtnPos.x !== 300) return p;
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      return getProfile(ext.control, ORIGIN);
+    })();
+    check(
+      !!draggedProfile.floatingBtnPos && draggedProfile.floatingBtnPos.y !== 220,
+      `拖动后写回该站胶囊坐标（floatingBtnPos=${JSON.stringify(draggedProfile.floatingBtnPos)}）`,
+    );
+    const draggedRect = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
+    check(
+      Math.abs(draggedRect.x - draggedProfile.floatingBtnPos.x) < 2,
+      `按钮停在松手处（${Math.round(draggedRect.x)} ≈ ${draggedProfile.floatingBtnPos.x}）`,
+    );
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    const capsuleMoved = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(
+      Math.abs(capsuleMoved.x - draggedProfile.floatingBtnPos.x) < 2,
+      `撤幕后胶囊出现在拖动后的位置（${Math.round(capsuleMoved.x)} ≈ ${draggedProfile.floatingBtnPos.x}）`,
+    );
+
+    // ---- 消息通道（#50）：查询本页是否遮着、命令撤掉；都只作用于发送方自己的文档 ----
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
+    const siteTab = await tabIdOf(ext.control, `${ORIGIN}/*`);
+    const stateOn = await sendToTab(ext.control, siteTab, { t: 'curtainState' });
+    check(stateOn?.covered === true, `内容脚本应答「现在遮着没有」= true（${JSON.stringify(stateOn)}）`);
+    const dismissAck = await sendToTab(ext.control, siteTab, { t: 'curtainDismiss' });
+    await waitFor(page, '消息撤掉幕布', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+    check(dismissAck?.ok === true, `内容脚本应答「撤掉幕布」（${JSON.stringify(dismissAck)}）`);
+    const stateOff = await sendToTab(ext.control, siteTab, { t: 'curtainState' });
+    check(stateOff?.ok === true && stateOff.covered === false, `没遮住时查询回 false 而不是报错（${JSON.stringify(stateOff)}）`);
 
     // ---- 原样态遮住再「恢复」：标题被替换，恢复回到真实标题与图标 ----
     await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
     await waitFor(page, '切到原样', (h) => document.title === 'Acme 阅读', [], { timeout: 5000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
     const coveredOriginal = await page.evaluate(() => ({
       title: document.title,
       iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
     }));
     check(coveredOriginal.title === '低调阅读', `原样态遮住后标题被替换（${coveredOriginal.title}）`);
     check(coveredOriginal.iconLinks === 1, `原样态遮住后图标被替换（icon link ×${coveredOriginal.iconLinks}）`);
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
-    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     const restoredOriginal = await page.evaluate(() => ({
       title: document.title,
       iconLinks: document.querySelectorAll('link[rel~="icon"]').length,
@@ -381,7 +524,7 @@ async function main() {
     await page.goto(`${ORIGIN}/dark`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
     const darkBg = await page.evaluate(
       () => getComputedStyle(document.querySelector('pagemask-curtain').shadowRoot.querySelector('[data-pm-curtain]')).backgroundColor,
     );
@@ -397,7 +540,7 @@ async function main() {
 
     // ---- 进向导前先撤幕布 ----
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
     await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     const wizardState = await page.evaluate(() => ({
@@ -414,7 +557,7 @@ async function main() {
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, TOGGLE, tid('pm-toggle-restore'), { timeout: 3000 });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
     const page2 = await ext.browser.newPage();
     await page2.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
@@ -426,8 +569,8 @@ async function main() {
       { timeout: 5000 },
     );
     check(true, '遮住期间别的标签页切开关：幕布仍在、标题仍是低调查');
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-restore'));
-    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     await page2.close();
     const finalProfile = await getProfile(ext.control, ORIGIN);
     check(finalProfile.switchState === 'original', `开关以存储为准（${finalProfile.switchState}）`);
@@ -464,8 +607,8 @@ async function main() {
     );
     check(top.open && top.onTop, `确认框在页面 z-index:2147483647 浮层之上（命中测试落在向导宿主上：${top.onTop}）`);
 
-    // ===================== 幕布：未添加网站的一次性脚本（#46） =====================
-    console.log('\n--- 幕布：未添加网站的一次性脚本（#46） ---');
+    // ===================== 幕布：未添加网站的一次性脚本（#46 / #50） =====================
+    console.log('\n--- 幕布：未添加网站的一次性脚本（#46 / #50） ---');
     // 删掉配置：这个网站从此"没添加过"，页面里没有内容脚本、没有悬浮胶囊
     await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
@@ -481,39 +624,111 @@ async function main() {
     };
 
     await injectOnce();
-    await waitForShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'), { timeout: 5000 });
-    const oneShot = await page.evaluate(() => ({
-      title: document.title,
-      cover: !!document.querySelector('pagemask-curtain'),
-      hit: document.elementFromPoint(500, 300)?.shadowRoot ? 'pagemask-curtain' : (document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null),
-    }));
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 5000 });
+    const oneShot = await page.evaluate(() => {
+      const sr = document.querySelector('pagemask-curtain')?.shadowRoot;
+      const btn = sr?.querySelector('[data-testid="pm-curtain-restore"]');
+      const cs = btn ? getComputedStyle(btn) : null;
+      return {
+        title: document.title,
+        cover: !!document.querySelector('pagemask-curtain'),
+        hit: document.elementFromPoint(500, 300)?.shadowRoot ? 'pagemask-curtain' : (document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null),
+        capsule: !!document.querySelector('pagemask-toggle'),
+        opacity: cs?.opacity ?? '',
+        radius: cs?.borderRadius ?? '',
+        btnBg: cs?.backgroundColor ?? '',
+      };
+    });
     check(oneShot.cover, '一次性幕布覆盖层已铺上');
     check(oneShot.hit === 'pagemask-curtain', `页面内容不可见（视口中心命中 ${oneShot.hit}）`);
     check(oneShot.title !== 'Acme 阅读', `标签页标题已换成低调标题（${oneShot.title}）`);
-    check(!(await page.$(TOGGLE)), '幕布上没有悬浮胶囊（没添加的网站本来就没有）');
+    check(!oneShot.capsule, '幕布上没有悬浮胶囊（没添加的网站本来就没有）');
+    check(
+      oneShot.opacity === '0.85' && oneShot.radius === '999px' && oneShot.btnBg === 'rgb(255, 255, 255)',
+      `一次性脚本的按钮与已添加站点同一套（不透明度 ${oneShot.opacity}、圆角 ${oneShot.radius}、底色 ${oneShot.btnBg}）`,
+    );
 
-    // 幂等：重复注入不叠加第二层
+    // 幂等：重复注入不叠加第二层、不重复注册监听（还是一个控制器、一颗按钮）
     await injectOnce();
     await injectOnce();
-    const layers = await page.evaluate(() => document.querySelectorAll('pagemask-curtain').length);
-    check(layers === 1, `重复注入不叠加（实际 ${layers} 层）`);
+    const layers = await page.evaluate(() => {
+      const hosts = document.querySelectorAll('pagemask-curtain');
+      return {
+        hosts: hosts.length,
+        buttons: hosts[0]?.shadowRoot?.querySelectorAll('[data-testid="pm-curtain-restore"]').length ?? 0,
+      };
+    });
+    check(layers.hosts === 1, `重复注入不叠加（实际 ${layers.hosts} 层）`);
+    check(layers.buttons === 1, `重复注入不重复注册（恢复按钮 ${layers.buttons} 个）`);
 
-    await clickInShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'));
-    await waitFor(page, '点「恢复」后幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 3000 });
+    // 消息通道（#50）：查询状态 → 命令撤掉 → 再查询回 false（不报错）
+    const oneShotTab = await tabIdOf(ext.control, `${ORIGIN}/*`);
+    const osStateOn = await sendToTab(ext.control, oneShotTab, { t: 'curtainState' });
+    check(osStateOn?.covered === true, `一次性脚本应答「现在遮着没有」= true（${JSON.stringify(osStateOn)}）`);
+    const osDismiss = await sendToTab(ext.control, oneShotTab, { t: 'curtainDismiss' });
+    await waitFor(page, '消息撤掉一次性幕布', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+    check(osDismiss?.ok === true, `一次性脚本应答「撤掉幕布」（${JSON.stringify(osDismiss)}）`);
+    const osStateOff = await sendToTab(ext.control, oneShotTab, { t: 'curtainState' });
+    check(osStateOff?.ok === true && osStateOff.covered === false, `没遮住时查询回 false 而不是报错（${JSON.stringify(osStateOff)}）`);
     const back = await page.evaluate(() => ({ title: document.title, hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null }));
     check(back.title === 'Acme 阅读', `恢复后标题回到原值（${back.title}）`);
     check(back.hit !== 'pagemask-curtain', `恢复后页面内容正常可见（命中 ${back.hit}）`);
+
+    // 撤掉后再次遮住仍正常（重复注入让活着的控制器再遮一次，不叠第二层）
+    await injectOnce();
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 5000 });
+    const relayer = await page.evaluate(() => document.querySelectorAll('pagemask-curtain').length);
+    check(relayer === 1, `撤掉后再次遮住仍正常（幕布 ${relayer} 层）`);
+
+    // 拖动记住位置（全局一份）：没添加过的网站下次遮住仍在原处
+    const osBefore = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
+    await page.mouse.move(osBefore.x + osBefore.w / 2, osBefore.y + osBefore.h / 2);
+    await page.mouse.down();
+    await page.mouse.move(osBefore.x + osBefore.w / 2 - 160, osBefore.y + osBefore.h / 2 - 90, { steps: 8 });
+    await page.mouse.up();
+    await new Promise((res) => setTimeout(res, 400));
+    check(!!(await page.$(CURTAIN)), '一次性脚本：拖动时不恢复');
+    const savedGlobal = await (async () => {
+      const deadline = Date.now() + 4000;
+      while (Date.now() < deadline) {
+        const s = await getSettings(ext.control);
+        if (s?.curtainBtnPos) return s.curtainBtnPos;
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      return null;
+    })();
+    check(!!savedGlobal, `拖动后写回全局位置（curtainBtnPos=${JSON.stringify(savedGlobal)}）`);
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '一次性幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     check(
       (await ext.control.evaluate(async (o) => (await chrome.storage.local.get(`profile:${o}`))[`profile:${o}`], ORIGIN)) === undefined,
       '没有留下任何站点配置',
     );
+    await injectOnce();
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 5000 });
+    const osAfter = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
+    check(
+      Math.abs(osAfter.x - savedGlobal.x) < 2 && Math.abs(osAfter.y - savedGlobal.y) < 2,
+      `再次遮住仍在记住的位置（${Math.round(osAfter.x)},${Math.round(osAfter.y)} ≈ ${Math.round(savedGlobal.x)},${Math.round(savedGlobal.y)}）`,
+    );
+
+    // 待授权的网站（有配置、页面里没有内容脚本）：遮住时用它自己设置的标题，不用全局默认
+    await sendToTab(ext.control, oneShotTab, { t: 'curtainDismiss' });
+    await waitFor(page, '一次性幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+    await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), disguisedTitle: '这个网站自己的标题' });
+    await new Promise((res) => setTimeout(res, 300));
+    check(!(await page.$(TOGGLE)), '待授权站点：页面里没有内容脚本，也就没有胶囊');
+    await injectOnce();
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 5000 });
+    const pendingTitle = await page.evaluate(() => document.title);
+    check(pendingTitle === '这个网站自己的标题', `待授权站点遮住时用它自己设置的标题（${pendingTitle}）`);
 
     // 刷新后脚本随文档消失：即使之前遮住过，新文档也是干净的
-    await injectOnce();
-    await waitForShadow(page, 'pagemask-curtain', tid('pm-curtain-restore'), { timeout: 5000 });
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
     await page.reload({ waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 500));
     check(!(await page.$('pagemask-curtain')), '刷新后一次性幕布随之消失');
+    check(!(await page.$(TOGGLE)), '刷新后也不会有悬浮胶囊（配置已删掉）');
   } catch (e) {
     r.fail(e);
   } finally {

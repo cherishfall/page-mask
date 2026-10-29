@@ -1,92 +1,78 @@
 <template>
-  <!-- 一根小胶囊：拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」菜单。遮住整页期间收起成单个「恢复」按钮
-       （同一位置，避免布局跳动）。菜单项与主按钮是兄弟节点，不再包在会吃掉 pointerdown 的拖动容器里
-       （N1：点菜单项会把开关切掉） -->
-  <div ref="rootEl" class="pm-tg" :class="{ 'pm-tg-on-curtain': curtain }" :style="rootStyle" data-testid="pm-toggle">
-    <!-- 幕布态：白屏上只留「恢复」一个入口，默认低对比度，指针移上去才显出完整按钮 -->
+  <!-- 一根小胶囊：拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」菜单。菜单项与主按钮是兄弟节点，
+       不再包在会吃掉 pointerdown 的拖动容器里（N1：点菜单项会把开关切掉）。
+       幕布期间整根胶囊由 content-runtime 卸掉，恢复按钮归幕布宿主所有（ui/curtain-restore.ts） -->
+  <div ref="rootEl" class="pm-tg" :style="rootStyle" data-testid="pm-toggle">
     <button
-      v-if="curtain"
       type="button"
-      class="pm-tg-restore"
-      title="恢复"
-      data-testid="pm-toggle-restore"
-      @click="emit('restore')"
+      class="pm-tg-grip"
+      :class="{ dragging }"
+      aria-label="移动按钮（也可以用方向键）"
+      title="拖动可移动按钮"
+      data-testid="pm-toggle-grip"
+      @pointerdown="onGripDown"
+      @pointermove="onGripMove"
+      @lostpointercapture="onGripUp"
+      @keydown="onGripKey"
     >
-      恢复
+      <span aria-hidden="true">⠿</span>
     </button>
 
-    <template v-else>
-      <button
-        type="button"
-        class="pm-tg-grip"
-        :class="{ dragging }"
-        aria-label="移动按钮（也可以用方向键）"
-        title="拖动可移动按钮"
-        data-testid="pm-toggle-grip"
-        @pointerdown="onGripDown"
-        @pointermove="onGripMove"
-        @lostpointercapture="onGripUp"
-        @keydown="onGripKey"
-      >
-        <span aria-hidden="true">⠿</span>
-      </button>
+    <button
+      type="button"
+      class="pm-tg-main"
+      :aria-pressed="state === 'disguised' ? 'true' : 'false'"
+      :title="tipText"
+      data-testid="pm-toggle-main"
+      @click="emit('toggle')"
+    >
+      <span class="pm-tg-dot" aria-hidden="true"></span>
+      <span class="pm-tg-label">{{ state === 'disguised' ? '清爽' : '原样' }}</span>
+    </button>
 
-      <button
-        type="button"
-        class="pm-tg-main"
-        :aria-pressed="state === 'disguised' ? 'true' : 'false'"
-        :title="tipText"
-        data-testid="pm-toggle-main"
-        @click="emit('toggle')"
+    <!-- 遮住整页（图标即可，读屏文案「遮住整页」） -->
+    <button
+      type="button"
+      class="pm-tg-cover"
+      aria-label="遮住整页"
+      title="遮住整页"
+      data-testid="pm-toggle-cover"
+      @click="emit('cover')"
+    >
+      <svg
+        class="pm-tg-cover-icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       >
-        <span class="pm-tg-dot" aria-hidden="true"></span>
-        <span class="pm-tg-label">{{ state === 'disguised' ? '清爽' : '原样' }}</span>
-      </button>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="3" y1="3" x2="21" y2="21" />
+      </svg>
+    </button>
 
-      <!-- 遮住整页（图标即可，读屏文案「遮住整页」） -->
-      <button
-        type="button"
-        class="pm-tg-cover"
-        aria-label="遮住整页"
-        title="遮住整页"
-        data-testid="pm-toggle-cover"
-        @click="emit('cover')"
-      >
-        <svg
-          class="pm-tg-cover-icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-          <circle cx="12" cy="12" r="3" />
-          <line x1="3" y1="3" x2="21" y2="21" />
-        </svg>
-      </button>
+    <!-- 展开式按钮组：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
+    <button
+      ref="moreEl"
+      type="button"
+      class="pm-tg-more"
+      aria-label="更多操作"
+      :aria-expanded="menuOpen ? 'true' : 'false'"
+      data-testid="pm-toggle-more"
+      @click="toggleMenu"
+    >
+      <span aria-hidden="true">⋯</span>
+    </button>
 
-      <!-- 展开式按钮组：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
-      <button
-        ref="moreEl"
-        type="button"
-        class="pm-tg-more"
-        aria-label="更多操作"
-        :aria-expanded="menuOpen ? 'true' : 'false'"
-        data-testid="pm-toggle-more"
-        @click="toggleMenu"
-      >
-        <span aria-hidden="true">⋯</span>
-      </button>
-
-      <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住 -->
-      <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
-        <button type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">编辑规则</button>
-        <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">按钮归位</button>
-      </div>
-    </template>
+    <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住 -->
+    <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">编辑规则</button>
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">按钮归位</button>
+    </div>
   </div>
 </template>
 
@@ -105,8 +91,6 @@ const KEY_STEP = 15;
 const props = defineProps<{
   state: SiteProfile['switchState'];
   position: { x: number; y: number } | null;
-  /** 幕布开着：整个胶囊收起成单个「恢复」按钮（#45） */
-  curtain: boolean;
 }>();
 const emit = defineEmits<{
   toggle: [];
@@ -114,7 +98,6 @@ const emit = defineEmits<{
   edit: [];
   resetPos: [];
   cover: [];
-  restore: [];
 }>();
 
 const rootEl = ref<HTMLElement | null>(null);

@@ -8,7 +8,7 @@
  * 注意：chrome.storage 本身没有事务，跨上下文（popup 与页面）仍可能在"读→写"的极短窗口内交错；
  * 重读最新值已把这个窗口缩到一次异步往返。
  */
-import type { ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
+import type { ButtonPos, ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
 import { createEmptyProfile } from './types';
 import { isValidOrigin, readSettings, readStoredSettings, sanitizeProfile, toStoredSettings } from './validate';
 
@@ -58,6 +58,9 @@ export interface HealthResult {
   id: string;
   status: 'ok' | 'stale';
 }
+
+/** 全局设置的局部改动：没提供的字段保留本机现值 */
+export type SettingsPatch = Partial<GlobalSettings>;
 
 /** 每个存储区一条写入队列（模块级，同一上下文里多个 storage 实例共享） */
 const writeChains = new WeakMap<object, Promise<unknown>>();
@@ -152,8 +155,24 @@ export function createPageMaskStorage(area: KVArea) {
     return readStoredSettings(obj[SETTINGS_KEY]);
   }
 
-  function putSettings(settings: GlobalSettings): Promise<void> {
-    return serialize(area, () => area.set({ [SETTINGS_KEY]: toStoredSettings(clone(settings)) }));
+  /**
+   * 写全局设置（局部改动）：先读本机现值再合并，没提到的字段保持不变。
+   * 「遮住」按钮位置（curtainBtnPos）是本机界面状态——在管理页改默认标题时不该把它冲掉。
+   */
+  function putSettings(patch: SettingsPatch): Promise<void> {
+    return serialize(area, async () => {
+      const obj = await area.get([SETTINGS_KEY]);
+      const next: GlobalSettings = { ...readStoredSettings(obj[SETTINGS_KEY]), ...patch };
+      await area.set({ [SETTINGS_KEY]: toStoredSettings(clone(next)) });
+    });
+  }
+
+  /**
+   * 记住没添加过的网站上「遮住」按钮的位置（全局一份）；null = 回到右下角。
+   * 与站点配置的 floatingBtnPos 同口径：本机界面状态，不刷新用户修改时间，导入时保留本机值。
+   */
+  function setCurtainBtnPos(pos: ButtonPos | null): Promise<void> {
+    return putSettings({ curtainBtnPos: pos });
   }
 
   async function exportBundle(): Promise<ExportBundle> {
@@ -171,7 +190,7 @@ export function createPageMaskStorage(area: KVArea) {
    * - 合并（默认）：同源配置做规则并集（冲突规则以导入方为准），站点级字段取用户修改时间较新的一方；
    *   本地已设置过的全局设置保留
    * - 整体替换：以导入文件为准（含全局设置），本地多出的站点移除
-   * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑）。
+   * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑），「遮住」按钮的全局位置同理。
    */
   async function importBundle(bundle: unknown, mode: 'merge' | 'replace' = 'merge'): Promise<ImportResult> {
     if (!isObject(bundle) || bundle.app !== 'pagemask' || !Array.isArray(bundle.profiles)) {
@@ -231,7 +250,9 @@ export function createPageMaskStorage(area: KVArea) {
         writes[profileKey(origin)] = next;
       }
       if (importedSettings && (mode === 'replace' || !(SETTINGS_KEY in all))) {
-        writes[SETTINGS_KEY] = toStoredSettings(importedSettings);
+        // 「遮住」按钮位置是本机界面状态（屏幕相关）：只换标题，保留本机的坐标
+        const localPos = readStoredSettings(all[SETTINGS_KEY]).curtainBtnPos;
+        writes[SETTINGS_KEY] = toStoredSettings({ ...importedSettings, curtainBtnPos: localPos });
       }
 
       await area.set(writes);
@@ -251,6 +272,7 @@ export function createPageMaskStorage(area: KVArea) {
     listProfiles,
     getSettings,
     putSettings,
+    setCurtainBtnPos,
     exportBundle,
     importBundle,
   };

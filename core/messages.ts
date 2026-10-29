@@ -149,6 +149,40 @@ export interface SiteResetMsg {
 }
 
 /**
+ * 扩展页面 → 内容脚本 / 一次性脚本：本页当前是不是遮着的（#50）。
+ * 没遮住时回 { ok: true, covered: false }，不报错。
+ */
+export interface CurtainStateMsg {
+  t: 'curtainState';
+}
+
+/**
+ * 扩展页面 → 内容脚本 / 一次性脚本：撤掉本页的幕布（#50）。
+ * 没遮住时什么也不做、同样回复成功；撤掉后仍可再次遮住。
+ */
+export interface CurtainDismissMsg {
+  t: 'curtainDismiss';
+}
+
+/** 幕布状态查询的回复 */
+export interface CurtainStateReply extends Ack {
+  covered: boolean;
+}
+
+/**
+ * 消息是不是本扩展自己的页面（popup / 管理页 / 引导页）发来的。
+ * 特权消息（后台的 enableSite / resetSite 等）与「作用于当前文档」的幕布消息都用它把关：
+ * 网页里的内容脚本 / 网页脚本发来的消息 sender.url 是网页地址，一律不算（REVIEW B26）。
+ */
+export function fromExtensionPage(
+  sender: { id?: string; url?: string } | undefined | null,
+  extensionId: string,
+  extensionBase: string,
+): boolean {
+  return !!sender && sender.id === extensionId && typeof sender.url === 'string' && sender.url.startsWith(extensionBase);
+}
+
+/**
  * popup → 后台：给当前标签页铺一次幕布（#46，未添加过的网站）。
  * 未添加的网站里没有内容脚本，只能由后台用 activeTab 注入一次性脚本
  * （entrypoints/curtain-oneshot.ts），不注册、不写配置。
@@ -169,4 +203,7 @@ export type BgRequest =
   | DraftCssRequest
   | HostShieldRequest
   | ReleaseOrphanCssRequest;
-export type ContentMsg = OpenWizardMsg | OpenEditorMsg | SiteResetMsg;
+export type ContentMsg = OpenWizardMsg | OpenEditorMsg | SiteResetMsg | CurtainStateMsg | CurtainDismissMsg;
+
+/** 内容脚本 / 一次性脚本给扩展页面的回复 */
+export type ContentReply = Ack | CurtainStateReply;

@@ -1,4 +1,44 @@
-import { curtainColor, curtainRestoreAction } from './curtain';
+import { CURTAIN_DRAG_THRESHOLD_PX, curtainColor, curtainRestoreAction, curtainTitle, isCurtainDrag } from './curtain';
+
+describe('isCurtainDrag：松手时算拖动还是点击（#50）', () => {
+  it('位移不超过阈值（4 像素）算点击：松手就恢复', () => {
+    expect(isCurtainDrag(4, 0)).toBe(false);
+    expect(isCurtainDrag(0, -4)).toBe(false);
+    expect(isCurtainDrag(-4, 0)).toBe(false);
+  });
+
+  it('位移超过阈值（4 像素）算拖动：松手不恢复', () => {
+    expect(isCurtainDrag(5, 0)).toBe(true);
+    expect(isCurtainDrag(0, 4.5)).toBe(true);
+    expect(isCurtainDrag(-5, 0)).toBe(true);
+  });
+
+  it('按欧氏距离判定：斜向 (3, 3) 的实际位移 4.24px 算拖动', () => {
+    expect(isCurtainDrag(3, 3)).toBe(true);
+    expect(isCurtainDrag(2, 2)).toBe(false);
+  });
+
+  it('阈值导出成常量，两条代码路径不会各写一个数', () => {
+    expect(CURTAIN_DRAG_THRESHOLD_PX).toBe(4);
+    expect(isCurtainDrag(CURTAIN_DRAG_THRESHOLD_PX + 0.1, 0)).toBe(true);
+  });
+});
+
+describe('curtainTitle：遮住时的标题（#50）', () => {
+  it('待授权的站点有配置、只是没授权：用它自己设置的标题，不是全局默认', () => {
+    expect(curtainTitle({ disguisedTitle: '本站标题' }, { defaultTitle: '全局标题' }, 'zh-CN')).toBe('本站标题');
+  });
+
+  it('从没添加过的站点（没有配置）：落到全局默认，再落到界面语言默认', () => {
+    expect(curtainTitle(null, { defaultTitle: '全局标题' }, 'zh-CN')).toBe('全局标题');
+    expect(curtainTitle(null, { defaultTitle: null }, 'zh-CN')).toBe('阅读');
+    expect(curtainTitle(null, null, 'en-US')).toBe('Reading');
+  });
+
+  it('站点标题为空白时不算设置（Chrome 会在标签页上显示网址）', () => {
+    expect(curtainTitle({ disguisedTitle: '  ' }, { defaultTitle: '全局标题' }, 'zh-CN')).toBe('全局标题');
+  });
+});
 
 describe('curtainRestoreAction：幕布「恢复」的分支决策（#45，最容易写错的地方）', () => {
   it('进入前是清爽态 → 回到清爽标题与图标（guard.apply(effectiveTitle(...), ...)）', () => {

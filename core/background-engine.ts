@@ -39,6 +39,7 @@ import type {
   OpenIntent,
   ReconcileResponse,
 } from './messages';
+import { fromExtensionPage as isExtensionPageSender } from './messages';
 
 export interface BackgroundDeps {
   /** 扩展 API（生产传 wxt/browser 的 browser，单测传 fakeBrowser 并按需 stub scripting/permissions） */
@@ -69,7 +70,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   /** 特权消息只接受本扩展自己的页面（popup / 管理页 / 引导页），网页里的内容脚本一律拒绝（REVIEW B26） */
   function fromExtensionPage(sender: Sender): boolean {
-    return sender.id === browser.runtime.id && typeof sender.url === 'string' && sender.url.startsWith(extensionBase);
+    return isExtensionPageSender(sender, browser.runtime.id, extensionBase);
   }
 
   async function isGranted(origin: string): Promise<boolean> {

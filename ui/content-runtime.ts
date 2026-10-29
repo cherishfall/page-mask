@@ -31,19 +31,21 @@ import { browser } from 'wxt/browser';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
-import { curtainRestoreAction } from '@/core/curtain';
+import { curtainRestoreAction, curtainTitle } from '@/core/curtain';
 import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles, type StyleRecord } from '@/core/doc-styles';
 import { applyKey } from '@/core/apply-key';
 import { TAKEOVER_EVENT, hostShieldPresent } from '@/core/host-shield';
-import type { Ack, BgRequest, CssAck, OpenIntent } from '@/core/messages';
+import { fromExtensionPage } from '@/core/messages';
+import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/messages';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
 import { MaskLayer } from './mask-layer';
 import { CurtainLayer } from './curtain';
+import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain-restore';
 import { createPageHost, type PageHost } from './page-host';
 import { createFirstPaintShield } from './first-paint-shield';
 
@@ -92,6 +94,8 @@ const HEALTH_IDLE_TIMEOUT_MS = 2000;
 
 export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise<StyleRecord | undefined>): ContentRuntimeHandle {
   const origin = location.origin;
+  /** 本扩展的页面根地址：判断消息是不是自己人发来的（core/messages.ts 的 fromExtensionPage） */
+  const extensionBase = browser.runtime.getURL('/');
   // 扩展更新 / 重载后被重新注入：新旧实例不在同一个隔离环境（实测），旧实例交不出样式记录。
   // 先看本文档里有没有旧实例注入的宿主保护样式（有 = 之前有实例在这里工作过，样式要接手），
   // 再广播接管事件：失联的旧实例收到后读 isValid，随即收尾（撤下界面、还原标题图标）
@@ -125,12 +129,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const uiReady = Promise.all([whenDomReady(ctx), activated]).then(() => undefined);
 
   let profile: SiteProfile | null = null;
-  let settings: GlobalSettings = { defaultTitle: null }; // null = 跟随界面语言默认（core/titles.ts）
+  let settings: GlobalSettings = { defaultTitle: null, curtainBtnPos: null }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
-  const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos']; curtain: boolean }>({
+  const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos'] }>({
     state: 'original',
     position: null,
-    curtain: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -139,6 +142,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const pageState = reactive<{ url: string }>({ url: location.href });
   let toggleHost: PageHost | null = null;
   let toggleApp: App | null = null;
+  /** 幕布上的「恢复」按钮（#50）：归幕布宿主所有，两条代码路径共用 ui/curtain-restore.ts */
+  let curtainButton: CurtainRestoreButton | null = null;
   let wizardHost: PageHost | null = null;
   let wizardApp: App | null = null;
   let editorHost: PageHost | null = null;
@@ -172,10 +177,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
-    toggleState.curtain = curtain.active;
   }
 
   function mountToggle(): void {
+    // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
+    if (curtain.active) return;
     syncToggleState();
     if (toggleHost) return;
     ensureHostShield();
@@ -186,13 +192,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
-          curtain: toggleState.curtain,
           onToggle: handleToggle,
           onMoved: handleMoved,
           onEdit: handleEdit,
           onResetPos: handleResetPos,
           onCover: handleCover,
-          onRestore: handleRestore,
         }),
     });
     toggleApp.mount(toggleHost.root);
@@ -399,36 +403,64 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 幕布开着时重新压住标题与覆盖层（applyAll / restoreAll 里的 guard 调用会把幕布的标题盖掉） */
   function reassertCurtain(): void {
     if (!curtain.active || !profile) return;
-    guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
     curtain.reassert();
   }
 
-  /** 遮住整页：铺覆盖层 + 压住标题与图标（与清爽态同一套规则）；记下进入前的开关态供恢复分支 */
+  /** 在幕布宿主里放「恢复」按钮（#50）：位置与该站胶囊共用 floatingBtnPos，遮住前后不跳位 */
+  function mountCurtainButton(): void {
+    if (curtainButton || !profile || !curtain.active) return;
+    const root = curtain.root;
+    if (!root) return;
+    curtainButton = createCurtainRestoreButton({
+      root,
+      position: profile.floatingBtnPos,
+      // 坐标是本机界面状态：写回胶囊用的同一个字段，不刷新用户修改时间
+      onMove: (pos) => void handleMoved(pos),
+      onRestore: handleRestore,
+    });
+  }
+
+  function unmountCurtainButton(): void {
+    curtainButton?.destroy();
+    curtainButton = null;
+  }
+
+  /**
+   * 遮住整页：铺覆盖层 + 压住标题与图标（与清爽态同一套规则）+ 幕布上的「恢复」按钮；
+   * 记录进入前的开关态供恢复分支。幕布期间整根胶囊卸掉（#50：一个页面上只有一套恢复入口）
+   */
   function showCurtain(): void {
     if (!profile || curtain.active) return;
     curtainEntryState = profile.switchState;
     ensureHostShield();
     curtain.show();
-    guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
-    syncToggleState();
+    mountCurtainButton();
+    unmountToggle();
+    guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
   }
 
   /**
    * 撤幕布并按进入前的开关态恢复标题与图标（#45，最容易写错的地方）：
    * 进入前是清爽态 → 回到清爽标题与图标；进入前是原样态 → 才还原真实标题与图标。
    * 一律 guard.restore() 会让清爽态当场露馅（真实标题放出来）。
+   *
+   * remount：撤幕布后把小胶囊按当前状态挂回来（#50）。随后就要清场的调用方（一键清空、
+   * 扩展失效收尾）传 false——否则会先挂上再卸掉。
    */
-  function hideCurtain(): void {
+  function hideCurtain({ remount = true } = {}): void {
     if (!curtain.active) return;
     const entry = curtainEntryState;
     curtainEntryState = null;
+    unmountCurtainButton();
     curtain.hide();
     if (entry && curtainRestoreAction(entry) === 'disguise' && profile) {
-      guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+      guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
     } else {
       guard.restore();
     }
     syncToggleState();
+    if (remount && profile) mountToggle();
   }
 
   /** 悬浮按钮「遮住」 */
@@ -492,7 +524,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
   function clearPageUi(): void {
-    hideCurtain(); // 先撤幕布再继续（#45；teardown 也走这里）
+    hideCurtain({ remount: false }); // 先撤幕布再继续（#45；teardown 也走这里）
     healthGen++;
     shield.release();
     unmountToggle();
@@ -531,7 +563,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function handleSiteReset(): Promise<Ack> {
     resetting = true;
     await exclusive(async () => {
-      hideCurtain(); // 先撤幕布再继续（#45）
+      hideCurtain({ remount: false }); // 先撤幕布再继续（#45）
       closeWizard();
       profile = null;
       clearPageUi();
@@ -559,10 +591,20 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   function onRuntimeMessage(
     msg: { t?: string; mode?: OpenIntent },
-    _sender: unknown,
-    sendResponse: (r: Ack) => void,
+    sender: unknown,
+    sendResponse: (r: ContentReply) => void,
   ): boolean {
     if (disposed) return false;
+    // 幕布的两条消息（#50）：只作用于本文档，且只接受扩展自己的页面发来的——
+    // 网页里的内容脚本 / 网页脚本不能让别的站点撤幕布（core/messages.ts 的 fromExtensionPage）
+    if (msg?.t === 'curtainState' || msg?.t === 'curtainDismiss') {
+      if (!fromExtensionPage(sender as { id?: string; url?: string } | undefined, browser.runtime.id, extensionBase)) {
+        return false;
+      }
+      if (msg.t === 'curtainDismiss') handleRestore();
+      sendResponse({ ok: true, covered: curtain.active });
+      return false;
+    }
     // popup / 后台触发的入口消息
     if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'addElement');
     else if (msg?.t === 'openEditor') openEditorPanel();

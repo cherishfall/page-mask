@@ -44,7 +44,7 @@ function profileOf(origin: string, over: Partial<SiteProfile> = {}): SiteProfile
   return { ...p, ...over };
 }
 
-const settingsOf = (defaultTitle: string | null) => ({ defaultTitle, settingsVersion: 2 });
+const settingsOf = (defaultTitle: string | null) => ({ defaultTitle, curtainBtnPos: null, settingsVersion: 2 });
 
 async function seed(origins: string[], defaultTitle: string | null = null) {
   const data: Record<string, unknown> = { settings: settingsOf(defaultTitle) };

@@ -9,11 +9,36 @@
  *
  * 这里只做纯计算：读 DOM 的部分在 ui/mask-color.ts，覆盖层本体在 ui/curtain.ts。
  */
-import type { SiteProfile } from './types';
+import type { GlobalSettings, SiteProfile } from './types';
 import { parseCssColor, resolveMaskColor } from './mask-color';
+import { effectiveTitle } from './titles';
 
 /** 幕布「恢复」时对标题与图标要做的动作 */
 export type CurtainRestoreAction = 'disguise' | 'real';
+
+/**
+ * 幕布恢复按钮的拖动阈值（像素，欧氏距离）：按下到松手的位移超过它算拖动，
+ * 否则算点击。4px 是触控 / 手抖与「真的想拖」之间的常用分界。
+ */
+export const CURTAIN_DRAG_THRESHOLD_PX = 4;
+
+/** 按下到松手移动了 (dx, dy)：是拖动（true）还是点击（false） */
+export function isCurtainDrag(dx: number, dy: number, threshold = CURTAIN_DRAG_THRESHOLD_PX): boolean {
+  return Math.hypot(dx, dy) > threshold;
+}
+
+/**
+ * 遮住时的标签页标题：站点自己配了标题就用它——**待授权的站点**（有配置、权限被收回，
+ * popup 只能走一次性脚本）也必须用它自己的标题，不能落到全局默认（#50）。
+ * 没有站点配置（从没添加过）时才是 全局默认 > 界面语言默认。
+ */
+export function curtainTitle(
+  profile: Pick<SiteProfile, 'disguisedTitle'> | null,
+  settings: Pick<GlobalSettings, 'defaultTitle'> | null | undefined,
+  uiLanguage?: string | null,
+): string {
+  return effectiveTitle({ disguisedTitle: profile?.disguisedTitle ?? null }, settings, uiLanguage);
+}
 
 /**
  * 恢复分支（#45，最容易写错的地方）：按**进入幕布前**的开关态决定——

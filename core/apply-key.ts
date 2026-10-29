@@ -8,7 +8,11 @@
  */
 import type { GlobalSettings, SiteProfile } from './types';
 
-export function applyKey(profile: SiteProfile, settings: GlobalSettings, url: string): string {
+export function applyKey(
+  profile: SiteProfile,
+  settings: Pick<GlobalSettings, 'defaultTitle'>,
+  url: string,
+): string {
   return JSON.stringify([
     url,
     profile.switchState,

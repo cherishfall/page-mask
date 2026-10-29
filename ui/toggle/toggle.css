@@ -2,17 +2,21 @@
  * 页内悬浮按钮样式（ui/toggle/toggle-styles.ts 注入到悬浮按钮的 shadow root）。
  *
  * 布局：一根小胶囊，四段——拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」（菜单）；
- * 遮住整页期间收起成单个「恢复」按钮（#45）。
+ * 幕布期间胶囊整体不渲染，恢复按钮归幕布宿主所有（ui/curtain-restore.ts，样式在同文件末尾）。
  * 胶囊本体用 tokens 的不透明底色 + 控件描边：半透明灰在深浅页面上都无法同时满足
  * 「本体 ≥3:1、文字 ≥4.5:1」，而这里是常驻控件，必须稳定可辨。
  * 菜单是 popover（进 top layer，不会被页面浮层压住），位置由脚本按视口算（Chrome 116
  * 没有 position-area，见 ui/FloatingToggle.vue 注释）。
  */
 
-.pm-tg {
-  /* 外圈：胶囊会浮在任意底色上，单一底色不可能对所有背景都 ≥3:1（白底够、中灰不够、深底靠本体）。
-     半透明黑的外圈在浅色与中灰底上过 3:1，深底由不透明本体承担，两者合起来覆盖三种情况 */
+/* 外圈：胶囊与幕布上的恢复按钮都浮在任意底色上，单一底色不可能对所有背景都 ≥3:1（白底够、中灰不够、
+   深底靠本体）。半透明黑的外圈在浅色与中灰底上过 3:1，深底由不透明本体承担，两者合起来覆盖三种情况 */
+.pm-tg,
+.pm-curtain-restore {
   --pm-tg-ring: rgb(0 0 0 / 0.5);
+}
+
+.pm-tg {
   position: fixed;
   display: inline-flex;
   align-items: stretch;
@@ -126,31 +130,52 @@
   block-size: 13px;
 }
 
-/* ── 幕布态：整根胶囊收起成单个「恢复」按钮（#45）。
-      默认低对比度（白屏上只剩一个极小的入口），指针移上去 / 键盘聚焦才显出完整按钮 ── */
-.pm-tg-on-curtain {
-  opacity: 0.35;
-}
-.pm-tg-on-curtain:hover,
-.pm-tg-on-curtain:focus-within {
-  opacity: 1;
-}
-.pm-tg-restore {
+/* ── 幕布上的「恢复」按钮（#50）：与胶囊同一套材质（--pm-bg 底色、--pm-border-control 控件描边、
+      --pm-radius-pill 胶囊圆角、--pm-shadow-overlay 浮层阴影），也由这套样式表注入幕布宿主的 shadow。
+      常态 0.85 不透明度、只显示睁开的眼睛；悬停 / 键盘聚焦升到 1 并显出「恢复」。
+      「恢复」两个字始终占位、只变透明度，所以文字出现时按钮不位移、不挤压 ── */
+.pm-curtain-restore {
+  position: fixed;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-pill);
-  padding: 4px 12px;
-  background: transparent;
-  color: inherit;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
   font-size: var(--pm-font-size-caption);
   line-height: var(--pm-line-height);
+  box-shadow: 0 0 0 1px var(--pm-tg-ring), var(--pm-shadow-overlay);
   cursor: pointer;
   white-space: nowrap;
+  /* 界面元素自己不参与文字选择；触屏拖动不触发页面滚动 */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  opacity: 0.85;
+  transition: opacity 120ms ease;
 }
-.pm-tg-restore:hover {
-  background: var(--pm-bg-subtle);
+.pm-curtain-restore:hover,
+.pm-curtain-restore:focus-visible {
+  opacity: 1;
+}
+.pm-curtain-restore-dragging {
+  cursor: grabbing;
+}
+.pm-curtain-restore-icon {
+  inline-size: 13px;
+  block-size: 13px;
+  flex: none;
+}
+.pm-curtain-restore-label {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.pm-curtain-restore:hover .pm-curtain-restore-label,
+.pm-curtain-restore:focus-visible .pm-curtain-restore-label {
+  opacity: 1;
 }
 
 /* ── 菜单（popover） ── */

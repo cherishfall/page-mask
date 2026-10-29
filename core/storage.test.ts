@@ -107,9 +107,9 @@ describe('站点配置 CRUD', () => {
     area.data.set(SETTINGS_KEY, { defaultTitle: '周报' }); // 0.1.0 用户自定义的值保留
     expect((await store.getSettings()).defaultTitle).toBe('周报');
     await store.putSettings({ defaultTitle: '新建标签页' }); // 0.2.0 用户主动选的快捷标题
-    expect(area.data.get(SETTINGS_KEY)).toEqual({ defaultTitle: '新建标签页', settingsVersion: 2 });
+    expect(area.data.get(SETTINGS_KEY)).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null, settingsVersion: 2 });
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
-    expect((await store.exportBundle()).settings).toEqual({ defaultTitle: '新建标签页' }); // 版本标记不进导出文件
+    expect((await store.exportBundle()).settings).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null }); // 版本标记不进导出文件
   });
 
   it('导入文件里的「新建标签页」按用户设置保留（导出文件 0.2.0 起才带设置，无旧值问题）', async () => {
@@ -214,7 +214,7 @@ describe('导出/导入', () => {
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1);
     expect(bundle.profiles).toHaveLength(1);
-    expect(bundle.settings).toEqual({ defaultTitle: '周报' });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', curtainBtnPos: null });
   });
 
   it('非法文件报人话错误（用"导出文件"一词）', async () => {
@@ -329,6 +329,59 @@ describe('导出/导入', () => {
     const got = (await store.getProfile('https://a.com'))!;
     expect(got.faviconDataUrl).toBeNull();
     expect(got.hideRules.map((r) => [r.id, r.candidates])).toEqual([['r1', ['.ok']]]);
+  });
+});
+
+describe('「遮住」按钮的全局位置（#50，本机界面状态）', () => {
+  it('读写：默认 null（右下角），写回后能读回，清空回到 null', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    expect((await store.getSettings()).curtainBtnPos).toBeNull();
+    await store.setCurtainBtnPos({ x: 120, y: 340 });
+    expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 120, y: 340 });
+    await store.setCurtainBtnPos(null);
+    expect((await store.getSettings()).curtainBtnPos).toBeNull();
+  });
+
+  it('改全局默认标题不会把「遮住」按钮的位置冲掉（putSettings 只改传进来的字段）', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    await store.setCurtainBtnPos({ x: 24, y: 560 });
+    await store.putSettings({ defaultTitle: '周报' });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '周报', curtainBtnPos: { x: 24, y: 560 } });
+  });
+
+  it('导入保留本机位置：合并与整体替换都不会被导出文件里的坐标覆盖', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    await store.setCurtainBtnPos({ x: 10, y: 20 });
+    const file = bundleOf([createEmptyProfile('https://a.com')], {
+      settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 900, y: 800 } },
+    });
+    await store.importBundle(file, 'merge');
+    expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 10, y: 20 });
+    await store.importBundle(file, 'replace');
+    expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 10, y: 20 });
+    expect((await store.getSettings()).defaultTitle).toBe('导入标题');
+  });
+
+  it('本机还没有位置时导入也不会写入外来坐标（屏幕相关，不跨电脑）', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    await store.importBundle(
+      bundleOf([createEmptyProfile('https://a.com')], {
+        settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 900, y: 800 } },
+      }),
+      'replace',
+    );
+    expect((await store.getSettings()).curtainBtnPos).toBeNull();
+  });
+
+  it('坏数据：奇形怪状的坐标一律视为没记录', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    for (const bad of [{ x: 'a', y: 1 }, { x: 1 }, 'garbage', [1, 2]]) {
+      area.data.set(SETTINGS_KEY, { curtainBtnPos: bad });
+      expect((await store.getSettings()).curtainBtnPos).toBeNull();
+    }
   });
 });
 
