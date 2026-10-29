@@ -5,7 +5,8 @@
  * 运行：npm run build && node tests/e2e/check-editor.mjs     （约 20 秒；HEADFUL=1 有界面运行）
  *
  * 覆盖：
- * - popup 的「编辑当前网站」真实点击 → 页面内出现编辑面板，且面板以 <dialog popover="manual"> 打开
+ * - popup 的「编辑当前网站」真实点击 → 页面内出现编辑面板，且面板以 <dialog popover="manual"> 打开；
+ *   面板标题与 ⋯ 菜单同一套叫法「编辑收起的内容」（#56）
  * - 重选 → 退出向导：规则数、规则 id、页面效果都不变（旧规则不再先删）
  * - 重选 → 选中新元素 → 预览 → 保存：旧规则被同一次写入替换（id 变、候选变），旧元素恢复可见、新元素被收起
  * - 面板打开期间在 popup 里关掉清爽模式，之后面板内改收起方案：开关仍是「原样」，不被面板写回
@@ -162,6 +163,10 @@ async function main() {
     await waitForShadow(page, EDITOR, tid('pm-editor-panel'), { timeout: 8000 });
     check(await panelOpen(page), '从 popup 点按钮后页面内出现编辑面板');
     check(await panelIsPopover(page), '面板以 <dialog popover="manual"> 打开（进 top layer，页面仍可操作）');
+    check(
+      (await shadowText(page, EDITOR, '#pm-ed-title')).trim() === '编辑收起的内容',
+      '面板标题与 ⋯ 菜单同一套叫法：「编辑收起的内容」（#56）',
+    );
     const focusInPanel = await page.evaluate(
       (h) => document.querySelector(h)?.shadowRoot?.activeElement?.dataset?.testid ?? null,
       EDITOR,

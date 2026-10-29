@@ -4,7 +4,8 @@
  * 已授权站点的标签页与扩展内部之间。
  *
  * 特权消息（enableSite / resetSite / reconcile）后台只接受扩展自己的页面发来的（REVIEW B26），
- * 内容脚本发来一律拒绝；内容脚本能发的消息只作用于发送方自己的文档 / 自己的站点（按 sender 判断）。
+ * 内容脚本发来一律拒绝；内容脚本能发的消息只作用于发送方自己的文档 / 自己的站点（按 sender 判断）——
+ * resetSiteHere（页面 ⋯ 菜单的「删除这个网站的设置」，#56）就是这样一条：不带来源、只删自己所在的站点。
  */
 
 /** 启用站点后要在页面里打开的界面 */
@@ -49,6 +50,17 @@ export interface EnableSiteResponse {
 export interface ResetSiteRequest {
   t: 'resetSite';
   origin: string;
+}
+
+/**
+ * 内容脚本 → 后台：页面右下角 ⋯ 菜单里的「删除这个网站的设置」（#56）。
+ *
+ * 与 resetSite 是同一件事、同一套收尾顺序，区别只在来源：这一条来自网页里的内容脚本，
+ * 所以不带 origin —— 后台只按 sender 判断，删的永远是发送方自己所在的那个站点
+ * （内容脚本只能出现在用户授权过的站点上，网页自己发不出这条消息）。
+ */
+export interface ResetSiteHereRequest {
+  t: 'resetSiteHere';
 }
 
 /** 扩展页面 → 后台：立即对账一次（导入、授权之后），回复仍待授权的站点 */
@@ -147,7 +159,6 @@ export interface OpenEditorMsg {
 export interface SiteResetMsg {
   t: 'siteReset';
 }
-
 /**
  * 扩展页面 → 内容脚本 / 一次性脚本：本页当前是不是遮着的（#50）。
  * 没遮住时回 { ok: true, covered: false }，不报错。
@@ -204,6 +215,7 @@ export interface CoverPageRequest {
 export type BgRequest =
   | EnableSiteRequest
   | ResetSiteRequest
+  | ResetSiteHereRequest
   | ReconcileRequest
   | CancelNewSiteRequest
   | CoverPageRequest

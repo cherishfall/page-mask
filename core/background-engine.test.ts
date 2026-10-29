@@ -652,7 +652,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
   // ---------- 一键清空 ----------
 
-  describe('resetSite（一键清空）', () => {
+  describe('resetSite（扩展页面发起的删除设置）', () => {
     it('先通知该站点已打开的标签页还原，再收回授权、注销、删配置', async () => {
       await configure(ORIGIN);
       const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
@@ -698,6 +698,50 @@ describe('后台引擎（fakeBrowser）', () => {
       await send({ t: 'resetSite', origin: ORIGIN });
 
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
+  });
+
+  describe('resetSiteHere（页面 ⋯ 菜单的「删除这个网站的设置」，#56）', () => {
+    it('内容脚本发来：删的是它自己所在的站点，顺序与 resetSite 一致', async () => {
+      await configure(ORIGIN);
+      const order: string[] = [];
+      stubs.sendMessage.mockImplementation(async (tabId: number) => {
+        order.push(`siteReset:${tabId}`);
+        return { ok: true };
+      });
+      stubs.permissions.remove.mockImplementation(async ({ origins }) => {
+        order.push('permissions.remove');
+        for (const o of origins) stubs.granted.delete(o);
+        return true;
+      });
+
+      expect(await send({ t: 'resetSiteHere' }, DOC_SENDER)).toEqual({ ok: true });
+
+      expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.registered.size).toBe(0);
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
+
+    it('消息里带的来源不生效：只按 sender 判断（换个来源也删自己这一站）', async () => {
+      await configure(OTHER);
+      stubs.sendMessage.mockResolvedValue({ ok: true });
+
+      await send({ t: 'resetSiteHere', origin: OTHER }, DOC_SENDER);
+
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.granted.has(pattern(OTHER))).toBe(true);
+      expect(await fakeBrowser.storage.local.get(`profile:${OTHER}`)).not.toEqual({});
+    });
+
+    it('没有发送方标签页（扩展页面自己发来的）时拒绝，什么都不删', async () => {
+      await configure(ORIGIN);
+
+      const res = (await send({ t: 'resetSiteHere' }, EXT_SENDER)) as { ok: boolean };
+
+      expect(res.ok).toBe(false);
+      expect(stubs.permissions.remove).not.toHaveBeenCalled();
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).not.toEqual({});
     });
   });
 

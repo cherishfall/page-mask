@@ -7,8 +7,8 @@
  * - 启用站点走与 popup 相同的 enableSite 消息入口
  * - 截图写到 test-results/e2e/（已忽略）
  * - 已知缺陷以 expectFail 形式存在：失败打印「预期失败 → #NN」，意外通过则计为失败（当前已无）
- * - 站点生命周期（#21）：重载后仍生效、撤销授权后 popup「重新授权」、一键清空即时还原、
- *   导出 → 清空 → 导入后「一次授权全部」、安装警告为空。权限弹窗本身无法自动化：
+ * - 站点生命周期（#21）：重载后仍生效、撤销授权后 popup「重新授权」、删除这个网站的设置即时还原、
+ *   导出 → 删除设置 → 导入后「一次授权全部」、安装警告为空。权限弹窗本身无法自动化：
  *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
  */
 import { removeTempDir } from './lib/tmp.mjs';
@@ -321,7 +321,7 @@ async function main() {
     await waitForShadow(page, TOGGLE_HOST, '[data-testid="pm-toggle-menu"]', { timeout: 3000 });
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-edit'));
     await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'), { timeout: 5000 });
-    check(true, '点菜单「编辑规则」打开编辑面板');
+    check(true, '点菜单「编辑收起的内容」打开编辑面板');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
     await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-editor-close"]')?.click(), EDITOR_HOST);
     await waitFor(page, '编辑面板关闭（复位）', (h) => !document.querySelector(h), [EDITOR_HOST]);
@@ -714,7 +714,7 @@ async function main() {
     await popup.close().catch(() => undefined);
     await site.close();
 
-    // ===================== 导出 → 一键清空 → 导入 → 一次授权全部（#21） =====================
+    // ===================== 导出 → 删除设置 → 导入 → 一次授权全部（#21） =====================
     console.log('\n--- 导出配置 ---');
     await setProfile(ext.control, ORIGIN2, seedProfile(ORIGIN2));
     await expectDisguisedInNewPage(ORIGIN2, '第二个站点配置后生效');
@@ -722,26 +722,26 @@ async function main() {
     const exported = await exportFromManagement(mgmtPage);
     check(exported.profiles.length === 2, `导出包含 2 个站点（${exported.profiles.map((x) => x.origin).join('、')}）`);
 
-    console.log('\n--- 一键清空后已打开页面立即恢复原样 ---');
+    console.log('\n--- 删除这个网站的设置后已打开页面立即恢复原样 ---');
     const open1 = await browser.newPage();
     await open1.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
-    await waitFor(open1, '清空前：标题已替换', (t) => document.title === t, [DISGUISED_TITLE]);
-    await waitStyle(open1, '清空前：页头被移除', '#site-header', 'display', 'none');
+    await waitFor(open1, '删除前：标题已替换', (t) => document.title === t, [DISGUISED_TITLE]);
+    await waitStyle(open1, '删除前：页头被移除', '#site-header', 'display', 'none');
     await open1.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
     await resetInManagement(mgmtPage, ORIGIN);
     await open1.bringToFront();
     // 不刷新页面：样式、标题、图标、悬浮按钮应立即全部还原
-    await waitStyle(open1, '清空后页头立即可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
-    await waitStyle(open1, '清空后页脚立即可见', '#site-footer', 'visibility', 'visible', { timeout: 1000 });
-    await waitFor(open1, '清空后标题还原', (t) => document.title === t, [FIXTURE_TITLE], { timeout: 3000 });
-    await waitFor(open1, '清空后悬浮按钮消失', (h) => !document.querySelector(h), [TOGGLE_HOST], { timeout: 3000 });
+    await waitStyle(open1, '删除后页头立即可见', '#site-header', 'display', 'none', { not: true, timeout: 3000 });
+    await waitStyle(open1, '删除后页脚立即可见', '#site-footer', 'visibility', 'visible', { timeout: 1000 });
+    await waitFor(open1, '删除后标题还原', (t) => document.title === t, [FIXTURE_TITLE], { timeout: 3000 });
+    await waitFor(open1, '删除后悬浮按钮消失', (h) => !document.querySelector(h), [TOGGLE_HOST], { timeout: 3000 });
     const icons = await open1.evaluate(() =>
       Array.from(document.querySelectorAll('link[rel~="icon"]')).map((l) => l.getAttribute('href')),
     );
-    check(icons.length === 1 && icons[0].startsWith('data:image/png;base64,iVBOR'), `清空后标签页图标还原为网站自己的（${icons.length} 个）`);
+    check(icons.length === 1 && icons[0].startsWith('data:image/png;base64,iVBOR'), `删除后标签页图标还原为网站自己的（${icons.length} 个）`);
     check(
       !(await open1.evaluate((sel) => !!document.querySelector(sel), ALL_HOSTS)),
-      '清空后页面上没有任何 PageMask 界面',
+      '删除后页面上没有任何 PageMask 界面',
     );
     // 宿主保护样式也已撤掉：页面自己造一个同名元素，不再被设成 fixed
     const shieldLeft = await open1.evaluate((tag) => {
@@ -751,8 +751,8 @@ async function main() {
       probe.remove();
       return pos;
     }, MASK_HOST);
-    check(shieldLeft !== 'fixed', `清空后宿主保护样式已撤掉（同名探针 position=${shieldLeft}）`);
-    check(true, '一键清空后已打开页面立即恢复原样（标题、图标、样式、悬浮按钮）');
+    check(shieldLeft !== 'fixed', `删除后宿主保护样式已撤掉（同名探针 position=${shieldLeft}）`);
+    check(true, '删除这个网站的设置后已打开页面立即恢复原样（标题、图标、样式、悬浮按钮）');
     check((await getProfile(ext.control, ORIGIN)) === null, '站点配置已删除');
     check(
       !(await ext.control.evaluate((pt) => chrome.permissions.contains({ origins: [pt] }), `${ORIGIN}/*`)),
@@ -760,7 +760,7 @@ async function main() {
     );
     await open1.close();
     await resetInManagement(mgmtPage, ORIGIN2);
-    await waitFor(mgmtPage, '两个站点都已清空', () => document.querySelectorAll('.site-row').length === 0);
+    await waitFor(mgmtPage, '两个站点的设置都已删除', () => document.querySelectorAll('.site-row').length === 0);
 
     console.log('\n--- 导入后一次授权全部 ---');
     await importInManagement(mgmtPage, exported);
@@ -907,12 +907,12 @@ async function main() {
       await m.click('xpath/.//button[normalize-space()="导出配置"]');
       await waitFor(m, '导出文件生成', () => window.__pmBlobs.length > 0);
       const text = await m.evaluate(() => window.__pmBlobs[0].text());
-      // 后面的步骤还在用这个页面（站点设置、清空），导完回到管理页
+      // 后面的步骤还在用这个页面（站点设置、删除设置），导完回到管理页
       await m.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
       return JSON.parse(text);
     }
 
-    /** 进某站点的设置页，点页脚的「一键清空」并确认（#41：入口从列表行迁到站点设置页） */
+    /** 进某站点的设置页，点页脚的「删除设置」并确认（#41：入口从列表行迁到站点设置页） */
     async function resetInManagement(m, origin) {
       // 后台标签页里不跑动画帧，puppeteer 的点击会一直等元素稳定；先切到前台
       await m.bringToFront();
@@ -922,11 +922,11 @@ async function main() {
       }, host);
       const btn = await m.waitForSelector(tid('pm-mgmt-reset'), { timeout: 5000 });
       await btn.click();
-      const yes = await m.waitForSelector('xpath/.//button[normalize-space()="确认清空"]', { timeout: 3000 });
+      const yes = await m.waitForSelector(tid('pm-mgmt-reset-confirm'), { timeout: 3000 });
       await yes.click();
-      // 清空后站点设置页自动回列表：先等地址变回列表，再等这一行消失
-      // （不先等地址的话，停在设置页上「行不存在」会被误判成清空成功）
-      await waitFor(m, '清空后回到网站列表', () => location.hash === '#/sites', [], { timeout: 5000 });
+      // 删除后站点设置页自动回列表：先等地址变回列表，再等这一行消失
+      // （不先等地址的话，停在设置页上「行不存在」会被误判成删除成功）
+      await waitFor(m, '删除后回到网站列表', () => location.hash === '#/sites', [], { timeout: 5000 });
       await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
     }
 

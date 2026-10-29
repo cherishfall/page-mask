@@ -44,6 +44,8 @@ import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
+// 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
+import { siteLabelOf } from '@/entrypoints/management/site';
 import { MaskLayer } from './mask-layer';
 import { CurtainLayer } from './curtain';
 import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain-restore';
@@ -133,9 +135,22 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let profile: SiteProfile | null = null;
   let settings: GlobalSettings = { defaultTitle: null, defaultIconDataUrl: null, curtainBtnPos: null }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
-  const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos'] }>({
+  const toggleState = reactive<{
+    state: SiteProfile['switchState'];
+    position: SiteProfile['floatingBtnPos'];
+    /** 站点自己的标签页标题（⋯ 菜单里的小面板编辑它） */
+    title: string | null;
+    icon: string | null;
+    /** 站点没有自己的标题时实际会用的那个（小面板的占位与说明） */
+    fallbackTitle: string;
+    hasDefaultIcon: boolean;
+  }>({
     state: 'original',
     position: null,
+    title: null,
+    icon: null,
+    fallbackTitle: '',
+    hasDefaultIcon: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -179,6 +194,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
+    toggleState.title = profile?.disguisedTitle ?? null;
+    toggleState.icon = profile?.faviconDataUrl ?? null;
+    toggleState.fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
+    toggleState.hasDefaultIcon = !!settings.defaultIconDataUrl;
   }
 
   function mountToggle(): void {
@@ -199,11 +218,20 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
+          title: toggleState.title ?? '',
+          icon: toggleState.icon,
+          fallbackTitle: toggleState.fallbackTitle,
+          hasDefaultIcon: toggleState.hasDefaultIcon,
+          siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
           onEdit: handleEdit,
           onResetPos: handleResetPos,
           onCover: handleCover,
+          onSaveTitle: handleTitleSave,
+          onSwitchClean: handleSwitchClean,
+          onDelete: handleDeleteRequest,
+          onDeleteSite: handleDeleteSite,
         }),
     });
     toggleApp.mount(toggleHost.root);
@@ -255,6 +283,57 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   function handleEdit() {
     if (ctx.isValid) openEditorPanel();
+  }
+
+  /**
+   * ⋯ 菜单小面板「保存」：标题与图标一起写库。
+   * 清爽态当场改标签页（不等 onChanged 绕一圈），原样态什么都不显示——面板会自己提示
+   * 「现在是原样态」，并给一个「切到清爽」的入口。
+   */
+  async function handleTitleSave(value: { title: string; icon: string | null }): Promise<void> {
+    if (!profile || !ctx.isValid) return;
+    const title = value.title.trim() ? value.title : null; // 留空 = 跟随全局默认（与站点设置页一致）
+    const icon = value.icon;
+    profile.disguisedTitle = title;
+    profile.faviconDataUrl = icon;
+    syncToggleState();
+    if (profile.switchState === 'disguised') {
+      guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
+    }
+    try {
+      await storage.updateProfile(origin, (p) => {
+        p.disguisedTitle = title;
+        p.faviconDataUrl = icon;
+      });
+    } catch {
+      showPageNotice(ctx, '没能保存这次改动，请稍后再试一次');
+    }
+  }
+
+  /** 小面板里的「切到清爽」：原地切过去，让刚保存的标题与图标立刻可见 */
+  async function handleSwitchClean(): Promise<void> {
+    if (!profile || !ctx.isValid || profile.switchState === 'disguised') return;
+    profile.switchState = 'disguised';
+    syncToggleState();
+    await storage.updateProfile(origin, (p) => {
+      p.switchState = 'disguised';
+    });
+  }
+
+  /** 点了「删除这个网站的设置」：弹确认框之前先把幕布撤掉，删完页面上不留旧覆盖层 */
+  function handleDeleteRequest(): void {
+    if (ctx.isValid) hideCurtain();
+  }
+
+  /** 确认删除：后台先让本页还原（此时还删得掉样式），再收回授权、删配置（REVIEW B7） */
+  async function handleDeleteSite(): Promise<void> {
+    if (!profile || !ctx.isValid) return;
+    hideCurtain({ remount: false });
+    // resetSiteHere：内容脚本发起的删除，后台只认发送方自己所在的站点（#56）
+    const res: Ack | undefined = await browser.runtime
+      .sendMessage({ t: 'resetSiteHere' } satisfies BgRequest)
+      .catch(() => undefined);
+    if (!res?.ok) showPageNotice(ctx, '没能删除这个网站的设置，请稍后再试一次');
   }
 
   // ---------- 方案C 遮罩覆盖层 ----------

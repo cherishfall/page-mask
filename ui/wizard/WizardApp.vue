@@ -43,66 +43,17 @@
         </button>
       </div>
 
-      <!-- 第 1 步：标签页标题和图标（只在第一次给一个网站开启清爽时出现） -->
+      <!-- 第 1 步：标签页标题和图标（只在第一次给一个网站开启清爽时出现）。
+           表单与页面 ⋯ 菜单里的小面板是同一个组件（ui/title-icon/TitleIconFields.vue），不写第二份 -->
       <template v-if="phase === 'title'">
         <div class="pm-wiz-step1">
-          <label class="pm-wiz-label" for="pm-wiz-title-input">{{ TEXT.titleLabel }}</label>
-          <input
-            id="pm-wiz-title-input"
-            v-model="titleInput"
-            class="pm-wiz-input"
-            type="text"
-            maxlength="60"
-            data-testid="pm-wiz-title-input"
-            aria-describedby="pm-wiz-title-hint"
+          <TitleIconFields
+            v-model:title="titleInput"
+            v-model:icon="iconDataUrl"
+            id-prefix="pm-wiz"
+            :title-hint="TEXT.titleHint(initialTitle)"
+            :icon-hint="TEXT.iconHint(hasDefaultIcon)"
           />
-          <div class="pm-wiz-chips" role="group" :aria-label="TEXT.quickLabel" data-testid="pm-wiz-quick">
-            <span class="pm-wiz-label">{{ TEXT.quickLabel }}</span>
-            <button
-              v-for="(q, i) in QUICK_TITLES"
-              :key="q.label"
-              type="button"
-              class="pm-wiz-chip"
-              :data-testid="`pm-wiz-quick-${i}`"
-              @click="titleInput = quickTitleValue(q, uiLanguage)"
-            >
-              {{ quickTitleValue(q, uiLanguage) }}
-            </button>
-          </div>
-          <p id="pm-wiz-title-hint" class="pm-wiz-sub">{{ TEXT.titleHint(initialTitle) }}</p>
-
-          <div class="pm-wiz-icon-row">
-            <span class="pm-wiz-label">{{ TEXT.iconLabel }}</span>
-            <img
-              v-if="iconDataUrl"
-              class="pm-wiz-icon-preview"
-              :src="iconDataUrl"
-              :alt="TEXT.iconPreviewAlt"
-              data-testid="pm-wiz-icon-preview"
-            />
-            <span v-else class="pm-wiz-icon-empty" aria-hidden="true" data-testid="pm-wiz-icon-empty"></span>
-            <label class="pm-wiz-btn pm-wiz-file">
-              {{ iconBusy ? TEXT.iconBusy : iconDataUrl ? TEXT.iconReplace : TEXT.iconUpload }}
-              <input
-                type="file"
-                :accept="ICON_SOURCE_TYPES.join(',')"
-                :disabled="iconBusy"
-                data-testid="pm-wiz-icon-input"
-                @change="onIconChange"
-              />
-            </label>
-            <button
-              v-if="iconDataUrl"
-              type="button"
-              class="pm-wiz-btn"
-              data-testid="pm-wiz-icon-clear"
-              @click="clearIcon"
-            >
-              {{ TEXT.iconClear }}
-            </button>
-          </div>
-          <p class="pm-wiz-sub">{{ TEXT.iconHint(hasDefaultIcon) }}</p>
-          <p v-if="iconError" class="pm-wiz-error" role="alert" data-testid="pm-wiz-icon-error">{{ iconError }}</p>
         </div>
       </template>
 
@@ -410,10 +361,6 @@ import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
 import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
-import { QUICK_TITLES, quickTitleValue, currentUiLanguage } from '@/core/titles';
-import { ICON_SOURCE_TYPES } from '@/core/icon';
-// 与管理页的站点设置页共用同一套图标压缩与校验管线（#26）：只跑在扩展页面 / 内容脚本里
-import { fileToIconDataUrl } from '@/entrypoints/management/tab-icon';
 import {
   badgePlacement,
   clampToViewport,
@@ -438,6 +385,7 @@ import {
 } from '@/core/wizard-logic';
 import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
+import TitleIconFields from '../title-icon/TitleIconFields.vue';
 import { ElementFollower } from '../follow';
 
 /** 草稿：DraftItem + 当前候选选择器、自动命名、「只这一个 / 同类一起」的两个命中数 */
@@ -469,21 +417,12 @@ const TEXT = {
     preview: '看效果',
   },
   progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
-  titleLabel: '标签页标题',
   titleHint: (fallback: string) =>
     `上面写什么，标签页就显示什么，现在就能看到。留空会用「${fallback}」——标题不会留成空白，空白时 Chrome 会改为显示网址。`,
-  quickLabel: '快捷标题',
-  iconLabel: '标签页图标',
-  iconUpload: '上传图标',
-  iconReplace: '换一张图标',
-  iconBusy: '正在处理…',
-  iconClear: '清除图标',
-  iconPreviewAlt: '将显示在标签页上的图标',
   iconHint: (hasDefault: boolean) =>
     hasDefault
       ? '图标可以不传；不传时用插件设置里的默认图标。'
       : '图标可以不传；不传时标签页上的图标位留空。',
-  iconFailed: '没能处理这张图标，请再试一次',
   pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消，可以连着选好几个。', '选中的都列在下面，随时能删。'],
   /** 调整组（#52）：自成一组，组内标明现在调的是第几项 */
   adjustGroup: '调整选中的那一项',
@@ -563,11 +502,8 @@ const emit = defineEmits<{ done: [saved: boolean, notice?: string] }>();
 
 /** 新站点第一次设置从「标题与图标」开始；已添加的网站直接进选内容 */
 const phase = ref<WizardPhase>(props.mode === 'newSite' ? 'title' : 'pick');
-const uiLanguage = currentUiLanguage();
 const titleInput = ref(props.initialTitle);
 const iconDataUrl = ref<string | null>(props.initialIcon);
-const iconBusy = ref(false);
-const iconError = ref('');
 /** 选择集（有序，顺序 = 序号）；元素本身不做响应式代理 */
 const selEls = shallowRef<Element[]>([]);
 const lastSel = shallowRef<Element | null>(null);
@@ -788,32 +724,6 @@ function pushTitlePreview() {
   props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconDataUrl.value || props.fallbackIcon);
 }
 
-async function onIconChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = ''; // 清空，之后再选同一个文件也会触发 change
-  if (!file || iconBusy.value) return;
-  iconBusy.value = true;
-  iconError.value = '';
-  try {
-    const res = await fileToIconDataUrl(file);
-    if (!res.ok) {
-      iconError.value = res.error;
-      return;
-    }
-    iconDataUrl.value = res.dataUrl; // watch 会立即更新标签页图标
-  } catch {
-    iconError.value = TEXT.iconFailed;
-  } finally {
-    iconBusy.value = false;
-  }
-}
-
-function clearIcon() {
-  iconError.value = '';
-  iconDataUrl.value = null;
-}
-
 /**
  * 「只改标题，完成」：保存 0 条规则 + 标题 / 图标，站点进入清爽态，向导直接关闭，
  * 不弹保存对话框（#51）。新站点的第一份配置在这里才第一次写入。
@@ -849,7 +759,7 @@ async function saveTitleOnly() {
       return;
     }
     if (!saved) {
-      noticeText.value = '这个网站的设置在别处被清空了，本次修改没有保存。可以从扩展图标重新开始设置。';
+      noticeText.value = '这个网站的设置在别处被删掉了，本次修改没有保存。可以从扩展图标重新开始设置。';
       noticeDlg.value?.showModal();
       return;
     }
@@ -1258,7 +1168,7 @@ async function doSave() {
       return;
     }
     if (!saved) {
-      noticeText.value = '这个网站的设置在别处被清空了，本次选择没有保存。可以从扩展图标重新开始设置。';
+      noticeText.value = '这个网站的设置在别处被删掉了，本次选择没有保存。可以从扩展图标重新开始设置。';
       noticeDlg.value?.showModal();
       return;
     }

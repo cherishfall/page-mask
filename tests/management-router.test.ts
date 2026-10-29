@@ -2,7 +2,7 @@
  * 管理页 hash 路由与站点标识（#40）。纯函数，不需要浏览器。
  */
 import { describe, expect, it } from 'vitest';
-import { addHash, isRouteHash, parseRoute, siteHash } from '@/entrypoints/management/router';
+import { isRouteHash, parseRoute, siteHash } from '@/entrypoints/management/router';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '@/entrypoints/management/site';
 import { createEmptyProfile } from '@/core/types';
 
@@ -40,19 +40,12 @@ describe('管理页 hash 路由', () => {
     expect(parseRoute('#/sites/例子.中国')).toEqual({ name: 'site', host: puny });
   });
 
-  it('待添加地址带着完整来源（http 还是 https 不靠 host 猜）', () => {
-    expect(addHash('https://example.com')).toBe('#/add/https%3A%2F%2Fexample.com');
-    expect(parseRoute(addHash('https://example.com'))).toEqual({ name: 'add', origin: 'https://example.com' });
-    expect(parseRoute(addHash('http://127.0.0.1:8080'))).toEqual({ name: 'add', origin: 'http://127.0.0.1:8080' });
-    expect(isRouteHash(addHash('https://example.com'))).toBe(true);
-  });
-
-  it('待添加地址的来源不合法或缺来源时落到网站列表（不渲染半截页面）', () => {
+  it('旧地址 #/add/<来源>（#56 删掉的「待添加」页）不再可达，一律落回网站列表', () => {
     expect(parseRoute('#/add')).toEqual({ name: 'sites' });
     expect(parseRoute('#/add/')).toEqual({ name: 'sites' });
-    expect(parseRoute('#/add/not-a-url')).toEqual({ name: 'sites' });
-    expect(parseRoute('#/add/chrome%3A%2F%2Fsettings')).toEqual({ name: 'sites' });
-    expect(parseRoute('#/add/%E0%A4%A')).toEqual({ name: 'sites' });
+    expect(parseRoute('#/add/https%3A%2F%2Fexample.com')).toEqual({ name: 'sites' });
+    expect(parseRoute('#/add/http%3A%2F%2F127.0.0.1%3A8080')).toEqual({ name: 'sites' });
+    expect(isRouteHash('#/add/https%3A%2F%2Fexample.com')).toBe(false);
   });
 });
 

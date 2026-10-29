@@ -287,6 +287,16 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return { ok: true };
   }
 
+  /**
+   * 页面 ⋯ 菜单里的「删除这个网站的设置」（#56）：与 resetSite 同一套收尾，只是由内容脚本发起。
+   * 只认网页标签页发来的消息，且只删它自己所在的站点（不信消息里的任何来源字段）。
+   */
+  async function resetSiteHere(sender: Sender): Promise<Ack> {
+    const origin = sender.tab ? originOf(sender.url) : null;
+    if (!origin) return { ok: false, error: 'no sender tab' };
+    return resetSite(origin);
+  }
+
   /** 新站点首次向导被取消：站点仍没有配置时，收回刚给的授权与注册（有配置说明别处已保存，不动） */
   async function cancelNewSite(sender: Sender): Promise<Ack> {
     const origin = sender.tab ? originOf(sender.url) : null;
@@ -419,6 +429,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
         return fromExtensionPage(sender) ? coverPage(msg.tabId) : Promise.resolve(FORBIDDEN);
       case 'resetSite':
         return fromExtensionPage(sender) ? resetSite(msg.origin) : Promise.resolve(FORBIDDEN);
+      case 'resetSiteHere':
+        return resetSiteHere(sender);
       case 'reconcile':
         return fromExtensionPage(sender) ? handleReconcile() : Promise.resolve(FORBIDDEN);
       case 'cancelNewSite':

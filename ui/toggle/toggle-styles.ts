@@ -1,26 +1,10 @@
 /**
- * 悬浮按钮自己的样式（胶囊、把手、菜单）。与向导 / 编辑面板同一套注入方式：
- * 可构造样式表 + adoptedStyleSheets，用 shadow root 所属 window 的 CSSStyleSheet 构造；
- * 失败时退回 <style>。需要 :popover-open、:focus-visible 等伪类，行内样式做不到。
+ * 悬浮按钮自己的样式（胶囊、把手、菜单、标题与图标小面板、删除确认框）。
+ * 与向导 / 编辑面板同一套注入方式（ui/adopt-css.ts）；表单部分的 CSS 与向导共用同一份
+ * （ui/title-icon/fields.css），两处不各写一套。
  */
 import toggleCss from './toggle.css?inline';
+import fieldsCss from '../title-icon/fields.css?inline';
+import { createStyleAdopter } from '../adopt-css';
 
-const sheetCache = new WeakMap<Document, CSSStyleSheet>();
-
-export function adoptToggleStyles(root: ShadowRoot): void {
-  try {
-    const doc = root.ownerDocument;
-    let sheet = sheetCache.get(doc);
-    if (!sheet) {
-      const Ctor = (doc.defaultView as (Window & typeof globalThis) | null)?.CSSStyleSheet ?? CSSStyleSheet;
-      sheet = new Ctor();
-      sheet.replaceSync(toggleCss);
-      sheetCache.set(doc, sheet);
-    }
-    if (!root.adoptedStyleSheets.includes(sheet)) root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
-  } catch {
-    const style = root.ownerDocument.createElement('style');
-    style.textContent = toggleCss;
-    root.appendChild(style);
-  }
-}
+export const adoptToggleStyles = createStyleAdopter(toggleCss, fieldsCss);

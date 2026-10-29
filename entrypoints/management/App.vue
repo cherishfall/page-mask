@@ -8,7 +8,6 @@
     <main id="pm-main" ref="mainEl" tabindex="-1">
       <SitesView v-if="route.name === 'sites'" />
       <SiteSettingsView v-else-if="route.name === 'site'" :key="route.host" :host="route.host" />
-      <SiteSettingsView v-else-if="route.name === 'add'" :key="route.origin" :origin="route.origin" />
     </main>
   </div>
 </template>

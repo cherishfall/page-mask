@@ -271,91 +271,14 @@
   gap: var(--pm-space-2);
 }
 
-/* ── 第 1 步：标签页标题和图标 ── */
+/* ── 第 1 步：标签页标题和图标 ──
+   表单本身（标题、快捷标题、图标上传 / 预览 / 清除）与页面 ⋯ 菜单的小面板共用同一个组件，
+   样式在 ui/title-icon/fields.css；这里只剩这一步的容器间距。 */
 .pm-wiz-step1 {
   display: flex;
   flex-direction: column;
   gap: var(--pm-space-1);
   margin-top: var(--pm-space-2);
-}
-.pm-wiz-label {
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
-}
-.pm-wiz-input {
-  box-sizing: border-box;
-  inline-size: 100%;
-  min-block-size: 32px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  padding: 4px 8px;
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  font: inherit;
-  font-size: var(--pm-font-size-body);
-}
-.pm-wiz-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.pm-wiz-chip {
-  min-block-size: 26px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-pill);
-  padding: 0 10px;
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  font: inherit;
-  font-size: var(--pm-font-size-caption);
-  cursor: pointer;
-}
-.pm-wiz-chip:hover {
-  background: var(--pm-bg-subtle);
-}
-.pm-wiz-icon-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--pm-space-2);
-  margin-top: var(--pm-space-1);
-}
-.pm-wiz-icon-preview,
-.pm-wiz-icon-empty {
-  flex: none;
-  inline-size: 32px;
-  block-size: 32px;
-  box-sizing: border-box;
-  border: 1px solid var(--pm-border-control);
-  border-radius: 4px;
-  background: var(--pm-bg-subtle);
-}
-/* 还没传图标：占位框里画一条斜线，表示「这里是空的」 */
-.pm-wiz-icon-empty {
-  border-style: dashed;
-  background:
-    linear-gradient(to top right, transparent calc(50% - 1px), var(--pm-border-control) 50%, transparent calc(50% + 1px)),
-    var(--pm-bg-subtle);
-}
-/* 文件选择框铺满整个按钮：点击落在原生 input 上，键盘也能触发 */
-.pm-wiz-file {
-  position: relative;
-  overflow: hidden;
-}
-.pm-wiz-file input[type='file'] {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  inline-size: 100%;
-  block-size: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-.pm-wiz-error {
-  margin: 0;
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-danger);
 }
 
 /* 预览阶段的草稿清单：每一行是一个完整的编辑单元，分两行（#53）——第一行序号 / 名字 / 删除，

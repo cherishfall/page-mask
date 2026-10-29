@@ -11,17 +11,17 @@
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
- *   站点设置页（#41）：标签页标题自动保存并可回读、图标上传与清除、收起项清单（名称 / 收起方式 / 人话范围）、
- *   删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
- *   页脚「一键清空」与二次确认、0 条规则时不出现「0 项」；列表行上不再有「一键清空」；
+ *   站点设置页（#41 / #56）：四块标题与页面 ⋯ 菜单同名（标签页标题 / 标签页图标 / 收起的内容 /
+ *   删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
+ *   人话范围）、删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
+ *   页脚「删除这个网站的设置」与二次确认（标题带域名、默认聚焦「取消」、危险按钮实底红）、
+ *   0 条规则时不出现「0 项」；列表行上没有删除入口；
  *   设置 tab 的默认标题自动保存、编辑态不被存储变化覆盖；
  *   整体替换导入用原生模态 <dialog>，默认聚焦「取消」、列出影响，取消不改数据；
  *   导入失败用人话；待授权站点在行里给出「授权并启用」，两个以上出现「一次授权全部」；空状态有引导文案；
  *   所有表单控件都有关联的标签
- * - 只想改标题（#42）：待添加页（#/add/<来源>，深链直接打开也不报错）→「添加这个网站」写下一份
- *   0 条规则的清爽态配置 → 悬浮按钮出现、标题生效、页面上没有元素被收起；
- *   添加后 popup 的次按钮是「编辑当前网站」、0 条规则不说「已收起 0 项」
- *   （popup 里的「设置标题和图标」入口已在 #54 删除，这条路由留给 #56 清理）
+ * - 旧入口清理（#56）：`#/add/<来源>`（「待添加」页）不再可达，落到网站列表；
+ *   只想改标题改走页面右下角 ⋯ 菜单的「标签页标题和图标」
  * - 引导页：4 步（含「固定到工具栏」），aria-current="step" 跟随「下一步」，无 🎭 与第三方品牌
  * - 三个页面：lang="zh-CN"、color-scheme meta；浅色 / 深色下 body 背景与前景等于 tokens 值；
  *   所有可见文字与其背景的对比度 ≥ 4.5、字号 ≥ 12px；可见文案（以及模板源码）里没有「伪装 / 泄露」
@@ -496,14 +496,14 @@ async function main() {
     const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
     check(rowText.includes('原样') && rowText.includes('已收起 2 项'), `一行一站：${rowText.split('\n').join(' / ')}`);
     check((await m.$eval(tid('pm-mgmt-site-link'), (a) => a.getAttribute('href'))) === SITE_HASH, `行链接指向 ${SITE_HASH}`);
-    // #41：一键清空从列表行迁到站点设置页页脚
+    // #41 / #56：删除入口只在站点设置页页脚，列表行上没有
     check(
-      !(await m.$(`xpath/.//li[@data-origin="${ORIGIN}"]//button[normalize-space()="一键清空"]`)),
-      '列表行上没有「一键清空」（入口只在站点设置页页脚）',
+      !(await m.$(`xpath/.//li[@data-origin="${ORIGIN}"]//button[normalize-space()="删除设置"]`)),
+      '列表行上没有「删除设置」（入口只在站点设置页页脚）',
     );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
-    console.log('\n--- 管理页：站点设置页（标题、图标、收起项、一键清空） ---');
+    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、收起的内容、删除设置） ---');
     await m.click(tid('pm-mgmt-site-link'));
     await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
@@ -511,6 +511,17 @@ async function main() {
     const mgmtSwitch = await findSwitch(m);
     check(mgmtSwitch.node?.name === '清爽模式', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
+    // 四块与页面右下角 ⋯ 菜单用同一批名字（#56）
+    const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
+    check(
+      sections.join(' / ') === '标签页标题 / 标签页图标 / 收起的内容 / 删除这个网站的设置',
+      `站点设置页四块标题与菜单同名（${sections.join(' / ')}）`,
+    );
+    const bodyText = await m.evaluate(() => document.body.innerText);
+    check(
+      !/清空|一键|屏蔽|拦截|移除这个网站|配置/.test(bodyText),
+      '站点设置页没有「清空 / 一键 / 屏蔽 / 拦截 / 移除这个网站 / 配置」这些旧叫法',
+    );
 
     // 标签页标题：停止输入后自动保存；重新打开管理页值仍在
     const siteTitle = tid('pm-mgmt-title');
@@ -541,7 +552,7 @@ async function main() {
     check(!!(await m.waitForSelector(tid('pm-mgmt-favicon-empty'), { timeout: 3000 })), '清除后显示「未设置」');
 
     // 收起项清单：名称 + 收起方式 + 人话范围
-    check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '已收起的项按行列出（2 行）');
+    check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '收起的内容按行列出（2 行）');
     const ruleRowText = await m.$eval('li[data-rule-id="r1"]', (e) => e.innerText);
     check(
       ruleRowText.includes('页头') && ruleRowText.includes('消失') && ruleRowText.includes('整个网站'),
@@ -599,22 +610,43 @@ async function main() {
     await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '站点设置页切换清爽模式写入存储');
     check(true, '站点设置页切换清爽模式写入存储');
 
-    // 一键清空：入口在本页页脚，二次确认列明影响、默认聚焦「取消」、Esc 不清空
+    // 删除这个网站的设置：入口在本页页脚，二次确认带域名、列明影响、默认聚焦「取消」、Esc 不删
     await m.click(tid('pm-mgmt-reset'));
-    await waitFor(m, '清空确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
-    const resetInfo = await m.evaluate((s) => {
-      const d = document.querySelector(s);
-      const title = document.getElementById(d.getAttribute('aria-labelledby'));
-      return { focus: document.activeElement?.textContent?.trim(), title: title?.textContent ?? '', list: d.querySelector('ul')?.innerText ?? '' };
-    }, tid('pm-mgmt-reset-dialog'));
+    await waitFor(m, '删除确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
+    const resetInfo = await m.evaluate(
+      (s, confirmSel) => {
+        const d = document.querySelector(s);
+        const title = document.getElementById(d.getAttribute('aria-labelledby'));
+        const btn = document.querySelector(confirmSel);
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(document.body).getPropertyValue('--pm-danger');
+        document.body.appendChild(probe);
+        const danger = getComputedStyle(probe).color;
+        probe.remove();
+        return {
+          focus: document.activeElement?.textContent?.trim(),
+          title: title?.textContent ?? '',
+          impact: d.querySelector('[data-testid="pm-mgmt-reset-impact"]')?.innerText ?? '',
+          confirm: btn?.textContent?.trim() ?? '',
+          confirmBg: btn ? getComputedStyle(btn).backgroundColor : '',
+          danger,
+        };
+      },
+      tid('pm-mgmt-reset-dialog'),
+      tid('pm-mgmt-reset-confirm'),
+    );
     check(resetInfo.focus === '取消', `原生模态 <dialog>，默认聚焦安全按钮「${resetInfo.focus}」`);
     check(
-      resetInfo.title.includes('127.0.0.1') && resetInfo.list.includes('2 个收起项会被删除'),
-      `确认框有标题并列明影响（${resetInfo.list.split('\n')[0]}）`,
+      resetInfo.title === `删除 ${HOST} 的设置？` && resetInfo.impact.includes('标签页标题、图标、收起的内容都会删掉'),
+      `确认框标题带域名、正文说清删什么（${resetInfo.title} / ${resetInfo.impact}）`,
+    );
+    check(
+      resetInfo.confirm === '删除设置' && resetInfo.confirmBg === resetInfo.danger,
+      `危险按钮是实底红、写「${resetInfo.confirm}」（${resetInfo.confirmBg}）`,
     );
     await m.keyboard.press('Escape');
     await waitFor(m, 'Esc 关闭确认框', (s) => !document.querySelector(s).open, [tid('pm-mgmt-reset-dialog')]);
-    check((await getProfile(ext.control, ORIGIN)) !== null, 'Esc 关闭确认框不清空');
+    check((await getProfile(ext.control, ORIGIN)) !== null, 'Esc 关闭确认框不删除');
 
     // 浏览器后退回到列表
     await m.evaluate(() => history.back());
@@ -636,8 +668,8 @@ async function main() {
     await waitFor(m, '0 条规则的确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
     const zeroImpact = await m.$eval(tid('pm-mgmt-reset-impact'), (e) => e.innerText);
     check(
-      !/\d+\s*个收起项会被删除/.test(zeroImpact) && zeroImpact.includes('标签页标题与图标'),
-      `0 条规则时确认框不出现「0 个收起项会被删除」（${zeroImpact.split('\n').join(' / ')}）`,
+      !/\d+\s*个收起项/.test(zeroImpact) && zeroImpact.includes('标签页标题、图标、收起的内容'),
+      `0 条规则时确认框不出现「0 个收起项」（${zeroImpact}）`,
     );
     await m.keyboard.press('Escape');
     await waitFor(m, 'Esc 关闭确认框（0 条规则）', (s) => !document.querySelector(s).open, [tid('pm-mgmt-reset-dialog')]);
@@ -793,70 +825,24 @@ async function main() {
     await checkSchemes(m, '管理页 · 空状态', 'bgSubtle');
     await m.close();
 
-    // ===================== 只想改标题（#42） =====================
-    console.log('\n--- 只想改标题：待添加页 → 添加 ---');
-    // 真实权限弹窗无法自动化：先用测试手段授予两个站点（这一步会重载扩展，之前的扩展页面全部关闭）
+    // ===================== 旧入口清理（#56） =====================
+    console.log('\n--- 旧地址 #/add 不再可达，落到网站列表 ---');
     await grantPermissions(ext, [ORIGIN, ORIGIN2]);
-
-    // 深链：直接打开待添加地址也要落到「添加这个网站」，不能是一个空白/报错页。
-    // popup 里的「设置标题和图标」入口已在 #54 删除（改标题走页面 ⋯ 菜单与向导），这条路由留给 #56 清理
     const HOST2 = new URL(ORIGIN2).host;
-    const addPage = await browser.newPage();
-    await addPage.goto(`${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`, { waitUntil: 'load' });
-    await addPage.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
-    check(true, '直接打开待添加地址（深链）不报错，显示「添加这个网站」');
-
-    const titleSite = await browser.newPage();
-    await titleSite.goto(`${ORIGIN2}/index.html`, { waitUntil: 'load' });
-    check(!(await titleSite.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
-
-    await addPage.bringToFront();
-    check((await addPage.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST2, `待添加页显示域名（${HOST2}）`);
-    const addHint = await addPage.$eval(tid('pm-mgmt-add-hint'), (e) => e.innerText);
-    check(addHint.includes('还没有添加') && addHint.includes('一项都不收起'), `待添加页说明这条路的用途（${addHint}）`);
-    await checkCommon(addPage, '管理页 · 待添加');
-    await checkSchemes(addPage, '管理页 · 待添加', 'bgSubtle');
-
-    const ADD_TITLE = '工作台';
-    await addPage.click(tid('pm-mgmt-add-title'));
-    await addPage.type(tid('pm-mgmt-add-title'), ADD_TITLE);
-    await addPage.click(tid('pm-mgmt-add-site'));
-    // 权限已预先授予 → 请求立即返回；添加成功后本页地址换成正常的站点设置地址
-    const SITE_HASH2 = `#/sites/${HOST2}`;
-    await poll(async () => (await addPage.evaluate(() => location.hash)) === SITE_HASH2, '添加后本页转为站点设置');
-    await addPage.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
-    const added = await getProfile(ext.control, ORIGIN2);
+    await setProfile(ext.control, ORIGIN2, profileOf(ORIGIN2));
+    const oldAdd = await browser.newPage();
+    await oldAdd.goto(`${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`, { waitUntil: 'load' });
+    await poll(async () => (await oldAdd.evaluate(() => location.hash)) === '#/sites', '#/add 被改写成 #/sites');
+    await oldAdd.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
     check(
-      !!added && added.hideRules.length === 0 && added.switchState === 'disguised' && added.disguisedTitle === ADD_TITLE,
-      `添加后写入 0 条规则的清爽态配置，标题是填的值（${JSON.stringify(added && { rules: added.hideRules.length, state: added.switchState, title: added.disguisedTitle })}）`,
+      !(await oldAdd.$(tid('pm-mgmt-add-site'))) && !(await oldAdd.$('#pm-add-title-input')),
+      '旧「待添加」页的「添加这个网站」与标题输入框都不在了，落在网站列表上',
     );
-    const addedCount = await addPage.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
-    check(addedCount.includes('没有收起任何内容'), `添加后站点设置页说「${addedCount}」`);
-
-    // 已打开的页面：标签页标题生效、一个元素都没被收起（不需要刷新）；0 条规则不挂胶囊（#51）
-    await titleSite.bringToFront();
-    await waitFor(titleSite, '添加后标签页标题生效', (t) => document.title === t, [ADD_TITLE]);
-    check(!(await titleSite.$('pagemask-toggle')), '0 条规则的网站页面上不出现小胶囊');
-    const hidden = await titleSite.evaluate(
-      () => [...document.querySelectorAll('#site-header, main, h1, p')].filter((el) => !el.checkVisibility()).length,
-    );
-    check(hidden === 0, '页面上没有任何元素被收起（全部仍然可见）');
-
-    // 已配置的站点：次按钮回到「编辑当前网站」，遮住开关也在，0 条规则不说「已收起 0 项」
-    const popupAdded = await openPopup(ext, titleSite);
-    await popupAdded.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
     check(
-      (await popupAdded.$eval(tid('pm-popup-edit'), (b) => b.textContent.trim())) === '编辑当前网站',
-      '添加后 popup 次按钮是「编辑当前网站」',
+      (await oldAdd.evaluate((h) => [...document.querySelectorAll('.site-host')].some((e) => e.textContent.trim() === h), HOST2)) === true,
+      `列表里能看到 ${HOST2}（它已经作为正常站点存在）`,
     );
-    check(!(await popupAdded.$(tid('pm-popup-title-settings'))), '面板里没有「设置标题和图标」');
-    const zeroMeta = await popupAdded.$eval('.meta', (e) => e.innerText.trim());
-    check(zeroMeta.includes('没有收起任何内容') && !zeroMeta.includes('已收起 0 项'), `popup 0 条规则说「${zeroMeta}」`);
-    await checkPopupChrome(popupAdded, '0 条规则的已添加网站');
-    // 0 条规则没有小胶囊，遮住开关照样能用（页面里的内容脚本负责遮与恢复）
-    await coverAndRestore(ext, popupAdded, titleSite, '0 条规则的已添加网站');
-    await titleSite.close();
-    await addPage.close();
+    await oldAdd.close();
 
     // ===================== 引导页 =====================
     console.log('\n--- 引导页 ---');

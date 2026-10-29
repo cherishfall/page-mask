@@ -209,6 +209,143 @@
 .pm-tg-item:hover {
   background: var(--pm-bg-subtle);
 }
+/* 分隔线（#56）：日常项 / 按钮位置 / 删除设置三组之间各一条 */
+.pm-tg-sep {
+  margin: 3px 0;
+  border: 0;
+  border-top: 1px solid var(--pm-border);
+}
+/* 删除这一组是危险动作：红字，悬停才给底色 */
+.pm-tg-item.danger {
+  color: var(--pm-danger);
+}
+
+/* ── 「标签页标题和图标」小面板（#56，ui/title-icon/TitleIconPanel.vue） ──
+   popover：进 top layer，不会被页面浮层压住；位置由脚本按「⋯」的位置算（贴在上方、右对齐）。
+   表单本身的样式在 ui/title-icon/fields.css，与向导第 1 步共用。 */
+.pm-tp {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  inline-size: 300px;
+  max-inline-size: calc(100vw - 2 * var(--pm-space-3));
+  max-block-size: calc(100vh - 2 * var(--pm-space-3));
+  overflow: auto;
+  padding: var(--pm-space-3);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-card);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow-overlay);
+  /* 胶囊整体不参与文字选择，但面板里有输入框，必须能选中、能拖选 */
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pm-tp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+  margin-bottom: var(--pm-space-2);
+}
+.pm-tp-heading {
+  margin: 0;
+  font-size: var(--pm-font-size-body);
+  font-weight: var(--pm-font-weight-strong);
+}
+.pm-tp-close {
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--pm-radius-control);
+  background: transparent;
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-caption);
+  line-height: 1;
+  cursor: pointer;
+}
+.pm-tp-close:hover {
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+}
+.pm-tp-note {
+  margin: 0;
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  color: var(--pm-fg);
+}
+.pm-tp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--pm-space-2);
+  margin-top: var(--pm-space-3);
+}
+
+/* ── 删除确认框（#56，ui/toggle/DeleteSiteDialog.vue） ──
+   原生模态 <dialog>：进 top layer，压得住页面里 z-index 再高的浮层；安全按钮「取消」默认聚焦，
+   危险按钮实底红。与向导 / 站点设置页的确认框同一套排版。 */
+.pm-tg-del {
+  box-sizing: border-box;
+  inline-size: min(420px, calc(100vw - 2 * var(--pm-space-3)));
+  padding: var(--pm-space-4);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-card);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow-overlay);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pm-tg-del::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.pm-tg-del-title {
+  margin: 0 0 var(--pm-space-2);
+  font-size: var(--pm-font-size-title);
+  overflow-wrap: anywhere;
+}
+.pm-tg-del-text {
+  margin: 0;
+  font-size: var(--pm-font-size-body);
+  line-height: var(--pm-line-height);
+}
+.pm-tg-del-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--pm-space-2);
+  margin-top: var(--pm-space-4);
+}
+.pm-tg-del-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 32px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: 4px 12px;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-size: var(--pm-font-size-body);
+  line-height: var(--pm-line-height);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pm-tg-del-actions button:hover {
+  background: var(--pm-bg-subtle);
+}
+/* 危险动作：实底红，与扩展页面的 .danger / .primary.danger 同一套 */
+.pm-tg-del-actions button.primary.danger {
+  background: var(--pm-danger);
+  border-color: var(--pm-danger);
+  color: var(--pm-on-danger);
+}
+.pm-tg-del-actions button.primary.danger:hover {
+  background: var(--pm-danger);
+  border-color: var(--pm-danger);
+}
 
 :focus-visible {
   outline: var(--pm-focus-ring);

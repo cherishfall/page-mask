@@ -4,62 +4,6 @@
 
     <p v-if="!store.state.loaded" class="hint">正在读取…</p>
 
-    <!-- 待添加（#/add/<来源>）：只想改标题、不想收起任何内容的网站从这里开始（#42） -->
-    <template v-else-if="!profile && addOrigin">
-      <h2 id="pm-site-title" class="host add-title">{{ siteLabelOf(addOrigin) }}</h2>
-      <p class="hint" data-testid="pm-mgmt-add-hint">
-        这个网站还没有添加。添加后只改它的标签页标题和图标，页面上的内容一项都不收起。
-      </p>
-
-      <section class="card">
-        <h3>标签页标题</h3>
-        <p class="hint">清爽模式下，这个网站的标签页显示这段文字。</p>
-        <div class="row">
-          <label class="visually-hidden" for="pm-add-title-input">标签页标题</label>
-          <input
-            id="pm-add-title-input"
-            v-model="addTitle"
-            class="title-input"
-            data-testid="pm-mgmt-add-title"
-            :placeholder="titlePlaceholder"
-            aria-describedby="pm-add-title-hint"
-          />
-        </div>
-        <div class="row quick" role="group" aria-labelledby="pm-add-title-quick">
-          <span id="pm-add-title-quick" class="hint">快捷填入</span>
-          <button
-            v-for="q in QUICK_TITLES"
-            :key="q.label"
-            type="button"
-            class="chip"
-            @click="addTitle = quickTitleValue(q, store.uiLanguage)"
-          >
-            {{ quickTitleValue(q, store.uiLanguage) }}
-          </button>
-        </div>
-        <p id="pm-add-title-hint" class="hint">
-          留空则用「{{ fallbackTitle }}」；标题不会留成空白——空白时 Chrome 会改为显示网址。
-        </p>
-      </section>
-
-      <p v-if="store.state.addError" class="hint error" role="alert" data-testid="pm-mgmt-add-error">
-        {{ store.state.addError }}
-      </p>
-
-      <div class="row">
-        <button
-          type="button"
-          class="primary"
-          data-testid="pm-mgmt-add-site"
-          :disabled="store.state.adding"
-          @click="addSite"
-        >
-          {{ store.state.adding ? '正在添加…' : '添加这个网站' }}
-        </button>
-      </div>
-      <p class="hint">添加时需要允许 PageMask 访问这个网站，浏览器会弹出一次权限确认。</p>
-    </template>
-
     <div v-else-if="!profile" class="card empty" data-testid="pm-mgmt-site-missing">
       <h2 id="pm-site-title">没有这个网站的设置</h2>
       <p class="hint">打开这个网站，点浏览器工具栏上的 PageMask 图标，就能为它开启清爽模式。</p>
@@ -187,9 +131,9 @@
         <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
       </section>
 
-      <!-- 已收起的项：只读清单，换方式与重选元素要到页面上做 -->
+      <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card">
-        <h3>已收起的项</h3>
+        <h3>收起的内容</h3>
 
         <p v-if="profile.hideRules.length === 0" class="hint" data-testid="pm-mgmt-no-rules">
           没有收起任何内容。点下面的「在页面上编辑」到网站上挑要收起的东西。
@@ -255,18 +199,18 @@
         <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHint }}</p>
       </section>
 
-      <!-- 页脚：一键清空（入口只在这里，列表行上不再有） -->
+      <!-- 页脚：删除这个网站的设置（与页面右下角 ⋯ 菜单里的那一项是同一件事、同一个叫法） -->
       <footer class="danger-zone">
-        <h3>清空这个网站</h3>
-        <p class="hint">删掉这个网站的全部设置，收回浏览器的访问权限，网站回到从未添加过的状态。</p>
-        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="openReset">一键清空</button>
+        <h3>{{ DELETE_SITE_HEADING }}</h3>
+        <p class="hint">{{ DELETE_SITE_IMPACT }}</p>
+        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="openReset">{{ DELETE_SITE_ACTION }}</button>
         <p v-if="store.state.resetError[profile.origin]" class="hint error" role="alert">
           {{ store.state.resetError[profile.origin] }}
         </p>
       </footer>
     </template>
 
-    <!-- 一键清空二次确认（原生模态对话框，安全按钮「取消」默认聚焦） -->
+    <!-- 删除二次确认（原生模态对话框：安全按钮「取消」默认聚焦，危险按钮实底红） -->
     <dialog
       ref="resetDialog"
       aria-labelledby="pm-mgmt-reset-title"
@@ -274,20 +218,16 @@
       @close="onResetClose"
     >
       <template v-if="store.state.resetTarget">
-        <h2 id="pm-mgmt-reset-title">清空 {{ siteLabelOf(store.state.resetTarget.origin) }} 的全部设置？</h2>
-        <ul data-testid="pm-mgmt-reset-impact">
-          <!-- 0 条时不出现「0 个收起项会被删除」这种说法：整行不出现 -->
-          <li v-if="store.state.resetTarget.hideRules.length > 0">
-            {{ store.state.resetTarget.hideRules.length }} 个收起项会被删除
-          </li>
-          <li>这个网站设置的标签页标题与图标会被删除</li>
-          <li>这个网站回到从未设置过的状态，页面上的悬浮按钮随之消失</li>
-          <li>浏览器对这个网站的访问权限会被收回（下次设置需要重新允许）</li>
-        </ul>
+        <h2 id="pm-mgmt-reset-title">
+          {{ deleteSiteTitle(siteLabelOf(store.state.resetTarget.origin)) }}
+        </h2>
+        <p data-testid="pm-mgmt-reset-impact">{{ DELETE_SITE_IMPACT }}</p>
       </template>
       <form method="dialog" class="dialog-actions">
-        <button value="cancel" autofocus>取消</button>
-        <button value="confirm" class="primary danger">确认清空</button>
+        <button value="cancel" autofocus data-testid="pm-mgmt-reset-cancel">取消</button>
+        <button value="confirm" class="primary danger" data-testid="pm-mgmt-reset-confirm">
+          {{ DELETE_SITE_ACTION }}
+        </button>
       </form>
     </dialog>
   </section>
@@ -297,26 +237,24 @@
 import { computed, nextTick, ref } from 'vue';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { scopeHumanLabel } from '@/core/scope';
+import {
+  DELETE_SITE_ACTION,
+  DELETE_SITE_HEADING,
+  DELETE_SITE_IMPACT,
+  deleteSiteTitle,
+} from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { STRATEGY_LABEL, type HideRule } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
-import { replaceHash, siteHash, SITES_HASH } from '../router';
+import { SITES_HASH } from '../router';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
 import { fileToIconDataUrl } from '../tab-icon';
 
-/**
- * `host` = 已在名单里的网站（`#/sites/<host>`）；`origin` = 还没添加的网站（`#/add/<来源>`）。
- * 后者带着完整来源，添加时才能请求到正确的站点权限。
- */
-const props = defineProps<{ host?: string; origin?: string }>();
-
-const addOrigin = computed(() => props.origin ?? null);
-const addTitle = ref('');
+/** 路由参数是网站的 host（`#/sites/<host>`），在名单里找不到就显示「没有这个网站的设置」 */
+const props = defineProps<{ host?: string }>();
 
 const profile = computed(() => {
-  // 待添加按完整来源比对（同主机不同协议是两个站点）；名单里的网站按 host 比对
-  if (props.origin) return store.state.profiles.find((p) => p.origin === props.origin) ?? null;
   const host = normalizeSiteHost(props.host ?? '');
   return store.state.profiles.find((p) => siteHostOf(p.origin) === host) ?? null;
 });
@@ -342,18 +280,6 @@ const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
 
 function onToggle(e: Event) {
   if (profile.value) void store.toggleSite(profile.value, e);
-}
-
-/**
- * 「添加这个网站」：授权 → 写一份 0 条规则的配置（清爽态、标题取输入值或全局默认）→ 本页转为正常站点设置。
- * 权限请求在 store 里的第一条语句发起（用户手势只在同一个同步回合内有效）。
- */
-async function addSite() {
-  const o = addOrigin.value;
-  if (!o || store.state.adding) return;
-  const res = await store.addSite(o, addTitle.value);
-  // 添加成功后地址换成正常站点设置地址，本页立即成为可编辑状态（不在历史里留下「待添加」这一步）
-  if (res === 'added') replaceHash(siteHash(siteHostOf(o)));
 }
 
 function removeRule(rule: HideRule) {
@@ -423,7 +349,7 @@ async function onResetClose() {
   if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次
   const target = store.state.resetTarget;
   await store.confirmReset(confirmed);
-  // 清空后这一页已经没有内容，回列表（失败时留在本页看提示）
+  // 删掉后这一页已经没有内容，回列表（失败时留在本页看提示）
   if (confirmed && target && !store.state.resetError[target.origin]) location.hash = SITES_HASH;
 }
 </script>
@@ -444,12 +370,6 @@ async function onResetClose() {
 
 .site-head .host {
   margin: 0;
-  overflow-wrap: anywhere;
-}
-
-/* 待添加页直接以域名为标题（没有开关那一行） */
-.add-title {
-  margin: 0 0 var(--pm-space-2);
   overflow-wrap: anywhere;
 }
 

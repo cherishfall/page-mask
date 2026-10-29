@@ -10,7 +10,7 @@
     data-testid="pm-editor-panel"
   >
     <div class="pm-ed-head">
-      <h2 id="pm-ed-title" class="pm-ed-title">编辑规则</h2>
+      <h2 id="pm-ed-title" class="pm-ed-title">编辑收起的内容</h2>
       <button type="button" class="pm-ed-close" aria-label="关闭编辑面板" data-testid="pm-editor-close" @click="emit('close')">
         <span aria-hidden="true">✕</span>
       </button>

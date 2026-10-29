@@ -7,7 +7,12 @@
  * 覆盖：
  * - 菜单：默认右下角时菜单完整在视口内（右侧与底部都不出屏）；Esc 关闭；点页面关闭；
  *   右键胶囊不再弹出菜单（「永不做」清单：不新增右键菜单入口）
- * - 点菜单「编辑规则」打开编辑面板，且开关状态不变（N1 的实测故障）
+ * - 菜单四项与两条分隔线（#56）：标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 /
+ *   删除这个网站的设置（红字，与上面用分隔线隔开）
+ * - 点菜单「编辑收起的内容」打开编辑面板，且开关状态不变（N1 的实测故障）
+ * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完提示「切到清爽」并给入口
+ * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
+ *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
  * - 拖动：专用把手 + setPointerCapture，拖出左上角时贴边不出视口，松手后位置落库（贴边 + 纵向坐标）
  * - 对比度：白底 / 深色 / 灰底三种页面上，胶囊本体（底色 vs 页面底色）≥3:1、文字 ≥4.5:1
@@ -152,7 +157,8 @@ function contrastInPage(page, host) {
 async function main() {
   const srv = await startServer(handler);
   const ORIGIN = srv.origin;
-  const ext = await launchExtension({ hostOrigins: [ORIGIN], revocable: false });
+  // revocable：站点权限以「可选权限、运行时已授予」的方式存在，删除设置时才能真的收回（#56）
+  const ext = await launchExtension({ hostOrigins: [ORIGIN] });
   try {
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
     const page = await ext.browser.newPage();
@@ -193,17 +199,148 @@ async function main() {
     await new Promise((res) => setTimeout(res, 300));
     check(!(await menuOpen(page)), '右键胶囊不会打开菜单（没有右键菜单入口）');
 
-    // ===================== 菜单「编辑规则」不切开关（N1） =====================
-    console.log('\n--- 点菜单「编辑规则」：打开面板、开关不变 ---');
+    // ===================== 菜单四项与两条分隔线（#56） =====================
+    console.log('\n--- 菜单：四项、两条分隔线、删除项红字 ---');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
+    const menuShape = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
+      const probe = document.createElement('span');
+      probe.style.color = getComputedStyle(menu).getPropertyValue('--pm-danger');
+      menu.appendChild(probe);
+      const danger = getComputedStyle(probe).color;
+      probe.remove();
+      const items = [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim());
+      const del = menu.querySelector('[data-testid="pm-toggle-delete"]');
+      return {
+        items,
+        seps: menu.querySelectorAll('.pm-tg-sep').length,
+        order: [...menu.children].map((el) => (el.classList.contains('pm-tg-sep') ? '---' : el.textContent.trim())),
+        deleteColor: del ? getComputedStyle(del).color : '',
+        danger,
+      };
+    }, TOGGLE);
+    check(
+      menuShape.items.join(' / ') === '标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 / 删除这个网站的设置',
+      `菜单是四项、叫法一致（${menuShape.items.join(' / ')}）`,
+    );
+    check(menuShape.seps === 2, `四项之间有两条分隔线（实际 ${menuShape.seps} 条）`);
+    check(
+      menuShape.order.join(' | ') ===
+        '标签页标题和图标 | 编辑收起的内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
+      `分组顺序：日常两项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
+    );
+    check(
+      menuShape.deleteColor === menuShape.danger,
+      `删除项是红字、与上面三项分开（${menuShape.deleteColor}）`,
+    );
+    await page.keyboard.press('Escape');
+    await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
+
+    // ===================== 菜单「编辑收起的内容」不切开关（N1） =====================
+    console.log('\n--- 点菜单「编辑收起的内容」：打开面板、开关不变 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-edit'));
     await waitForShadow(page, EDITOR, tid('pm-editor-panel'), { timeout: 5000 });
-    check(true, '菜单「编辑规则」打开了编辑面板');
+    check(true, '菜单「编辑收起的内容」打开了编辑面板');
     const afterMenu = await getProfile(ext.control, ORIGIN);
     check(afterMenu.switchState === 'disguised', `开关没有被菜单点击切掉（${afterMenu.switchState}）`);
     await page.keyboard.press('Escape');
     await waitFor(page, '面板关闭', (h) => !document.querySelector(h), [EDITOR], { timeout: 3000 });
+
+    // ===================== 就地改标题与图标（#56） =====================
+    console.log('\n--- 菜单「标签页标题和图标」：就地弹出小面板、保存即生效 ---');
+    const urlBefore = page.url();
+    const panelOpen = () =>
+      page.evaluate(
+        (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]')?.matches(':popover-open'),
+        TOGGLE,
+      );
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
+    await waitFor(page, '小面板打开', (h) => {
+      const el = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]');
+      return !!el && el.matches(':popover-open');
+    }, [TOGGLE], { timeout: 3000 });
+    check(page.url() === urlBefore, `就地打开，没有跳到别的标签页（地址仍是 ${new URL(page.url()).pathname}）`);
+    check(!(await page.$(WIZARD)) && !(await page.$(EDITOR)), '没有借道向导或编辑面板');
+    const panelShape = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
+      return {
+        menuClosed: !menu.matches(':popover-open'),
+        titleInput: !!sr.querySelector('[data-testid="pm-tp-title-input"]'),
+        quick: sr.querySelectorAll('[data-testid^="pm-tp-quick-"]').length,
+        iconInput: !!sr.querySelector('[data-testid="pm-tp-icon-input"]'),
+        iconEmpty: !!sr.querySelector('[data-testid="pm-tp-icon-empty"]'),
+        save: sr.querySelector('[data-testid="pm-tp-save"]')?.textContent.trim() ?? '',
+        cancel: sr.querySelector('[data-testid="pm-tp-cancel"]')?.textContent.trim() ?? '',
+      };
+    }, TOGGLE);
+    check(panelShape.menuClosed, '打开小面板时菜单先关掉');
+    check(
+      panelShape.titleInput && panelShape.quick === 4 && panelShape.iconInput && panelShape.iconEmpty,
+      `表单与向导第 1 步同一套：标题、4 个快捷标题、图标上传与预览位（${JSON.stringify(panelShape)}）`,
+    );
+    check(panelShape.save === '保存' && panelShape.cancel === '取消', '面板底部是「取消」「保存」');
+    const box = await rectIn(page, TOGGLE, tid('pm-tp-panel'));
+    check(
+      box.x >= 0 && box.y >= 0 && box.right <= 1000 && box.bottom <= 700,
+      `小面板完整在视口内（${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.w)}×${Math.round(box.h)}）`,
+    );
+
+    // 清爽态：改标题 → 保存 → 标签页当场改名
+    const NEW_TITLE = '安静的标题';
+    await page.evaluate(
+      (h, v) => {
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-tp-title-input"]');
+        input.focus();
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      TOGGLE,
+      NEW_TITLE,
+    );
+    await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
+    await waitFor(page, '保存后标签页当场改名', (t) => document.title === t, [NEW_TITLE], { timeout: 3000 });
+    check(!(await panelOpen()), '清爽态下保存后面板收起');
+    check((await getProfile(ext.control, ORIGIN)).disguisedTitle === NEW_TITLE, '标题写进存储');
+
+    // 原样态：保存后要说明「现在是原样态」，并给一个切换入口
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitFor(page, '切到原样', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
+    const ORIGINAL_TITLE = '原样下改的标题';
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
+    await waitFor(page, '小面板再次打开', (h) => {
+      const el = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]');
+      return !!el && el.matches(':popover-open');
+    }, [TOGGLE], { timeout: 3000 });
+    await page.evaluate(
+      (h, v) => {
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-tp-title-input"]');
+        input.focus();
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      TOGGLE,
+      ORIGINAL_TITLE,
+    );
+    await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
+    await waitForShadow(page, TOGGLE, tid('pm-tp-original-note'), { timeout: 3000 });
+    const noteText = await shadowText(page, TOGGLE, tid('pm-tp-original-note'));
+    check(noteText.includes('原样态') && noteText.includes('切到清爽'), `原样态下保存给出说明（${noteText.trim()}）`);
+    check((await page.title()) === 'Acme 阅读', '原样态下标签页仍是真名（保存不硬改）');
+    await clickInShadow(page, TOGGLE, tid('pm-tp-switch-clean'));
+    await waitFor(page, '面板里的「切到清爽」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
+    check(!(await panelOpen()), '切换后面板收起');
+    // 复位：后面的幕布用例断言固定的清爽标题
+    await patchProfile(ext.control, ORIGIN, { disguisedTitle: '低调阅读', switchState: 'disguised' });
+    await waitFor(page, '复位到固定标题', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });
 
     // ===================== 键盘：Tab 聚焦、回车切换 =====================
     console.log('\n--- 键盘操作 ---');
@@ -283,7 +420,7 @@ async function main() {
       `拖到左上角时贴边、不出视口（${Math.round(corner.x)},${Math.round(corner.y)}）`,
     );
 
-    // 按钮归位
+    // 按钮放回右下角
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
@@ -296,7 +433,7 @@ async function main() {
       }
       return getProfile(ext.control, ORIGIN);
     })();
-    check(reset.floatingBtnPos === null, '「按钮归位」清掉保存的坐标');
+    check(reset.floatingBtnPos === null, '「按钮放回右下角」清掉保存的坐标');
     const home = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(home.right <= 1000 && home.bottom <= 700, `归位后回到右下角（right=${Math.round(home.right)}, bottom=${Math.round(home.bottom)}）`);
 
@@ -729,6 +866,112 @@ async function main() {
     await new Promise((res) => setTimeout(res, 500));
     check(!(await page.$('pagemask-curtain')), '刷新后一次性幕布随之消失');
     check(!(await page.$(TOGGLE)), '刷新后也不会有悬浮胶囊（配置已删掉）');
+
+    // ===================== 删除这个网站的设置（#56） =====================
+    console.log('\n--- 菜单「删除这个网站的设置」：确认框 → 删配置、收权限、页面还原 ---');
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await sendToBackground(ext.control, { t: 'enableSite', origin: ORIGIN, tabId: await tabIdOf(ext.control, `${ORIGIN}/*`) });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    await waitFor(page, '删除前：清爽态', (t) => document.title === t, ['低调阅读']);
+    await new Promise((res) => setTimeout(res, 200));
+
+    const openDeleteDialog = async () => {
+      await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+      await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
+      await clickInShadow(page, TOGGLE, tid('pm-toggle-delete'));
+      await waitFor(
+        page,
+        '删除确认框打开',
+        (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-delete-dialog"]')?.matches(':modal'),
+        [TOGGLE],
+        { timeout: 3000 },
+      );
+    };
+    const dialogInfo = () =>
+      page.evaluate((h) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
+        const confirm = sr.querySelector('[data-testid="pm-tg-delete-confirm"]');
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(confirm).getPropertyValue('--pm-danger');
+        sr.querySelector('[data-testid="pm-tg-delete-dialog"]').appendChild(probe);
+        const danger = getComputedStyle(probe).color;
+        probe.remove();
+        return {
+          menuClosed: !menu.matches(':popover-open'),
+          title: sr.querySelector('[data-testid="pm-tg-delete-title"]')?.textContent.trim() ?? '',
+          impact: sr.querySelector('[data-testid="pm-tg-delete-impact"]')?.textContent.trim() ?? '',
+          focus: sr.activeElement?.dataset.testid ?? null,
+          confirmText: confirm?.textContent.trim() ?? '',
+          confirmBg: confirm ? getComputedStyle(confirm).backgroundColor : '',
+          danger,
+          curtain: !!document.querySelector('pagemask-curtain'),
+        };
+      }, TOGGLE);
+
+    await openDeleteDialog();
+    const del = await dialogInfo();
+    check(del.menuClosed, '点「删除这个网站的设置」先关掉菜单，再弹确认框');
+    check(!del.curtain, '弹确认框时页面上没有幕布');
+    check(
+      del.title === `删除 ${new URL(ORIGIN).host} 的设置？`,
+      `确认框标题带域名（${del.title}）`,
+    );
+    check(
+      del.impact.includes('标签页标题、图标、收起的内容都会删掉') &&
+        del.impact.includes('访问权限也会收回') &&
+        del.impact.includes('你添加的网站'),
+      `正文说清删什么、还会发生什么（${del.impact}）`,
+    );
+    check(del.focus === 'pm-tg-delete-cancel', `默认焦点在「取消」上（${del.focus}）`);
+    check(
+      del.confirmText === '删除设置' && del.confirmBg === del.danger,
+      `危险按钮是实底红、写「${del.confirmText}」（${del.confirmBg}）`,
+    );
+
+    // Esc 取消：什么都不删
+    await page.keyboard.press('Escape');
+    await waitFor(
+      page,
+      'Esc 关闭确认框',
+      (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-delete-dialog"]')?.matches(':modal'),
+      [TOGGLE],
+      { timeout: 3000 },
+    );
+    check((await getProfile(ext.control, ORIGIN)) !== null, 'Esc 取消不删除任何东西');
+    check((await page.title()) === '低调阅读', '取消后仍是清爽态、标题没变');
+
+    // 确认删除：配置、权限、页面、列表一起干净
+    await openDeleteDialog();
+    await clickInShadow(page, TOGGLE, tid('pm-tg-delete-confirm'));
+    await waitFor(page, '标题恢复真名', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
+    await waitFor(page, '页面还原：广告位重新可见', () => getComputedStyle(document.querySelector('#ad')).display !== 'none');
+    await waitFor(page, '小胶囊消失', (h) => !document.querySelector(h), [TOGGLE], { timeout: 5000 });
+    const afterDelete = await page.evaluate(
+      (sel) => ({
+        hosts: document.querySelectorAll(sel).length,
+        hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
+      }),
+      'pagemask-toggle, pagemask-wizard, pagemask-editor, pagemask-mask, pagemask-curtain, pagemask-notice',
+    );
+    check(afterDelete.hosts === 0, `页面上没有任何 PageMask 界面（${afterDelete.hosts} 个宿主）`);
+    check(afterDelete.hit !== 'pagemask-toggle', `页面内容恢复正常（视口中心命中 ${afterDelete.hit}）`);
+    check((await getProfile(ext.control, ORIGIN)) === null, '站点配置已删除');
+    check(
+      (await ext.control.evaluate((pt) => chrome.permissions.contains({ origins: [pt] }), `${ORIGIN}/*`)) === false,
+      '浏览器给 PageMask 的访问权限已收回',
+    );
+
+    // 「你添加的网站」列表里也没有了
+    const mgmt = await ext.browser.newPage();
+    await mgmt.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
+    await mgmt.waitForSelector(tid('pm-mgmt-empty'), { timeout: 5000 });
+    check(
+      (await mgmt.$$eval('li[data-origin]', (rows) => rows.length)) === 0,
+      '管理页「你添加的网站」里已经没有它',
+    );
+    await mgmt.close();
   } catch (e) {
     r.fail(e);
   } finally {

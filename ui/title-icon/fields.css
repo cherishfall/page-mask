@@ -1,0 +1,141 @@
+/*
+ * 标签页标题与图标表单（ui/title-icon/TitleIconFields.vue）的样式。
+ * 向导第 1 步与页面 ⋯ 菜单的小面板是同一份表单，样式也就只有这一份：
+ * 两处各自把这份样式表与自己的样式一起注入 shadow（ui/wizard/wizard-styles.ts、
+ * ui/toggle/toggle-styles.ts），组件本身不重复写 CSS。
+ * 颜色只用 tokens 里对比度已验证的组合，跟随 .pm-root 的 color-scheme 明暗切换。
+ */
+
+.pm-tif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-1);
+}
+
+.pm-tif-label {
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+
+.pm-tif-input {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 32px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: 4px 8px;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-font-size-body);
+}
+
+.pm-tif-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-tif-chip {
+  min-block-size: 26px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-pill);
+  padding: 0 10px;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pm-tif-chip:hover {
+  background: var(--pm-bg-subtle);
+}
+
+.pm-tif-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pm-space-2);
+  margin-top: var(--pm-space-1);
+}
+
+.pm-tif-icon-preview,
+.pm-tif-icon-empty {
+  flex: none;
+  inline-size: 32px;
+  block-size: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--pm-border-control);
+  border-radius: 4px;
+  background: var(--pm-bg-subtle);
+}
+/* 还没传图标：占位框里画一条斜线，表示「这里是空的」 */
+.pm-tif-icon-empty {
+  border-style: dashed;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--pm-border-control) 50%, transparent calc(50% + 1px)),
+    var(--pm-bg-subtle);
+}
+
+/* 表单里的小按钮（上传 / 换一张 / 清除）；小面板的动作按钮也复用它，全站只有这一套 */
+.pm-tif-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 32px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: 4px 12px;
+  font-size: var(--pm-font-size-body);
+  line-height: var(--pm-line-height);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pm-tif-btn:hover:not(:disabled) {
+  background: var(--pm-bg-subtle);
+}
+.pm-tif-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pm-tif-btn.primary {
+  background: var(--pm-accent);
+  border-color: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+.pm-tif-btn.primary:hover:not(:disabled) {
+  background: var(--pm-accent-hover);
+  border-color: var(--pm-accent-hover);
+}
+
+/* 文件选择框铺满整个按钮：点击落在原生 input 上，键盘也能触发 */
+.pm-tif-file {
+  position: relative;
+  overflow: hidden;
+}
+.pm-tif-file input[type='file'] {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pm-tif-hint {
+  margin: 0;
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  color: var(--pm-fg-muted);
+}
+
+.pm-tif-error {
+  margin: 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-danger);
+}
