@@ -6,6 +6,9 @@
  * 覆盖：
  * - popup：开关在无障碍树里是 switch 角色、状态正确、点击 / 空格切换后状态变化并写入存储；
  *   不支持页面的说明、待授权、授权被拒、处理中（按钮禁用 + aria-busy）；h1 标题、装饰符号不进无障碍树
+ * - popup 只留三件事（#54）：主按钮 + 编辑当前网站 + 遮住开关（遮住后写「恢复本页」），
+ *   底部一行「管理全部网站」「插件设置」各自落地；三种站点状态（未添加 / 已添加 / 待授权）都能遮住与恢复；
+ *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
  *   站点设置页（#41）：标签页标题自动保存并可回读、图标上传与清除、收起项清单（名称 / 收起方式 / 人话范围）、
@@ -15,9 +18,10 @@
  *   整体替换导入用原生模态 <dialog>，默认聚焦「取消」、列出影响，取消不改数据；
  *   导入失败用人话；待授权站点在行里给出「授权并启用」，两个以上出现「一次授权全部」；空状态有引导文案；
  *   所有表单控件都有关联的标签
- * - 只想改标题（#42）：未配置站点 popup 次按钮是「设置标题和图标」→ 待添加页（#/add/<来源>，深链直接打开也不报错）
- *   →「添加这个网站」写下一份 0 条规则的清爽态配置 → 悬浮按钮出现、标题生效、页面上没有元素被收起，
- *   已配置站点的次按钮回到「编辑当前网站」、0 条规则不说「已收起 0 项」
+ * - 只想改标题（#42）：待添加页（#/add/<来源>，深链直接打开也不报错）→「添加这个网站」写下一份
+ *   0 条规则的清爽态配置 → 悬浮按钮出现、标题生效、页面上没有元素被收起；
+ *   添加后 popup 的次按钮是「编辑当前网站」、0 条规则不说「已收起 0 项」
+ *   （popup 里的「设置标题和图标」入口已在 #54 删除，这条路由留给 #56 清理）
  * - 引导页：4 步（含「固定到工具栏」），aria-current="step" 跟随「下一步」，无 🎭 与第三方品牌
  * - 三个页面：lang="zh-CN"、color-scheme meta；浅色 / 深色下 body 背景与前景等于 tokens 值；
  *   所有可见文字与其背景的对比度 ≥ 4.5、字号 ≥ 12px；可见文案（以及模板源码）里没有「伪装 / 泄露」
@@ -37,6 +41,9 @@ const r = createReporter();
 const { check } = r;
 const tid = (id) => `[data-testid="${id}"]`;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/** 面板自身的内容高度（px）：Chrome 弹窗上限 600，超了就要滚动 */
+const popupHeight = (page) => page.$eval('main.popup', (m) => m.getBoundingClientRect().height);
 
 /** 1×1 的合法 PNG（标签页图标上传用，走真实的解码 → 缩放 → 编码） */
 const PNG_1PX =
@@ -248,12 +255,95 @@ function checkSources() {
   }
 }
 
+/**
+ * 面板只留三件事（#54）：遮住开关 + 底部两个入口，高度不超过 Chrome 弹窗上限。
+ * 三种站点状态都调这一份（未添加 / 已添加 / 待授权）。
+ */
+async function checkPopupChrome(popup, label) {
+  check(!(await popup.$(tid('pm-popup-title-settings'))), `${label}：面板里不再有「设置标题和图标」`);
+  check(
+    (await popup.$eval(tid('pm-popup-cover'), (b) => b.textContent.trim())) === '遮住本页',
+    `${label}：未遮住时开关写「遮住本页」`,
+  );
+  const entries = await popup.evaluate(
+    (s) =>
+      s.map((x) => {
+        const el = document.querySelector(x);
+        const box = el.getBoundingClientRect();
+        return { text: el.textContent.trim(), top: box.top, height: box.height };
+      }),
+    [tid('pm-popup-manage'), tid('pm-popup-settings')],
+  );
+  check(
+    entries[0].text === '管理全部网站' && entries[1].text === '插件设置',
+    `${label}：底部是「${entries[0].text}」「${entries[1].text}」`,
+  );
+  const minH = Math.min(entries[0].height, entries[1].height);
+  check(
+    Math.abs(entries[0].top - entries[1].top) < 1 && minH >= 24,
+    `${label}：两个入口并排一行、高度 ${minH.toFixed(1)}px ≥ 24px`,
+  );
+  const h = await popupHeight(popup);
+  check(h <= 600, `${label}：面板高度 ${h.toFixed(1)}px 不超过 Chrome 弹窗上限 600px`);
+}
+
+/**
+ * 遮住 → 重开面板写「恢复本页」→ 点一下恢复。两半都验证页面与面板：
+ * 幕布宿主出现 / 消失、面板关闭、遮住状态下重开的面板仍然不超过 600px。
+ */
+async function coverAndRestore(ext, popup, page, label) {
+  await popup.click(tid('pm-popup-cover'));
+  await waitFor(page, `${label}：页面铺上幕布`, (h) => !!document.querySelector(h), ['pagemask-curtain'], { timeout: 5000 });
+  check(true, `${label}：点「遮住本页」后页面被遮住`);
+  await poll(() => popup.isClosed(), `${label}：遮住后面板关闭`);
+  check(true, `${label}：遮住后面板关闭`);
+
+  popup = await openPopup(ext, page);
+  await popup.waitForSelector(tid('pm-popup-cover'), { timeout: 5000 });
+  await waitFor(
+    popup,
+    `${label}：重开面板显示「恢复本页」`,
+    (s) => document.querySelector(s).textContent.trim() === '恢复本页',
+    [tid('pm-popup-cover')],
+    { timeout: 5000 },
+  );
+  check(true, `${label}：遮住后重新打开面板，按钮显示「恢复本页」`);
+  const h = await popupHeight(popup);
+  check(h <= 600, `${label}：遮住状态下重开的面板高度 ${h.toFixed(1)}px 不超过 600px`);
+
+  await popup.click(tid('pm-popup-cover'));
+  await waitFor(page, `${label}：幕布撤掉`, (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 5000 });
+  check(true, `${label}：点「恢复本页」后页面恢复`);
+  await poll(() => popup.isClosed(), `${label}：恢复后面板关闭`);
+  check(true, `${label}：恢复后面板关闭`);
+}
+
+/** 底部两个入口各自落到对应的页面（点完面板关闭） */
+async function footerLandings(ext, browser, page, label) {
+  const openAndClick = async (testid, urlPart) => {
+    const popup = await openPopup(ext, page);
+    await popup.waitForSelector(tid(testid), { timeout: 5000 });
+    const opened = browser.waitForTarget((t) => t.url().includes(urlPart), { timeout: 8000 });
+    await popup.click(tid(testid));
+    const tab = await (await opened).asPage();
+    await tab.waitForFunction(() => document.readyState === 'complete');
+    await poll(() => popup.isClosed(), `${label}：点入口后面板关闭`);
+    return tab;
+  };
+  const mgmt = await openAndClick('pm-popup-manage', '/management.html#/sites');
+  check(mgmt.url().endsWith('/management.html#/sites'), `${label}：「管理全部网站」落到 ${mgmt.url()}`);
+  await mgmt.close();
+  const settings = await openAndClick('pm-popup-settings', '/settings.html');
+  check(settings.url().endsWith('/settings.html'), `${label}：「插件设置」落到 ${settings.url()}`);
+  await settings.close();
+}
+
 async function main() {
   const t0 = Date.now();
   const srv = await startServer(handler);
   const srv2 = await startServer(handler);
   const ORIGIN = srv.origin; // 已配置、已授权
-  const ORIGIN2 = srv2.origin; // 没有配置、没有授权（新站点）
+  const ORIGIN2 = srv2.origin; // 没有配置（未添加的站点）；站点权限在用例里单独授，让一次性幕布脚本可注入
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-check-pages-'));
   // tabs 仅加在测试拷贝里：openPopup() 打开的 popup 没有 activeTab，需要它才读得到当前标签页网址
   const ext = await launchExtension({ hostOrigins: [ORIGIN], extraPermissions: ['tabs'] });
@@ -294,7 +384,9 @@ async function main() {
     await popup.waitForSelector(tid('pm-popup-stale'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-stale'), (e) => e.innerText)).includes('1 项可能失效'), 'popup 以文字显示「1 项可能失效」');
     await checkSchemes(popup, 'popup', 'bg');
-    await popup.close().catch(() => undefined);
+    await checkPopupChrome(popup, '已添加');
+    await coverAndRestore(ext, popup, site, '已添加的网站');
+    await footerLandings(ext, browser, site, '已添加的网站');
 
     console.log('\n--- popup：不支持的页面 ---');
     const blank = await browser.newPage();
@@ -307,19 +399,23 @@ async function main() {
     await popup.close().catch(() => undefined);
     await blank.close();
 
-    console.log('\n--- popup：新站点处理中 / 授权被拒 ---');
+    console.log('\n--- popup：新站点（未添加）三件事与遮住开关 ---');
+    // 真实入口是点工具栏图标——activeTab 在那一刻才临时授予，自动化点不到工具栏；
+    // 这里先授站点权限，让「没有内容脚本、由后台注入一次性脚本」这条路可走（线上靠 activeTab 等价）
+    await grantPermissions(ext, [ORIGIN, ORIGIN2]);
     const site2 = await browser.newPage();
     await site2.goto(`${ORIGIN2}/index.html`, { waitUntil: 'load' });
+    check(!(await site2.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '为当前网站开启清爽模式', '新站点显示「为当前网站开启清爽模式」');
-    check(!!(await popup.$(tid('pm-popup-title-settings'))), '未配置站点有「设置标题和图标」（只想改标题的入口）');
-    check(!!(await popup.$(tid('pm-popup-cover'))), '未配置站点有「遮住本页」（应急幕布的入口）');
-    check(
-      (await popup.$eval(tid('pm-popup-title-settings'), (b) => b.textContent.trim())) === '设置标题和图标',
-      '未配置站点的次按钮是「设置标题和图标」',
-    );
     check(!(await popup.$(tid('pm-popup-edit'))), '未配置站点不显示「编辑当前网站」（那个按钮只在已配置时才有意义）');
+    await checkPopupChrome(popup, '未添加的网站');
+    await coverAndRestore(ext, popup, site2, '未添加的网站');
+
+    console.log('\n--- popup：新站点处理中 / 授权被拒 ---');
+    popup = await openPopup(ext, site2);
+    await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），
     // 这里替换 popup 的消息通道，验证「点击后进入处理中」与「后台回复 denied 时的界面表现」。
     await popup.evaluate(() => {
@@ -345,6 +441,36 @@ async function main() {
       enabled: !document.querySelector(b).disabled,
     }), tid('pm-popup-error'), tid('pm-popup-setup'));
     check(denied.text.includes('需要允许访问这个网站') && denied.role === 'alert' && denied.enabled, `授权被拒：role=alert「${denied.text}」，按钮恢复可点`);
+
+    // 遮住失败：给一句人话，按钮恢复可点（页面上没有接收方、后台也注入不了）
+    await popup.evaluate(() => {
+      chrome.tabs.sendMessage = () => Promise.reject(new Error('没有接收方'));
+      chrome.runtime.sendMessage = () => Promise.resolve({ ok: false });
+    });
+    await popup.click(tid('pm-popup-cover'));
+    await popup.waitForSelector(tid('pm-popup-error'), { timeout: 5000 });
+    const coverErr = await popup.evaluate((e, b) => ({
+      text: document.querySelector(e).textContent,
+      enabled: !document.querySelector(b).disabled,
+    }), tid('pm-popup-error'), tid('pm-popup-cover'));
+    check(coverErr.text.includes('没能遮住这个页面') && coverErr.enabled, `遮住失败给一句人话「${coverErr.text}」，按钮恢复可点`);
+
+    // 遮住开关在处理中同样禁用：把消息挂起，看按钮有没有拦住第二次点击
+    await popup.evaluate(() => {
+      chrome.tabs.sendMessage = () => new Promise(() => undefined);
+      chrome.runtime.sendMessage = () => new Promise(() => undefined);
+    });
+    await popup.click(tid('pm-popup-cover'));
+    await waitFor(popup, '遮住处理中', (s) => document.querySelector(s).disabled, [tid('pm-popup-cover')]);
+    const busyCover = await popup.evaluate((s) => ({
+      text: document.querySelector(s).textContent.trim(),
+      ariaBusy: document.querySelector('main').getAttribute('aria-busy'),
+    }), tid('pm-popup-cover'));
+    check(
+      busyCover.text === '正在遮住…' && busyCover.ariaBusy === 'true',
+      `遮住处理中：按钮禁用、显示「${busyCover.text}」、aria-busy=${busyCover.ariaBusy}`,
+    );
+
     await popup.close().catch(() => undefined);
     await site2.close();
 
@@ -668,33 +794,22 @@ async function main() {
     await m.close();
 
     // ===================== 只想改标题（#42） =====================
-    console.log('\n--- 只想改标题：popup 次按钮 → 待添加页 → 添加 ---');
-    // 真实权限弹窗无法自动化：先用测试手段授予 ORIGIN2（这一步会重载扩展，之前的扩展页面全部关闭）
-    await grantPermissions(ext, [ORIGIN2]);
+    console.log('\n--- 只想改标题：待添加页 → 添加 ---');
+    // 真实权限弹窗无法自动化：先用测试手段授予两个站点（这一步会重载扩展，之前的扩展页面全部关闭）
+    await grantPermissions(ext, [ORIGIN, ORIGIN2]);
 
-    // 深链：直接打开待添加地址也要落到「添加这个网站」，不能是一个空白/报错页
-    const directAdd = await browser.newPage();
-    await directAdd.goto(`${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`, { waitUntil: 'load' });
-    await directAdd.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
+    // 深链：直接打开待添加地址也要落到「添加这个网站」，不能是一个空白/报错页。
+    // popup 里的「设置标题和图标」入口已在 #54 删除（改标题走页面 ⋯ 菜单与向导），这条路由留给 #56 清理
+    const HOST2 = new URL(ORIGIN2).host;
+    const addPage = await browser.newPage();
+    await addPage.goto(`${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`, { waitUntil: 'load' });
+    await addPage.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
     check(true, '直接打开待添加地址（深链）不报错，显示「添加这个网站」');
-    await directAdd.close();
 
     const titleSite = await browser.newPage();
     await titleSite.goto(`${ORIGIN2}/index.html`, { waitUntil: 'load' });
     check(!(await titleSite.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
 
-    const popupNew = await openPopup(ext, titleSite);
-    await popupNew.waitForSelector(tid('pm-popup-title-settings'), { timeout: 5000 });
-    // tabs.create 会打开一个新的管理页标签（popup 随即关闭）：先挂上等待，再点
-    const openedAdd = browser.waitForTarget((t) => t.url().includes('/management.html#/add/'), { timeout: 8000 });
-    await popupNew.click(tid('pm-popup-title-settings'));
-    const addPage = await (await openedAdd).asPage();
-    const HOST2 = new URL(ORIGIN2).host;
-    const ADD_URL = `${extOrigin}/management.html#/add/${encodeURIComponent(ORIGIN2)}`;
-    await poll(async () => addPage.url() === ADD_URL, 'popup 次按钮落到该网站的待添加页');
-    check(true, `popup 次按钮落到待添加页（${addPage.url()}）`);
-
-    await addPage.waitForSelector(tid('pm-mgmt-add-site'), { timeout: 5000 });
     await addPage.bringToFront();
     check((await addPage.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST2, `待添加页显示域名（${HOST2}）`);
     const addHint = await addPage.$eval(tid('pm-mgmt-add-hint'), (e) => e.innerText);
@@ -727,17 +842,19 @@ async function main() {
     );
     check(hidden === 0, '页面上没有任何元素被收起（全部仍然可见）');
 
-    // 已配置的站点：次按钮回到「编辑当前网站」，0 条规则不说「已收起 0 项」
+    // 已配置的站点：次按钮回到「编辑当前网站」，遮住开关也在，0 条规则不说「已收起 0 项」
     const popupAdded = await openPopup(ext, titleSite);
     await popupAdded.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
     check(
       (await popupAdded.$eval(tid('pm-popup-edit'), (b) => b.textContent.trim())) === '编辑当前网站',
       '添加后 popup 次按钮是「编辑当前网站」',
     );
-    check(!(await popupAdded.$(tid('pm-popup-title-settings'))), '已配置站点不再显示「设置标题和图标」');
+    check(!(await popupAdded.$(tid('pm-popup-title-settings'))), '面板里没有「设置标题和图标」');
     const zeroMeta = await popupAdded.$eval('.meta', (e) => e.innerText.trim());
     check(zeroMeta.includes('没有收起任何内容') && !zeroMeta.includes('已收起 0 项'), `popup 0 条规则说「${zeroMeta}」`);
-    await popupAdded.close().catch(() => undefined);
+    await checkPopupChrome(popupAdded, '0 条规则的已添加网站');
+    // 0 条规则没有小胶囊，遮住开关照样能用（页面里的内容脚本负责遮与恢复）
+    await coverAndRestore(ext, popupAdded, titleSite, '0 条规则的已添加网站');
     await titleSite.close();
     await addPage.close();
 
@@ -764,14 +881,17 @@ async function main() {
     // ===================== popup 待授权（最后做：撤销权限） =====================
     console.log('\n--- popup：待授权 ---');
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
-    await removePermission(ext.control, ORIGIN);
+    // 先开页面再撤权限：页面里的内容脚本仍然活着（线上撤权限后已打开的页面就是这样），
+    // 遮住开关走内容脚本这条路；全新打开的页面没有内容脚本，只能靠 activeTab 注入，自动化点不到工具栏
     const site3 = await browser.newPage();
     await site3.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
+    await removePermission(ext.control, ORIGIN);
     popup = await openPopup(ext, site3);
     await popup.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
     check(!(await popup.$(tid('pm-popup-switch'))) && !!(await popup.$(tid('pm-popup-reauth'))), 'popup 显示「待授权」与「重新授权」，不显示开关');
     await checkSchemes(popup, 'popup（待授权）', 'bg');
-    await popup.close().catch(() => undefined);
+    await checkPopupChrome(popup, '待授权的网站');
+    await coverAndRestore(ext, popup, site3, '待授权的网站');
     await site3.close();
 
     console.log(`\n用时 ${((Date.now() - t0) / 1000).toFixed(1)} 秒`);

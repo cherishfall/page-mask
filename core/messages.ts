@@ -157,6 +157,15 @@ export interface CurtainStateMsg {
 }
 
 /**
+ * 扩展页面 → 内容脚本：遮住本页（#54）。
+ * 已添加且已授权、内容脚本在线的站点走这条：与悬浮胶囊上的「遮住」同一颗按钮、同一位置、同一标题来源。
+ * 没有内容脚本的站点（没添加过 / 待授权）仍由后台注入一次性脚本（CoverPageRequest）。
+ */
+export interface CurtainCoverMsg {
+  t: 'curtainCover';
+}
+
+/**
  * 扩展页面 → 内容脚本 / 一次性脚本：撤掉本页的幕布（#50）。
  * 没遮住时什么也不做、同样回复成功；撤掉后仍可再次遮住。
  */
@@ -203,7 +212,13 @@ export type BgRequest =
   | DraftCssRequest
   | HostShieldRequest
   | ReleaseOrphanCssRequest;
-export type ContentMsg = OpenWizardMsg | OpenEditorMsg | SiteResetMsg | CurtainStateMsg | CurtainDismissMsg;
+export type ContentMsg =
+  | OpenWizardMsg
+  | OpenEditorMsg
+  | SiteResetMsg
+  | CurtainStateMsg
+  | CurtainCoverMsg
+  | CurtainDismissMsg;
 
 /** 内容脚本 / 一次性脚本给扩展页面的回复 */
 export type ContentReply = Ack | CurtainStateReply;

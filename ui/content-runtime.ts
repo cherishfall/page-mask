@@ -617,13 +617,14 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     sendResponse: (r: ContentReply) => void,
   ): boolean {
     if (disposed) return false;
-    // 幕布的两条消息（#50）：只作用于本文档，且只接受扩展自己的页面发来的——
-    // 网页里的内容脚本 / 网页脚本不能让别的站点撤幕布（core/messages.ts 的 fromExtensionPage）
-    if (msg?.t === 'curtainState' || msg?.t === 'curtainDismiss') {
+    // 幕布的三条消息（#50、#54）：只作用于本文档，且只接受扩展自己的页面发来的——
+    // 网页里的内容脚本 / 网页脚本不能让别的站点遮住 / 撤幕布（core/messages.ts 的 fromExtensionPage）
+    if (msg?.t === 'curtainState' || msg?.t === 'curtainDismiss' || msg?.t === 'curtainCover') {
       if (!fromExtensionPage(sender as { id?: string; url?: string } | undefined, browser.runtime.id, extensionBase)) {
         return false;
       }
       if (msg.t === 'curtainDismiss') handleRestore();
+      else if (msg.t === 'curtainCover') handleCover();
       sendResponse({ ok: true, covered: curtain.active });
       return false;
     }

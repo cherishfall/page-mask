@@ -59,30 +59,24 @@
       <!-- 页面内编辑面板的第二个入口（普通按钮，不是右键菜单） -->
       <button
         v-if="phase === 'ready'"
-        class="ghost"
         data-testid="pm-popup-edit"
         :disabled="busy !== ''"
         @click="editSite"
       >
         {{ busy === 'edit' ? '正在打开…' : '编辑当前网站' }}
       </button>
-      <!-- 还没添加的网站：只想改标签页标题和图标的路（不进向导），以及应急的「遮住本页」（#42、#46） -->
-      <template v-else-if="phase === 'new'">
-        <button
-          class="ghost"
-          data-testid="pm-popup-title-settings"
-          :disabled="busy !== ''"
-          @click="openTitleSettings"
-        >
-          {{ busy === 'title' ? '正在打开…' : '设置标题和图标' }}
-        </button>
-        <button class="ghost" data-testid="pm-popup-cover" :disabled="busy !== ''" @click="coverPage">
-          {{ busy === 'cover' ? '正在遮住…' : '遮住本页' }}
-        </button>
-      </template>
+
+      <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
+      <button data-testid="pm-popup-cover" :disabled="busy !== ''" @click="toggleCurtain">
+        <template v-if="busy === 'curtain'">{{ covered ? '正在恢复…' : '正在遮住…' }}</template>
+        <template v-else>{{ covered ? '恢复本页' : '遮住本页' }}</template>
+      </button>
     </template>
 
-    <button class="ghost manage" @click="manage">管理全部网站</button>
+    <div class="links">
+      <button class="ghost link" data-testid="pm-popup-manage" @click="manage">管理全部网站</button>
+      <button class="ghost link" data-testid="pm-popup-settings" @click="openSettings">插件设置</button>
+    </div>
   </main>
 </template>
 
@@ -92,9 +86,16 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
-import { addHash } from '@/entrypoints/management/router';
 import type { SiteProfile } from '@/core/types';
-import type { EnableSiteResponse, OpenEditorMsg, OpenIntent } from '@/core/messages';
+import type {
+  CurtainCoverMsg,
+  CurtainDismissMsg,
+  CurtainStateMsg,
+  CurtainStateReply,
+  EnableSiteResponse,
+  OpenEditorMsg,
+  OpenIntent,
+} from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
 /** tabs.query 已返回（tab 可能仍为 null：没有活动标签页） */
@@ -102,8 +103,10 @@ const tabLoaded = ref(false);
 const profile = ref<SiteProfile | null>(null);
 /** 当前网站的站点授权；null = 还没查 */
 const granted = ref<boolean | null>(null);
+/** 当前标签页是否遮着（#54）：面板打开时问页面，问不到就当未遮住 */
+const covered = ref(false);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
-const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'title' | 'cover'>('');
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'curtain'>('');
 /** 失败 / 授权被拒时给用户看的话 */
 const message = ref('');
 
@@ -118,6 +121,8 @@ const ERROR_TEXT: Record<string, string> = {
 };
 const TOGGLE_FAILED_TEXT = '没能切换清爽模式，请稍后再试一次';
 const EDIT_FAILED_TEXT = '没能打开编辑面板，刷新这个页面后再试一次';
+const COVER_FAILED_TEXT = '没能遮住这个页面，刷新这个页面后再试一次';
+const RESTORE_FAILED_TEXT = '没能恢复这个页面，刷新这个页面后再试一次';
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -164,6 +169,26 @@ async function refresh() {
   ]);
   profile.value = p;
   granted.value = g;
+  await refreshCurtain();
+}
+
+/**
+ * 给当前标签页发一条幕布消息。没有接收方时（没添加过的网站没有内容脚本、一次性脚本还没注入过）
+ * 返回 undefined——调用方按「没遮住」处理，不当成错误。
+ */
+async function sendCurtain(
+  tabId: number,
+  msg: CurtainStateMsg | CurtainCoverMsg | CurtainDismissMsg,
+): Promise<CurtainStateReply | undefined> {
+  return (await browser.tabs.sendMessage(tabId, msg).catch(() => undefined)) as CurtainStateReply | undefined;
+}
+
+/** 问当前标签页遮着没有：内容脚本与一次性脚本都认这三条消息，两条路径的状态一致 */
+async function refreshCurtain() {
+  const tabId = tab.value?.id;
+  if (tabId === undefined) return;
+  const reply = await sendCurtain(tabId, { t: 'curtainState' });
+  covered.value = reply?.covered === true;
 }
 
 async function toggleSwitch(e: Event) {
@@ -275,38 +300,19 @@ async function editSite() {
 }
 
 /**
- * 未配置站点的次按钮：打开管理页的「待添加」页（`#/add/<来源>`），在那里授权、填标题，
- * 写下一份 0 条规则的配置。不能把授权放进 popup——权限框弹出会销毁 popup。
+ * 遮住开关（#54）：一个按钮两个方向，处理期间禁用防连点。
+ * 成功后面板关闭——拖走视线的那一步不该再留一个窗口在屏幕上。
  */
-async function openTitleSettings() {
-  const o = origin.value;
-  if (!o || busy.value) return;
-  message.value = '';
-  busy.value = 'title';
-  try {
-    await browser.tabs.create({ url: browser.runtime.getURL('/management.html') + addHash(o) });
-    window.close();
-  } catch {
-    message.value = '没能打开管理页，请再点一次 PageMask';
-    busy.value = '';
-  }
-}
-
-/**
- * 未配置站点的「遮住本页」（#46）：让后台用 activeTab 注入一次性幕布脚本。
- * 未添加的网站里没有内容脚本，这是唯一的遮法；幕布上自己有一个「恢复」入口。
- */
-async function coverPage() {
+async function toggleCurtain() {
   const tabId = tab.value?.id;
   if (tabId === undefined || busy.value) return;
+  const wantRestore = covered.value;
   message.value = '';
-  busy.value = 'cover';
+  busy.value = 'curtain';
   try {
-    const res: { ok?: boolean } | undefined = await browser.runtime
-      .sendMessage({ t: 'coverPage', tabId })
-      .catch(() => undefined);
-    if (!res?.ok) {
-      message.value = '没能遮住这个页面，刷新这个页面后再试一次';
+    const ok = wantRestore ? await dismissCurtain(tabId) : await coverCurtain(tabId);
+    if (!ok) {
+      message.value = wantRestore ? RESTORE_FAILED_TEXT : COVER_FAILED_TEXT;
       return;
     }
     window.close();
@@ -315,9 +321,44 @@ async function coverPage() {
   }
 }
 
-async function manage() {
-  await browser.tabs.create({ url: browser.runtime.getURL('/management.html') });
+/**
+ * 遮住当前标签页，两条路径按站点状态分流：
+ * - 内容脚本在（已添加的网站，页面开过）：让它遮——与悬浮胶囊上的「遮住」同一颗按钮、同一位置、
+ *   同一标题来源。不看授权状态：待授权站点只要页面开在撤销授权之前，内容脚本仍然活着；
+ * - 已添加且已授权、内容脚本却还没在（页面开在授权之前）：先让后台对账注入一次再发；
+ * - 剩下没添加过 / 待授权且没有内容脚本的：页面里没有任何可用的脚本，由后台用 activeTab
+ *   注入一次性脚本（#46），它与内容脚本共用同一套覆盖层、恢复按钮与标题来源。
+ */
+async function coverCurtain(tabId: number): Promise<boolean> {
+  if ((await sendCurtain(tabId, { t: 'curtainCover' }))?.covered) return true;
+  const o = origin.value;
+  if (profile.value && granted.value && o) {
+    if ((await enableSite(tabId, o))?.ok && (await sendCurtain(tabId, { t: 'curtainCover' }))?.covered) return true;
+  }
+  const res: { ok?: boolean } | undefined = await browser.runtime
+    .sendMessage({ t: 'coverPage', tabId })
+    .catch(() => undefined);
+  return res?.ok === true;
+}
+
+/** 撤掉当前标签页的幕布；接收方已经不在了（刷新 / 跳走，幕布本来也随文档消失）就算已恢复 */
+async function dismissCurtain(tabId: number): Promise<boolean> {
+  const reply = await sendCurtain(tabId, { t: 'curtainDismiss' });
+  return reply ? reply.covered === false : true;
+}
+
+/** 底部两个入口：都关掉面板再开新标签页 */
+async function openPage(path: `/management.html${string}` | `/settings.html${string}`) {
+  await browser.tabs.create({ url: browser.runtime.getURL(path) });
   window.close();
+}
+
+function manage() {
+  void openPage('/management.html#/sites');
+}
+
+function openSettings() {
+  void openPage('/settings.html');
 }</script>
 
 <style>
@@ -384,11 +425,19 @@ async function manage() {
 .popup > button.primary {
   padding: 8px 12px;
 }
-.manage {
+/* 底部一行两个入口：视觉上明显弱于主按钮，但仍要够点（高度不小于 24px） */
+.links {
+  display: flex;
+  gap: var(--pm-space-2);
+}
+.links > .link {
+  flex: 1;
+  min-height: 24px;
+  padding: 2px 6px;
   color: var(--pm-fg-muted);
   font-size: var(--pm-font-size-caption);
 }
-button.manage:hover:not(:disabled) {
+.links > .link:hover:not(:disabled) {
   color: var(--pm-fg);
 }
 </style>
