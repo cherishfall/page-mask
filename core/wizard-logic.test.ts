@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  badgePlacement,
   clampToViewport,
   isTooBigForPick,
   navigateLevel,
   reconcileDrafts,
   removeFromSelection,
   replaceInSelection,
+  selectionRows,
   titleFromInput,
   titleOnlyPatch,
   toggleSelection,
@@ -174,6 +176,60 @@ describe('「只改标题，完成」保存 0 条规则（#51）', () => {
       faviconDataUrl: 'data:image/png;base64,AAA',
       switchState: 'disguised',
     });
+  });
+});
+
+describe('已选清单的序号（#52）：删掉某一项后重排，且与号码牌同源', () => {
+  const name = (el: string) => `名字-${el}`;
+  it('序号按选择集顺序从 1 开始，名字跟着元素走', () => {
+    expect(selectionRows(['A', 'B', 'C'], name)).toEqual([
+      { seq: 1, el: 'A', name: '名字-A' },
+      { seq: 2, el: 'B', name: '名字-B' },
+      { seq: 3, el: 'C', name: '名字-C' },
+    ]);
+  });
+  it('删掉中间一项后，后面的项序号整体前移（清单与号码牌一起重排）', () => {
+    const rows = selectionRows(removeFromSelection(['A', 'B', 'C'], 'B'), name);
+    expect(rows.map((r) => r.seq)).toEqual([1, 2]);
+    expect(rows.map((r) => r.el)).toEqual(['A', 'C']);
+    expect(rows.map((r) => r.name)).toEqual(['名字-A', '名字-C']);
+  });
+  it('删除后号码牌编号 = 清单行号（同一个数组下标）', () => {
+    const left = removeFromSelection(['A', 'B', 'C'], 'A');
+    // 页面上的号码牌按 selectionRows 的 seq 画，清单行也用它，二者不可能对不上
+    const badgeSeqs = selectionRows(left, name).map((r) => r.seq);
+    expect(badgeSeqs).toEqual([1, 2]);
+  });
+  it('全删掉是空清单', () => {
+    expect(selectionRows([], name)).toEqual([]);
+  });
+});
+
+describe('badgePlacement 号码牌不压在元素自己的文字上（#52）', () => {
+  const badge = { width: 24, height: 24 };
+  const vp = { width: 1000, height: 800 };
+  it('元素上方有地方：号码牌完全在元素上面', () => {
+    const p = badgePlacement({ left: 100, top: 300, width: 200, height: 80 }, badge, vp);
+    expect(p.side).toBe('above');
+    expect(p.left).toBe(100);
+    expect(p.top + badge.height).toBeLessThanOrEqual(300);
+  });
+  it('元素贴着视口顶边：翻到元素下方，仍不压住内容', () => {
+    const p = badgePlacement({ left: 0, top: 0, width: 600, height: 48 }, badge, vp);
+    expect(p.side).toBe('below');
+    expect(p.top).toBeGreaterThanOrEqual(48);
+  });
+  it('元素几乎占满一屏：上下都没地方，才回到左上角内侧（半透明兜底）', () => {
+    const p = badgePlacement({ left: 0, top: 0, width: 1000, height: 800 }, badge, vp);
+    expect(p.side).toBe('inside');
+    expect(p.top).toBeGreaterThanOrEqual(0);
+    expect(p.top).toBeLessThan(24);
+  });
+  it('元素左侧在视口外时号码牌贴左边，不跑出屏幕', () => {
+    expect(badgePlacement({ left: -120, top: 300, width: 300, height: 80 }, badge, vp).left).toBe(0);
+  });
+  it('元素贴右边时号码牌往左收，不超出视口', () => {
+    expect(badgePlacement({ left: 980, top: 300, width: 20, height: 20 }, badge, vp).left).toBe(1000 - 24);
   });
 });
 

@@ -149,12 +149,112 @@
   color: var(--pm-fg);
   font-weight: var(--pm-font-weight-strong);
 }
-.pm-wiz-btns {
+
+/* ── 第 2 步：说明分行、按用途分组、已选清单（#52） ── */
+/* 清单需要一点宽度才放得下「序号 + 名字 + 删除」，但不超过工具条自己的上限 */
+.pm-wiz-pick {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+  min-inline-size: 300px;
+  margin-top: 6px;
+}
+/* 说明：一行一件事 */
+.pm-wiz-lead {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pm-font-size-caption);
+  line-height: 1.4;
+  color: var(--pm-fg-muted);
+}
+/* 分组：浅底 + 一行小标题，同组按钮尺寸一致；不同用途的动作不挤在同一行 */
+.pm-wiz-group {
+  padding: 6px 8px;
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg-subtle);
+}
+.pm-wiz-group-title {
+  margin: 0;
+  font-size: var(--pm-font-size-caption);
+  font-weight: var(--pm-font-weight-strong);
+  color: var(--pm-fg);
+}
+.pm-wiz-group-note {
+  margin: 2px 0 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+.pm-wiz-group-note strong {
+  color: var(--pm-fg);
+  font-weight: var(--pm-font-weight-strong);
+}
+.pm-wiz-group-row {
+  display: flex;
   gap: var(--pm-space-2);
-  justify-content: center;
-  margin-top: var(--pm-space-2);
+  margin-top: 6px;
+}
+.pm-wiz-group-row .pm-wiz-btn {
+  flex: 1 1 0;
+}
+.pm-wiz-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pm-space-2);
+}
+/* 「全部删掉」：文字链接，视觉权重明显低于主按钮 */
+.pm-wiz-link {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.pm-wiz-link:hover,
+.pm-wiz-link:focus-visible {
+  color: var(--pm-danger);
+}
+/* 已选清单：一行一项，限高、内部滚动（选到十几项也不会把工具条撑到挡住页面） */
+.pm-wiz-rows {
+  margin: var(--pm-space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  max-block-size: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pm-wiz-rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+  padding: 1px 0;
+  border-top: 1px solid var(--pm-border);
+  font-size: var(--pm-font-size-body);
+}
+.pm-wiz-rows li:first-child {
+  border-top: 0;
+}
+.pm-wiz-row-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 0 项时前进按钮旁边的说明 */
+.pm-wiz-foot-hint {
+  align-self: center;
+  max-inline-size: 220px;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
 }
 
 /* 底栏：左下角回退（第 1 步是「只改标题，完成」），右下角前进 */
@@ -498,6 +598,8 @@
 .pm-wiz-ghost {
   border: 0;
 }
+/* 号码牌自己一个盒子：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧（#52），
+ * 所以牌子不会压住元素自己的文字；盒子里只有牌子本身，不画框。 */
 /* 号码牌：选择阶段不可点（点选落到捕获层上）；预览阶段可点，点了滚到清单里对应的行并高亮 */
 .pm-wiz-badge {
   position: absolute;
@@ -516,7 +618,12 @@
   font-weight: var(--pm-font-weight-strong);
   line-height: 20px;
   text-align: center;
+  white-space: nowrap;
   pointer-events: none;
+}
+/* 实在没地方放到外面（元素几乎占满一屏）时才回到内侧：半透明，尽量让下面的字还能看清 */
+.pm-wiz-badge-box.inside .pm-wiz-badge {
+  opacity: 0.85;
 }
 button.pm-wiz-badge {
   background: var(--pm-fg);

@@ -15,6 +15,7 @@
 export interface LivePair {
   el: Element;
   box: HTMLElement;
+  place?: PlacementFn;
 }
 
 export interface GhostPair {
@@ -22,14 +23,22 @@ export interface GhostPair {
   baseRect: { left: number; top: number; width: number; height: number };
   baseScroll: { x: number; y: number };
   box: HTMLElement;
+  place?: PlacementFn;
 }
 
-interface Placement {
+export interface Placement {
   left: number;
   top: number;
   width: number;
   height: number;
 }
+
+/**
+ * 可选的位置修正：拿到目标元素的真实视口矩形，返回盒子要放的位置（默认原样）。
+ * 用于号码牌这类「要贴在元素外面、又不能被视口边裁掉」的标记——盒子位置随滚动变化，
+ * 只有每帧拿到矩形才能夹紧（见 core/wizard-logic.ts badgePlacement）。
+ */
+export type PlacementFn = (rect: Placement) => Placement;
 
 /** 连续多少帧位置不变算静止 */
 const STABLE_FRAMES = 3;
@@ -50,19 +59,20 @@ export class ElementFollower {
   private listening: AbortController | null = null;
   private resizeObserver: ResizeObserver | null = null;
 
-  trackLive(el: Element, box: HTMLElement): void {
-    this.live.set(box, { el, box });
+  trackLive(el: Element, box: HTMLElement, place?: PlacementFn): void {
+    this.live.set(box, { el, box, place });
     this.listen();
     this.resizeObserver?.observe(el);
     this.check();
     this.kick();
   }
 
-  trackGhost(baseRect: GhostPair['baseRect'], box: HTMLElement): void {
+  trackGhost(baseRect: GhostPair['baseRect'], box: HTMLElement, place?: PlacementFn): void {
     this.ghosts.set(box, {
       baseRect,
       baseScroll: { x: window.scrollX, y: window.scrollY },
       box,
+      place,
     });
     this.listen();
     this.check();
@@ -145,22 +155,21 @@ export class ElementFollower {
   /** 读完全部矩形再统一写；返回是否有盒子位置变化 */
   private tick(): boolean {
     const plan: [HTMLElement, Placement | null][] = [];
-    for (const { el, box } of this.live.values()) {
+    for (const { el, box, place } of this.live.values()) {
       const r = el.getBoundingClientRect();
-      plan.push([box, r.width === 0 && r.height === 0 ? null : { left: r.left, top: r.top, width: r.width, height: r.height }]);
+      const p = r.width === 0 && r.height === 0 ? null : { left: r.left, top: r.top, width: r.width, height: r.height };
+      plan.push([box, p && place ? place(p) : p]);
     }
     const sx = window.scrollX;
     const sy = window.scrollY;
-    for (const { baseRect, baseScroll, box } of this.ghosts.values()) {
-      plan.push([
-        box,
-        {
-          left: baseRect.left - (sx - baseScroll.x),
-          top: baseRect.top - (sy - baseScroll.y),
-          width: baseRect.width,
-          height: baseRect.height,
-        },
-      ]);
+    for (const { baseRect, baseScroll, box, place } of this.ghosts.values()) {
+      const p = {
+        left: baseRect.left - (sx - baseScroll.x),
+        top: baseRect.top - (sy - baseScroll.y),
+        width: baseRect.width,
+        height: baseRect.height,
+      };
+      plan.push([box, place ? place(p) : p]);
     }
     let changed = false;
     for (const [box, p] of plan) {

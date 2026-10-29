@@ -99,20 +99,40 @@ const shadowTexts = (page, sel) =>
     sel,
   );
 
-/** 等某个号码牌所在的标记框与页面元素重合（标记跟随是逐帧的） */
-function waitBoxOn(page, label, badgeSel, elSel) {
+/**
+ * 等第 seq 个标记的*框*与页面元素重合（标记跟随是逐帧的）。
+ * 号码牌从 #52 起单独一个盒子、贴在元素外面（不压住元素自己的文字），所以这里核对的是框，
+ * 号码牌位置另由 badgeOutsideEl 断言。
+ */
+function waitBoxOn(page, label, seq, elSel) {
   return waitFor(
     page,
     label,
-    (h, b, e) => {
-      const badge = document.querySelector(h)?.shadowRoot?.querySelector(b);
+    (h, s, e) => {
+      const box = document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-box-${s}"]`);
       const el = document.querySelector(e);
-      if (!badge || !el) return false;
-      const br = badge.parentElement.getBoundingClientRect();
+      if (!box || !el) return false;
+      const br = box.getBoundingClientRect();
       const er = el.getBoundingClientRect();
       return Math.abs(br.x - er.x) < 1.5 && Math.abs(br.y - er.y) < 1.5 && Math.abs(br.width - er.width) < 1.5;
     },
-    [HOST, badgeSel, elSel],
+    [HOST, seq, elSel],
+  );
+}
+
+/** 号码牌是否完全在元素边界外侧（不压住元素自己的文字）：返回 null 表示还没画出来 */
+function badgeOutsideEl(page, seq, elSel) {
+  return page.evaluate(
+    (h, s, sel) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const b = sr?.querySelector(`[data-testid="pm-badge-${s}"]`)?.getBoundingClientRect();
+      const e = document.querySelector(sel)?.getBoundingClientRect();
+      if (!b || !e) return null;
+      return b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5;
+    },
+    HOST,
+    seq,
+    elSel,
   );
 }
 
@@ -233,6 +253,117 @@ async function main() {
     const vh = await page.evaluate(() => innerHeight);
     check(tb.y > vh / 2 && tb.y + tb.h <= vh, `工具条默认在底部，不挡页面顶部导航（top=${Math.round(tb.y)}，视口高 ${vh}）`);
 
+    // ===================== 第 2 步重排（#52）：说明分行、按用途分组、0 项出口 =====================
+    console.log('\n--- 选内容：说明分行、按钮分组、0 项时前进禁用 ---');
+    const leadLines = await shadowTexts(page, `${tid('pm-wiz-pick-lead')} li`);
+    check(leadLines.length >= 3 && leadLines.every((t) => t.length <= 24), `说明拆成多行短句（${leadLines.join(' / ')}）`);
+    check(
+      !(await shadowExists(page, HOST, tid('pm-wiz-clear'))),
+      '旧的整块「清空（N）」按钮已经不在了',
+    );
+    check(await shadowExists(page, HOST, tid('pm-wiz-group-adjust')), '「选大一点 / 选小一点」自成一组');
+    const groupTitles = await shadowTexts(page, `${tid('pm-wiz-group-adjust')} .pm-wiz-group-title`);
+    check(groupTitles.length === 1 && groupTitles[0].length > 0, `调整组有一行小标题（${groupTitles[0]}）`);
+    check(
+      (await shadowTexts(page, `${tid('pm-wiz-group-adjust')} .pm-wiz-group-note`))[0]?.includes('先在页面上点一下'),
+      '没选中时，调整组里说明先选一个',
+    );
+    const groupBg = await page.evaluate(
+      (h) => getComputedStyle(document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-group-adjust"]')).backgroundColor,
+      HOST,
+    );
+    check(/rgb/.test(groupBg) && groupBg !== 'rgba(0, 0, 0, 0)', `分组有浅色底（${groupBg}）`);
+    const btnGeom = await page.evaluate(
+      (h) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const a = sr.querySelector('[data-testid="pm-wiz-bigger"]').getBoundingClientRect();
+        const b = sr.querySelector('[data-testid="pm-wiz-smaller"]').getBoundingClientRect();
+        const other = sr.querySelector('[data-testid="pm-wiz-preview"]').getBoundingClientRect();
+        return { sameSize: Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1, adjustW: a.width, otherW: other.width, otherY: other.y, adjustY: a.y };
+      },
+      HOST,
+    );
+    check(btnGeom.sameSize, `组内两个按钮尺寸一致（宽 ${Math.round(btnGeom.adjustW)}）`);
+    check(btnGeom.otherY > btnGeom.adjustY + 8, '前进按钮不和调整按钮挤在同一行');
+    check(
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').disabled, HOST)) === true,
+      '0 项时前进按钮是灰的（disabled）',
+    );
+    check(
+      (await shadowTexts(page, tid('pm-wiz-next-hint')))[0]?.includes('先在页面上点一下'),
+      '0 项时前进按钮旁边有一行说明为什么',
+    );
+    check((await shadowTexts(page, tid('pm-wiz-list-empty')))[0]?.includes('还没有选任何东西'), '0 项时清单是空状态');
+    check(!(await shadowExists(page, HOST, tid('pm-wiz-clear-all'))), '清单为空时不显示「全部删掉」');
+
+    // 选三张同类卡片：清单一行一项，序号与号码牌一致
+    await clickEl(page, C1);
+    await clickEl(page, C2);
+    await clickEl(page, C3);
+    await waitFor(page, '清单三行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 3, [HOST]);
+    const rowNums = await shadowTexts(page, `${tid('pm-wiz-selected')} .pm-wiz-num`);
+    const rowNames = await shadowTexts(page, `${tid('pm-wiz-selected')} .pm-wiz-row-name`);
+    check(JSON.stringify(rowNums) === '["1","2","3"]', `清单一行一项、序号 1/2/3（实际 ${JSON.stringify(rowNums)}）`);
+    check(rowNames.length === 3 && rowNames[0].includes('卡片一') && rowNames[2].includes('卡片三'), `每行显示元素名字（${rowNames.join(' / ')}）`);
+    check(
+      !!(await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-group-list"]').querySelector('[data-testid="pm-wiz-clear-all"]')?.classList.contains('pm-wiz-link'), HOST)),
+      '「全部删掉」在清单标题行里、是文字链接（不是按钮）',
+    );
+    const listHeight = await shadowRect(page, tid('pm-wiz-selected'));
+    const listScrollable = await page.evaluate((h) => {
+      const el = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-selected"]');
+      return { max: getComputedStyle(el).maxBlockSize, overflow: getComputedStyle(el).overflowY };
+    }, HOST);
+    check(
+      listScrollable.overflow === 'auto' && (parseFloat(listScrollable.max) || 0) <= 200 && listHeight.h <= 200,
+      `清单限高、内部滚动（max ${listScrollable.max}，当前高 ${Math.round(listHeight.h)}）`,
+    );
+
+    // 号码牌不再压住元素自己的文字（#52）
+    await waitFor(page, '号码牌画到元素外面', (h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const b = sr.querySelector('[data-testid="pm-badge-1"]')?.getBoundingClientRect();
+      const e = document.querySelector('.card:nth-child(1)')?.getBoundingClientRect();
+      return !!b && !!e && (b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5);
+    }, [HOST]);
+    check((await badgeOutsideEl(page, 1, C1)) === true, '号码牌 1 完全在第一张卡片外面，不遮住「卡片一」');
+    check((await badgeOutsideEl(page, 3, C3)) === true, '号码牌 3 同样在元素外面');
+
+    // 键盘：聚焦第 2 行的删除按钮，回车只删这一项，序号与号码牌一起重排
+    await page.evaluate((h) => {
+      document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-2-remove"]').focus();
+    }, HOST);
+    await page.keyboard.press('Enter');
+    await waitFor(page, '清单剩两行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 2, [HOST]);
+    const afterNames = await shadowTexts(page, `${tid('pm-wiz-selected')} .pm-wiz-row-name`);
+    const afterNums = await shadowTexts(page, `${tid('pm-wiz-selected')} .pm-wiz-num`);
+    check(
+      afterNames[0].includes('卡片一') && afterNames[1].includes('卡片三') && JSON.stringify(afterNums) === '["1","2"]',
+      `只删掉这一项，剩下的序号重排（${afterNames.join(' / ')}）`,
+    );
+    const badgeTexts = await shadowTexts(page, '[data-testid^="pm-badge-"]');
+    check(JSON.stringify(badgeTexts) === '["1","2"]', `页面上的号码牌跟着重排（${JSON.stringify(badgeTexts)}）`);
+    await waitBoxOn(page, '号码牌 1 还在卡片一上', 1, C1);
+    await waitBoxOn(page, '号码牌 2 换到卡片三', 2, C3);
+    check(true, '号码牌与清单一致：1 = 卡片一、2 = 卡片三');
+    const focusedAfterDelete = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
+    check(focusedAfterDelete === 'pm-sel-2-remove', `删除后焦点落在下一行的删除按钮上（${focusedAfterDelete}）`);
+    const delLabel = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-2-remove"]').getAttribute('aria-label'), HOST);
+    check(/删掉第 2 项/.test(delLabel) && delLabel.includes('卡片三'), `删除按钮有读屏可读的名字（${delLabel}）`);
+
+    // 「全部删掉」：文字链接，一按全清，回到 0 项状态
+    await clickInShadow(page, HOST, tid('pm-wiz-clear-all'));
+    await waitFor(page, '全部删掉后清单为空', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 0, [HOST]);
+    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 0, '全部删掉后页面上的号码牌也没了');
+    check(
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').disabled, HOST)) === true,
+      '全部删掉后前进按钮又变灰',
+    );
+    check((await shadowTexts(page, tid('pm-wiz-next-hint')))[0]?.includes('先在页面上点一下'), '前进按钮旁边重新出现说明');
+    const focusAfterClear = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
+    check(focusAfterClear === 'pm-wiz-group-list', `全部删掉后焦点留在清单上（${focusAfterClear}）`);
+
+    // ===================== 序号重新编号（N6）、调整对象（N13） =====================
     await clickEl(page, C1);
     await clickEl(page, '#promo');
     await clickEl(page, '#banner');
@@ -241,8 +372,8 @@ async function main() {
     await waitFor(page, '取消后剩两个序号牌', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-badge-"]').length === 2, [HOST]);
     const nums = await shadowTexts(page, '[data-testid^="pm-badge-"]');
     check(JSON.stringify(nums) === '["1","2"]', `取消 A 后序号显示 1、2（实际 ${JSON.stringify(nums)}）`);
-    await waitBoxOn(page, '序号 1 跟着 B', tid('pm-badge-1'), '#promo');
-    await waitBoxOn(page, '序号 2 跟着 C', tid('pm-badge-2'), '#banner');
+    await waitBoxOn(page, '序号 1 跟着 B', 1, '#promo');
+    await waitBoxOn(page, '序号 2 跟着 C', 2, '#banner');
     check(true, '序号 1 框住 B（活动栏）、序号 2 框住 C（横幅）');
     const target = (await shadowTexts(page, tid('pm-wiz-adjust-target')))[0];
     check(target.includes('第 2 项'), `「选大一点」作用对象显示为最后选中的第 2 项（${target}）`);
@@ -416,9 +547,9 @@ async function main() {
     // ===================== 滚动后按指针位置命中（N14）、选大一点（N13） =====================
     console.log('\n--- 选择阶段：滚动后点击选中的是指针下的元素 ---');
     await openWizard();
-    // 坐标取第 3 行的中心：既不要用固定坐标（可能落在元素之间的空隙上），
-    // 也不要取靠底部的行（默认底部居中的工具条会盖住那里，指针落不到拾取层）
-    const r2 = await rectOf(page, '#r2');
+    // 坐标取第 2 行的中心：既不要用固定坐标（可能落在元素之间的空隙上），
+    // 也不要取靠底部的行（默认底部居中的工具条会盖住那里，指针落不到拾取层——#52 起面板更高）
+    const r2 = await rectOf(page, '#r1');
     const X = Math.round(r2.x + r2.w / 2);
     const Y = Math.round(r2.y + r2.h / 2);
     await page.mouse.move(X + 20, Y + 20);
@@ -426,16 +557,16 @@ async function main() {
     await waitFor(page, '悬停框出现', (h) => !!document.querySelector(h).shadowRoot.querySelector('.pm-wiz-hover'), [HOST]);
     await waitFor(
       page,
-      '悬停框框住指针下的第 3 行',
+      '悬停框框住指针下的第 2 行',
       (h) => {
         const box = document.querySelector(h).shadowRoot.querySelector('.pm-wiz-hover').getBoundingClientRect();
-        const er = document.getElementById('r2').getBoundingClientRect();
+        const er = document.getElementById('r1').getBoundingClientRect();
         return Math.abs(box.y - er.y) < 1.5 && Math.abs(box.height - er.height) < 1.5;
       },
       [HOST],
     );
     const hoverBefore = await page.evaluate((x, y) => document.elementsFromPoint(x, y).find((e) => !e.tagName.startsWith('PAGEMASK-'))?.id, X, Y);
-    check(hoverBefore === 'r2', `悬停框跟着指针下的元素（${hoverBefore}）`);
+    check(hoverBefore === 'r1', `悬停框跟着指针下的元素（${hoverBefore}）`);
     await page.mouse.wheel({ deltaY: 900 });
     await waitFor(page, '页面滚动了', () => scrollY > 300);
     const under = await page.evaluate((x, y) => document.elementsFromPoint(x, y).find((e) => !e.tagName.startsWith('PAGEMASK-'))?.id, X, Y);
@@ -452,21 +583,21 @@ async function main() {
     );
     check(true, '滚动后（没有移动鼠标）悬停框换到指针下的元素');
     await page.mouse.click(X, Y); // 不移动鼠标直接点
-    await waitBoxOn(page, '选中指针下的元素', tid('pm-badge-1'), `#${under}`);
+    await waitBoxOn(page, '选中指针下的元素', 1, `#${under}`);
     check(true, `滚动后点击选中的是指针下的元素（#${under}），不是滚动前悬停的 #${hoverBefore}`);
 
     console.log('\n--- 「选大一点」作用于最后选中的元素 ---');
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitFor(page, '滚回顶部', () => scrollY === 0);
-    const txtSel = '#t3';
+    const txtSel = '#t0';
     await clickEl(page, txtSel);
-    await waitBoxOn(page, '第 2 项是行内文字', tid('pm-badge-2'), txtSel);
+    await waitBoxOn(page, '第 2 项是行内文字', 2, txtSel);
     // 鼠标经过别的元素再去点按钮（以前会作用到最后划过的元素上）
     await page.mouse.move(X, Y + 120);
     await clickInShadow(page, HOST, tid('pm-wiz-bigger'));
     const rowSel = '#r' + txtSel.slice(2);
-    await waitBoxOn(page, '第 2 项换成所在的整行', tid('pm-badge-2'), rowSel);
-    await waitBoxOn(page, '第 1 项不受影响', tid('pm-badge-1'), `#${under}`);
+    await waitBoxOn(page, '第 2 项换成所在的整行', 2, rowSel);
+    await waitBoxOn(page, '第 1 项不受影响', 1, `#${under}`);
     check(true, `「选大一点」把最后选中的 ${txtSel} 换成 ${rowSel}，序号不变，第 1 项不受影响`);
 
     // ===================== 工具条拖动 / 方向键（N15） =====================

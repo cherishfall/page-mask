@@ -152,4 +152,22 @@ describe('ElementFollower：事件驱动跟随', () => {
     window.dispatchEvent(new Event('resize'));
     expect(frames).toHaveLength(0);
   });
+
+  it('位置修正回调：每帧按真实矩形算出盒子位置（号码牌放到元素外面，#52）', () => {
+    const f = new ElementFollower();
+    const { el, state } = makeEl({ left: 10, top: 100, width: 100, height: 50 });
+    const box = document.createElement('div');
+    // 号码牌：贴在元素上方 24px 处
+    f.trackLive(el, box, (r) => ({ left: r.left, top: r.top - 24, width: 24, height: 24 }));
+    expect(box.style.left).toBe('10px');
+    expect(box.style.top).toBe('76px');
+    expect(box.style.height).toBe('24px');
+    flushUntilIdle();
+    // 页面滚动使元素顶到视口顶部：修正函数继续生效，盒子不会停在旧位置
+    state.top = 0;
+    window.dispatchEvent(new Event('scroll'));
+    flushUntilIdle();
+    expect(box.style.top).toBe('-24px');
+    f.stop();
+  });
 });

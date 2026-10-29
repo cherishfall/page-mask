@@ -138,6 +138,60 @@ export function removeFromSelection<T>(list: readonly T[], el: T): T[] {
   return list.filter((x) => x !== el);
 }
 
+/** 已选清单的一行（#52）：序号与页面上的号码牌来自同一个数组下标，删掉某一项后两者一起重排 */
+export interface SelectionRow<T> {
+  /** 1 起，与号码牌上的数字一致 */
+  seq: number;
+  el: T;
+  name: string;
+}
+
+/** 把选择集摊成清单行；selection 的顺序就是序号顺序 */
+export function selectionRows<T>(selection: readonly T[], name: (el: T) => string): SelectionRow<T>[] {
+  return selection.map((el, i) => ({ seq: i + 1, el, name: name(el) }));
+}
+
+// ---------- 号码牌位置（#52） ----------
+// 号码牌不再画在元素左上角里面——那里正是元素自己的文字（截图里「2)出租」被盖掉一半）。
+// 改成贴在元素边界外侧：优先上方，上方顶到视口边就放下方，上下都放不下（元素几乎占满一屏）
+// 时才退到左上角内侧（调用方用半透明底），保证内容可读、同时看得出它对应哪个元素。
+
+export interface MarkerRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** above / below = 号码牌完全在元素外面；inside = 实在没地方时的兜底 */
+export type BadgeSide = 'above' | 'below' | 'inside';
+
+export interface BadgePlace {
+  left: number;
+  top: number;
+  side: BadgeSide;
+}
+
+/** 号码牌与元素之间留的空隙 */
+const BADGE_GAP = 2;
+
+/**
+ * 号码牌左上角的视口坐标。左右夹紧在视口里（元素贴着视口边、半个元素在屏幕外时也不会跑出去）。
+ */
+export function badgePlacement(
+  rect: MarkerRect,
+  badge: { width: number; height: number },
+  viewport: { width: number; height: number },
+  gap = BADGE_GAP,
+): BadgePlace {
+  const left = Math.max(0, Math.min(rect.left, viewport.width - badge.width));
+  const above = rect.top - badge.height - gap;
+  if (above >= 0) return { left, top: above, side: 'above' };
+  const below = rect.top + rect.height + gap;
+  if (below + badge.height <= viewport.height) return { left, top: below, side: 'below' };
+  return { left, top: Math.max(0, rect.top + gap), side: 'inside' };
+}
+
 /**
  * 进入（或回到）预览时按选择集重算草稿（N12）：还在选择里的元素沿用已有草稿（改过的名称、方案、
  * 同类设置都保留），新选的元素才新建，已取消的丢弃；结果按选择集顺序排列。

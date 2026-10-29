@@ -107,30 +107,82 @@
       </template>
 
       <template v-else-if="phase === 'pick'">
-        <p class="pm-wiz-sub">{{ TEXT.pickHint(canGoBack) }}</p>
-        <p class="pm-wiz-sub" data-testid="pm-wiz-adjust-target">
-          <template v-if="lastSel">
-            选中的是里面的文字？用「选大一点」调整
-            <strong>第 {{ lastSelIndex + 1 }} 项（{{ lastSelName }}）</strong>
-          </template>
-          <template v-else>{{ TEXT.adjustHintEmpty }}</template>
-        </p>
-        <div class="pm-wiz-btns">
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-bigger" :disabled="!lastSel" @click="adjust('bigger')">
-            选大一点
-          </button>
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-smaller" :disabled="!lastSel" @click="adjust('smaller')">
-            选小一点
-          </button>
-          <button
-            v-if="selEls.length > 0"
-            type="button"
-            class="pm-wiz-btn"
-            data-testid="pm-wiz-clear"
-            @click="clearSelection"
+        <div class="pm-wiz-pick">
+          <!-- 说明：一行一件事，不再堆成一整段 -->
+          <ul class="pm-wiz-lead" data-testid="pm-wiz-pick-lead">
+            <li v-for="line in TEXT.pickLead" :key="line">{{ line }}</li>
+          </ul>
+
+          <!-- 分组一：调整选中项（浅底 + 小标题；组内标明现在调的是第几项） -->
+          <div class="pm-wiz-group" role="group" aria-labelledby="pm-wiz-adjust-title" data-testid="pm-wiz-group-adjust">
+            <p id="pm-wiz-adjust-title" class="pm-wiz-group-title">{{ TEXT.adjustGroup }}</p>
+            <p class="pm-wiz-group-note" data-testid="pm-wiz-adjust-target">
+              <template v-if="lastSel">
+                {{ TEXT.adjustNow }}<strong>第 {{ lastSelIndex + 1 }} 项（{{ lastSelName }}）</strong>
+              </template>
+              <template v-else>{{ TEXT.adjustEmpty }}</template>
+            </p>
+            <div class="pm-wiz-group-row">
+              <button
+                type="button"
+                class="pm-wiz-btn"
+                data-testid="pm-wiz-bigger"
+                :disabled="!lastSel"
+                @click="adjust('bigger')"
+              >
+                {{ TEXT.bigger }}
+              </button>
+              <button
+                type="button"
+                class="pm-wiz-btn"
+                data-testid="pm-wiz-smaller"
+                :disabled="!lastSel"
+                @click="adjust('smaller')"
+              >
+                {{ TEXT.smaller }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 分组二：已选清单，一行一项、一行一个删除；右上角「全部删掉」只是文字链接 -->
+          <section
+            ref="listEl"
+            class="pm-wiz-group"
+            aria-labelledby="pm-wiz-list-title"
+            tabindex="-1"
+            data-testid="pm-wiz-group-list"
           >
-            清空（{{ selEls.length }}）
-          </button>
+            <div class="pm-wiz-group-head">
+              <h3 id="pm-wiz-list-title" class="pm-wiz-group-title" data-testid="pm-wiz-list-title">
+                {{ TEXT.listTitle(selectionRows.length) }}
+              </h3>
+              <button
+                v-if="selectionRows.length > 0"
+                type="button"
+                class="pm-wiz-link"
+                data-testid="pm-wiz-clear-all"
+                @click="clearSelection"
+              >
+                {{ TEXT.clearAll }}
+              </button>
+            </div>
+            <ol v-if="selectionRows.length > 0" class="pm-wiz-rows" data-testid="pm-wiz-selected">
+              <li v-for="row in selectionRows" :key="rowKey(row.el)" :data-testid="`pm-sel-${row.seq}`">
+                <span class="pm-wiz-num" aria-hidden="true">{{ row.seq }}</span>
+                <span class="pm-wiz-row-name" :data-testid="`pm-sel-name-${row.seq}`">{{ row.name }}</span>
+                <button
+                  type="button"
+                  class="pm-wiz-del"
+                  :aria-label="TEXT.deleteOne(row.seq, row.name)"
+                  :data-testid="`pm-sel-${row.seq}-remove`"
+                  @click="removeSelected(row)"
+                >
+                  <span aria-hidden="true">✕</span>
+                </button>
+              </li>
+            </ol>
+            <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ TEXT.listEmpty }}</p>
+          </section>
         </div>
       </template>
 
@@ -213,6 +265,14 @@
           </button>
         </div>
         <div class="pm-wiz-footer-right">
+          <!-- 0 项时前进按钮是灰的，旁边的这一行说明为什么 -->
+          <span
+            v-if="phase === 'pick' && selectionRows.length === 0"
+            class="pm-wiz-foot-hint"
+            data-testid="pm-wiz-next-hint"
+          >
+            {{ TEXT.nextBlocked }}
+          </span>
           <button
             v-if="phase === 'title'"
             type="button"
@@ -313,7 +373,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
@@ -329,8 +389,10 @@ import { ICON_SOURCE_TYPES } from '@/core/icon';
 // 与管理页的站点设置页共用同一套图标压缩与校验管线（#26）：只跑在扩展页面 / 内容脚本里
 import { fileToIconDataUrl } from '@/entrypoints/management/tab-icon';
 import {
+  badgePlacement,
   clampToViewport,
   reconcileDrafts,
+  selectionRows as buildSelectionRows,
   titleFromInput,
   titleOnlyPatch,
   unsavableDraftWarning,
@@ -339,6 +401,8 @@ import {
   wizardPrevPhase,
   wizardStep,
   type DraftItem,
+  type MarkerRect,
+  type SelectionRow,
   type WizardMode,
   type WizardPhase,
 } from '@/core/wizard-logic';
@@ -390,11 +454,20 @@ const TEXT = {
       ? '图标可以不传；不传时用插件设置里的默认图标。'
       : '图标可以不传；不传时标签页上的图标位留空。',
   iconFailed: '没能处理这张图标，请再试一次',
-  pickHint: (hasBack: boolean) =>
-    hasBack
-      ? '点一下选中，再点一下取消，可以连续选多个。按「上一步」回标题，右上角 ✕ 退出。'
-      : '点一下选中，再点一下取消，可以连续选多个。右上角 ✕ 退出。',
-  adjustHintEmpty: '选中的是里面的文字时，可以用「选大一点」调整',
+  pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消，可以连着选好几个。', '选中的都列在下面，随时能删。'],
+  /** 调整组（#52）：自成一组，组内标明现在调的是第几项 */
+  adjustGroup: '调整选中的那一项',
+  adjustNow: '现在调的是',
+  adjustEmpty: '还没选中东西。先在页面上点一下要调整的那一项。',
+  bigger: '选大一点',
+  smaller: '选小一点',
+  /** 已选清单（#52）：一行一项，逐项删除；「全部删掉」是文字链接 */
+  listTitle: (n: number) => (n > 0 ? `已选的 ${n} 项` : '已选的内容'),
+  listEmpty: '还没有选任何东西。',
+  clearAll: '全部删掉',
+  deleteOne: (seq: number, name: string) => `删掉第 ${seq} 项：${name}`,
+  /** 0 项时前进按钮是灰的，旁边的说明告诉用户去哪儿选 */
+  nextBlocked: '先在页面上点一下要收起的内容',
   previewHint: '滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、改范围。',
   back: '上一步',
   nextToPick: '下一步：选内容',
@@ -461,6 +534,8 @@ const dragging = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
 const overlayLayer = ref<HTMLElement | null>(null);
 const toolbarEl = ref<HTMLElement | null>(null);
+/** 已选清单本身（删到 0 项时把焦点放在这里，不丢回页面） */
+const listEl = ref<HTMLElement | null>(null);
 const exitDlg = ref<HTMLDialogElement | null>(null);
 const saveDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
@@ -484,6 +559,17 @@ const sitePattern = computed(() => deriveScopePattern(props.url));
 const scopeHint = computed(() => scopeUnavailableHint(props.url));
 const lastSelIndex = computed(() => (lastSel.value ? selEls.value.indexOf(lastSel.value) : -1));
 const lastSelName = computed(() => (lastSel.value ? describeElement(lastSel.value) : ''));
+/** 第 2 步的已选清单：序号与页面上的号码牌同源（core/wizard-logic.ts selectionRows） */
+const selectionRows = computed<SelectionRow<Element>[]>(() => buildSelectionRows(selEls.value, describeElement));
+
+/** 清单行的稳定 key：跟着元素走，删掉中间一行时不会把 DOM 内容挪到别的元素名下 */
+const rowKeys = new WeakMap<Element, number>();
+let rowKeySeq = 0;
+function rowKey(el: Element): number {
+  let key = rowKeys.get(el);
+  if (key === undefined) rowKeys.set(el, (key = ++rowKeySeq));
+  return key;
+}
 
 /** 「第 N 步 / 共 M 步」：新站 3 步、老站 2 步 */
 const progressText = computed(() => {
@@ -730,9 +816,27 @@ function adjust(dir: 'bigger' | 'smaller') {
   pick.adjust(dir);
 }
 
-/** 工具条「清空」：去掉全部已选，仍留在点选模式（不想一个个点掉时的出口） */
-function clearSelection() {
+/**
+ * 清单里删掉这一项：只删这一项（选择集、号码牌、清单三处同步重排），焦点交给下一行。
+ * 删到 0 项时焦点落在清单上——按钮都被移除了，不能让焦点掉回页面。
+ */
+async function removeSelected(row: SelectionRow<Element>) {
+  pick.remove(row.el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
+  await nextTick();
+  const left = selEls.value.length;
+  if (left === 0) {
+    listEl.value?.focus();
+    return;
+  }
+  const nextSeq = Math.min(row.seq, left);
+  toolbarEl.value?.querySelector<HTMLElement>(`[data-testid="pm-sel-${nextSeq}-remove"]`)?.focus();
+}
+
+/** 清单右上角「全部删掉」：去掉全部已选，仍留在点选模式（不想一个个点掉时的出口） */
+async function clearSelection() {
   pick.clear(); // 选择集变化会经 onSelectionChange 同步序号牌与工具条
+  await nextTick();
+  listEl.value?.focus();
 }
 
 // ---------- 页内标记 ----------
@@ -780,45 +884,82 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
   box.appendChild(tag);
 }
 
+/** 号码牌的固定尺寸：定位要先知道尺寸，才能算在元素外面放不放得下 */
+const BADGE_SIZE = { width: 24, height: 24 };
+
+/**
+ * 号码牌自己一个盒子（#52）：位置由 badgePlacement 算在元素边界外侧，不再压在元素自己的文字上。
+ * 元素贴着视口顶边时号码牌翻到元素下方；实在没有空间才回到内侧，并改用半透明底。
+ */
+function badgePlace(box: HTMLElement) {
+  return (rect: MarkerRect): MarkerRect => {
+    const placed = badgePlacement(rect, BADGE_SIZE, { width: window.innerWidth, height: window.innerHeight });
+    box.classList.toggle('inside', placed.side === 'inside');
+    return { left: placed.left, top: placed.top, width: BADGE_SIZE.width, height: BADGE_SIZE.height };
+  };
+}
+
+/**
+ * 一个标记 = 元素上的框 + 框外面的号码牌。框跟元素严丝合缝（waitBoxOn 用它核对），
+ * 号码牌单独跟同一个元素但位置外移。
+ */
+function addMarker(opts: {
+  seq: number;
+  kind: 'selected' | 'blank' | 'mask' | 'ghost';
+  el?: Element;
+  /** 彻底移除的元素没有矩形，用它进入预览时缓存的页面坐标 */
+  ghost?: MarkerRect;
+  jump?: () => void;
+}): HTMLElement {
+  const box = makeBox(`pm-wiz-${opts.kind}`);
+  box.dataset.testid = `pm-box-${opts.seq}`;
+  if (opts.kind === 'mask') box.style.background = '#f4f4f4';
+  const badgeBox = makeBox('pm-wiz-badge-box');
+  addBadge(badgeBox, opts.seq, opts.jump);
+  markerBoxes.push(box, badgeBox);
+  const place = badgePlace(badgeBox);
+  if (opts.ghost) {
+    follower.trackGhost(opts.ghost, box);
+    follower.trackGhost(opts.ghost, badgeBox, place);
+  } else if (opts.el) {
+    follower.trackLive(opts.el, box);
+    follower.trackLive(opts.el, badgeBox, place);
+  }
+  return box;
+}
+
 /** 按当前阶段整体重画标记：编号每次都按最新顺序重新计算（N6）；全部同步完成，没有延时登记（N21） */
 function renderMarkers() {
   clearMarkers();
   if (phase.value === 'pick') {
-    selEls.value.forEach((el, i) => {
-      const box = makeBox('pm-wiz-selected');
-      if (el === lastSel.value) box.classList.add('current');
-      addBadge(box, i + 1);
-      markerBoxes.push(box);
-      follower.trackLive(el, box);
-    });
+    // 序号与清单同源：selectionRows 的第几行就是号码牌上的数字（删掉一项后一起重排）
+    for (const row of selectionRows.value) {
+      const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
+      if (row.el === lastSel.value) box.classList.add('current');
+    }
     return;
   }
   drafts.value.forEach((d, i) => {
     const jump = () => flashRow(i);
     if (d.strategy === 'remove') {
       // 彻底移除：元素已没有矩形，用进入预览时缓存的页面坐标 + 滚动差值跟随，只显示号码牌（N7、N8）
-      const box = makeBox('pm-wiz-ghost');
-      addBadge(box, i + 1, jump);
-      markerBoxes.push(box);
       const base = baseRects.get(d.el);
-      if (base) {
-        follower.trackGhost(
-          { left: base.left - window.scrollX, top: base.top - window.scrollY, width: base.width, height: base.height },
-          box,
-        );
-      }
+      addMarker({
+        seq: i + 1,
+        kind: 'ghost',
+        jump,
+        ghost: base && {
+          left: base.left - window.scrollX,
+          top: base.top - window.scrollY,
+          width: base.width,
+          height: base.height,
+        },
+      });
     } else if (d.strategy === 'blank') {
-      const box = makeBox('pm-wiz-blank');
-      addBadge(box, i + 1, jump);
-      markerBoxes.push(box);
-      follower.trackLive(d.el, box);
+      addMarker({ seq: i + 1, kind: 'blank', el: d.el, jump });
     } else {
       // 方案 C 遮罩：覆盖盒本身就是预览（不拦截指针，跳转入口在号码牌上）
-      const box = makeBox('pm-wiz-mask');
-      box.style.background = '#f4f4f4';
-      addBadge(box, i + 1, jump);
-      markerBoxes.push(box);
-      follower.trackLive(d.el, box);
+      addMarker({ seq: i + 1, kind: 'mask', el: d.el, jump });
     }
   });
 }
