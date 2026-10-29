@@ -1,49 +1,53 @@
-# HANDOFF · 0.3.0 已完成，剩人工验收与上架
+# HANDOFF · 0.4.0 进行中（1 / 10）
 
-> 本文件只在交接时临时放根目录（见 `AGENTS.md`），看完即可删除。正式的设计共识在 `docs/design.md`，过程记录在 `docs/dev/`。
+> 本文件只在批次进行中临时放根目录（见 `AGENTS.md`），批次收尾后删除。设计共识在 `docs/design.md`，术语在 `GLOSSARY.md`，过程记录在 `docs/dev/`。
 
 ## 现在到哪了
 
-0.3.0 的 9 张票（#39–#47）**全部实现并提交**，spec 是 [#38](https://github.com/cherishfall/page-mask/issues/38)。
+0.4.0 的 spec 是 [#48](https://github.com/cherishfall/page-mask/issues/48)，拆成十张子票 [#49–#58](https://github.com/cherishfall/page-mask/issues/48)，阻塞关系用 GitHub 原生依赖边（不是正文里写一句话）。
 
-- 单测：475 项全绿（`npm run compile && npx vitest run`）
-- E2E：6 个套件 405 项全绿（`npm run test:e2e`）
-- 打包门禁：`npm run check:package`、`npm run check:docs` 通过
-- 版本号已改 0.3.0，`CHANGELOG.md`（中英）、`README.md`（中英）、`CHROMEWEBSTORE.md` 都已同步
+| # | 票 | 阻塞于 | 状态 |
+|---|---|---|---|
+| [#49](https://github.com/cherishfall/page-mask/issues/49) | 标题与图标不再和网站对抢 | — | ✅ `e28530f` |
+| [#50](https://github.com/cherishfall/page-mask/issues/50) | 遮住可开可关 + 统一恢复按钮 | — | ⏭ 下一个 |
+| [#55](https://github.com/cherishfall/page-mask/issues/55) | 插件设置独立成页 | — | ⏭ 下一个 |
+| [#51](https://github.com/cherishfall/page-mask/issues/51) | 向导三步骨架 + 第 1 步 | #49 ✅ | 已解锁 |
+| [#52](https://github.com/cherishfall/page-mask/issues/52) | 点选这一步清单化 | #51 | 等待 |
+| [#53](https://github.com/cherishfall/page-mask/issues/53) | 看效果收编范围、保存即完成 | #52 | 等待 |
+| [#54](https://github.com/cherishfall/page-mask/issues/54) | 面板只留三件事 | #50 #55 | 等待 |
+| [#56](https://github.com/cherishfall/page-mask/issues/56) | 站点设置与 ⋯ 菜单对齐 | #51 | 等待 |
+| [#57](https://github.com/cherishfall/page-mask/issues/57) | 中英双语 | #51–#56 | 等待 |
+| [#58](https://github.com/cherishfall/page-mask/issues/58) | 文档、引导、截图 | #57 | 等待 |
 
-**跑 E2E 的环境坑**：这台机器的工具沙箱里 Chrome 起不来（`sandbox initialization failed`），要加环境变量
-`CHROME_ARGS="--no-sandbox --disable-gpu"` 再跑 `npm run test:e2e`。用户自己跑不需要。
+**建议顺序**：49 ✅ → 50 → 55 → 51 → 52 → 53 → 54 → 56 → 57 → 58。50 和 55 互不依赖，但同一台机器上并行跑会抢 git index，**串行做**。
 
-## 这批做了什么（只给索引，细节别在这看）
+## 换模型或换工具之后怎么接着跑
 
-| 事情 | 落点 |
-|---|---|
-| 新站点授权后直接进向导（根因：权限框会销毁 popup） | issue #39、`docs/dev/DEVLOG.md` 的 #39 段 |
-| 管理页拆成「网站 / 设置」两个 tab + hash 路由 | issue #40 |
-| 站点设置页（标题、图标、规则删除+撤销、一键清空） | issue #41 |
-| 只想改标题也能配置（popup「设置标题和图标」→ 管理页「待添加」） | issue #42 |
-| 向导清空 / 取消 / 危险按钮实底红 | issue #43 |
-| 预览清单行内编辑（收起方式、同类范围、删除、命名改进） | issue #44 |
-| 幕布（已添加站点） | issue #45、`docs/adr/0007-curtain-ephemeral-full-page-cover.md` |
-| 幕布（未添加站点：popup「遮住本页」+ activeTab） | issue #46 |
+1. 读这份文件的进度表，再 `HTTPS_PROXY=http://127.0.0.1:7890 gh issue view <编号>` 取那张票的完整验收标准。
+2. 一次只做一张票。做完：`npm run compile` + `npx vitest run`（全量约 495 项）必须全绿。
+3. `git commit`（Conventional Commits，**不要 push**，推送由批次收尾统一做）。
+4. 回来把本文件进度表的对应行改成 ✅ 并写上 commit，再进下一张。
 
-设计共识与术语已同步：`docs/design.md`（「幕布」一节、界面清单、收起方案的界面用词）、`GLOSSARY.md`（新增「幕布」「管理页」「站点设置页」，收起方式改叫「消失 / 留空 / 盖住」）。
+## 实现时必须守的硬约束（容易踩回去）
 
-## 剩下的都是人工活
+1. **幕布恢复按钮常态不透明度 85%**，不是 50%——白色幕布上 50% 的图标只有 2:1 左右，达不到非文本对比 3:1 的可识别门槛，也是"用户找不到按钮"的直接原因。
+2. **插件设置页注册成 options 时必须 `open_in_tab: true`**，否则 Chrome 会把它塞进约 400×600 的小窗，布局全崩。
+3. **一次性幕布脚本必须应答两条消息**（查询是否遮着、命令撤掉）。现在它只会闷头铺幕布，谁问都不应，面板的「遮住 / 恢复」开关做出来也只能单向。
+4. **术语**（以 `GLOSSARY.md` 为准，本批会更新）：删除这个网站的设置 / 收起的内容 / 标签页标题和图标 / 插件设置 / 界面语言。界面上**禁用**：清空、一键、屏蔽、拦截、配置、移除这个网站。
+5. **面板点「遮住本页」后必然关闭**（Chrome 的 popup 一失焦就销毁），"再点一下恢复" = 重新点一次工具条图标。这是平台限制，不是 bug，别当缺陷去修。
 
-1. **真实权限弹窗验收**（E2E 用替身替换了 `permissions.request`，自动化覆盖不到）：
-   - 在没添加过的网站上点扩展 → 点「为当前网站开启清爽模式」→ 点「允许」→ **向导应当直接出现，不需要点第二次**
-   - 点「拒绝」→ 什么都不发生；再点一次扩展，权限框应当重新弹出
-   - popup 的「重新授权」同样一次到位
-   - popup 的「遮住本页」在没添加过的网站上应当当场遮住（`activeTab` 的授予时机只有真机能确认）
-2. **商店截图重拍**：`docs/store-assets/` 里的截图 2（向导）与截图 5（管理页）是旧界面，还需要补一张幕布。
-   `tests/e2e/store-shots.mjs` 还没跟上 0.3.0 的新结构，重拍前先改它（`CHROMEWEBSTORE.md` §8 里标了 ⚠️）。
-3. **提交商店**：`CHROMEWEBSTORE.md` 是逐字段粘贴用的材料。权限与 0.2.0 一致（storage、scripting、activeTab + 按站点可选主机权限），隐私政策已复核、无变化。
-4. ~~**发 release**~~：已发 —— https://github.com/cherishfall/page-mask/releases/tag/v0.3.0 （tag `v0.3.0`，附 `page-mask-0.3.0-chrome.zip`，23 个文件 / 132 KB）。
+## 本批推翻的旧共识（收尾改文档时同步）
 
-## 建议下一步调用的 skill
+- `docs/design.md`「幕布」一节写着「上面不放任何文字、图标、logo」——现在留一颗睁眼按钮，这条要改，`ADR-0007` 一并补。
+- 管理页原来是「网站 / 设置」两个 tab，本批拆成两个独立页面，`design.md` 的「界面清单」要重画。
+- 「一键清空」这个词整条从术语表移除，换成「删除这个网站的设置」。
 
-- 动手改代码前：`implement`
-- 碰界面 / 交互：`modern-web-guidance`（先 search 再 retrieve）、`web-design-guidelines`、`ui-ux-pro-max`
-- 碰扩展 API / 商店材料：`chrome-extensions`
-- 再交接时：`handoff`
+## 跑测试的环境坑（这台机器）
+
+- E2E 起不来 Chrome 时要加：`CHROME_ARGS="--no-sandbox --disable-gpu" npm run test:e2e`。
+- `gh` 命令必须带 `HTTPS_PROXY=http://127.0.0.1:7890`；git 已配仓库级代理，不用前缀。
+- 新增依赖必须用官方源装，见 `AGENTS.md` 的「本机网络环境」一节。
+
+## 0.3.0 的历史（已发布，仅留索引）
+
+9 张票 #39–#47 全部实现；release：https://github.com/cherishfall/page-mask/releases/tag/v0.3.0 。细节见 `docs/dev/DEVLOG.md` 与 git 历史。
