@@ -942,6 +942,9 @@ async function main() {
       } finally {
         removeTempDir(path.dirname(file)); // 收尾失败不改用例结论
       }
+      // 导入在插件设置页完成（0.4.0 起导出/导入搬到了独立页面），
+      // 后续断言都在网站列表页上，这里把页面带回列表并让 store 重新读一遍
+      await m.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
     }
 
     console.log(`\n用时 ${((Date.now() - t0) / 1000).toFixed(1)} 秒，截图在 ${path.relative(process.cwd(), OUT)}/`);
