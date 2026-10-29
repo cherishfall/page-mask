@@ -175,11 +175,16 @@ export function createPageMaskStorage(area: KVArea) {
     return putSettings({ curtainBtnPos: pos });
   }
 
-  async function exportBundle(): Promise<ExportBundle> {
+  /**
+   * 导出网站配置与插件设置（#55）。appVersion 由调用方传运行时 manifest 的版本，
+   * 写进文件的 appVersion 字段（formatVersion 保持不变，仍是 1）。
+   */
+  async function exportBundle(appVersion?: string): Promise<ExportBundle> {
     return {
       app: 'pagemask',
       formatVersion: 1,
       exportedAt: new Date().toISOString(),
+      ...(appVersion ? { appVersion } : {}),
       settings: await getSettings(),
       profiles: await listProfiles(),
     };
@@ -190,6 +195,7 @@ export function createPageMaskStorage(area: KVArea) {
    * - 合并（默认）：同源配置做规则并集（冲突规则以导入方为准），站点级字段取用户修改时间较新的一方；
    *   本地已设置过的全局设置保留
    * - 整体替换：以导入文件为准（含全局设置），本地多出的站点移除
+   * 旧导出文件（没有 settings 字段）只导网站，插件设置保持本机不变，不报错（#55）。
    * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑），「遮住」按钮的全局位置同理。
    */
   async function importBundle(bundle: unknown, mode: 'merge' | 'replace' = 'merge'): Promise<ImportResult> {

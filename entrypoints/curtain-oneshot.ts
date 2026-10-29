@@ -60,6 +60,7 @@ async function run(): Promise<void> {
     { createCurtainRestoreButton },
     { curtainTitle },
     { fromExtensionPage },
+    { effectiveIcon },
   ] = await Promise.all([
     import('wxt/browser'),
     import('@/ui/curtain'),
@@ -70,6 +71,7 @@ async function run(): Promise<void> {
     import('@/ui/curtain-restore'),
     import('@/core/curtain'),
     import('@/core/messages'),
+    import('@/core/icon'),
   ]);
 
   const w = window as unknown as OneshotWindow;
@@ -110,7 +112,8 @@ async function run(): Promise<void> {
         storage.getProfile(origin).catch(() => null),
         storage.getSettings().catch(() => null),
       ]);
-      guard.apply(curtainTitle(profile, settings), null);
+      // 图标三层：站点自己的 > 插件默认 > 内置透明（#55）
+      guard.apply(curtainTitle(profile, settings), effectiveIcon(profile ?? { faviconDataUrl: null }, settings));
       layer.show();
       const root = layer.root;
       if (!root) return;

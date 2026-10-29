@@ -1,11 +1,36 @@
 /**
- * 标签页图标上传（#26）：原图大小限制与压缩尺寸计算。纯函数，canvas 绘制在管理页里做。
+ * 标签页图标：上传管线（#26）+ 默认图标的三层生效顺序（#55）。纯函数，canvas 绘制在管理页里做。
  *
- * 流程：检查原图（类型、≤5MB）→ createImageBitmap 解码 → 按 containRect 画进 32×32 透明画布 →
+ * 上传流程：检查原图（类型、≤5MB）→ createImageBitmap 解码 → 按 containRect 画进 32×32 透明画布 →
  * canvas.toDataURL('image/png') → 检查结果 < 20KB 且通过 core/validate 的 isSafeFaviconDataUrl。
  * 32×32 是 Chrome 在 2 倍屏上画 16px 标签页图标用的尺寸；PNG 最坏（随机噪点）约 4KB 原始像素，
  * base64 后也远低于 20KB。
  */
+
+/**
+ * 默认图标：1×1 真正全透明 PNG（RGBA 全 0，单测解码校验）。图片能正常加载，Chrome 就照常
+ * 显示它——全透明即标签页图标位留空（不会变成地球；地球只在没有图标或加载失败时出现）。
+ * 不使用、也不复刻任何浏览器自带图标。
+ */
+export const TRANSPARENT_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
+
+/**
+ * 实际使用的标签页图标，三层顺序：站点自己设的 > 插件设置里的默认图标 > 内置透明图标。
+ * 参数做运行时类型检查：存储里的旧数据 / 坏数据可能不是字符串。
+ */
+export function effectiveIcon(
+  profile: { faviconDataUrl: unknown },
+  settings: { defaultIconDataUrl?: unknown } | null | undefined,
+): string {
+  if (nonBlank(profile.faviconDataUrl)) return profile.faviconDataUrl;
+  if (nonBlank(settings?.defaultIconDataUrl)) return settings.defaultIconDataUrl;
+  return TRANSPARENT_PNG;
+}
+
+function nonBlank(v: unknown): v is string {
+  return typeof v === 'string' && v !== '';
+}
 
 /** 原图上限：5MB（超过多半是照片原图，提示用户换小一点的图） */
 export const MAX_ICON_SOURCE_BYTES = 5 * 1024 * 1024;

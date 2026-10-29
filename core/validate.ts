@@ -216,6 +216,7 @@ export function readSettings(v: unknown): GlobalSettings {
   return {
     defaultTitle:
       typeof o.defaultTitle === 'string' && o.defaultTitle.trim() ? o.defaultTitle : DEFAULT_SETTINGS.defaultTitle,
+    defaultIconDataUrl: isSafeFaviconDataUrl(o.defaultIconDataUrl) ? o.defaultIconDataUrl : null,
     curtainBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
   };
 }

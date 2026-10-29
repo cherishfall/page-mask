@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 // @ts-ignore 项目不装 @types/node；vitest 跑在 Node 里，node:zlib 可用
 import { inflateSync } from 'node:zlib';
-import { TitleFaviconGuard, TRANSPARENT_PNG } from './disguise';
+import { TitleFaviconGuard } from './disguise';
+import { TRANSPARENT_PNG } from './icon';
 
 /**
  * 最小 PNG 解码：只支持本项目默认图标用到的 8 位 RGBA、非隔行格式。

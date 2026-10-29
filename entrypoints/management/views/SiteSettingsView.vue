@@ -157,7 +157,9 @@
             alt="当前的标签页图标"
             data-testid="pm-mgmt-favicon"
           />
-          <span v-else class="hint" data-testid="pm-mgmt-favicon-empty">未设置：标签页上不显示图标</span>
+          <span v-else class="hint" data-testid="pm-mgmt-favicon-empty">
+            未设置：{{ store.state.defaultIcon ? '用插件设置里的默认图标' : '标签页上不显示图标' }}
+          </span>
           <label class="button file-button">
             {{ iconBusy ? '正在处理…' : profile.faviconDataUrl ? '换一张图标' : '上传图标' }}
             <input
@@ -179,7 +181,9 @@
             清除图标
           </button>
         </div>
-        <p id="pm-site-icon-hint" class="hint">PNG、JPG、GIF、WebP 或 ICO，不超过 5MB，会自动缩小成 32×32。</p>
+        <p id="pm-site-icon-hint" class="hint">
+          PNG、JPG、GIF、WebP 或 ICO，不超过 5MB，会自动缩小成 32×32。没有单独设置时用插件设置里的默认图标。
+        </p>
         <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
       </section>
 

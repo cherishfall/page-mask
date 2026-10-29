@@ -86,6 +86,11 @@ export interface GlobalSettings {
    */
   defaultTitle: string | null;
   /**
+   * 全局默认标签页图标（data URL）；null = 用内置的 1×1 全透明图标。
+   * 生效顺序：站点自己的图标 > 这一项 > 内置透明图标（core/icon.ts 的 effectiveIcon）。
+   */
+  defaultIconDataUrl: string | null;
+  /**
    * 没添加过的网站（一次性脚本）上「遮住」按钮记住的位置（视口坐标）；null = 默认右下角。
    * 这是本机界面状态（屏幕相关），与站点配置的 floatingBtnPos 同一口径：
    * 导入时保留本机的值，不被导入文件覆盖。
@@ -93,13 +98,19 @@ export interface GlobalSettings {
   curtainBtnPos: ButtonPos | null;
 }
 
-export const DEFAULT_SETTINGS: GlobalSettings = { defaultTitle: null, curtainBtnPos: null };
+export const DEFAULT_SETTINGS: GlobalSettings = {
+  defaultTitle: null,
+  defaultIconDataUrl: null,
+  curtainBtnPos: null,
+};
 
 /** 导出文件结构：带版本号字段供未来迁移（ADR-0004） */
 export interface ExportBundle {
   app: 'pagemask';
   formatVersion: 1;
   exportedAt: string;
+  /** 导出时的插件版本（运行时 manifest 的 version）；旧文件没有这个字段 */
+  appVersion?: string;
   /** 全局设置（0.2.0 起导出；旧文件没有此字段） */
   settings?: GlobalSettings;
   profiles: SiteProfile[];

@@ -31,6 +31,7 @@ import { browser } from 'wxt/browser';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
+import { effectiveIcon } from '@/core/icon';
 import { curtainRestoreAction, curtainTitle } from '@/core/curtain';
 import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
@@ -129,7 +130,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const uiReady = Promise.all([whenDomReady(ctx), activated]).then(() => undefined);
 
   let profile: SiteProfile | null = null;
-  let settings: GlobalSettings = { defaultTitle: null, curtainBtnPos: null }; // null = 跟随界面语言默认（core/titles.ts）
+  let settings: GlobalSettings = { defaultTitle: null, defaultIconDataUrl: null, curtainBtnPos: null }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
   const toggleState = reactive<{ state: SiteProfile['switchState']; position: SiteProfile['floatingBtnPos'] }>({
     state: 'original',
@@ -368,7 +369,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function applyAll(): Promise<boolean> {
     if (!profile) return false;
     // 先压标题、首屏遮挡换成精确规则（都不等后台往返），再同步正式样式
-    guard.apply(effectiveTitle(profile, settings), profile.faviconDataUrl);
+    guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
     shield.narrow(buildDisguiseCss(profile.hideRules, location.href));
     const ok = await syncFormalStyles();
     shield.release();
@@ -403,7 +404,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 幕布开着时重新压住标题与覆盖层（applyAll / restoreAll 里的 guard 调用会把幕布的标题盖掉） */
   function reassertCurtain(): void {
     if (!curtain.active || !profile) return;
-    guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
+    guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
     curtain.reassert();
   }
 
@@ -437,7 +438,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     curtain.show();
     mountCurtainButton();
     unmountToggle();
-    guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
+    guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
   }
 
   /**
@@ -455,7 +456,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     unmountCurtainButton();
     curtain.hide();
     if (entry && curtainRestoreAction(entry) === 'disguise' && profile) {
-      guard.apply(curtainTitle(profile, settings), profile.faviconDataUrl);
+      guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
     } else {
       guard.restore();
     }

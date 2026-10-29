@@ -17,6 +17,10 @@ export default defineConfig({
       default_title: '__MSG_actionTitle__',
       default_icon: { 16: 'icon/16.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' },
     },
+    // 「插件设置」页（entrypoints/settings）同时是 Chrome 的"扩展程序选项"：右键工具条图标点"选项"、
+    // 扩展管理页点"扩展程序选项"，进的都是这一页。open_in_tab 必须为 true——否则 Chrome 会把它
+    // 塞进约 400×600 的小窗，整页布局会崩（#55）。
+    options_ui: { page: 'settings.html', open_in_tab: true },
     permissions: ['storage', 'scripting', 'activeTab'],
     optional_host_permissions: ['*://*/*'],
   },

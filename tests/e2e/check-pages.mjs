@@ -234,7 +234,7 @@ function vueFiles(dir) {
 
 /** 模板源码检查：<template> 里（去掉注释）没有禁用词 / 品牌 */
 function checkSources() {
-  for (const name of ['popup', 'management', 'onboarding']) {
+  for (const name of ['popup', 'management', 'settings', 'onboarding']) {
     const dir = path.join(REPO_ROOT, 'entrypoints', name);
     const indexHtml = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
     check(!FORBIDDEN.test(indexHtml), `源码 ${name}/index.html：无「伪装 / 泄露」`);
@@ -360,13 +360,12 @@ async function main() {
     const HOST = new URL(ORIGIN).host;
     const SITE_HASH = `#/sites/${HOST}`;
     const hash = () => m.evaluate(() => location.hash);
-    const currentOf = (id) => m.$eval(tid(id), (a) => a.getAttribute('aria-current'));
 
     await poll(async () => (await hash()) === '#/sites', '没有 hash 时落到 #/sites');
     check(true, '首次进入没有 hash 时落到 #/sites');
     check(
-      (await currentOf('pm-mgmt-tab-sites')) === 'page' && (await currentOf('pm-mgmt-tab-settings')) === null,
-      '「网站」tab 用 aria-current="page"，「设置」不是当前页',
+      !(await m.$('nav[aria-label="管理页视图"]')) && !(await m.$(tid('pm-mgmt-tab-settings'))),
+      '网站列表页没有页内 tab 切换（插件设置是独立页面，#55）',
     );
     const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
     check(rowText.includes('原样') && rowText.includes('已收起 2 项'), `一行一站：${rowText.split('\n').join(' / ')}`);
@@ -527,21 +526,26 @@ async function main() {
     );
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
 
-    console.log('\n--- 管理页：设置 tab（默认标题、关于） ---');
-    await m.goto(`${extOrigin}/management.html#/settings`, { waitUntil: 'load' });
-    await m.waitForSelector(tid('pm-mgmt-default-title'), { timeout: 5000 });
-    await checkCommon(m, '管理页 · 设置');
+    console.log('\n--- 插件设置页（默认标题、默认图标、关于） ---');
+    await m.goto(`${extOrigin}/settings.html`, { waitUntil: 'load' });
+    await m.waitForSelector(tid('pm-settings-default-title'), { timeout: 5000 });
+    await checkCommon(m, '插件设置');
+    const backLink = await m.$eval(tid('pm-settings-back'), (a) => ({
+      text: a.textContent.trim(),
+      href: a.getAttribute('href'),
+    }));
     check(
-      (await hash()) === '#/settings' && (await currentOf('pm-mgmt-tab-settings')) === 'page',
-      '「设置」tab 有独立地址并标记 aria-current="page"',
+      backLink.text === '← 你添加的网站' && backLink.href === 'management.html#/sites',
+      '左上角有返回「你添加的网站」的轻量链接',
     );
     const manifest = JSON.parse(fs.readFileSync(ext.manifestPath, 'utf8'));
-    const shownVersion = await m.$eval(tid('pm-mgmt-version'), (e) => e.textContent.trim());
+    check(manifest.options_ui?.page === 'settings.html' && manifest.options_ui?.open_in_tab === true, '插件设置页注册为扩展程序选项，且在标签页里打开');
+    const shownVersion = await m.$eval(tid('pm-settings-version'), (e) => e.textContent.trim());
     check(shownVersion === manifest.version, `「关于」显示版本号 ${shownVersion}`);
     check(!!(await m.$('a[href="https://github.com/cherishfall/page-mask/issues"]')), '「关于」有指向 GitHub issues 的反馈入口');
 
-    // 编辑态与存储态分离：设置 tab 的全局默认标题
-    const titleSel = tid('pm-mgmt-default-title');
+    // 编辑态与存储态分离：插件设置页的全局默认标题
+    const titleSel = tid('pm-settings-default-title');
     const TYPED = '我的阅读标题';
     await m.click(titleSel);
     await m.type(titleSel, TYPED);
@@ -563,59 +567,62 @@ async function main() {
     await sleep(1200);
     check((await getSettings(ext.control)).defaultTitle === '临时标题', '没等自动保存就离开输入框时，失焦也会立即提交');
 
-    console.log('\n--- 管理页：导入 ---');
+    console.log('\n--- 插件设置页：导入 ---');
     const writeJson = (name, data) => {
       const f = path.join(tmp, name);
       fs.writeFileSync(f, typeof data === 'string' ? data : JSON.stringify(data));
       return f;
     };
-    const importInput = () => m.$(tid('pm-mgmt-import-input'));
+    const importInput = () => m.$(tid('pm-settings-import-input'));
     // 导入方式在按钮之前
     const order = await m.evaluate(
       (s) => !!(document.querySelector('fieldset.import-mode').compareDocumentPosition(document.querySelector(s)) & Node.DOCUMENT_POSITION_FOLLOWING),
-      tid('pm-mgmt-import-input'),
+      tid('pm-settings-import-input'),
     );
     check(order, '导入方式（fieldset）排在选择文件按钮之前');
     // 导入失败用人话
     await (await importInput()).uploadFile(writeJson('broken.json', '{ not json'));
-    await waitFor(m, '导入失败提示', (s) => document.querySelector(s).textContent.includes('导入失败'), [tid('pm-mgmt-import-result')]);
-    const failText = await m.$eval(tid('pm-mgmt-import-result'), (e) => e.textContent.trim());
+    await waitFor(m, '导入失败提示', (s) => document.querySelector(s).textContent.includes('导入失败'), [tid('pm-settings-import-result')]);
+    const failText = await m.$eval(tid('pm-settings-import-result'), (e) => e.textContent.trim());
     check(failText === '导入失败：不是有效的 PageMask 导出文件' && !/[A-Za-z]/.test(failText.replace(/PageMask/g, '')), `导入失败用人话（${failText}）`);
     // 整体替换：先确认，列出影响
     const OTHER = 'https://example.com';
     const bundle = { app: 'pagemask', formatVersion: 1, exportedAt: new Date().toISOString(), profiles: [profileOf(OTHER, { hideRules: [rule('x1', '广告', ['.ad'])] })] };
     const bundleFile = writeJson('replace.json', bundle);
-    await m.click('label[for="import-replace"]');
+    await m.click('label[for="pm-settings-import-replace"]');
     await (await importInput()).uploadFile(bundleFile);
-    await waitFor(m, '替换确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-replace-dialog')]);
-    const impact = await m.evaluate((s) => ({ text: document.querySelector(s).innerText, focus: document.activeElement?.textContent?.trim() }), tid('pm-mgmt-replace-impact'));
+    await waitFor(m, '替换确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-settings-replace-dialog')]);
+    const impact = await m.evaluate((s) => ({ text: document.querySelector(s).innerText, focus: document.activeElement?.textContent?.trim() }), tid('pm-settings-replace-impact'));
     check(
       impact.text.includes('1 个网站、2 个收起项会全部被替换') && impact.text.includes('本机不再保留') && impact.text.includes('127.0.0.1') && impact.text.includes('文件里的 1 个网站、1 个收起项'),
       `替换确认框列出影响：\n      ${impact.text.split('\n').join('\n      ')}`,
     );
     check(impact.focus === '取消', '替换确认框默认聚焦「取消」');
-    await (await m.waitForSelector(`xpath/.//dialog[@data-testid="pm-mgmt-replace-dialog"]//button[normalize-space()="取消"]`)).click();
-    await waitFor(m, '取消后提示', (s) => document.querySelector(s).textContent.includes('已取消导入'), [tid('pm-mgmt-import-result')]);
+    await (await m.waitForSelector(`xpath/.//dialog[@data-testid="pm-settings-replace-dialog"]//button[normalize-space()="取消"]`)).click();
+    await waitFor(m, '取消后提示', (s) => document.querySelector(s).textContent.includes('已取消导入'), [tid('pm-settings-import-result')]);
     check((await getProfile(ext.control, ORIGIN)) !== null && (await getProfile(ext.control, OTHER)) === null, '取消整体替换：本机数据没有改动');
 
     // 深浅色 / 对比度（确认框打开时也检查一次）
-    await checkSchemes(m, '管理页 · 设置', 'bgSubtle');
+    await checkSchemes(m, '插件设置', 'bgSubtle');
     await (await importInput()).uploadFile(bundleFile);
-    await waitFor(m, '替换确认框再次打开', (s) => document.querySelector(s).open, [tid('pm-mgmt-replace-dialog')]);
-    await checkSchemes(m, '管理页 · 设置（确认框打开）', 'bgSubtle');
-    await (await m.waitForSelector(`xpath/.//dialog[@data-testid="pm-mgmt-replace-dialog"]//button[normalize-space()="确认替换"]`)).click();
-    await waitFor(m, '整体替换完成', (s) => document.querySelector(s).textContent.includes('导入完成'), [tid('pm-mgmt-import-result')]);
+    await waitFor(m, '替换确认框再次打开', (s) => document.querySelector(s).open, [tid('pm-settings-replace-dialog')]);
+    await checkSchemes(m, '插件设置（确认框打开）', 'bgSubtle');
+    await (await m.waitForSelector(`xpath/.//dialog[@data-testid="pm-settings-replace-dialog"]//button[normalize-space()="确认替换"]`)).click();
+    await waitFor(m, '整体替换完成', (s) => document.querySelector(s).textContent.includes('导入完成'), [tid('pm-settings-import-result')]);
     check(
       (await getProfile(ext.control, ORIGIN)) === null && (await getProfile(ext.control, OTHER)) !== null,
-      `确认后整体替换生效（${await m.$eval(tid('pm-mgmt-import-result'), (e) => e.textContent.trim())}）`,
+      `确认后整体替换生效（${await m.$eval(tid('pm-settings-import-result'), (e) => e.textContent.trim())}）`,
     );
 
     console.log('\n--- 管理页：待授权站点 ---');
     // 整体替换后只剩 example.com（从没授权过）；再补回原站点并收回它的授权，两个站点都待授权
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
     await removePermission(ext.control, ORIGIN);
-    await m.click(tid('pm-mgmt-tab-sites'));
-    await poll(async () => (await hash()) === '#/sites', '切回网站列表');
+    await m.click(tid('pm-settings-back'));
+    await poll(
+      async () => (await m.evaluate(() => location.pathname)) === '/management.html' && (await hash()) === '#/sites',
+      '点返回链接回到「你添加的网站」',
+    );
     await m.waitForSelector(tid('pm-mgmt-pending-all'), { timeout: 5000 });
     const pendingText = await m.$eval(tid('pm-mgmt-pending-all'), (e) => e.innerText);
     check(pendingText.includes('2 个网站待授权') && pendingText.includes('一次授权全部'), `两个以上待授权时出现「一次授权全部」（${pendingText.split('\n')[0]}）`);

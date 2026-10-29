@@ -1,11 +1,13 @@
 /**
  * 管理页的 hash 路由（手写，不引路由库）。
  *
- * 四个视图各有独立地址，刷新、直接粘贴、浏览器前进后退都停在正确视图：
+ * 三个视图各有独立地址，刷新、直接粘贴、浏览器前进后退都停在正确视图：
  *   `#/sites`                 网站列表
  *   `#/sites/<host>`          某个网站的站点设置（host 是 origin 的 host，含非默认端口）
  *   `#/add/<origin>`          还没添加的网站（站点设置视图的「待添加」状态）
- *   `#/settings`              设置
+ *
+ * 「插件设置」是独立的 HTML 页面（settings.html，#55），不再有页内 tab，也不在本路由里：
+ * 旧地址 `#/settings` 认不出来，会落回网站列表。
  *
  * 「待添加」单独一条地址而不是给 `#/sites/<host>` 加参数：新建配置需要完整来源
  * （`http` 还是 `https` 靠 host 看不出来），用 `#/add/` 把「这个网站还不在名单里」
@@ -20,11 +22,9 @@ import { normalizeSiteHost } from './site';
 export type ManagementRoute =
   | { name: 'sites' }
   | { name: 'site'; host: string }
-  | { name: 'add'; origin: string }
-  | { name: 'settings' };
+  | { name: 'add'; origin: string };
 
 export const SITES_HASH = '#/sites';
-export const SETTINGS_HASH = '#/settings';
 export const ADD_HASH = '#/add/';
 
 /** 某个网站的站点设置地址 */
@@ -48,13 +48,12 @@ function safeDecode(value: string): string {
 /** hash 是否属于本页的几种地址之一（用于判断要不要改写成默认地址） */
 export function isRouteHash(hash: string): boolean {
   const parts = hash.replace(/^#/, '').split('/').filter(Boolean);
-  return parts[0] === 'sites' || parts[0] === 'add' || parts[0] === 'settings';
+  return parts[0] === 'sites' || parts[0] === 'add';
 }
 
 /** 解析 hash；认不出来的一律当作网站列表（调用方通常已先改成 `#/sites`） */
 export function parseRoute(hash: string): ManagementRoute {
   const parts = hash.replace(/^#/, '').split('/').filter(Boolean);
-  if (parts[0] === 'settings') return { name: 'settings' };
   if (parts[0] === 'add' && parts[1]) {
     // 来源必须是规范形式（只能 http/https）；认不出来就当作没有这条地址
     const origin = normalizeOrigin(safeDecode(parts.slice(1).join('/')));

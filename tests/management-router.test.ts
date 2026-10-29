@@ -18,10 +18,10 @@ describe('管理页 hash 路由', () => {
     expect(isRouteHash('#/nope')).toBe(false);
   });
 
-  it('设置 tab 有独立地址', () => {
-    expect(parseRoute('#/settings')).toEqual({ name: 'settings' });
-    expect(parseRoute('#/settings/')).toEqual({ name: 'settings' });
-    expect(isRouteHash('#/settings')).toBe(true);
+  it('「插件设置」不在本路由里：旧地址 #/settings 落回网站列表，由独立页面承载（#55）', () => {
+    expect(parseRoute('#/settings')).toEqual({ name: 'sites' });
+    expect(parseRoute('#/settings/')).toEqual({ name: 'sites' });
+    expect(isRouteHash('#/settings')).toBe(false);
   });
 
   it('站点设置地址带 host（含端口），可直接粘贴', () => {

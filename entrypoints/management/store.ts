@@ -1,5 +1,6 @@
 /**
- * 管理页的模块级状态与操作（三个视图共用，避免层层 props，也避免各写一份存储读取）。
+ * 插件页面的模块级状态与操作（管理页的三个视图与「插件设置」页共用，
+ * 避免层层 props，也避免各写一份存储读取）。
  *
  * - 存储态：profiles / 全局设置 / 待授权站点，storage 与 permissions 变化后整体刷新
  * - 编辑态：标题输入框绑定 drafts，聚焦中或有未保存改动（dirty）时不覆盖，其余字段照常刷新
@@ -16,6 +17,7 @@ import { originPattern } from '@/core/registration';
 import type { Ack, EnableSiteResponse, OpenEditorMsg, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
+import { exportFileName } from '@/core/export-file';
 
 /** 全局默认标题在 drafts 里的键；站点用 origin 作键 */
 export const DEFAULT_KEY = '__default__';
@@ -27,6 +29,8 @@ export interface ManagementState {
   loaded: boolean;
   /** 存储里的全局默认标题（null = 跟随界面语言默认） */
   defaultTitle: string | null;
+  /** 存储里的全局默认标签页图标（null = 内置透明图标） */
+  defaultIcon: string | null;
   /** 输入框草稿：键 = origin，全局默认标题用 DEFAULT_KEY */
   drafts: Record<string, string>;
   /** 当前聚焦的字段 */
@@ -61,6 +65,7 @@ export function createManagementStore() {
     profiles: [],
     loaded: false,
     defaultTitle: null,
+    defaultIcon: null,
     drafts: {},
     focusedKey: null,
     pendingOrigins: [],
@@ -98,6 +103,7 @@ export function createManagementStore() {
     state.drafts = syncDrafts(state.drafts, stored, isEditing);
     state.profiles = list;
     state.defaultTitle = settings.defaultTitle;
+    state.defaultIcon = settings.defaultIconDataUrl;
     state.pendingOrigins = list.filter((_, i) => !granted[i]).map((p) => p.origin);
     state.loaded = true;
   }
@@ -289,6 +295,12 @@ export function createManagementStore() {
     });
   }
 
+  /** 换 / 清除插件默认图标：null = 回到内置的全透明图标（#55） */
+  async function setDefaultIcon(dataUrl: string | null): Promise<void> {
+    await storage.putSettings({ defaultIconDataUrl: dataUrl });
+    state.defaultIcon = dataUrl;
+  }
+
   /**
    * 「在页面上编辑」：找到该站已打开的标签页，让页面里的内容脚本打开编辑面板，并把那个标签页切到前台。
    * 换收起方式、重选元素都要页面上下文，只能这样跳过去。
@@ -340,13 +352,15 @@ export function createManagementStore() {
     await reload();
   }
 
+  /** 导出网站配置 + 插件设置；文件名带插件版本与本机时间到秒（#55） */
   async function doExport() {
-    const bundle = await storage.exportBundle();
+    const version = browser.runtime.getManifest().version;
+    const bundle = await storage.exportBundle(version);
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pagemask-config-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = exportFileName(version, new Date());
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -427,6 +441,7 @@ export function createManagementStore() {
     toggleSite,
     updateRules,
     setIcon,
+    setDefaultIcon,
     openPageEditor,
     askReset,
     confirmReset,

@@ -164,7 +164,16 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
   });
   it('带版本标记的值原样保留', () => {
     const stored = toStoredSettings({ defaultTitle: '新建标签页' });
-    expect(stored).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null, settingsVersion: 2 });
-    expect(readStoredSettings(stored)).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null });
+    expect(stored).toEqual({
+      defaultTitle: '新建标签页',
+      defaultIconDataUrl: null,
+      curtainBtnPos: null,
+      settingsVersion: 2,
+    });
+    expect(readStoredSettings(stored)).toEqual({
+      defaultTitle: '新建标签页',
+      defaultIconDataUrl: null,
+      curtainBtnPos: null,
+    });
   });
 });

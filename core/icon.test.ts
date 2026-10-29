@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkIconSource, containRect, ICON_ERROR, ICON_SIZE, MAX_ICON_SOURCE_BYTES } from './icon';
+import { checkIconSource, containRect, effectiveIcon, ICON_ERROR, ICON_SIZE, MAX_ICON_SOURCE_BYTES, TRANSPARENT_PNG } from './icon';
 
 describe('checkIconSource', () => {
   it('接受常见图片格式且不超过 5MB', () => {
@@ -36,5 +36,32 @@ describe('containRect', () => {
     expect(containRect(0, 10)).toBeNull();
     expect(containRect(10, Number.NaN)).toBeNull();
     expect(containRect(Infinity, 10)).toBeNull();
+  });
+});
+
+describe('effectiveIcon：站点自己的图标 > 插件默认图标 > 内置透明图标', () => {
+  const SITE_ICON = 'data:image/png;base64,SITE';
+  const DEFAULT_ICON = 'data:image/png;base64,DEFAULT';
+
+  it('三层依次兜底', () => {
+    expect(effectiveIcon({ faviconDataUrl: SITE_ICON }, { defaultIconDataUrl: DEFAULT_ICON })).toBe(SITE_ICON);
+    expect(effectiveIcon({ faviconDataUrl: null }, { defaultIconDataUrl: DEFAULT_ICON })).toBe(DEFAULT_ICON);
+    expect(effectiveIcon({ faviconDataUrl: null }, { defaultIconDataUrl: null })).toBe(TRANSPARENT_PNG);
+  });
+
+  it('站点自己设过图标时，改插件默认图标不影响它；没设过的跟着变', () => {
+    const settings = { defaultIconDataUrl: 'data:image/png;base64,OLD' };
+    const withOwn = { faviconDataUrl: SITE_ICON };
+    const withoutOwn = { faviconDataUrl: null };
+    expect(effectiveIcon(withOwn, settings)).toBe(SITE_ICON);
+    expect(effectiveIcon(withoutOwn, settings)).not.toBe(effectiveIcon(withoutOwn, { defaultIconDataUrl: DEFAULT_ICON }));
+  });
+
+  it('坏数据不会漏进标签页：非字符串 / 空串都按没设置处理', () => {
+    for (const bad of [undefined, 42, '', {}, null]) {
+      expect(effectiveIcon({ faviconDataUrl: bad }, { defaultIconDataUrl: bad })).toBe(TRANSPARENT_PNG);
+    }
+    expect(effectiveIcon({ faviconDataUrl: '' }, null)).toBe(TRANSPARENT_PNG);
+    expect(effectiveIcon({ faviconDataUrl: '' }, undefined)).toBe(TRANSPARENT_PNG);
   });
 });

@@ -44,7 +44,14 @@ function profileOf(origin: string, over: Partial<SiteProfile> = {}): SiteProfile
   return { ...p, ...over };
 }
 
-const settingsOf = (defaultTitle: string | null) => ({ defaultTitle, curtainBtnPos: null, settingsVersion: 2 });
+const settingsOf = (defaultTitle: string | null) => ({
+  defaultTitle,
+  defaultIconDataUrl: null,
+  curtainBtnPos: null,
+  settingsVersion: 2,
+});
+
+const ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 async function seed(origins: string[], defaultTitle: string | null = null) {
   const data: Record<string, unknown> = { settings: settingsOf(defaultTitle) };
@@ -213,6 +220,59 @@ describe('管理页 store', () => {
       .map(([m]) => m as { t?: string; tabId?: number; origin?: string })
       .filter((m) => m.t === 'enableSite');
     expect(enabled).toEqual([{ t: 'enableSite', origin: A, tabId: 7 }]);
+  });
+
+  it('插件默认图标：写入全局设置、清空回到内置透明图标', async () => {
+    await seed([], null);
+    const store = createManagementStore();
+    await store.reload();
+    expect(store.state.defaultIcon).toBeNull();
+
+    await store.setDefaultIcon(ICON);
+    expect(store.state.defaultIcon).toBe(ICON);
+    expect((await fakeBrowser.storage.local.get('settings')).settings).toEqual({
+      ...settingsOf(null),
+      defaultIconDataUrl: ICON,
+    });
+
+    await store.setDefaultIcon(null);
+    expect(store.state.defaultIcon).toBeNull();
+    expect((await fakeBrowser.storage.local.get('settings')).settings).toEqual(settingsOf(null));
+  });
+
+  it('导出：文件名带版本与本机时间到秒，文件里含网站配置、插件设置与版本号', async () => {
+    await seed([A], null);
+    const store = createManagementStore();
+    await store.reload();
+    await store.setDefaultIcon(ICON);
+    Object.assign(fakeBrowser.runtime, { getManifest: () => ({ version: '0.4.0' }) });
+
+    const blobs: Blob[] = [];
+    Object.assign(URL, {
+      createObjectURL: vi.fn((b: Blob) => {
+        blobs.push(b);
+        return 'blob:pm';
+      }),
+      revokeObjectURL: vi.fn(),
+    });
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      names.push(this.download);
+    });
+    vi.useFakeTimers({ now: new Date(2026, 9, 29, 23, 59, 59) });
+    try {
+      await store.doExport();
+    } finally {
+      vi.useRealTimers();
+      click.mockRestore();
+    }
+
+    expect(names).toEqual(['pagemask-0.4.0-20261029235959.json']);
+    const bundle = JSON.parse(await blobs[0]!.text());
+    expect(bundle.formatVersion).toBe(1); // 老字段不变
+    expect(bundle.appVersion).toBe('0.4.0');
+    expect(bundle.settings.defaultIconDataUrl).toBe(ICON);
+    expect(bundle.profiles.map((p: SiteProfile) => p.origin)).toEqual([A]);
   });
 
   it('导入：坏文件用人话报错；整体替换先给影响预览，取消不改数据', async () => {

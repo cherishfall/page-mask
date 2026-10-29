@@ -10,7 +10,7 @@ import type { GlobalSettings, SiteProfile } from './types';
 
 export function applyKey(
   profile: SiteProfile,
-  settings: Pick<GlobalSettings, 'defaultTitle'>,
+  settings: Pick<GlobalSettings, 'defaultTitle' | 'defaultIconDataUrl'>,
   url: string,
 ): string {
   return JSON.stringify([
@@ -19,6 +19,7 @@ export function applyKey(
     profile.disguisedTitle,
     profile.faviconDataUrl,
     settings.defaultTitle,
+    settings.defaultIconDataUrl,
     profile.hideRules.map(({ lastHealth: _h, lastHealthAt: _t, ...rest }) => rest),
   ]);
 }

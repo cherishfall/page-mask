@@ -12,7 +12,7 @@ function profile(): SiteProfile {
   ];
   return p;
 }
-const settings = { defaultTitle: null };
+const settings = { defaultTitle: null, defaultIconDataUrl: null };
 
 describe('applyKey：判断存储变化是否需要整页重新应用', () => {
   it('只是体检回写（lastHealth / lastHealthAt）：不需要', () => {
@@ -30,7 +30,7 @@ describe('applyKey：判断存储变化是否需要整页重新应用', () => {
     expect(applyKey(after, settings, URL_A)).toBe(applyKey(profile(), settings, URL_A));
   });
 
-  it('开关、规则、伪装标题、全局默认标题、页面地址变化：需要', () => {
+  it('开关、规则、伪装标题、全局默认标题与图标、页面地址变化：需要', () => {
     const base = applyKey(profile(), settings, URL_A);
     const switched = profile();
     switched.switchState = 'original';
@@ -42,7 +42,9 @@ describe('applyKey：判断存储变化是否需要整页重新应用', () => {
       applyKey(switched, settings, URL_A),
       applyKey(ruleChanged, settings, URL_A),
       applyKey(titled, settings, URL_A),
-      applyKey(profile(), { defaultTitle: '文档' }, URL_A),
+      applyKey(profile(), { defaultTitle: '文档', defaultIconDataUrl: null }, URL_A),
+      // 插件默认图标变了，没单独设过图标的网站要跟着变（#55）
+      applyKey(profile(), { defaultTitle: null, defaultIconDataUrl: 'data:image/png;base64,AAA' }, URL_A),
       applyKey(profile(), settings, 'https://site.test/b'),
     ]) {
       expect(key).not.toBe(base);

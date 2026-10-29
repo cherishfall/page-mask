@@ -107,9 +107,18 @@ describe('站点配置 CRUD', () => {
     area.data.set(SETTINGS_KEY, { defaultTitle: '周报' }); // 0.1.0 用户自定义的值保留
     expect((await store.getSettings()).defaultTitle).toBe('周报');
     await store.putSettings({ defaultTitle: '新建标签页' }); // 0.2.0 用户主动选的快捷标题
-    expect(area.data.get(SETTINGS_KEY)).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null, settingsVersion: 2 });
+    expect(area.data.get(SETTINGS_KEY)).toEqual({
+      defaultTitle: '新建标签页',
+      defaultIconDataUrl: null,
+      curtainBtnPos: null,
+      settingsVersion: 2,
+    });
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
-    expect((await store.exportBundle()).settings).toEqual({ defaultTitle: '新建标签页', curtainBtnPos: null }); // 版本标记不进导出文件
+    expect((await store.exportBundle()).settings).toEqual({
+      defaultTitle: '新建标签页',
+      defaultIconDataUrl: null,
+      curtainBtnPos: null,
+    }); // 版本标记不进导出文件
   });
 
   it('导入文件里的「新建标签页」按用户设置保留（导出文件 0.2.0 起才带设置，无旧值问题）', async () => {
@@ -214,7 +223,7 @@ describe('导出/导入', () => {
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1);
     expect(bundle.profiles).toHaveLength(1);
-    expect(bundle.settings).toEqual({ defaultTitle: '周报', curtainBtnPos: null });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: null, curtainBtnPos: null });
   });
 
   it('非法文件报人话错误（用"导出文件"一词）', async () => {
@@ -347,7 +356,11 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
     const store = createPageMaskStorage(memoryArea());
     await store.setCurtainBtnPos({ x: 24, y: 560 });
     await store.putSettings({ defaultTitle: '周报' });
-    expect(await store.getSettings()).toEqual({ defaultTitle: '周报', curtainBtnPos: { x: 24, y: 560 } });
+    expect(await store.getSettings()).toEqual({
+      defaultTitle: '周报',
+      defaultIconDataUrl: null,
+      curtainBtnPos: { x: 24, y: 560 },
+    });
   });
 
   it('导入保留本机位置：合并与整体替换都不会被导出文件里的坐标覆盖', async () => {
@@ -393,5 +406,86 @@ describe('mergeProfiles 字段级取舍', () => {
     expect(merged.disguisedTitle).toBe('新标题');
     expect(merged.floatingBtnPos).toEqual({ x: 1, y: 2 });
     expect(merged.updatedAt).toBe(200);
+  });
+});
+
+describe('插件设置随导出 / 导入（#55）', () => {
+  const ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
+
+  it('导出带插件设置与"导出时的插件版本号"，格式版本仍是 1', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    await store.updateProfile('https://x.com', () => false, { create: true });
+    await store.putSettings({ defaultTitle: '周报', defaultIconDataUrl: ICON });
+
+    const bundle = await store.exportBundle('0.4.0');
+
+    expect(bundle.app).toBe('pagemask');
+    expect(bundle.formatVersion).toBe(1); // 老字段不变
+    expect(bundle.appVersion).toBe('0.4.0');
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: ICON, curtainBtnPos: null });
+    expect(bundle.profiles).toHaveLength(1);
+  });
+
+  it('老文件（没有插件设置字段）仍能导入：只导网站，本机插件设置原样保留，两种模式都不报错', async () => {
+    const area = memoryArea();
+    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: ICON, settingsVersion: 2 });
+    const store = createPageMaskStorage(area);
+    const oldFile = bundleOf([createEmptyProfile('https://a.com')]); // 0.1.0 / 0.2.0 之前的形状，没有 settings
+
+    const merged = await store.importBundle(oldFile, 'merge');
+    expect(merged.added).toBe(1);
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null });
+
+    const replaced = await store.importBundle(bundleOf([createEmptyProfile('https://b.com')]), 'replace');
+    expect(replaced.removed).toBe(1);
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null });
+  });
+
+  it('整体替换采用文件里的默认标题与默认图标；合并时本地已设置过的保留', async () => {
+    const file = bundleOf([createEmptyProfile('https://a.com')], {
+      settings: { defaultTitle: '导入标题', defaultIconDataUrl: ICON, curtainBtnPos: null },
+    });
+
+    const replaced = createPageMaskStorage(memoryArea());
+    await replaced.importBundle(file, 'replace');
+    expect((await replaced.getSettings()).defaultIconDataUrl).toBe(ICON);
+    expect((await replaced.getSettings()).defaultTitle).toBe('导入标题');
+
+    const withLocal = memoryArea();
+    withLocal.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: null, settingsVersion: 2 });
+    const merged = createPageMaskStorage(withLocal);
+    await merged.importBundle(file, 'merge');
+    expect(await merged.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: null });
+  });
+
+  it('文件里的插件设置缺字段 / 不合法时按默认值处理（不报错、不写进存储坏图）', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    await store.importBundle(
+      bundleOf([createEmptyProfile('https://a.com')], {
+        settings: { defaultTitle: '导入标题', defaultIconDataUrl: 'https://evil.example/x.png' },
+      }),
+      'replace',
+    );
+    expect(await store.getSettings()).toEqual({ defaultTitle: '导入标题', defaultIconDataUrl: null, curtainBtnPos: null });
+  });
+
+  it('导入不覆盖本机的按钮坐标（网站级 floatingBtnPos 与全局 curtainBtnPos）', async () => {
+    const area = memoryArea();
+    seed(area, { ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 5, y: 6 } });
+    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: { x: 10, y: 20 }, settingsVersion: 2 });
+    const store = createPageMaskStorage(area);
+
+    for (const mode of ['merge', 'replace'] as const) {
+      await store.importBundle(
+        bundleOf(
+          [{ ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 900, y: 900 } }],
+          { settings: { defaultTitle: '导入标题', defaultIconDataUrl: ICON, curtainBtnPos: { x: 800, y: 700 } } },
+        ),
+        mode,
+      );
+      expect((await store.getProfile('https://keep.com'))!.floatingBtnPos).toEqual({ x: 5, y: 6 });
+      expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 10, y: 20 });
+    }
+    expect((await store.getSettings()).defaultIconDataUrl).toBe(ICON);
   });
 });

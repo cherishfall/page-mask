@@ -437,19 +437,16 @@ async function main() {
     }));
     check(mgmt.host.includes('127.0.0.1'), `管理页列出站点（${mgmt.host}）`);
     check(mgmt.state.includes('已收起'), `管理页显示收起项数与状态（${mgmt.state.trim()}）`);
-    // 导出 / 导入搬到「设置」tab：切过去再查
-    await mPage.evaluate(() => {
-      location.hash = '#/settings';
-    });
-    await mPage.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
-    const hasExport = await mPage.evaluate(() =>
+    // 导出 / 导入在独立的「插件设置」页（#55）
+    const sPage = await browser.newPage();
+    await sPage.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
+    await sPage.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
+    const hasExport = await sPage.evaluate(() =>
       !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
     );
-    check(hasExport, '设置 tab 里有导出/导入');
-    await mPage.evaluate(() => {
-      location.hash = '#/sites';
-    });
-    await mPage.waitForSelector('.site-row', { timeout: 3000 });
+    check(hasExport, '插件设置页有导出/导入');
+    await sPage.close();
+    await mPage.bringToFront();
     await shot(mPage, 'management');
     await mPage.close();
 
@@ -888,13 +885,10 @@ async function main() {
       return m;
     }
 
-    /** 点「导出配置」，截获生成的文件内容（不真的下载到磁盘） */
+    /** 点「导出配置」，截获生成的文件内容（不真的下载到磁盘）；导出在独立的「插件设置」页（#55） */
     async function exportFromManagement(m) {
       await m.bringToFront();
-      // 导出在「设置」tab
-      await m.evaluate(() => {
-        location.hash = '#/settings';
-      });
+      await m.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
       await m.waitForSelector('xpath/.//button[normalize-space()="导出配置"]', { timeout: 3000 });
       await m.evaluate(() => {
         window.__pmBlobs = [];
@@ -910,7 +904,10 @@ async function main() {
       });
       await m.click('xpath/.//button[normalize-space()="导出配置"]');
       await waitFor(m, '导出文件生成', () => window.__pmBlobs.length > 0);
-      return JSON.parse(await m.evaluate(() => window.__pmBlobs[0].text()));
+      const text = await m.evaluate(() => window.__pmBlobs[0].text());
+      // 后面的步骤还在用这个页面（站点设置、清空），导完回到管理页
+      await m.goto(`${ext.extOrigin}/management.html`, { waitUntil: 'load' });
+      return JSON.parse(text);
     }
 
     /** 进某站点的设置页，点页脚的「一键清空」并确认（#41：入口从列表行迁到站点设置页） */
@@ -931,13 +928,10 @@ async function main() {
       await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
     }
 
-    /** 通过管理页的文件选择框导入（默认合并模式） */
+    /** 通过「插件设置」页的文件选择框导入（默认合并模式，#55） */
     async function importInManagement(m, bundle) {
       await m.bringToFront();
-      // 导入在「设置」tab
-      await m.evaluate(() => {
-        location.hash = '#/settings';
-      });
+      await m.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
       await m.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
       const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pm-e2e-import-')), 'pagemask-config.json');
       fs.writeFileSync(file, JSON.stringify(bundle));
