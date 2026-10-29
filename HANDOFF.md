@@ -1,4 +1,4 @@
-# HANDOFF · 0.4.0 进行中（6 / 10）
+# HANDOFF · 0.4.0 进行中（7 / 10）
 
 > 本文件只在批次进行中临时放根目录（见 `AGENTS.md`），批次收尾后删除。设计共识在 `docs/design.md`，术语在 `GLOSSARY.md`，过程记录在 `docs/dev/`。
 
@@ -14,12 +14,12 @@
 | [#51](https://github.com/cherishfall/page-mask/issues/51) | 向导三步骨架 + 第 1 步 | #49 ✅ | ✅ `fda942b` |
 | [#52](https://github.com/cherishfall/page-mask/issues/52) | 点选这一步清单化 | #51 ✅ | ✅ `389784a` |
 | [#53](https://github.com/cherishfall/page-mask/issues/53) | 看效果收编范围、保存即完成 | #52 ✅ | ✅ `59bac6b` + `ea12522` |
-| [#54](https://github.com/cherishfall/page-mask/issues/54) | 面板只留三件事 | #50 ✅ #55 ✅ | ⏭ 下一个 |
-| [#56](https://github.com/cherishfall/page-mask/issues/56) | 站点设置与 ⋯ 菜单对齐 | #51 | 等待 |
+| [#54](https://github.com/cherishfall/page-mask/issues/54) | 面板只留三件事 | #50 ✅ #55 ✅ | ✅ `09aaa7e` |
+| [#56](https://github.com/cherishfall/page-mask/issues/56) | 站点设置与 ⋯ 菜单对齐 | #51 ✅ | ⏭ 下一个 |
 | [#57](https://github.com/cherishfall/page-mask/issues/57) | 中英双语 | #51–#56 | 等待 |
 | [#58](https://github.com/cherishfall/page-mask/issues/58) | 文档、引导、截图 | #57 | 等待 |
 
-**建议顺序**：49 ✅ → 50 ✅ → 55 ✅ → 51 ✅ → 52 ✅ → 53 ✅ → 54 → 56 → 57 → 58。50 和 55 互不依赖，但同一台机器上并行跑会抢 git index，**串行做**。
+**建议顺序**：49 ✅ → 50 ✅ → 55 ✅ → 51 ✅ → 52 ✅ → 53 ✅ → 54 ✅ → 56 → 57 → 58。50 和 55 互不依赖，但同一台机器上并行跑会抢 git index，**串行做**。
 
 ## 换模型或换工具之后怎么接着跑
 
@@ -40,6 +40,7 @@
 
 - 向导第 2 步的面板从约 308px 涨到 412px（选满 11 项时）。清单已限高、工具条可拖走，这是"能逐项删除"的代价。
 - 选元素这一步仍然只能靠指针点。给网页元素做键盘遍历是另一套交互模型，不在本批范围。
+- 面板在"没添加过的网站"上遮住整页，依赖 activeTab；自动化测不到这条真实路径（`chrome.action.openPopup()` 不授予 activeTab），E2E 用替代路径覆盖，真机需人工确认一次。
 
 ## 本批推翻的旧共识（收尾改文档时同步）
 
