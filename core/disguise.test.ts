@@ -53,6 +53,51 @@ describe('默认图标 TRANSPARENT_PNG', () => {
   });
 });
 
+/** 可推进的假时钟：定时器按到期顺序执行，每次执行后清空微任务（MutationObserver 回调在这里面） */
+function createClock() {
+  let now = 0;
+  let seq = 0;
+  const timers: { at: number; fn: () => void; id: number; cancelled: boolean }[] = [];
+  const flush = () => new Promise<void>((r) => setTimeout(r, 0));
+  return {
+    now: () => now,
+    setTimer: (fn: () => void, ms: number) => {
+      const timer = { at: now + ms, fn, id: ++seq, cancelled: false };
+      timers.push(timer);
+      return () => {
+        timer.cancelled = true;
+      };
+    },
+    /** 推进假时钟；期间到期的定时器逐个执行，并等微任务（观察器）跑完再继续 */
+    async advance(ms: number) {
+      await flush(); // 先把当前这一拍里站点写入引发的观察器回调跑完（补刀排期在这里产生）
+      const target = now + ms;
+      for (;;) {
+        timers.sort((a, b) => a.at - b.at || a.id - b.id);
+        const next = timers.find((t) => !t.cancelled && t.at <= target);
+        if (!next) break;
+        timers.splice(timers.indexOf(next), 1);
+        now = next.at;
+        next.fn();
+        await flush();
+      }
+      now = target;
+      await flush();
+    },
+  };
+}
+
+/** 模拟真实 SPA 的标题守卫：一发现标题不是自己的就立刻改回（每轮都反抗，永不放弃） */
+function watchTitle(doc: Document, siteTitle: string): MutationObserver {
+  const guard = new MutationObserver(() => {
+    if (doc.title !== siteTitle) doc.title = siteTitle;
+  });
+  guard.observe(doc.head, { childList: true, subtree: true, characterData: true });
+  return guard;
+}
+
+const ICONS = 'link[rel~="icon"]';
+
 describe('TitleFaviconGuard（jsdom）', () => {
   let doc: Document;
 
@@ -169,12 +214,11 @@ describe('TitleFaviconGuard（jsdom）', () => {
     expect(doc.title).toBe('第 3 章');
   });
 
-  it('补刀限频：站点自己的守卫与我们来回抢时，一秒内补刀次数有上限，退避后再压回一次', async () => {
+  it('补刀限频：站点自己的守卫与我们来回抢时，一秒内补刀次数有上限，且同一拍只安排一次补刀', async () => {
     let now = 0;
     const timers: (() => void)[] = [];
     const guard = new TitleFaviconGuard(doc, {
       maxForcesPerSecond: 5,
-      backoffMs: 2000,
       now: () => now,
       setTimer: (fn) => {
         timers.push(fn);
@@ -193,9 +237,9 @@ describe('TitleFaviconGuard（jsdom）', () => {
     siteGuard.disconnect();
     const ours = setter.mock.calls.filter(([v]) => v === '阅读').length;
     expect(ours).toBeLessThanOrEqual(5);
-    expect(timers.length).toBe(1); // 退避后只安排一次补刀
+    expect(timers.length).toBe(1); // 同一拍只安排一次补刀
 
-    now += 2000;
+    now += 16; // 合并窗口到期
     timers[0]!();
     expect(doc.title).toBe('阅读');
     setter.mockRestore();
@@ -219,5 +263,160 @@ describe('TitleFaviconGuard（jsdom）', () => {
     const guard = new TitleFaviconGuard(doc);
     guard.apply('t', 'data:image/png;base64,CUSTOM');
     expect(doc.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe('data:image/png;base64,CUSTOM');
+  });
+
+  describe('会反抗的网站（#49）', () => {
+    /** 装一个"永不放弃"的站点标题守卫，并用假时钟驱动插件 */
+    function setupFight(maxForcesPerSecond: number) {
+      const clock = createClock();
+      const guard = new TitleFaviconGuard(doc, {
+        maxForcesPerSecond,
+        debounceMs: 10,
+        now: clock.now,
+        setTimer: clock.setTimer,
+      });
+      const setter = vi.spyOn(doc, 'title', 'set');
+      guard.apply('阅读', null);
+      const siteGuard = watchTitle(doc, '站点');
+      doc.title = '站点';
+      const writes = () => setter.mock.calls.filter(([v]) => v === '阅读').length;
+      return { clock, guard, setter, siteGuard, writes };
+    }
+
+    it('网站连续写 3 次标题：合并成一拍，只补刀一次', async () => {
+      const clock = createClock();
+      const guard = new TitleFaviconGuard(doc, { now: clock.now, setTimer: clock.setTimer, debounceMs: 10 });
+      guard.apply('阅读', null);
+      const setter = vi.spyOn(doc, 'title', 'set');
+      doc.title = '站点 1';
+      doc.title = '站点 2';
+      doc.title = '站点 3';
+      await clock.advance(10);
+      expect(setter.mock.calls.filter(([v]) => v === '阅读')).toHaveLength(1);
+      expect(doc.title).toBe('阅读');
+      setter.mockRestore();
+      guard.restore();
+      expect(doc.title).toBe('站点 3'); // 还原成站点最后一次写入的值
+    });
+
+    it('长期对抢：第一秒内的标题写入有硬上限', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { clock, guard, setter, siteGuard, writes } = setupFight(4);
+      await clock.advance(1000);
+      // 进入时写过 1 次，补刀 3 次后到上限就熔断，不会出现每秒十几次的重写
+      expect(writes()).toBe(4);
+      expect(writes()).toBeLessThanOrEqual(4);
+      expect(doc.title).toBe('站点');
+      siteGuard.disconnect();
+      setter.mockRestore();
+      guard.restore();
+      warn.mockRestore();
+    });
+
+    it('到达上限后彻底停手：页面停在网站标题上，重复 apply 也不会重置熔断', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { clock, guard, setter, siteGuard, writes } = setupFight(4);
+      await clock.advance(1000);
+      const settled = writes();
+      expect(settled).toBe(4);
+
+      // 熔断要留下可查的记录（判断是网站太顽固还是我们写错了）
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]![0])).toContain('已停止改写');
+
+      // 上层每次存储变化都会重复调 apply：不能因此把熔断计数清零
+      guard.apply('阅读', null);
+      await clock.advance(5000);
+      expect(writes()).toBe(settled);
+      expect(doc.title).toBe('站点');
+
+      siteGuard.disconnect();
+      setter.mockRestore();
+      guard.restore();
+      warn.mockRestore();
+    });
+
+    it('熔断后只有目标标题真的变了才解封', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { clock, guard, setter, siteGuard } = setupFight(3);
+      await clock.advance(1000);
+      expect(doc.title).toBe('站点');
+
+      siteGuard.disconnect();
+      guard.update('公司Wiki', null);
+      expect(doc.title).toBe('公司Wiki');
+      expect(setter.mock.calls.filter(([v]) => v === '公司Wiki')).toHaveLength(1);
+
+      setter.mockRestore();
+      guard.restore();
+      warn.mockRestore();
+    });
+
+    it('图标只建一次：多次补刀与站点重新插入自己的图标都不删我们的那张', async () => {
+      const clock = createClock();
+      const guard = new TitleFaviconGuard(doc, {
+        maxForcesPerSecond: 10,
+        debounceMs: 10,
+        now: clock.now,
+        setTimer: clock.setTimer,
+      });
+      guard.apply('阅读', null);
+      const ours = doc.querySelector(ICONS)!;
+      expect(ours).not.toBeNull();
+
+      const create = vi.spyOn(doc, 'createElement');
+      for (const title of ['站点 1', '站点 2', '站点 3']) {
+        doc.title = title;
+        await clock.advance(10);
+        expect(doc.title).toBe('阅读');
+        expect(doc.querySelectorAll(ICONS)).toHaveLength(1);
+        expect(doc.querySelector(ICONS)).toBe(ours); // 还是同一个元素，没有删了重建
+      }
+      expect(create.mock.calls.filter(([tag]) => String(tag).toLowerCase() === 'link')).toHaveLength(0);
+      create.mockRestore();
+
+      // 站点重新插回自己的图标：只移除站点的，我们那张原地保留
+      const siteIcon = doc.createElement('link');
+      siteIcon.rel = 'icon';
+      siteIcon.href = 'https://site.com/other.ico';
+      doc.head.appendChild(siteIcon);
+      doc.title = '站点 4';
+      await clock.advance(10);
+      expect(doc.querySelectorAll(ICONS)).toHaveLength(1);
+      expect(doc.querySelector(ICONS)).toBe(ours);
+      expect(ours.isConnected).toBe(true);
+      guard.restore();
+    });
+
+    it('图标没有真的不一致时不动 DOM：重复 apply 不删不插', () => {
+      const guard = new TitleFaviconGuard(doc);
+      guard.apply('阅读', null);
+      const ours = doc.querySelector(ICONS);
+      const append = vi.spyOn(doc.head, 'appendChild');
+      const remove = vi.spyOn(Element.prototype, 'remove');
+      guard.apply('阅读', null); // 每次存储变化都会重复调用
+      guard.apply('阅读', TRANSPARENT_PNG); // 显式传默认图标，等价于空
+      expect(append).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
+      expect(doc.querySelector(ICONS)).toBe(ours);
+      append.mockRestore();
+      remove.mockRestore();
+      guard.restore();
+    });
+
+    it('慢速改回不会被熔断：每秒一次仍然每次都压回', async () => {
+      const clock = createClock();
+      const guard = new TitleFaviconGuard(doc, { now: clock.now, setTimer: clock.setTimer, debounceMs: 10 });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      guard.apply('阅读', null);
+      for (let i = 1; i <= 6; i++) {
+        doc.title = `第 ${i} 章`;
+        await clock.advance(1000);
+        expect(doc.title).toBe('阅读');
+      }
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+      guard.restore();
+    });
   });
 });

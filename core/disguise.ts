@@ -3,8 +3,13 @@
  * 伪装态改写 document.title + 替换 favicon；SPA 站点（微信读书等）翻页时会把标题
  * 改回去，用 MutationObserver 监听 head 变化立即压回（参考 Tabee 模式）。
  * 原样态完全还原：标题、图标一并还原，用的是伪装期间站点最新写入的值（B21）。
- * #22：只观察 <head>（B22）；补刀限频（站点自己也有守卫时不互相改成死循环）；
- * 运行时失效（扩展更新 / 重载）后不再补刀。
+ * #22：只观察 <head>（B22）；运行时失效（扩展更新 / 重载）后不再补刀。
+ * #49：网站自己守标题时不再和它抢——
+ *  - 站点写入引起的补刀合并到一拍（`debounceMs` 窗口），同一串连击只写一次；
+ *  - 图标不再删除重建：我们那张已存在就原地改 href，站点图标只在挡路时移除；
+ *  - 一秒内写到上限即熔断，之后不再写 DOM（页面停在网站自己的标题上）并 console.warn 留证。
+ *    熔断不被重复的 apply() 重置（上层每次存储变化都会调它），只有 restore() 后重新进入、
+ *    或目标标题 / 图标真的变了才解封。
  */
 
 export { effectiveTitle } from './titles';
@@ -18,6 +23,10 @@ export const TRANSPARENT_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 const ICON_SELECTOR = 'link[rel~="icon"]';
+/** 熔断窗口：这段时间内写入次数到上限就彻底停手 */
+const FORCE_WINDOW_MS = 1000;
+/** 站点写入与补刀之间的合并窗口，约一帧（同一拍内的一串变化只写一次） */
+const DEFAULT_DEBOUNCE_MS = 16;
 
 interface Snapshot {
   title: string;
@@ -25,10 +34,10 @@ interface Snapshot {
 }
 
 export interface GuardOptions {
-  /** 一秒内最多补刀几次；超过即退避（站点自己也有守卫时避免互相改成死循环，REVIEW B22） */
+  /** 一秒内最多写入几次；到上限即熔断（站点自己死守标题时彻底放手，见 #49）。默认 5 */
   maxForcesPerSecond?: number;
-  /** 退避多久后再补一次 */
-  backoffMs?: number;
+  /** 站点写入与补刀之间的合并窗口（毫秒）；同一窗口内的连续变化只补一次。默认 16 */
+  debounceMs?: number;
   /**
    * 运行时是否仍有效（内容脚本传 () => ctx.isValid：扩展更新 / 重载后读它会触发失效收尾）。
    * 无效时不再补刀，站点写入的标题照常保留
@@ -54,12 +63,15 @@ export class TitleFaviconGuard {
   private active = false;
   private wantedTitle = '';
   private wantedIcon = '';
-  /** 我们插入的那一张图标（区分站点自己的图标声明） */
+  /** 我们插入的那一张图标（区分站点自己的图标声明）；存在期间原地复用，不删不重建 */
   private ownLink: HTMLLinkElement | null = null;
+  /** 窗口内的写入时刻（含进入伪装态的第一笔） */
   private forceTimes: number[] = [];
-  private cancelBackoff: (() => void) | null = null;
+  private cancelPending: (() => void) | null = null;
+  /** 熔断：连续抢不过后停止一切写入，直到 restore 或目标真的变了 */
+  private tripped = false;
   private readonly maxForces: number;
-  private readonly backoffMs: number;
+  private readonly debounceMs: number;
   private readonly now: () => number;
   private readonly setTimer: (fn: () => void, ms: number) => () => void;
   private readonly isAlive: () => boolean;
@@ -68,8 +80,8 @@ export class TitleFaviconGuard {
     private doc: Document,
     opts: GuardOptions = {},
   ) {
-    this.maxForces = opts.maxForcesPerSecond ?? 10;
-    this.backoffMs = opts.backoffMs ?? 2000;
+    this.maxForces = opts.maxForcesPerSecond ?? 5;
+    this.debounceMs = opts.debounceMs ?? DEFAULT_DEBOUNCE_MS;
     this.now = opts.now ?? (() => Date.now());
     this.setTimer =
       opts.setTimer ??
@@ -86,13 +98,23 @@ export class TitleFaviconGuard {
 
   /** 进入伪装态。title 为最终展示文字；iconDataUrl 为空时用中性透明图标 */
   apply(title: string, iconDataUrl: string | null): void {
-    this.wantedTitle = title;
-    this.wantedIcon = iconDataUrl || TRANSPARENT_PNG;
+    const icon = iconDataUrl || TRANSPARENT_PNG;
     if (!this.active) {
+      this.wantedTitle = title;
+      this.wantedIcon = icon;
       this.snapshot = this.takeSnapshot();
       this.active = true;
+      this.resetLimit();
       this.startObserving();
+      this.force();
+      return;
     }
+    // 上层每次存储变化都会重复调用 apply；目标没变就什么都不做——尤其不能清空熔断计数，
+    // 否则站点每次写标题后紧跟一次存储变化，熔断就永远触发不了（#49）
+    if (title === this.wantedTitle && icon === this.wantedIcon) return;
+    this.wantedTitle = title;
+    this.wantedIcon = icon;
+    this.resetLimit();
     this.force();
   }
 
@@ -101,6 +123,7 @@ export class TitleFaviconGuard {
     if (!this.active) return;
     this.stopObserving();
     this.active = false;
+    this.resetLimit();
     const snap = this.snapshot;
     this.snapshot = null;
     this.ownLink = null;
@@ -125,26 +148,42 @@ export class TitleFaviconGuard {
   }
 
   private force(): void {
+    if (!this.active || this.tripped) return;
+    if (!this.takeForceSlot()) return;
+    this.cancelPendingForce();
     this.observer?.disconnect();
-    this.cancelBackoff?.();
-    this.cancelBackoff = null;
     try {
       if (this.doc.title !== this.wantedTitle) this.doc.title = this.wantedTitle;
-      // 移除站点全部图标声明，换成我们的一张。
-      // document_start 时 <head> 可能还没解析出来：先不插图标（Chrome 只认 head 里的图标声明），
-      // 观察器会在 head 出现时再补上。
-      for (const link of this.doc.querySelectorAll(ICON_SELECTOR)) link.remove();
-      this.ownLink = null;
-      if (this.doc.head) {
-        const link = this.doc.createElement('link');
-        link.rel = 'icon';
-        link.href = this.wantedIcon;
-        this.doc.head.appendChild(link);
-        this.ownLink = link;
-      }
+      this.syncIcon();
     } finally {
       this.observeTargets();
     }
+  }
+
+  /**
+   * 图标同步：已有我们那张就原地改 href，没有才插入；站点图标只在挡路时移除。
+   * 一切都对得上时不动 DOM（每次补刀都重建 favicon 会让标签栏反复重绘）。
+   */
+  private syncIcon(): void {
+    const head = this.doc.head;
+    // document_start 时 <head> 可能还没解析出来：先不插图标（Chrome 只认 head 里的图标声明），
+    // 观察器会在 head 出现时再补上。
+    if (!head) return;
+    const links = Array.from(this.doc.querySelectorAll(ICON_SELECTOR));
+    if (this.ownLink && !this.ownLink.isConnected) this.ownLink = null;
+    if (!this.ownLink) {
+      for (const link of links) link.remove();
+      const link = this.doc.createElement('link');
+      link.setAttribute('rel', 'icon');
+      link.setAttribute('href', this.wantedIcon);
+      head.appendChild(link);
+      this.ownLink = link;
+      return;
+    }
+    const own = this.ownLink;
+    for (const link of links) if (link !== own) link.remove();
+    if (own.getAttribute('href') !== this.wantedIcon) own.setAttribute('href', this.wantedIcon);
+    if (own.parentElement !== head) head.appendChild(own);
   }
 
   /**
@@ -174,33 +213,57 @@ export class TitleFaviconGuard {
       // 先记下站点写入的值，再判断运行时是否仍有效：失效收尾时的还原要用到最新标题
       this.recordSiteValues(titleDiverged);
       if (!this.isAlive() || !this.active) return;
-      if (this.overLimit()) {
-        this.scheduleBackoff();
-        return;
-      }
-      this.force();
+      // 同一拍内的一串站点变化只安排一次补刀；熔断后连安排都不做
+      this.scheduleForce();
     });
     this.observeTargets();
   }
 
-  /** 最近一秒内的补刀次数是否已到上限（到上限则这次不补，记一次） */
-  private overLimit(): boolean {
-    const t = this.now();
-    this.forceTimes = this.forceTimes.filter((x) => t - x < 1000);
-    if (this.forceTimes.length >= this.maxForces) return true;
-    this.forceTimes.push(t);
-    return false;
+  /** 合并窗口：站点写入后最多一拍补一次；窗口内后续写入不重复排期 */
+  private scheduleForce(): void {
+    if (this.tripped || this.cancelPending) return;
+    this.cancelPending = this.setTimer(() => {
+      this.cancelPending = null;
+      if (!this.active || this.tripped) return;
+      if (!this.isAlive()) return;
+      if (this.doc.title === this.wantedTitle && !this.iconDiverged()) return;
+      this.force();
+    }, this.debounceMs);
   }
 
-  /** 退避：过一段时间再补一次（只安排一次）；期间站点的写入照常记录 */
-  private scheduleBackoff(): void {
-    if (this.cancelBackoff) return;
-    this.cancelBackoff = this.setTimer(() => {
-      this.cancelBackoff = null;
-      if (!this.active || !this.isAlive()) return;
-      this.forceTimes = [];
-      if (this.doc.title !== this.wantedTitle || this.iconDiverged()) this.force();
-    }, this.backoffMs);
+  private cancelPendingForce(): void {
+    this.cancelPending?.();
+    this.cancelPending = null;
+  }
+
+  /** 熔断后的解封条件只有两个：restore 后重新进入、目标标题/图标真的变了（resetLimit 的调用点） */
+  private resetLimit(): void {
+    this.tripped = false;
+    this.forceTimes = [];
+  }
+
+  /** 记一次写入；窗口内到上限则熔断并拒绝这次写入 */
+  private takeForceSlot(): boolean {
+    const t = this.now();
+    this.forceTimes = this.forceTimes.filter((x) => t - x < FORCE_WINDOW_MS);
+    if (this.forceTimes.length >= this.maxForces) {
+      this.tripBreaker();
+      return false;
+    }
+    this.forceTimes.push(t);
+    return true;
+  }
+
+  /** 彻底放手：不再写 DOM，留一条可查的记录（判断是网站太顽固还是我们写错了） */
+  private tripBreaker(): void {
+    if (this.tripped) return;
+    this.tripped = true;
+    this.forceTimes = [];
+    this.cancelPendingForce();
+    console.warn(
+      `[PageMask] 标签页标题 / 图标在 ${FORCE_WINDOW_MS} 毫秒内已改写 ${this.maxForces} 次，网站仍在改回；` +
+        '已停止改写，页面保留网站自己的标题',
+    );
   }
 
   /**
@@ -219,15 +282,16 @@ export class TitleFaviconGuard {
     if (!this.doc.head) return false; // 还没有 head，图标无处可放，等 head 出现
     const links = Array.from(this.doc.querySelectorAll(ICON_SELECTOR));
     if (links.length !== 1) return true;
-    const href = links[0]?.getAttribute('href') ?? '';
-    return href !== this.wantedIcon;
+    const only = links[0]!;
+    if (only !== this.ownLink) return true; // 站点自己的声明还在，需要换成我们那张
+    if (only.parentElement !== this.doc.head) return true;
+    return only.getAttribute('href') !== this.wantedIcon;
   }
 
   private stopObserving(): void {
     this.observer?.disconnect();
     this.observer = null;
-    this.cancelBackoff?.();
-    this.cancelBackoff = null;
+    this.cancelPendingForce();
     this.forceTimes = [];
   }
 }
