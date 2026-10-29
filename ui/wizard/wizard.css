@@ -533,15 +533,16 @@
   color: var(--pm-fg);
 }
 
-/* 删除这一项：默认中性灰，悬停 / 键盘聚焦变红 */
+/* 删除这一项：两根清单（选内容 / 看效果）共用同一套外观——有边、有底，像一个真按钮，
+   默认中性灰，悬停或键盘聚焦变红。两处不许再各写一份，否则视觉会分叉（#53） */
 .pm-wiz-del {
   flex: none;
-  inline-size: 24px;
-  block-size: 24px;
+  inline-size: 28px;
+  block-size: 28px;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-control);
-  background: transparent;
+  background: var(--pm-bg-subtle);
   color: var(--pm-fg-muted);
   font: inherit;
   font-size: var(--pm-font-size-caption);
@@ -550,18 +551,6 @@
 }
 .pm-wiz-del:hover,
 .pm-wiz-del:focus-visible {
-  color: var(--pm-danger);
-  background: var(--pm-bg-subtle);
-}
-/* 看效果每行的删除：像一个真的按钮（有边、有底、悬停变色），不再是一枚飘着的符号（#53） */
-.pm-wiz-drafts .pm-wiz-del {
-  inline-size: 28px;
-  block-size: 28px;
-  border: 1px solid var(--pm-border-control);
-  background: var(--pm-bg-subtle);
-}
-.pm-wiz-drafts .pm-wiz-del:hover,
-.pm-wiz-drafts .pm-wiz-del:focus-visible {
   border-color: var(--pm-danger);
   background: var(--pm-bg);
   color: var(--pm-danger);
