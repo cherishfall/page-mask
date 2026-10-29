@@ -12,7 +12,7 @@
  *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
  */
 import { removeTempDir } from './lib/tmp.mjs';
-import { createReporter, resultsDir, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, resultsDir, startServer, waitFor } from './lib/harness.mjs';
 import {
   BUILD_DIR,
   getProfile,
@@ -205,14 +205,18 @@ async function main() {
     await waitStyle(page, '存储切回清爽态后样式重新注入', '#site-header', 'display', 'none');
     check(true, '存储切回清爽态 → 样式重新注入');
 
-    // ===================== 向导全流程（拾取 → 预览 → 保存） =====================
+    // ===================== 向导全流程（第 1 步 → 拾取 → 预览 → 保存） =====================
     console.log('\n--- 向导全流程 ---');
     await patchProfile(ext.control, ORIGIN, { hideRules: [], switchState: 'original' });
     await page.reload({ waitUntil: 'load' });
-    await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
+    // 0 条规则不再挂胶囊（#51）：等隔离环境里的内容脚本就绪，而不是等页面上某个界面
+    await poll(async () => evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false), '内容脚本就绪');
     await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'newSite' });
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));
-    check(true, '向导工具条出现');
+    check((await shadowText(page, WIZARD_HOST, tid('pm-wiz-progress'))).trim() === '第 1 步 / 共 3 步', '新站点向导从第 1 步（标题与图标）开始，共 3 步');
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-next'));
+    await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-preview'));
+    check(true, '向导工具条出现（第 2 步：选内容）');
 
     // 拾取：真实鼠标点击页头左侧（避开顶部中央的工具条）+ 第一张推荐卡
     const headerPt = await page.evaluate(() => {

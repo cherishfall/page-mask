@@ -17,7 +17,13 @@
     </div>
     <p class="pm-ed-hint">只列当前页面生效的规则（{{ rules.length }} 条）；改动即时生效</p>
 
-    <p v-if="rules.length === 0" class="pm-ed-empty">这个页面还没有生效的隐藏规则</p>
+    <!-- 没有规则：说清楚这是正常的「只改标题」形态，并给出开始点选的入口（#51） -->
+    <div v-if="rules.length === 0" class="pm-ed-empty-box" data-testid="pm-ed-empty">
+      <p class="pm-ed-empty">{{ emptyText }}</p>
+      <button type="button" class="pm-ed-btn primary" data-testid="pm-editor-start" @click="emit('addElement')">
+        开始选要收起的内容
+      </button>
+    </div>
 
     <ul v-else class="pm-ed-list">
       <li v-for="rule in rules" :key="rule.id" class="pm-ed-card">
@@ -113,7 +119,15 @@
       </li>
     </ul>
 
-    <button type="button" class="pm-ed-add" data-testid="pm-editor-add" @click="emit('addElement')">＋ 收起更多内容</button>
+    <button
+      v-if="rules.length > 0"
+      type="button"
+      class="pm-ed-add"
+      data-testid="pm-editor-add"
+      @click="emit('addElement')"
+    >
+      ＋ 收起更多内容
+    </button>
 
     <!-- 删除后约 5 秒可撤销。容器常驻（live region 只有内容出现时才播报） -->
     <div class="pm-ed-undo" role="status" data-testid="pm-editor-undo">
@@ -166,6 +180,14 @@ const rules = computed(() => {
   const p = profile.value;
   if (!p) return [] as HideRule[];
   return rulesApplicableAt(p.hideRules, props.page.url);
+});
+
+/** 空状态文案：整站没有规则（只改标题的站点）与「这一页没有生效规则」分开说 */
+const emptyText = computed(() => {
+  const total = profile.value?.hideRules.length ?? 0;
+  return total === 0
+    ? '这个网站还没有收起任何内容。先到页面上点选你想收起来的东西。'
+    : '这个页面还没有生效的收起项。可以在页面上再选一些内容。';
 });
 
 /** 删除与撤销（与管理页的站点设置共用同一套逻辑与 5 秒计时，core/rule-undo.ts） */

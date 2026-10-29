@@ -1,16 +1,21 @@
 /**
- * 设置向导状态机验收（#34、#44，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
+ * 设置向导状态机验收（#34、#44、#51，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
  *
- * 运行：npm run build && node tests/e2e/check-wizard.mjs     （约 15 秒；HEADFUL=1 有界面运行）
+ * 运行：npm run build && node tests/e2e/check-wizard.mjs     （约 20 秒；HEADFUL=1 有界面运行）
  *
  * 覆盖：
+ * - 新站点三步（标题与图标 → 选内容 → 看效果）、老站点两步；每一步显示「第 N 步 / 共 M 步」
+ * - 第 1 步：默认标题已填、快捷标题、上传图标后标签页标题 / 图标实时跟着变；回第 1 步再回来已选内容不丢
+ * - 第 1 步退出：确认框说明已选内容不保存、标签页会变回原来的名字；退出后标题与图标完全还原、授权收回
+ * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上没有小胶囊，列表里能看到它
+ * - 0 条规则的页内编辑面板：空状态说明 +「开始选要收起的内容」入口
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
  * - 预览：行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
  *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
  * - 范围标签：「同类 N 处」↔「仅这一处」切换后预览立即更新；同类只有一处时标签不可点
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
- * - Esc：保存对话框打开时 Esc 只关浮层；没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续编辑（N9）
- * - 「继续选择」后已改的方案保留，只给新元素建草稿（N12）
+ * - Esc：保存对话框打开时 Esc 只关浮层；没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
+ * - 「上一步」后已改的方案保留，只给新元素建草稿（N12）
  * - 退出后预览样式撤掉（不允许免保存临时隐藏）
  * - 选择阶段：滚轮滚动后不移动鼠标直接点击，选中的是指针下的元素，悬停框也换到新元素（N14）
  * - 「选大一点」作用于最后选中的元素并原位替换（N13、N6）
@@ -18,13 +23,28 @@
  *
  * 不写截图、不留临时文件。
  */
-import { createReporter, startServer, waitFor } from './lib/harness.mjs';
-import { launchExtension, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
-import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
+import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
+import {
+  getProfile,
+  launchExtension,
+  sendToBackground,
+  sendToTab,
+  setProfile,
+  tabIdOf,
+} from './lib/extension.mjs';
+import { clickInShadow, shadowExists, shadowText, waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
 const { check } = r;
 const HOST = 'pagemask-wizard';
+const EDITOR = 'pagemask-editor';
+const TOGGLE = 'pagemask-toggle';
+const SITE_TITLE = 'Acme 书房 · 向导测试';
+/** 1×1 PNG：上传图标用，不需要临时文件 */
+const ICON_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=',
+  'base64',
+);
 const tid = (id) => `[data-testid="${id}"]`;
 const C1 = '.card:nth-child(1)';
 const C2 = '.card:nth-child(2)';
@@ -141,6 +161,12 @@ const rangeDisabled = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-range"]`)?.disabled, HOST, n);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
+const inputValue = (page, id) =>
+  page.evaluate((h, s) => document.querySelector(h)?.shadowRoot?.querySelector(s)?.value ?? null, HOST, tid(id));
+const badgeCount = (page) =>
+  page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid^="pm-badge-"]').length ?? 0, HOST);
+const progressOf = async (page) => (await shadowTexts(page, tid('pm-wiz-progress')))[0] ?? '';
+const headingOf = async (page) => (await shadowTexts(page, tid('pm-wiz-heading')))[0] ?? '';
 
 /** 真实鼠标点页面元素（相对左上角的偏移，默认中心） */
 async function clickEl(page, sel, dx, dy) {
@@ -151,8 +177,13 @@ async function clickEl(page, sel, dx, dy) {
 
 async function main() {
   const srv = await startServer(handler);
+  // 两个干净来源：#51 的「新站点取消」与「只改标题，完成」各用一个（取消会收回授权，不能复用）
+  const srvNew = await startServer(handler);
+  const srvNew2 = await startServer(handler);
   const ORIGIN = srv.origin;
-  const ext = await launchExtension({ hostOrigins: [ORIGIN] });
+  const NEW_ORIGIN = srvNew.origin;
+  const TITLE_ONLY_ORIGIN = srvNew2.origin;
+  const ext = await launchExtension({ hostOrigins: [ORIGIN, NEW_ORIGIN, TITLE_ONLY_ORIGIN] });
   try {
     const page = await ext.browser.newPage();
     page.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
@@ -164,7 +195,18 @@ async function main() {
       switchState: 'original',
       disguisedTitle: null,
       faviconDataUrl: null,
-      hideRules: [],
+      // 老站点：已有 1 条规则（不命中任何元素），胶囊才会挂上；向导里只认本次点选的内容
+      hideRules: [
+        {
+          id: 'r_e2e_existing',
+          elementName: '以前收起的项',
+          candidates: ['#pm-not-in-this-page'],
+          strategy: 'remove',
+          scope: { type: 'all' },
+          onlyThis: false,
+          createdAt: now,
+        },
+      ],
       floatingBtnPos: null,
       createdAt: now,
       updatedAt: now,
@@ -181,6 +223,12 @@ async function main() {
     // ===================== 序号重新编号（N6）、调整对象（N13） =====================
     console.log('\n--- 选择阶段：序号随选择变化重新编号 ---');
     await openWizard();
+    check((await progressOf(page)) === '第 1 步 / 共 2 步', `老站点直接进入第 1 步（选内容），共 2 步（${await progressOf(page)}）`);
+    check((await headingOf(page)) === '点选要收起的内容', `标题说明这一步做什么（${await headingOf(page)}）`);
+    check(
+      !(await shadowExists(page, HOST, tid('pm-wiz-back'))),
+      '左下角没有「上一步」（已经添加过的网站只有两步）',
+    );
     const tb = await shadowRect(page, tid('pm-wizard-toolbar'));
     const vh = await page.evaluate(() => innerHeight);
     check(tb.y > vh / 2 && tb.y + tb.h <= vh, `工具条默认在底部，不挡页面顶部导航（top=${Math.round(tb.y)}，视口高 ${vh}）`);
@@ -204,6 +252,8 @@ async function main() {
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：活动栏被移除', '#promo', false);
     await waitVisible(page, '预览：横幅被移除', '#banner', false);
+    check((await progressOf(page)) === '第 2 步 / 共 2 步', `看效果是第 2 步（${await progressOf(page)}）`);
+    check((await shadowExists(page, HOST, tid('pm-wiz-back'))), '看效果这一步左下角有「上一步」');
     check((await draftCount(page)) === 2, `草稿清单是一行一项（实际 ${await draftCount(page)} 行）`);
     check(
       (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
@@ -273,19 +323,24 @@ async function main() {
     );
     check(hit && !hit.own, `留白项上的虚线框不拦截点击（框中心命中页面元素 ${hit?.name ?? '无'}）`);
 
-    // N9：没有浮层时 Esc = 请求退出（有草稿 → 确认框）；确认框上 Esc = 继续编辑
+    // N9：没有浮层时 Esc = 请求退出（有草稿 → 确认框）；确认框上 Esc = 继续设置
     await page.keyboard.press('Escape');
     await waitFor(page, '预览阶段 Esc 弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     check(true, '预览阶段没有浮层时按 Esc：弹出退出确认');
+    const dialogText = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText, HOST);
+    check(
+      dialogText.includes('不会保存') && dialogText.includes('标签页会变回原来的名字'),
+      `退出确认说清楚已选内容不保存、标签页会变回原来的名字（${dialogText.split('\n').join(' / ')}）`,
+    );
     const focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
-    check(focused === 'pm-wiz-exit-no', `退出确认默认聚焦「继续编辑」（${focused}）`);
+    check(focused === 'pm-wiz-exit-no', `退出确认默认聚焦「继续设置」（${focused}）`);
     await page.keyboard.press('Escape');
     await waitFor(page, '确认框上 Esc 关掉确认框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
-    check((await wizardOpen(page)) && !(await visible(page, '#banner')), '退出确认框上按 Esc = 继续编辑：向导还在，预览照常');
+    check((await wizardOpen(page)) && !(await visible(page, '#banner')), '退出确认框上按 Esc = 继续设置：向导还在，预览照常');
 
-    // ===================== 继续选择保留已改方式（N12）、范围标签切换（#44） =====================
-    console.log('\n--- 继续选择后已改的方式保留；范围标签在「仅这一处」与「同类 N 处」之间切换 ---');
-    await clickInShadow(page, HOST, tid('pm-wiz-continue'));
+    // ===================== 上一步保留已改方式（N12）、范围标签切换（#44） =====================
+    console.log('\n--- 从看效果回到选内容：已改的方式保留；范围标签在「仅这一处」与「同类 N 处」之间切换 ---');
+    await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitVisible(page, '回到选择阶段：预览撤掉', '#banner');
     await clickEl(page, C2);
     await waitFor(page, '已选 3 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('3'), [HOST]);
@@ -295,7 +350,7 @@ async function main() {
       (await checkedStrategy(page, 1)) === 'blank' &&
         (await checkedStrategy(page, 2)) === 'remove' &&
         (await checkedStrategy(page, 3)) === 'remove',
-      `继续选择后第 1 项仍是「留空」，新加的是默认「消失」（${await checkedStrategy(page, 1)} / ${await checkedStrategy(page, 2)} / ${await checkedStrategy(page, 3)}）`,
+      `从看效果回到选内容后第 1 项仍是「留空」，新加的是默认「消失」（${await checkedStrategy(page, 1)} / ${await checkedStrategy(page, 2)} / ${await checkedStrategy(page, 3)}）`,
     );
     check(
       (await page.evaluate(() => getComputedStyle(document.querySelector('#promo')).visibility)) === 'hidden',
@@ -330,7 +385,7 @@ async function main() {
     await waitVisible(page, '删除后卡片二恢复', C2);
     check((await draftCount(page)) === 2, '删除后清单少了一行');
     check((await nameValue(page, 1)) === '活动栏（改名）', '清单重绘后行内改的名字还在');
-    await clickInShadow(page, HOST, tid('pm-wiz-continue'));
+    await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitFor(page, '回到选择阶段', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]'), [HOST]);
     const left = await shadowTexts(page, '[data-testid^="pm-badge-"]');
     check(left.length === 2, `删掉的那项没有带着序号牌回来（剩 ${left.length} 个）`);
@@ -437,22 +492,201 @@ async function main() {
     const t3 = await shadowRect(page, tid('pm-wizard-toolbar'));
     check(t3.x > t2.x + 10 && t3.y > t2.y + 10, `方向键移动工具条（→ ${Math.round(t3.x)},${Math.round(t3.y)}）`);
 
-    // 选择阶段 Esc：有选择 → 确认；确认框上 Esc = 继续编辑；再确认退出
+    // 选择阶段 Esc：有选择 → 确认；确认框上 Esc = 继续设置；再确认退出
     await page.keyboard.press('Escape');
     await waitFor(page, '选择阶段 Esc 弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     await page.keyboard.press('Escape');
     await waitFor(page, '确认框关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
-    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 2, '选择阶段：确认框上 Esc = 继续编辑，已选内容还在');
+    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 2, '选择阶段：确认框上 Esc = 继续设置，已选内容还在');
     await page.keyboard.press('Escape');
     await waitForShadow(page, HOST, tid('pm-wiz-exit-yes'));
     await clickInShadow(page, HOST, tid('pm-wiz-exit-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
     check(true, '确认后退出向导');
+
+    // ===================== 新站点：三步骨架、第 1 步实时预览、退出还原（#51） =====================
+    console.log('\n--- 新站点：第 1 步是标签页标题和图标，实时预览，退出完全还原 ---');
+    const pageNew = await ext.browser.newPage();
+    pageNew.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
+    await pageNew.goto(`${NEW_ORIGIN}/new-site.html`, { waitUntil: 'load' });
+    /** 新站点没有配置：走与 popup 相同的 enableSite 入口，注入内容脚本并打开向导 */
+    async function openNewSite(target, origin) {
+      const tabId = await tabIdOf(ext.control, `${origin}/*`);
+      const res = await sendToBackground(ext.control, { t: 'enableSite', origin, tabId, open: 'newSite' });
+      check(res?.ok === true, `新站点 ${origin} 已启用并打开向导`);
+      await waitForShadow(target, HOST, tid('pm-wizard-toolbar'));
+      return tabId;
+    }
+    const newTabId = await openNewSite(pageNew, NEW_ORIGIN);
+    check((await progressOf(pageNew)) === '第 1 步 / 共 3 步', `新站点从第 1 步开始，共 3 步（${await progressOf(pageNew)}）`);
+    check((await headingOf(pageNew)) === '标签页标题和图标', `第 1 步的标题（${await headingOf(pageNew)}）`);
+    const initialTitle = await inputValue(pageNew, 'pm-wiz-title-input');
+    check(!!initialTitle && initialTitle.trim() !== '', `标题输入框默认已填（${initialTitle}）`);
+    check(
+      !(await shadowExists(pageNew, HOST, tid('pm-wiz-back'))),
+      '第 1 步左下角没有「上一步」',
+    );
+    check(await shadowExists(pageNew, HOST, tid('pm-wiz-title-done')), '第 1 步左下角是「只改标题，完成」');
+    await waitFor(pageNew, '打开第 1 步就把默认标题压到标签页', (t) => document.title === t, [initialTitle]);
+
+    // 打字：标签页标题立刻跟着变（不点保存）
+    await pageNew.evaluate((h) => {
+      const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
+      input.focus();
+      input.select();
+    }, HOST);
+    await pageNew.keyboard.type('工作笔记');
+    await waitFor(pageNew, '输入标题时标签页立刻跟着变', () => document.title === '工作笔记');
+    check(true, '输入标题：标签页标题实时变成「工作笔记」');
+
+    // 快捷标题：点一下填入并立刻生效
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-quick-1'));
+    await waitFor(pageNew, '快捷标题「阅读」实时生效', () => document.title === '阅读');
+    check((await inputValue(pageNew, 'pm-wiz-title-input')) === '阅读', '快捷标题一键填入输入框');
+
+    // 图标：上传后标签页图标立刻跟着变（可以不传）
+    check(await shadowExists(pageNew, HOST, tid('pm-wiz-icon-empty')), '没传图标时显示空图标位');
+    await pageNew.evaluate(
+      (h, b64) => {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-icon-input"]');
+        const dt = new DataTransfer();
+        dt.items.add(new File([bytes], 'icon.png', { type: 'image/png' }));
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      HOST,
+      ICON_PNG.toString('base64'),
+    );
+    await waitForShadow(pageNew, HOST, tid('pm-wiz-icon-preview'));
+    await waitFor(
+      pageNew,
+      '上传图标后标签页图标立刻跟着变',
+      () => (document.querySelector('link[rel~="icon"]')?.getAttribute('href') ?? '').startsWith('data:image/png'),
+    );
+    check(true, '上传图标：图标预览出现，标签页 favicon 实时换成上传的图标');
+
+    // 第 1 步 → 第 2 步（选内容），回第 1 步再回来，已选内容不丢
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-next'));
+    await waitFor(pageNew, '进入选内容', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-bigger"]'), [HOST]);
+    check((await progressOf(pageNew)) === '第 2 步 / 共 3 步', `第 2 步是选内容（${await progressOf(pageNew)}）`);
+    check(await shadowExists(pageNew, HOST, tid('pm-wiz-back')), '第 2 步左下角出现「上一步」');
+    await clickEl(pageNew, '#promo');
+    await waitFor(pageNew, '已选 1 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('1'), [HOST]);
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-back'));
+    await waitFor(pageNew, '回到第 1 步', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-done"]'), [HOST]);
+    check((await progressOf(pageNew)) === '第 1 步 / 共 3 步', `回到第 1 步（${await progressOf(pageNew)}）`);
+    check((await inputValue(pageNew, 'pm-wiz-title-input')) === '阅读', '回到第 1 步后标题还是刚才填的');
+    check(await shadowExists(pageNew, HOST, tid('pm-wiz-icon-preview')), '回到第 1 步后图标还在');
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-next'));
+    await waitFor(pageNew, '回到选内容', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-bigger"]'), [HOST]);
+    check((await badgeCount(pageNew)) === 1, '从第 1 步回来后，已选内容没有丢');
+
+    // 第 3 步：看效果（标题预览仍然生效）
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-preview'));
+    await waitForShadow(pageNew, HOST, tid('pm-wiz-save'));
+    check((await progressOf(pageNew)) === '第 3 步 / 共 3 步', `看效果是第 3 步（${await progressOf(pageNew)}）`);
+    check((await pageNew.title()) === '阅读', '进入看效果后，第 1 步设置的标题仍然生效');
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-back'));
+    await waitForShadow(pageNew, HOST, tid('pm-wiz-preview'));
+
+    // 退出确认 + 完全还原
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-exit'));
+    await waitFor(pageNew, '弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
+    const newExitText = await pageNew.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText, HOST);
+    check(
+      newExitText.includes('不会保存') && newExitText.includes('标签页会变回原来的名字'),
+      `退出确认写明已选内容不保存、标签页会变回原来的名字（${newExitText.split('\n').join(' / ')}）`,
+    );
+    const newFocus = await pageNew.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
+    check(newFocus === 'pm-wiz-exit-no', `退出确认默认焦点在「继续设置」（${newFocus}）`);
+    await pageNew.keyboard.press('Escape');
+    await waitFor(pageNew, '确认框上 Esc 继续设置', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-exit'));
+    await waitForShadow(pageNew, HOST, tid('pm-wiz-exit-yes'));
+    await clickInShadow(pageNew, HOST, tid('pm-wiz-exit-yes'));
+    await waitFor(pageNew, '取消后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    await waitFor(pageNew, '标题完全还原', (t) => document.title === t, [SITE_TITLE]);
+    check(
+      await pageNew.evaluate(() => document.querySelectorAll('link[rel~="icon"]').length === 0),
+      '取消后标签页图标也完全还原（页面本来没有图标）',
+    );
+    await poll(
+      async () => !(await ext.control.evaluate((o) => chrome.permissions.contains({ origins: [o] }), `${NEW_ORIGIN}/*`)),
+      '新站点取消后收回授权',
+      { timeout: 8000 },
+    );
+    check(true, '新站点取消后收回授权、标题与图标完全还原');
+    await pageNew.close();
+
+    // ===================== 「只改标题，完成」：0 条规则、没有小胶囊、面板空状态（#51） =====================
+    console.log('\n--- 只改标题：保存 0 条规则、进入清爽态、页面上不挂胶囊 ---');
+    const pageOnly = await ext.browser.newPage();
+    pageOnly.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
+    await pageOnly.goto(`${TITLE_ONLY_ORIGIN}/title-only.html`, { waitUntil: 'load' });
+    const onlyTabId = await openNewSite(pageOnly, TITLE_ONLY_ORIGIN);
+    await pageOnly.evaluate((h) => {
+      const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
+      input.focus();
+      input.select();
+    }, HOST);
+    await pageOnly.keyboard.type('只看标题');
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-title-done'));
+    await waitFor(pageOnly, '向导直接关闭（不弹保存对话框）', (h) => !document.querySelector(h), [HOST]);
+    const onlyProfile = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
+    check(
+      onlyProfile?.hideRules.length === 0 &&
+        onlyProfile.disguisedTitle === '只看标题' &&
+        onlyProfile.switchState === 'disguised',
+      `保存 0 条规则 + 标题，站点进入清爽态（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState })}）`,
+    );
+    await waitFor(pageOnly, '标签页保持保存后的标题', () => document.title === '只看标题');
+    check(
+      await pageOnly.evaluate((h) => !document.querySelector(h), TOGGLE),
+      '0 条规则的网站页面上不出现小胶囊',
+    );
+    check(
+      await pageOnly.evaluate(() => !document.querySelector('pagemask-editor')),
+      '页面上也没有别的常驻界面',
+    );
+
+    // 列表里能看到它
+    const mgmt = await ext.browser.newPage();
+    await mgmt.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
+    await mgmt.waitForSelector(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, { timeout: 8000 });
+    const onlyRow = await mgmt.$eval(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, (e) => e.innerText);
+    check(
+      onlyRow.includes('清爽') && onlyRow.includes('没有收起任何内容'),
+      `列表里能看到这个只改标题的网站（${onlyRow.split('\n').join(' / ')}）`,
+    );
+    await mgmt.close();
+
+    // 面板空状态 +「开始选要收起的内容」入口（没有胶囊时的第二条路）
+    await sendToTab(ext.control, onlyTabId, { t: 'openEditor' });
+    await waitForShadow(pageOnly, EDITOR, tid('pm-editor-panel'));
+    const emptyText = await shadowText(pageOnly, EDITOR, tid('pm-ed-empty'));
+    check(emptyText.includes('还没有收起任何内容'), `面板空状态说清楚没有可收起的项（${emptyText.trim()}）`);
+    check(await shadowExists(pageOnly, EDITOR, tid('pm-editor-start')), '空状态里有「开始选要收起的内容」入口');
+    check(
+      !(await shadowExists(pageOnly, EDITOR, tid('pm-editor-add'))),
+      '空状态不再重复显示底部的「＋ 收起更多内容」',
+    );
+    await clickInShadow(pageOnly, EDITOR, tid('pm-editor-start'));
+    await waitForShadow(pageOnly, HOST, tid('pm-wizard-toolbar'));
+    check((await progressOf(pageOnly)) === '第 1 步 / 共 2 步', `从面板开始选内容：直接进选内容，共 2 步（${await progressOf(pageOnly)}）`);
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit'));
+    await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);
+    check(true, '面板入口打开的向导可以正常退出');
+    await pageOnly.close();
   } catch (e) {
     r.fail(e);
   } finally {
     await ext.cleanup();
     await srv.close();
+    await srvNew.close();
+    await srvNew2.close();
   }
   process.exitCode = r.summary();
 }

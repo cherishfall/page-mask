@@ -6,10 +6,17 @@ import {
   reconcileDrafts,
   removeFromSelection,
   replaceInSelection,
+  titleFromInput,
+  titleOnlyPatch,
   toggleSelection,
   unsavableDraftWarning,
   wizardEscAction,
+  wizardNextPhase,
+  wizardPhases,
+  wizardPrevPhase,
+  wizardStep,
 } from './wizard-logic';
+import { createEmptyProfile } from './types';
 
 describe('isTooBigForPick 防呆', () => {
   const vp = { width: 1000, height: 800 };
@@ -104,6 +111,69 @@ describe('wizardEscAction 向导级 Esc（N9）', () => {
   });
   it('其他按键不响应', () => {
     expect(wizardEscAction({ ...esc, key: 'Enter', keyCode: 13 }, { overlayOpen: false })).toBe('none');
+  });
+});
+
+describe('三步骨架（#51）：步骤顺序、推进与回退', () => {
+  it('新站点三步：标题与图标 → 选内容 → 看效果', () => {
+    expect(wizardPhases('newSite')).toEqual(['title', 'pick', 'preview']);
+    expect(wizardStep('newSite', 'title')).toEqual({ index: 1, total: 3 });
+    expect(wizardStep('newSite', 'pick')).toEqual({ index: 2, total: 3 });
+    expect(wizardStep('newSite', 'preview')).toEqual({ index: 3, total: 3 });
+  });
+  it('已添加的网站只有两步：选内容 → 看效果，进度也按 2 算', () => {
+    expect(wizardPhases('addElement')).toEqual(['pick', 'preview']);
+    expect(wizardStep('addElement', 'pick')).toEqual({ index: 1, total: 2 });
+    expect(wizardStep('addElement', 'preview')).toEqual({ index: 2, total: 2 });
+  });
+  it('推进：标题 → 选内容 → 看效果；看效果没有下一步', () => {
+    expect(wizardNextPhase('newSite', 'title')).toBe('pick');
+    expect(wizardNextPhase('newSite', 'pick')).toBe('preview');
+    expect(wizardNextPhase('newSite', 'preview')).toBeNull();
+    expect(wizardNextPhase('addElement', 'pick')).toBe('preview');
+    expect(wizardNextPhase('addElement', 'preview')).toBeNull();
+  });
+  it('回退：第 1 步没有上一步；看效果退回选内容', () => {
+    expect(wizardPrevPhase('newSite', 'title')).toBeNull();
+    expect(wizardPrevPhase('newSite', 'pick')).toBe('title');
+    expect(wizardPrevPhase('newSite', 'preview')).toBe('pick');
+    // 老站点进入就是第 1 步（选内容）：左下角没有「上一步」
+    expect(wizardPrevPhase('addElement', 'pick')).toBeNull();
+    expect(wizardPrevPhase('addElement', 'preview')).toBe('pick');
+  });
+});
+
+describe('标题空值兜底（design.md：标题永不为空白）', () => {
+  it('去掉首尾空白后使用输入值', () => {
+    expect(titleFromInput('  工作笔记  ', '阅读')).toBe('工作笔记');
+  });
+  it('空字符串 / 只有空白 / 非字符串都用兜底标题', () => {
+    expect(titleFromInput('', '阅读')).toBe('阅读');
+    expect(titleFromInput('   ', ' 阅读 ')).toBe('阅读');
+    expect(titleFromInput(null, 'Read')).toBe('Read');
+    expect(titleFromInput(undefined, undefined)).toBe('Reading');
+  });
+  it('兜底也是空白时退回常量 "Reading"，不会把标题留空', () => {
+    expect(titleFromInput('  ', '   ')).toBe('Reading');
+  });
+});
+
+describe('「只改标题，完成」保存 0 条规则（#51）', () => {
+  it('写入标题、图标与清爽态，不产生任何收起规则', () => {
+    const profile = createEmptyProfile('https://example.test');
+    Object.assign(profile, titleOnlyPatch({ title: '工作笔记', icon: null, fallbackTitle: '阅读' }));
+    expect(profile.hideRules).toEqual([]);
+    expect(profile.disguisedTitle).toBe('工作笔记');
+    expect(profile.faviconDataUrl).toBeNull();
+    expect(profile.switchState).toBe('disguised');
+  });
+  it('标题留空用兜底值；上传的图标原样保留', () => {
+    const patch = titleOnlyPatch({ title: '   ', icon: 'data:image/png;base64,AAA', fallbackTitle: '阅读' });
+    expect(patch).toEqual({
+      disguisedTitle: '阅读',
+      faviconDataUrl: 'data:image/png;base64,AAA',
+      switchState: 'disguised',
+    });
   });
 });
 

@@ -69,12 +69,15 @@ async function main() {
         const tabId = await tabIdOf(control, `${origin}/*`);
         const res = await sendToBackground(control, { t: 'enableSite', origin, tabId });
         assert(res?.ok, `${site.name}：enableSite 成功`);
-        await page.waitForSelector('pagemask-toggle', { timeout: 10000 });
+        // 0 条规则不挂胶囊（#51）：不再等悬浮按钮，内容脚本在 enableSite 注入完成时已就绪
 
-        // 打开向导（新站点）
+        // 打开向导（新站点）：第 1 步是标题与图标，标题已按默认填好；直接进选内容
         await sendToTab(control, tabId, { t: 'openWizard', mode: 'newSite' });
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wizard-toolbar"]');
-        assert(true, `${site.name}：向导打开`);
+        assert(true, `${site.name}：向导打开（第 1 步：标签页标题和图标）`);
+        await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-next"]');
+        await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-bigger"]');
+        assert(true, `${site.name}：进入第 2 步（选内容）`);
 
         // 找一个可见可点选的元素（避开链接跳转：点选不触发导航，preventDefault 兜底）
         const pt = await page.evaluate((pickSel) => {

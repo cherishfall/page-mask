@@ -46,7 +46,18 @@ async function main() {
       switchState: 'original',
       disguisedTitle: null,
       faviconDataUrl: null,
-      hideRules: [],
+      // 至少 1 条规则才会挂胶囊（#51）：这条不命中任何元素，只为让悬浮按钮出现
+      hideRules: [
+        {
+          id: 'r_dark_mode',
+          elementName: '不存在的元素',
+          candidates: ['#pm-not-in-this-page'],
+          strategy: 'remove',
+          scope: { type: 'all' },
+          onlyThis: false,
+          createdAt: now,
+        },
+      ],
       floatingBtnPos: null,
       createdAt: now,
       updatedAt: now,

@@ -70,6 +70,18 @@
   font-size: var(--pm-font-size-body);
   color: var(--pm-fg-muted);
 }
+/* 没有规则时的空状态：一句说明 + 一个开始点选的主按钮 */
+.pm-ed-empty-box {
+  margin-block: var(--pm-space-2);
+}
+.pm-ed-empty-box .pm-ed-empty {
+  padding-block: var(--pm-space-2);
+}
+.pm-ed-empty-box .pm-ed-btn {
+  min-block-size: 32px;
+  padding: 4px 12px;
+  font-size: var(--pm-font-size-body);
+}
 
 /* ── 规则卡片 ── */
 .pm-ed-list {

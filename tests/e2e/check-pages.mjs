@@ -718,10 +718,10 @@ async function main() {
     const addedCount = await addPage.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
     check(addedCount.includes('没有收起任何内容'), `添加后站点设置页说「${addedCount}」`);
 
-    // 已打开的页面：悬浮按钮出现、标签页标题生效、一个元素都没被收起（不需要刷新）
+    // 已打开的页面：标签页标题生效、一个元素都没被收起（不需要刷新）；0 条规则不挂胶囊（#51）
     await titleSite.bringToFront();
-    await titleSite.waitForSelector('pagemask-toggle', { timeout: 8000 });
     await waitFor(titleSite, '添加后标签页标题生效', (t) => document.title === t, [ADD_TITLE]);
+    check(!(await titleSite.$('pagemask-toggle')), '0 条规则的网站页面上不出现小胶囊');
     const hidden = await titleSite.evaluate(
       () => [...document.querySelectorAll('#site-header, main, h1, p')].filter((el) => !el.checkVisibility()).length,
     );

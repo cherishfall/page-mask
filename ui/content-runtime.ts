@@ -183,6 +183,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function mountToggle(): void {
     // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
     if (curtain.active) return;
+    // 0 条收起规则的网站不挂胶囊（#51）：页面上没有可切换的内容，开关留在 popup / 管理页
+    if (!profile || profile.hideRules.length === 0) {
+      unmountToggle();
+      return;
+    }
     syncToggleState();
     if (toggleHost) return;
     ensureHostShield();
@@ -338,10 +343,23 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
     ensureHostShield();
     wizardHost = createPageHost(ctx, 'wizard');
+    // 第 1 步（#51）：默认标题按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
+    const fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
+    const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
     wizardApp = createApp(WizardApp, {
       mode,
       url: location.href,
       replaceRuleId: replaceRuleId ?? null,
+      initialTitle: fallbackTitle,
+      initialIcon: profile?.faviconDataUrl ?? null,
+      fallbackIcon,
+      hasDefaultIcon: !!settings.defaultIconDataUrl,
+      // 实时预览标题 / 图标：直接压到当前标签页（guard 在第 1 步第一次调用时快照真实标题），
+      // 退出向导后由 refreshState → applyAll / restoreAll / clearPageUi 还原
+      previewDisguise: (title: string, icon: string | null) => {
+        if (!ctx.isValid) return;
+        guard.apply(title, icon ?? fallbackIcon);
+      },
       // 预览样式同样按本文档记录（SW 回收后点「放弃」也能撤掉）
       setDraft: (css: string | null) => styles.setDraft(css),
       onDone: (saved?: boolean) => {

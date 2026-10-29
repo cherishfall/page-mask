@@ -1,7 +1,8 @@
 /**
- * 向导纯逻辑：防呆阈值与层级导航（design.md 核心流程「选择」步）。
+ * 向导纯逻辑：防呆阈值、层级导航（design.md 核心流程「选择」步）与三步骨架（#51）。
  * 面向不懂 CSS 的用户：选大/选小解决点选中内层文字的痛点。
  */
+import { DEFAULT_TITLE_EN } from './titles';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -41,6 +42,74 @@ export function unsavableDraftWarning(drafts: readonly { candidates: readonly st
   const idx = drafts.findIndex((d) => d.candidates.length === 0);
   if (idx < 0) return null;
   return `第 ${idx + 1} 个元素没法稳定识别：请点它右边的 ✕ 不收起这一项，再用「选大一点」重新选`;
+}
+
+// ---------- 三步骨架（#51） ----------
+// 新网站第一次设置：标题与图标 → 选内容 → 看效果；已经添加过的网站只有后两步。
+// 第 1 步只在这里出现，第 2 / 3 步的内容重排在 #52、#53。
+
+export type WizardMode = 'newSite' | 'addElement';
+export type WizardPhase = 'title' | 'pick' | 'preview';
+
+/** 这个入口的步骤顺序 */
+export function wizardPhases(mode: WizardMode): readonly WizardPhase[] {
+  return mode === 'newSite' ? ['title', 'pick', 'preview'] : ['pick', 'preview'];
+}
+
+/** 「第 N 步 / 共 M 步」里的两个数（1 起） */
+export function wizardStep(mode: WizardMode, phase: WizardPhase): { index: number; total: number } {
+  const phases = wizardPhases(mode);
+  const i = phases.indexOf(phase);
+  return { index: (i < 0 ? 0 : i) + 1, total: phases.length };
+}
+
+/** 上一步；第 1 步没有（老站点进入就是选内容，左下角不出现「上一步」） */
+export function wizardPrevPhase(mode: WizardMode, phase: WizardPhase): WizardPhase | null {
+  const phases = wizardPhases(mode);
+  const i = phases.indexOf(phase);
+  return i > 0 ? phases[i - 1]! : null;
+}
+
+/** 下一步；最后一步（看效果）返回 null（保存由界面自己处理） */
+export function wizardNextPhase(mode: WizardMode, phase: WizardPhase): WizardPhase | null {
+  const phases = wizardPhases(mode);
+  const i = phases.indexOf(phase);
+  return i >= 0 && i < phases.length - 1 ? phases[i + 1]! : null;
+}
+
+/**
+ * 标题输入框的值 → 真正会写进标签页的文字。
+ * 永远不返回空白：标题为空时 Chrome 会在标签页上显示网址（design.md「标签页标题与图标」）。
+ * 输入只有空白时用兜底值（全局默认 > 界面语言默认，由调用方传进来）；兜底也空白时用常量 "Reading"。
+ */
+export function titleFromInput(value: unknown, fallback: unknown): string {
+  const typed = typeof value === 'string' ? value.trim() : '';
+  if (typed) return typed;
+  const fb = typeof fallback === 'string' ? fallback.trim() : '';
+  return fb || DEFAULT_TITLE_EN;
+}
+
+/** 「只改标题，完成」写进站点配置的字段：0 条收起规则、清爽态 */
+export interface TitleOnlyPatch {
+  disguisedTitle: string;
+  faviconDataUrl: string | null;
+  switchState: 'disguised';
+}
+
+/**
+ * 「只改标题，完成」：只写标题 / 图标 / 开关，不碰已有的收起规则（新站点本来就没有规则，
+ * 保存后就是合法的「0 条规则」站点配置）。图标没上传就写 null（回到透明 / 全局默认图标）。
+ */
+export function titleOnlyPatch(input: {
+  title: unknown;
+  icon: string | null;
+  fallbackTitle: unknown;
+}): TitleOnlyPatch {
+  return {
+    disguisedTitle: titleFromInput(input.title, input.fallbackTitle),
+    faviconDataUrl: input.icon || null,
+    switchState: 'disguised',
+  };
 }
 
 // ---------- 选择集（顺序 = 序号牌编号） ----------

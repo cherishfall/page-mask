@@ -27,17 +27,93 @@
         >
           ⠿
         </button>
-        <h2 id="pm-wiz-title" class="pm-wiz-title">{{ phase === 'pick' ? '点选要收起的内容' : '预览效果' }}</h2>
+        <div class="pm-wiz-headtext">
+          <h2 id="pm-wiz-title" class="pm-wiz-title" data-testid="pm-wiz-heading">{{ TEXT.heading[phase] }}</h2>
+          <p class="pm-wiz-progress" data-testid="pm-wiz-progress">{{ progressText }}</p>
+        </div>
+        <button
+          type="button"
+          class="pm-wiz-close"
+          :aria-label="TEXT.exit"
+          :title="TEXT.exit"
+          data-testid="pm-wiz-exit"
+          @click="requestExit"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
       </div>
 
-      <template v-if="phase === 'pick'">
-        <p class="pm-wiz-sub">点一下选中，再点一下取消，可以连续选多个。按 Esc 或「取消」离开。</p>
+      <!-- 第 1 步：标签页标题和图标（只在第一次给一个网站开启清爽时出现） -->
+      <template v-if="phase === 'title'">
+        <div class="pm-wiz-step1">
+          <label class="pm-wiz-label" for="pm-wiz-title-input">{{ TEXT.titleLabel }}</label>
+          <input
+            id="pm-wiz-title-input"
+            v-model="titleInput"
+            class="pm-wiz-input"
+            type="text"
+            maxlength="60"
+            data-testid="pm-wiz-title-input"
+            aria-describedby="pm-wiz-title-hint"
+          />
+          <div class="pm-wiz-chips" role="group" :aria-label="TEXT.quickLabel" data-testid="pm-wiz-quick">
+            <span class="pm-wiz-label">{{ TEXT.quickLabel }}</span>
+            <button
+              v-for="(q, i) in QUICK_TITLES"
+              :key="q.label"
+              type="button"
+              class="pm-wiz-chip"
+              :data-testid="`pm-wiz-quick-${i}`"
+              @click="titleInput = quickTitleValue(q, uiLanguage)"
+            >
+              {{ quickTitleValue(q, uiLanguage) }}
+            </button>
+          </div>
+          <p id="pm-wiz-title-hint" class="pm-wiz-sub">{{ TEXT.titleHint(initialTitle) }}</p>
+
+          <div class="pm-wiz-icon-row">
+            <span class="pm-wiz-label">{{ TEXT.iconLabel }}</span>
+            <img
+              v-if="iconDataUrl"
+              class="pm-wiz-icon-preview"
+              :src="iconDataUrl"
+              :alt="TEXT.iconPreviewAlt"
+              data-testid="pm-wiz-icon-preview"
+            />
+            <span v-else class="pm-wiz-icon-empty" aria-hidden="true" data-testid="pm-wiz-icon-empty"></span>
+            <label class="pm-wiz-btn pm-wiz-file">
+              {{ iconBusy ? TEXT.iconBusy : iconDataUrl ? TEXT.iconReplace : TEXT.iconUpload }}
+              <input
+                type="file"
+                :accept="ICON_SOURCE_TYPES.join(',')"
+                :disabled="iconBusy"
+                data-testid="pm-wiz-icon-input"
+                @change="onIconChange"
+              />
+            </label>
+            <button
+              v-if="iconDataUrl"
+              type="button"
+              class="pm-wiz-btn"
+              data-testid="pm-wiz-icon-clear"
+              @click="clearIcon"
+            >
+              {{ TEXT.iconClear }}
+            </button>
+          </div>
+          <p class="pm-wiz-sub">{{ TEXT.iconHint(hasDefaultIcon) }}</p>
+          <p v-if="iconError" class="pm-wiz-error" role="alert" data-testid="pm-wiz-icon-error">{{ iconError }}</p>
+        </div>
+      </template>
+
+      <template v-else-if="phase === 'pick'">
+        <p class="pm-wiz-sub">{{ TEXT.pickHint(canGoBack) }}</p>
         <p class="pm-wiz-sub" data-testid="pm-wiz-adjust-target">
           <template v-if="lastSel">
             选中的是里面的文字？用「选大一点」调整
             <strong>第 {{ lastSelIndex + 1 }} 项（{{ lastSelName }}）</strong>
           </template>
-          <template v-else>选中的是里面的文字时，可以用「选大一点」调整</template>
+          <template v-else>{{ TEXT.adjustHintEmpty }}</template>
         </p>
         <div class="pm-wiz-btns">
           <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-bigger" :disabled="!lastSel" @click="adjust('bigger')">
@@ -55,21 +131,11 @@
           >
             清空（{{ selEls.length }}）
           </button>
-          <button
-            type="button"
-            class="pm-wiz-btn primary"
-            data-testid="pm-wiz-preview"
-            :disabled="selEls.length === 0"
-            @click="enterPreview"
-          >
-            预览（{{ selEls.length }}）
-          </button>
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">取消</button>
         </div>
       </template>
 
       <template v-else>
-        <p class="pm-wiz-sub">滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、改范围。</p>
+        <p class="pm-wiz-sub">{{ TEXT.previewHint }}</p>
         <ol class="pm-wiz-drafts" aria-label="本次要收起的内容" data-testid="pm-wiz-drafts">
           <li v-for="(d, i) in drafts" :key="i" :data-testid="`pm-draft-${i + 1}`">
             <div class="pm-wiz-draft-main">
@@ -121,12 +187,57 @@
             <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ STRATEGY_HINT[d.strategy] }}</p>
           </li>
         </ol>
-        <div class="pm-wiz-btns">
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-continue" @click="backToPick">继续选择</button>
-          <button type="button" class="pm-wiz-btn primary" data-testid="pm-wiz-save" @click="openSave">保存</button>
-          <button type="button" class="pm-wiz-btn" data-testid="pm-wiz-exit" @click="requestExit">取消</button>
-        </div>
       </template>
+
+      <!-- 底栏：左下角回退（第 1 步换成「只改标题，完成」），右下角前进 -->
+      <div class="pm-wiz-footer">
+        <div class="pm-wiz-footer-left">
+          <button
+            v-if="phase === 'title'"
+            type="button"
+            class="pm-wiz-btn"
+            data-testid="pm-wiz-title-done"
+            :disabled="saving"
+            @click="saveTitleOnly"
+          >
+            {{ TEXT.titleDone }}
+          </button>
+          <button
+            v-else-if="canGoBack"
+            type="button"
+            class="pm-wiz-btn"
+            data-testid="pm-wiz-back"
+            @click="goBack"
+          >
+            {{ TEXT.back }}
+          </button>
+        </div>
+        <div class="pm-wiz-footer-right">
+          <button
+            v-if="phase === 'title'"
+            type="button"
+            class="pm-wiz-btn primary"
+            data-testid="pm-wiz-next"
+            :disabled="saving"
+            @click="goNext"
+          >
+            {{ TEXT.nextToPick }}
+          </button>
+          <button
+            v-else-if="phase === 'pick'"
+            type="button"
+            class="pm-wiz-btn primary"
+            data-testid="pm-wiz-preview"
+            :disabled="selEls.length === 0"
+            @click="goNext"
+          >
+            {{ TEXT.nextToPreview(selEls.length) }}
+          </button>
+          <button v-else type="button" class="pm-wiz-btn primary" data-testid="pm-wiz-save" @click="openSave">
+            {{ TEXT.save }}
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- 提示（读屏按 polite 状态消息播报；容器常驻，内容出现时才播报） -->
@@ -134,7 +245,7 @@
       <span v-if="warnText" class="pm-wiz-toast" data-testid="pm-wizard-warn">{{ warnText }}</span>
     </div>
 
-    <!-- 放弃确认：模态；Esc = 继续编辑，焦点默认在「继续编辑」（危险动作实底红，N9） -->
+    <!-- 退出确认：模态；Esc = 继续设置，焦点默认在「继续设置」（危险动作实底红，N9） -->
     <dialog
       ref="exitDlg"
       class="pm-wiz-dialog"
@@ -143,13 +254,11 @@
       @close="onExitClose"
     >
       <form method="dialog">
-        <h2 id="pm-exit-title">放弃这些设置？</h2>
-        <p>
-          {{ phase === 'pick' ? `已经选了 ${selEls.length} 项，` : `${drafts.length} 项还没保存，` }}放弃后不会保存，页面恢复原样。
-        </p>
+        <h2 id="pm-exit-title">{{ TEXT.exitTitle }}</h2>
+        <p>{{ exitBody }}</p>
         <div class="pm-wiz-actions">
-          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">继续编辑</button>
-          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">放弃</button>
+          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">{{ TEXT.exitStay }}</button>
+          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">{{ TEXT.exitConfirm }}</button>
         </div>
       </form>
     </dialog>
@@ -204,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
+import { computed, markRaw, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
@@ -215,12 +324,23 @@ import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
 import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
+import { QUICK_TITLES, quickTitleValue, currentUiLanguage } from '@/core/titles';
+import { ICON_SOURCE_TYPES } from '@/core/icon';
+// 与管理页的站点设置页共用同一套图标压缩与校验管线（#26）：只跑在扩展页面 / 内容脚本里
+import { fileToIconDataUrl } from '@/entrypoints/management/tab-icon';
 import {
   clampToViewport,
   reconcileDrafts,
+  titleFromInput,
+  titleOnlyPatch,
   unsavableDraftWarning,
   wizardEscAction,
+  wizardNextPhase,
+  wizardPrevPhase,
+  wizardStep,
   type DraftItem,
+  type WizardMode,
+  type WizardPhase,
 } from '@/core/wizard-logic';
 import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
@@ -244,6 +364,54 @@ const STRATEGY_HINT: Record<StrategyId, string> = {
   mask: '盖一块和背景同色的板',
 };
 
+/**
+ * 向导的界面文案（#51 新增的外壳与第 1 步）。集中放在这里，方便 #57 抽成中英双语表；
+ * 还没改到的第 2 / 3 步文案暂时留在各自的模板里。
+ */
+const TEXT = {
+  heading: {
+    title: '标签页标题和图标',
+    pick: '点选要收起的内容',
+    preview: '看效果',
+  },
+  progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
+  titleLabel: '标签页标题',
+  titleHint: (fallback: string) =>
+    `上面写什么，标签页就显示什么，现在就能看到。留空会用「${fallback}」——标题不会留成空白，空白时 Chrome 会改为显示网址。`,
+  quickLabel: '快捷标题',
+  iconLabel: '标签页图标',
+  iconUpload: '上传图标',
+  iconReplace: '换一张图标',
+  iconBusy: '正在处理…',
+  iconClear: '清除图标',
+  iconPreviewAlt: '将显示在标签页上的图标',
+  iconHint: (hasDefault: boolean) =>
+    hasDefault
+      ? '图标可以不传；不传时用插件设置里的默认图标。'
+      : '图标可以不传；不传时标签页上的图标位留空。',
+  iconFailed: '没能处理这张图标，请再试一次',
+  pickHint: (hasBack: boolean) =>
+    hasBack
+      ? '点一下选中，再点一下取消，可以连续选多个。按「上一步」回标题，右上角 ✕ 退出。'
+      : '点一下选中，再点一下取消，可以连续选多个。右上角 ✕ 退出。',
+  adjustHintEmpty: '选中的是里面的文字时，可以用「选大一点」调整',
+  previewHint: '滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、改范围。',
+  back: '上一步',
+  nextToPick: '下一步：选内容',
+  nextToPreview: (n: number) => `下一步：看效果（${n}）`,
+  save: '保存',
+  titleDone: '只改标题，完成',
+  exit: '退出设置',
+  exitTitle: '退出设置？',
+  /** 退出确认：说清楚已选内容不保存、标签页会变回原来的名字（#51） */
+  exitBody: (selected: number) =>
+    selected > 0
+      ? `已经选的 ${selected} 项不会保存；退出后标签页会变回原来的名字，页面恢复原样。`
+      : '改过的标题和图标不会保存；退出后标签页会变回原来的名字，页面恢复原样。',
+  exitStay: '继续设置',
+  exitConfirm: '退出',
+} as const;
+
 /** 方向键每次移动工具条的距离 */
 const KEY_STEP = 16;
 const ARROW_DIRS: Record<string, readonly [number, number]> = {
@@ -254,16 +422,32 @@ const ARROW_DIRS: Record<string, readonly [number, number]> = {
 };
 
 const props = defineProps<{
-  mode: 'newSite' | 'addElement';
+  mode: WizardMode;
   url: string;
   /** 重选元素：保存时用新规则替换这条旧规则（取消则旧规则原样保留，N5） */
   replaceRuleId?: string | null;
+  /** 第 1 步标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
+  initialTitle: string;
+  /** 站点现有的图标（新站点为 null） */
+  initialIcon: string | null;
+  /** 站点没有自己的图标时实际会用的那张（插件默认图标或透明图标） */
+  fallbackIcon: string;
+  /** 插件设置里是否有默认图标，只影响第 1 步的说明文字 */
+  hasDefaultIcon: boolean;
+  /** 把标题 / 图标实时压到当前标签页上（退出时由内容脚本运行时还原） */
+  previewDisguise: (title: string, icon: string | null) => void;
   /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
   setDraft: (css: string | null) => Promise<CssAck>;
 }>();
 const emit = defineEmits<{ done: [saved: boolean] }>();
 
-const phase = ref<'pick' | 'preview'>('pick');
+/** 新站点第一次设置从「标题与图标」开始；已添加的网站直接进选内容 */
+const phase = ref<WizardPhase>(props.mode === 'newSite' ? 'title' : 'pick');
+const uiLanguage = currentUiLanguage();
+const titleInput = ref(props.initialTitle);
+const iconDataUrl = ref<string | null>(props.initialIcon);
+const iconBusy = ref(false);
+const iconError = ref('');
 /** 选择集（有序，顺序 = 序号）；元素本身不做响应式代理 */
 const selEls = shallowRef<Element[]>([]);
 const lastSel = shallowRef<Element | null>(null);
@@ -301,6 +485,20 @@ const scopeHint = computed(() => scopeUnavailableHint(props.url));
 const lastSelIndex = computed(() => (lastSel.value ? selEls.value.indexOf(lastSel.value) : -1));
 const lastSelName = computed(() => (lastSel.value ? describeElement(lastSel.value) : ''));
 
+/** 「第 N 步 / 共 M 步」：新站 3 步、老站 2 步 */
+const progressText = computed(() => {
+  const { index, total } = wizardStep(props.mode, phase.value);
+  return TEXT.progress(index, total);
+});
+/** 第 1 步没有上一步（老站点进入就是选内容，左下角同样不出现「上一步」） */
+const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== null);
+const exitBody = computed(() => TEXT.exitBody(phase.value === 'preview' ? drafts.value.length : selEls.value.length));
+
+// 第 1 步的实时预览：改标题 / 换图标时立刻压到标签页上（不点保存也能看到）
+watch([titleInput, iconDataUrl], () => {
+  if (phase.value === 'title') pushTitlePreview();
+});
+
 onMounted(() => {
   const root = rootEl.value?.getRootNode();
   if (root instanceof ShadowRoot) adoptWizardStyles(root);
@@ -320,9 +518,18 @@ onMounted(() => {
     onWarnTooBig: () => showWarn('选到接近整页的内容了，可能不是你想要的；试试「选小一点」'),
   });
   pick.attach(pickLayer);
-  document.documentElement.style.cursor = 'crosshair';
+  // 打开时不是点选阶段（新站点先看标题与图标）：捕获层不接管指针，光标也不改
+  if (phase.value !== 'pick') {
+    pickLayer.style.display = 'none';
+    pick.stop();
+    document.documentElement.style.cursor = '';
+  } else {
+    document.documentElement.style.cursor = 'crosshair';
+  }
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('resize', reclampToolbar);
+  // 第 1 步：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
+  if (phase.value === 'title') pushTitlePreview();
 });
 
 onBeforeUnmount(() => {
@@ -363,12 +570,19 @@ function onKeyDown(e: KeyboardEvent) {
 // ---------- 退出 ----------
 
 function requestExit() {
-  const dirty = phase.value === 'pick' ? selEls.value.length > 0 : drafts.value.length > 0;
-  if (!dirty) {
+  if (!isDirty()) {
     void finish(false);
     return;
   }
   exitDlg.value?.showModal();
+}
+
+/** 有没有还没保存的东西：第 1 步看标题 / 图标是否动过，后两步看选了几项 */
+function isDirty(): boolean {
+  if (phase.value === 'title') {
+    return titleInput.value.trim() !== props.initialTitle.trim() || iconDataUrl.value !== props.initialIcon;
+  }
+  return phase.value === 'pick' ? selEls.value.length > 0 : drafts.value.length > 0;
 }
 
 function onExitClose() {
@@ -388,6 +602,126 @@ async function finish(saved: boolean) {
     if (!res.ok) console.warn('[PageMask] 预览样式没能撤掉', res.error);
   }
   emit('done', saved);
+}
+
+// ---------- 三步骨架（#51） ----------
+
+/** 右下角前进：标题 → 选内容 → 看效果 → 保存 */
+function goNext() {
+  const next = wizardNextPhase(props.mode, phase.value);
+  if (next === 'pick') enterPick();
+  else if (next === 'preview') void enterPreview();
+  else openSave();
+}
+
+/** 左下角回退：看效果 → 选内容 → 标题（第 1 步没有上一步，按钮不渲染） */
+function goBack() {
+  const prev = wizardPrevPhase(props.mode, phase.value);
+  if (prev === 'title') enterTitle();
+  else if (prev === 'pick') void backToPick();
+}
+
+/** 点选阶段的页内状态：十字光标 + 全屏捕获层 + 已有序号牌 */
+function enterPickUI() {
+  document.documentElement.style.cursor = 'crosshair';
+  if (pickLayer) {
+    pickLayer.style.display = '';
+    pick.attach(pickLayer);
+  }
+  renderMarkers();
+}
+
+function enterPick() {
+  phase.value = 'pick';
+  enterPickUI();
+}
+
+/** 回到第 1 步：撤掉点选层与页内标记，选择集保留（再点「下一步」还能带走） */
+function enterTitle() {
+  phase.value = 'title';
+  document.documentElement.style.cursor = '';
+  pick.stop();
+  if (pickLayer) pickLayer.style.display = 'none';
+  updateHoverBox(null);
+  clearMarkers();
+  void setDraftCss(null);
+  pushTitlePreview();
+}
+
+/** 把标题 / 图标实时压到当前标签页（第 1 步专用；退出时由内容脚本运行时还原） */
+function pushTitlePreview() {
+  props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconDataUrl.value || props.fallbackIcon);
+}
+
+async function onIconChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = ''; // 清空，之后再选同一个文件也会触发 change
+  if (!file || iconBusy.value) return;
+  iconBusy.value = true;
+  iconError.value = '';
+  try {
+    const res = await fileToIconDataUrl(file);
+    if (!res.ok) {
+      iconError.value = res.error;
+      return;
+    }
+    iconDataUrl.value = res.dataUrl; // watch 会立即更新标签页图标
+  } catch {
+    iconError.value = TEXT.iconFailed;
+  } finally {
+    iconBusy.value = false;
+  }
+}
+
+function clearIcon() {
+  iconError.value = '';
+  iconDataUrl.value = null;
+}
+
+/**
+ * 「只改标题，完成」：保存 0 条规则 + 标题 / 图标，站点进入清爽态，向导直接关闭，
+ * 不弹保存对话框（#51）。新站点的第一份配置在这里才第一次写入。
+ */
+async function saveTitleOnly() {
+  if (saving || finished) return;
+  saving = true;
+  try {
+    const cleared = await props.setDraft(null);
+    if (!cleared.ok) {
+      showWarn('预览效果没能撤掉，本次没有保存。请刷新页面后重试');
+      return;
+    }
+    const storage = createPageMaskStorage(browser.storage.local);
+    const origin = new URL(props.url).origin;
+    const patch = titleOnlyPatch({
+      title: titleInput.value,
+      icon: iconDataUrl.value,
+      fallbackTitle: props.initialTitle,
+    });
+    let saved;
+    try {
+      // 只改标题 / 图标 / 开关：不碰已有的收起规则（新站点本来就没有规则）
+      saved = await storage.updateProfile(
+        origin,
+        (p) => {
+          Object.assign(p, patch);
+        },
+        { create: props.mode === 'newSite' },
+      );
+    } catch (e) {
+      showWarn(`保存没有成功（${e instanceof Error ? e.message : String(e)}），可以再点一次`);
+      return;
+    }
+    if (!saved) {
+      noticeText.value = '这个网站的设置在别处被清空了，本次修改没有保存。可以从扩展图标重新开始设置。';
+      noticeDlg.value?.showModal();
+      return;
+    }
+    await finish(true);
+  } finally {
+    saving = false;
+  }
 }
 
 // ---------- 选择阶段 ----------
@@ -561,12 +895,7 @@ async function backToPick() {
   // 草稿不清空：回到预览时沿用（N12）
   await setDraftCss(null);
   if (phase.value !== 'pick') return;
-  document.documentElement.style.cursor = 'crosshair';
-  renderMarkers();
-  if (pickLayer) {
-    pickLayer.style.display = '';
-    pick.attach(pickLayer);
-  }
+  enterPickUI();
 }
 
 /** 重画标记并应用预览样式（与正式样式同一个生成函数 core/css-builder，预览所见 = 保存所得） */
@@ -734,7 +1063,12 @@ async function doSave() {
             if (i >= 0) p.hideRules.splice(i, 1);
           }
           p.hideRules.push(...rules);
-          if (props.mode === 'newSite') p.switchState = 'disguised'; // 新站点保存后自动开启清爽模式
+          if (props.mode === 'newSite') {
+            // 第 1 步填的标题 / 图标随这次保存一起落库（#51）；老站点不碰标题
+            p.disguisedTitle = titleFromInput(titleInput.value, props.initialTitle);
+            p.faviconDataUrl = iconDataUrl.value || null;
+            p.switchState = 'disguised'; // 新站点保存后自动开启清爽模式
+          }
         },
         { create: props.mode === 'newSite' },
       );
