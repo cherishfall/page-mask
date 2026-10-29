@@ -42,3 +42,25 @@ textarea {
   font: inherit;
   color: inherit;
 }
+
+/*
+ * 页内轻提示（#53）：保存完关掉向导后说一句话，不拦人。
+ * 底部居中的一小条，不抢焦点、不接指针；几秒后由 ui/page-notice.ts 撤掉宿主。
+ */
+.pm-notice {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--pm-space-4);
+  box-sizing: border-box;
+  inline-size: max-content;
+  max-inline-size: min(420px, calc(100vw - 32px));
+  margin-inline: auto;
+  padding: var(--pm-space-2) var(--pm-space-4);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-size: var(--pm-font-size-caption);
+  box-shadow: var(--pm-shadow-overlay);
+  pointer-events: none;
+}

@@ -123,8 +123,6 @@ async function main() {
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-preview"]');
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
-        await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save-yes"]');
-        await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save-yes"]');
         await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
         await waitFor(page, '标题已伪装', () => document.title === '阅读');
         assert(true, `${site.name}：保存后向导关闭、标题已伪装`);

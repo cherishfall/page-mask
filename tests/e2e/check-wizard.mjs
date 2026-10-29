@@ -1,5 +1,5 @@
 /**
- * 设置向导状态机验收（#34、#44、#51，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
+ * 设置向导状态机验收（#34、#44、#51、#52、#53，审查 N6–N15、N21、N22）：真实鼠标 / 键盘操作，夹具是虚构的长页面。
  *
  * 运行：npm run build && node tests/e2e/check-wizard.mjs     （约 20 秒；HEADFUL=1 有界面运行）
  *
@@ -7,15 +7,18 @@
  * - 新站点三步（标题与图标 → 选内容 → 看效果）、老站点两步；每一步显示「第 N 步 / 共 M 步」
  * - 第 1 步：默认标题已填、快捷标题、上传图标后标签页标题 / 图标实时跟着变；回第 1 步再回来已选内容不丢
  * - 第 1 步退出：确认框说明已选内容不保存、标签页会变回原来的名字；退出后标题与图标完全还原、授权收回
- * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上没有小胶囊，列表里能看到它
+ * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上没有小胶囊，列表里能看到它；
+ *   关掉向导后有一句轻提示说明标签页名字已经换了（#53）
  * - 0 条规则的页内编辑面板：空状态说明 +「开始选要收起的内容」入口
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
- * - 预览：行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
+ * - 预览：每行两行排版（第一行序号 / 名字 / 删除，第二行收起方式与同类选项）、删除按钮有底有边（#53）；
+ *   行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
  *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
- * - 范围标签：「同类 N 处」↔「仅这一处」切换后预览立即更新；同类只有一处时标签不可点
+ * - 「只这一个 / 同类一起（N）」：N 实时算、切换后预览立即更新、同类只有一处时第二项不可选并说明（#53）
+ * - 底部「在哪些页面收起」三选一；点保存直接落库并关掉向导，没有第二个确认框（#53）
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
- * - Esc：保存对话框打开时 Esc 只关浮层；没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
- * - 「上一步」后已改的方案保留，只给新元素建草稿（N12）
+ * - Esc：没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
+ * - 「上一步」后已改的方案与选项保留，只给新元素建草稿（N12）
  * - 退出后预览样式撤掉（不允许免保存临时隐藏）
  * - 选择阶段：滚轮滚动后不移动鼠标直接点击，选中的是指针下的元素，悬停框也换到新元素（N14）
  * - 「选大一点」作用于最后选中的元素并原位替换（N13、N6）
@@ -39,6 +42,7 @@ const { check } = r;
 const HOST = 'pagemask-wizard';
 const EDITOR = 'pagemask-editor';
 const TOGGLE = 'pagemask-toggle';
+const NOTICE = 'pagemask-notice';
 const SITE_TITLE = 'Acme 书房 · 向导测试';
 /** 1×1 PNG：上传图标用，不需要临时文件 */
 const ICON_PNG = Buffer.from(
@@ -175,10 +179,23 @@ const checkedStrategy = (page, n) =>
 
 /** 第 n 行下面那行解释文字 */
 const rowHint = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-hint`)))[0] ?? '';
-/** 第 n 行范围标签的文字 */
-const rowRange = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-range`)))[0] ?? '';
-const rangeDisabled = (page, n) =>
-  page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-range"]`)?.disabled, HOST, n);
+/** 第 n 行的「只这一个 / 同类一起（N）」两个选项的文字（#53） */
+const onlyChoices = (page, n) => shadowTexts(page, `${tid(`pm-draft-${n}-opts`)} .pm-wiz-only .pm-wiz-seg-opt span`);
+/** 第 n 行那对选项当前选中的是哪个：one / same */
+const onlyChecked = (page, n) =>
+  page.evaluate(
+    (h, i) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      if (sr?.querySelector(`[data-testid="pm-draft-${i}-only"]`)?.checked) return 'one';
+      if (sr?.querySelector(`[data-testid="pm-draft-${i}-same"]`)?.checked) return 'same';
+      return null;
+    },
+    HOST,
+    n,
+  );
+const sameDisabled = (page, n) =>
+  page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-same"]`)?.disabled, HOST, n);
+const scopeChoices = (page) => shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-radio`);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
 const inputValue = (page, id) =>
@@ -394,6 +411,72 @@ async function main() {
     const before = await shadowRect(page, tid('pm-marker-2'));
     check(before && before.w > 0 && before.h > 0, `第 2 项号码牌可见（${JSON.stringify(before)}）`);
 
+    // ===================== 第 3 步的排版与两处「范围」不撞名（#53） =====================
+    console.log('\n--- 看效果：每行两行排版、两个选项不撞名、底部三选一 ---');
+    const rowGeom = await page.evaluate(
+      (h) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const head = sr.querySelector('[data-testid="pm-draft-1-head"]').getBoundingClientRect();
+        const opts = sr.querySelector('[data-testid="pm-draft-1-opts"]').getBoundingClientRect();
+        const name = sr.querySelector('[data-testid="pm-draft-name-1"]').getBoundingClientRect();
+        const del = sr.querySelector('[data-testid="pm-draft-1-remove"]').getBoundingClientRect();
+        const method = sr.querySelector('[data-testid="pm-draft-1-strategy-remove"]').getBoundingClientRect();
+        const only = sr.querySelector('[data-testid="pm-draft-1-only"]').getBoundingClientRect();
+        const inHead = (r) => r.top >= head.top - 0.5 && r.bottom <= head.bottom + 0.5;
+        return {
+          twoLines: opts.top >= head.bottom - 0.5,
+          headHolds: inHead(name) && inHead(del),
+          optsHoldBoth: method.top >= opts.top - 0.5 && only.top >= opts.top - 0.5,
+        };
+      },
+      HOST,
+    );
+    check(rowGeom.twoLines, '每行拆成两行：第二行（收起方式与同类选项）整体落在第一行下面');
+    check(rowGeom.headHolds, '第一行放的是序号、名字、删除');
+    check(rowGeom.optsHoldBoth, '第二行放的是收起方式与「只这一个 / 同类一起（N）」');
+    const delBox = await page.evaluate(
+      (h) => {
+        const b = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-remove"]');
+        const cs = getComputedStyle(b);
+        return { bg: cs.backgroundColor, border: cs.borderTopWidth, w: b.getBoundingClientRect().width };
+      },
+      HOST,
+    );
+    check(
+      delBox.bg !== 'rgba(0, 0, 0, 0)' && parseFloat(delBox.border) > 0,
+      `删除按钮有底色和边框，不再是一枚飘着的 ✕（底色 ${delBox.bg}、边框 ${delBox.border}、宽 ${Math.round(delBox.w)}）`,
+    );
+    const delName = await page.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-remove"]').getAttribute('aria-label'),
+      HOST,
+    );
+    const row1Name = await nameValue(page, 1);
+    check(
+      delName === `删掉第 1 项：${row1Name}`,
+      `删除按钮有完整的读屏名字（${delName}）`,
+    );
+    const choices = await onlyChoices(page, 1);
+    check(
+      choices[0] === '只这一个' && choices[1] === '同类一起（1）',
+      `行内那对写成「只这一个 / 同类一起（N）」（${choices.join(' / ')}）`,
+    );
+    const rowTexts = await shadowTexts(page, tid('pm-draft-1'));
+    check(
+      !rowTexts.join(' ').includes('范围') && !rowTexts.join(' ').includes('在哪些页面'),
+      '行内不再出现「范围」「在哪些页面」这类叫法',
+    );
+    const scopeLegend = (await shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-scope-legend`))[0] ?? '';
+    check(scopeLegend === '在哪些页面收起', `页面级那件事叫「在哪些页面收起」（${scopeLegend}）`);
+    const scopes = await scopeChoices(page);
+    check(
+      scopes.length === 3 && scopes[0].includes('整个网站') && scopes[1].startsWith('只在这类页面') && scopes[2].startsWith('除了这类页面'),
+      `这一步底部是三选一：整个网站 / 只在这类页面 / 除了这类页面（${scopes.join(' / ')}）`,
+    );
+    check(
+      !(await shadowExists(page, HOST, tid('pm-wizard-save-pop'))),
+      '原来的保存对话框已经从 DOM 里删掉（点保存不再弹第二个框）',
+    );
+
     // 行内切到「留空」：页面立刻变、解释跟着换
     await clickInShadow(page, HOST, tid('pm-draft-1-strategy-blank'));
     await waitFor(page, '活动栏改为留空', () => getComputedStyle(document.querySelector('#promo')).visibility === 'hidden');
@@ -419,13 +502,6 @@ async function main() {
     check((await rowHint(page, 2)) === '盖一块和背景同色的板', `「盖住」下面显示对应解释（${await rowHint(page, 2)}）`);
     await clickInShadow(page, HOST, tid('pm-draft-2-strategy-remove'));
     await waitVisible(page, '改回消失：横幅又被移除', '#banner', false);
-
-    // N9：有浮层（保存对话框）时 Esc 只关浮层
-    await clickInShadow(page, HOST, tid('pm-wiz-save'));
-    await waitFor(page, '保存对话框打开', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-save-pop"]').open, [HOST], { timeout: 3000 });
-    await page.keyboard.press('Escape');
-    await waitFor(page, 'Esc 关掉保存对话框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-save-pop"]').open, [HOST], { timeout: 3000 });
-    check((await wizardOpen(page)) && !(await visible(page, '#banner')), '保存对话框打开时按 Esc：只关对话框，向导还在、预览照常');
 
     // 点页面上的号码牌 = 滚到清单对应行并高亮，不再打开浮层
     check(
@@ -469,8 +545,8 @@ async function main() {
     await waitFor(page, '确认框上 Esc 关掉确认框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     check((await wizardOpen(page)) && !(await visible(page, '#banner')), '退出确认框上按 Esc = 继续设置：向导还在，预览照常');
 
-    // ===================== 上一步保留已改方式（N12）、范围标签切换（#44） =====================
-    console.log('\n--- 从看效果回到选内容：已改的方式保留；范围标签在「仅这一处」与「同类 N 处」之间切换 ---');
+    // ===================== 上一步保留已改方式（N12）、「只这一个 / 同类一起」（#53） =====================
+    console.log('\n--- 从看效果回到选内容：已改的方式保留；「只这一个 / 同类一起（N）」实时切换 ---');
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitVisible(page, '回到选择阶段：预览撤掉', '#banner');
     await clickEl(page, C2);
@@ -489,21 +565,41 @@ async function main() {
     );
     check(!(await visible(page, C1)) && !(await visible(page, C3)), '默认同类一起收起：卡片一、三也被预览移除');
 
-    // 范围标签：三张卡片互为同类
-    check((await rowRange(page, 3)) === '同类 3 处', `范围标签显示实时命中数（${await rowRange(page, 3)}）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-range'));
-    await waitVisible(page, '仅这一处：卡片一恢复可见', C1);
-    await waitVisible(page, '仅这一处：卡片三恢复可见', C3);
-    check(!(await visible(page, C2)), '切到「仅这一处」立即刷新预览：同类其它卡片恢复，卡片二仍被收起');
-    check((await rowRange(page, 3)) === '仅这一处', `切到「仅这一处」后标签显示「仅这一处」（${await rowRange(page, 3)}）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-range'));
+    // 「只这一个 / 同类一起（N）」：三张卡片互为同类
+    check((await onlyChoices(page, 3)).join('|') === '只这一个|同类一起（3）', `同类数量实时算（${(await onlyChoices(page, 3)).join(' / ')}）`);
+    check((await onlyChecked(page, 3)) === 'same', '默认选的是「同类一起」');
+    await clickInShadow(page, HOST, tid('pm-draft-3-only'));
+    await waitVisible(page, '只这一个：卡片一恢复可见', C1);
+    await waitVisible(page, '只这一个：卡片三恢复可见', C3);
+    check(!(await visible(page, C2)), '切到「只这一个」立即刷新预览：同类其它卡片恢复，卡片二仍被收起');
+    check((await onlyChecked(page, 3)) === 'one', '切到「只这一个」后选项跟着变');
+    // N 与当前选项无关：切到「只这一个」之后仍显示同类一共有几个
+    check((await onlyChoices(page, 3))[1] === '同类一起（3）', `切到「只这一个」后 N 仍是 3（${(await onlyChoices(page, 3))[1]}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-same'));
     await waitVisible(page, '切回同类：卡片一又收起', C1, false);
     await waitVisible(page, '切回同类：卡片三又收起', C3, false);
-    check((await rowRange(page, 3)) === '同类 3 处', `再点一次切回「同类 3 处」，另外两处同时收起（${await rowRange(page, 3)}）`);
+    check((await onlyChecked(page, 3)) === 'same', `切回「同类一起（3）」，另外两处同时收起（${(await onlyChoices(page, 3)).join(' / ')}）`);
 
-    // 页面上该类只有一处：标签显示「仅这一处」且点不动
-    check((await rowRange(page, 2)) === '仅这一处', `只有一处的项显示「仅这一处」（${await rowRange(page, 2)}）`);
-    check((await rangeDisabled(page, 2)) === true, '只有一处时范围标签不可点（button disabled）');
+    // 回第 2 步再回来：草稿不变（方案、选项都还在），预览样式重新应用（#53）
+    await clickInShadow(page, HOST, tid('pm-wiz-back'));
+    await waitVisible(page, '回第 2 步：预览撤掉，卡片一回来了', C1);
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitVisible(page, '再回到看效果：卡片一又被收起', C1, false);
+    check(
+      (await draftCount(page)) === 3 &&
+        (await onlyChecked(page, 3)) === 'same' &&
+        (await checkedStrategy(page, 1)) === 'blank',
+      '从第 2 步返回后草稿不变、预览样式重新应用（3 行、选项与方案都还是刚才的）',
+    );
+
+    // 页面上该类只有一处：第二项不可选，并说明为什么
+    check((await onlyChoices(page, 2))[1] === '同类一起（1）', `只有一处的项显示「同类一起（1）」（${(await onlyChoices(page, 2))[1]}）`);
+    check((await sameDisabled(page, 2)) === true, '只有一处时「同类一起」不可选（radio disabled）');
+    check(
+      ((await shadowTexts(page, tid('pm-draft-2-same-note')))[0] ?? '').includes('没有第二个同类'),
+      '只有一处时旁边有一句说明为什么不可选',
+    );
+    check((await onlyChecked(page, 2)) === 'one', '只有一处时选中的是「只这一个」');
 
     // 行内改名：不点开任何浮层，改名后清单重绘仍保留
     await clickInShadow(page, HOST, tid('pm-draft-name-1'));
@@ -634,6 +730,33 @@ async function main() {
     await clickInShadow(page, HOST, tid('pm-wiz-exit-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
     check(true, '确认后退出向导');
+
+    // ===================== 保存即完成：底部三选一落库、没有第二个确认框（#53） =====================
+    console.log('\n--- 保存：范围在底部选，点保存直接落库并关掉向导 ---');
+    await openWizard();
+    await clickEl(page, C1);
+    await clickEl(page, C2);
+    await waitFor(page, '已选 2 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('2'), [HOST]);
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitVisible(page, '预览：卡片一被移除', C1, false);
+    check(
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-scope-all"]').checked, HOST)) === true,
+      '「在哪些页面收起」默认选整个网站',
+    );
+    await clickInShadow(page, HOST, tid('pm-wiz-scope-include'));
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(page, '点保存后向导直接关闭', (h) => !document.querySelector(h), [HOST]);
+    check(true, '点「保存」直接结束向导，没有第二个确认框');
+    const savedProfile = await getProfile(ext.control, ORIGIN);
+    const added = (savedProfile?.hideRules ?? []).filter((r) => r.id !== 'r_e2e_existing');
+    const patternPrefix = `${ORIGIN}/wizard.html`;
+    check(
+      added.length === 2 &&
+        added.every(
+          (r) => r.scope.type === 'include' && r.scope.patterns.length === 1 && r.scope.patterns[0].prefix === patternPrefix,
+        ),
+      `选「只在这类页面」后落库的规则范围是 include + 当前这类页面（${JSON.stringify(added.map((r) => r.scope))}）`,
+    );
 
     // ===================== 新站点：三步骨架、第 1 步实时预览、退出还原（#51） =====================
     console.log('\n--- 新站点：第 1 步是标签页标题和图标，实时预览，退出完全还原 ---');
@@ -766,6 +889,20 @@ async function main() {
     await pageOnly.keyboard.type('只看标题');
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-title-done'));
     await waitFor(pageOnly, '向导直接关闭（不弹保存对话框）', (h) => !document.querySelector(h), [HOST]);
+    // 0 条规则：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
+    await waitForShadow(pageOnly, NOTICE, tid('pm-page-notice'));
+    const notice = await pageOnly.evaluate((n) => {
+      const root = document.querySelector(n)?.shadowRoot;
+      const el = root?.querySelector('[data-testid="pm-page-notice"]');
+      return el
+        ? { text: el.textContent.trim(), role: el.getAttribute('role'), buttons: root.querySelectorAll('button, dialog').length }
+        : null;
+    }, NOTICE);
+    check(
+      notice?.text === '已保存，标签页名字换成「只看标题」了',
+      `0 条规则保存后有一句轻提示，说明标签页名字已经换了（${notice?.text}）`,
+    );
+    check(notice?.role === 'status' && notice.buttons === 0, '这句提示是状态消息，不是拦人的弹窗');
     const onlyProfile = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
     check(
       onlyProfile?.hideRules.length === 0 &&

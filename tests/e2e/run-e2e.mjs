@@ -275,8 +275,6 @@ async function main() {
 
     // 保存（默认整站）
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-save'));
-    await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-save-yes'));
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-save-yes'));
     await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
     await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
     await waitFor(page, '新站点保存后自动进入清爽态', (t) => document.title === t, [DISGUISED_TITLE]);

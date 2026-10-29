@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   badgePlacement,
   clampToViewport,
+  draftHitCounts,
   isTooBigForPick,
   navigateLevel,
   reconcileDrafts,
   removeFromSelection,
   replaceInSelection,
+  scopeFromChoice,
   selectionRows,
   titleFromInput,
   titleOnlyPatch,
@@ -17,8 +19,9 @@ import {
   wizardPhases,
   wizardPrevPhase,
   wizardStep,
+  zeroRuleSavedNotice,
 } from './wizard-logic';
-import { createEmptyProfile } from './types';
+import { createEmptyProfile, type ScopePattern } from './types';
 
 describe('isTooBigForPick 防呆', () => {
   const vp = { width: 1000, height: 800 };
@@ -247,5 +250,77 @@ describe('clampToViewport 工具条拖动 / 方向键移动后仍在可视区（
   });
   it('窗口比工具条还小时贴左上，不出现负数', () => {
     expect(clampToViewport({ left: 10, top: 10 }, size, { width: 300, height: 50 })).toEqual({ left: 0, top: 0 });
+  });
+});
+
+describe('预览这一步的「同类一起（N）」：数量实时算（#53）', () => {
+  /** 每个元素在页面上命中几个，用一张表冒充 DOM */
+  const page = new Map<Element, number>();
+  const count = (selectors: readonly string[]) => Number(selectors[0] ?? 0);
+  const sameCandidates = (el: Element) => [String(page.get(el) ?? 1)];
+
+  beforeEach(() => {
+    page.clear();
+    page.set(document.body, 3);
+    page.set(document.createElement('div'), 1);
+  });
+
+  it('「同类一起」的 N 取同类那组候选的命中数，与当前选项无关', () => {
+    const body = document.body;
+    const one = document.createElement('div');
+    const hits = draftHitCounts(
+      [
+        { el: body, onlyThis: false, candidates: ['3'] },
+        { el: body, onlyThis: true, candidates: ['1'] },
+        { el: one, onlyThis: false, candidates: ['1'] },
+      ],
+      sameCandidates,
+      count,
+    );
+    // 第 2 行切到了「只这一个」：实际收 1 个，但「同类一起」的 N 仍是 3
+    expect(hits).toEqual([
+      { hits: 3, sameHits: 3 },
+      { hits: 1, sameHits: 3 },
+      { hits: 1, sameHits: 1 },
+    ]);
+  });
+
+  it('页面变了（懒加载 / 滚动加载）后再算，N 跟着变', () => {
+    const el = document.createElement('p');
+    page.set(el, 3);
+    expect(draftHitCounts([{ el, onlyThis: false, candidates: ['3'] }], sameCandidates, count)[0]).toEqual({ hits: 3, sameHits: 3 });
+    page.set(el, 5);
+    expect(draftHitCounts([{ el, onlyThis: false, candidates: ['5'] }], sameCandidates, count)[0]).toEqual({ hits: 5, sameHits: 5 });
+  });
+});
+
+describe('「在哪些页面收起」三选一 → 落库的范围（#53）', () => {
+  const pattern: ScopePattern = { label: '/book/ 下的页面', prefix: 'https://example.test/book' };
+
+  it('整个网站：不带任何页面条件', () => {
+    expect(scopeFromChoice('all', pattern)).toEqual({ type: 'all' });
+  });
+
+  it('只在这类页面：规则范围是 include + 这一个「这类页面」', () => {
+    expect(scopeFromChoice('include', pattern)).toEqual({ type: 'include', patterns: [pattern] });
+  });
+
+  it('除了这类页面：规则范围是 exclude + 这一个「这类页面」', () => {
+    expect(scopeFromChoice('exclude', pattern)).toEqual({ type: 'exclude', patterns: [pattern] });
+  });
+
+  it('推不出「这类页面」时只能整站，不会写出一条空 pattern 的范围', () => {
+    expect(scopeFromChoice('include', null)).toEqual({ type: 'all' });
+    expect(scopeFromChoice('exclude', null)).toEqual({ type: 'all' });
+  });
+});
+
+describe('0 条规则保存后的轻提示（#53）', () => {
+  it('说清楚生效的是标签页名字，并带上真正生效的标题', () => {
+    expect(zeroRuleSavedNotice('工作笔记')).toBe('已保存，标签页名字换成「工作笔记」了');
+  });
+  it('标题取的是兜底后的值（输入留空时也一样）', () => {
+    const patch = titleOnlyPatch({ title: '  ', icon: null, fallbackTitle: '阅读' });
+    expect(zeroRuleSavedNotice(patch.disguisedTitle)).toBe('已保存，标签页名字换成「阅读」了');
   });
 });

@@ -48,6 +48,7 @@ import { MaskLayer } from './mask-layer';
 import { CurtainLayer } from './curtain';
 import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain-restore';
 import { createPageHost, type PageHost } from './page-host';
+import { showPageNotice } from './page-notice';
 import { createFirstPaintShield } from './first-paint-shield';
 
 /** DOM 解析完成（document_start 启动时 body 还不存在） */
@@ -362,8 +363,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       },
       // 预览样式同样按本文档记录（SW 回收后点「放弃」也能撤掉）
       setDraft: (css: string | null) => styles.setDraft(css),
-      onDone: (saved?: boolean) => {
+      onDone: (saved?: boolean, notice?: string) => {
         closeWizard();
+        // 保存后的一句话（例如 0 条规则时说明只有标签页名字变了）：向导已关，提示自己一个宿主，几秒后消失
+        if (saved && notice) showPageNotice(ctx, notice);
         if (!saved && mode === 'newSite' && !profile) {
           // 新站点首次向导被取消：还没写过配置，请后台收回刚给的授权（后台会再核对一次确实没有配置）
           void browser.runtime.sendMessage({ t: 'cancelNewSite' } satisfies BgRequest).catch(() => undefined);

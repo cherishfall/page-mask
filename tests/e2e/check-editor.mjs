@@ -190,8 +190,6 @@ async function main() {
     await clickInShadow(page, WIZARD, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：横幅被收起', '#banner', false);
     await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
-    await waitForShadow(page, WIZARD, tid('pm-wiz-save-yes'));
-    await clickInShadow(page, WIZARD, tid('pm-wiz-save-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD]);
     const afterSave = await getProfile(ext.control, ORIGIN);
     check(afterSave.hideRules.length === 1, `保存后仍然只有 1 条规则（${afterSave.hideRules.length}）`);

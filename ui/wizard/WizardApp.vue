@@ -188,21 +188,34 @@
 
       <template v-else>
         <p class="pm-wiz-sub">{{ TEXT.previewHint }}</p>
-        <ol class="pm-wiz-drafts" aria-label="本次要收起的内容" data-testid="pm-wiz-drafts">
-          <li v-for="(d, i) in drafts" :key="i" :data-testid="`pm-draft-${i + 1}`">
-            <div class="pm-wiz-draft-main">
+        <ol class="pm-wiz-drafts" :aria-label="TEXT.draftsLabel" data-testid="pm-wiz-drafts">
+          <li v-for="(d, i) in drafts" :key="rowKey(d.el)" :data-testid="`pm-draft-${i + 1}`">
+            <!-- 第一行：序号、名字、删除（#53：每行拆成两行，控件不再互相挤压） -->
+            <div class="pm-wiz-draft-head" :data-testid="`pm-draft-${i + 1}-head`">
               <span class="pm-wiz-num" aria-hidden="true">{{ i + 1 }}</span>
               <input
                 v-model="d.name"
                 class="pm-wiz-name"
                 type="text"
                 :placeholder="d.autoName"
-                :aria-label="`第 ${i + 1} 项的名称，留空则自动命名`"
+                :aria-label="TEXT.nameLabel(i + 1)"
                 :data-testid="`pm-draft-name-${i + 1}`"
               />
+              <button
+                type="button"
+                class="pm-wiz-del"
+                :aria-label="TEXT.deleteOne(i + 1, draftName(d))"
+                :data-testid="`pm-draft-${i + 1}-remove`"
+                @click="removeDraft(d)"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
+            <!-- 第二行：收起方式 +「只这一个 / 同类一起（N）」 -->
+            <div class="pm-wiz-draft-opts" :data-testid="`pm-draft-${i + 1}-opts`">
               <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
               <fieldset class="pm-wiz-method">
-                <legend class="pm-wiz-sr">收起方式</legend>
+                <legend class="pm-wiz-sr">{{ TEXT.methodLegend }}</legend>
                 <div class="pm-wiz-seg">
                   <label v-for="s in STRATEGY_ORDER" :key="s" class="pm-wiz-seg-opt">
                     <input
@@ -217,28 +230,64 @@
                   </label>
                 </div>
               </fieldset>
-              <button
-                type="button"
-                class="pm-wiz-range"
-                :disabled="!rangeClickable(d)"
-                :data-testid="`pm-draft-${i + 1}-range`"
-                @click="toggleOnlyThis(d)"
+              <!-- 收起几个：这一项自己，还是页面上同类的全部（N 实时算） -->
+              <fieldset class="pm-wiz-only">
+                <legend class="pm-wiz-sr">{{ TEXT.onlyLegend(i + 1) }}</legend>
+                <div class="pm-wiz-seg">
+                  <label class="pm-wiz-seg-opt">
+                    <input
+                      type="radio"
+                      :name="`pm-only-${i + 1}`"
+                      :checked="onlyOneOf(d)"
+                      :data-testid="`pm-draft-${i + 1}-only`"
+                      @change="setOnlyOne(d, true)"
+                    />
+                    <span>{{ TEXT.onlyThis }}</span>
+                  </label>
+                  <label class="pm-wiz-seg-opt">
+                    <input
+                      type="radio"
+                      :name="`pm-only-${i + 1}`"
+                      :checked="!onlyOneOf(d)"
+                      :disabled="d.sameHits <= 1"
+                      :data-testid="`pm-draft-${i + 1}-same`"
+                      @change="setOnlyOne(d, false)"
+                    />
+                    <span>{{ TEXT.sameGroup(d.sameHits) }}</span>
+                  </label>
+                </div>
+              </fieldset>
+              <span
+                v-if="d.sameHits <= 1"
+                class="pm-wiz-only-note"
+                :data-testid="`pm-draft-${i + 1}-same-note`"
               >
-                {{ rangeLabel(d) }}
-              </button>
-              <button
-                type="button"
-                class="pm-wiz-del"
-                aria-label="不收起这一项"
-                :data-testid="`pm-draft-${i + 1}-remove`"
-                @click="removeDraft(d)"
-              >
-                <span aria-hidden="true">✕</span>
-              </button>
+                {{ TEXT.sameNone }}
+              </span>
             </div>
             <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ STRATEGY_HINT[d.strategy] }}</p>
           </li>
         </ol>
+
+        <!-- 在哪些页面收起：整批设置一次，就在这一步底部（取代原来点保存才弹出的框） -->
+        <fieldset class="pm-wiz-scope" data-testid="pm-wiz-scope">
+          <legend class="pm-wiz-scope-legend">{{ TEXT.scopeLegend }}</legend>
+          <label class="pm-wiz-radio">
+            <input v-model="scopeChoice" type="radio" value="all" data-testid="pm-wiz-scope-all" />
+            {{ TEXT.scopeAll }}
+          </label>
+          <template v-if="sitePattern">
+            <label class="pm-wiz-radio">
+              <input v-model="scopeChoice" type="radio" value="include" data-testid="pm-wiz-scope-include" />
+              {{ TEXT.scopeInclude(sitePattern.label) }}
+            </label>
+            <label class="pm-wiz-radio">
+              <input v-model="scopeChoice" type="radio" value="exclude" data-testid="pm-wiz-scope-exclude" />
+              {{ TEXT.scopeExclude(sitePattern.label) }}
+            </label>
+          </template>
+          <span v-else-if="scopeHint" class="pm-wiz-hint" data-testid="pm-wiz-scope-hint">{{ scopeHint }}</span>
+        </fieldset>
       </template>
 
       <!-- 底栏：左下角回退（第 1 步换成「只改标题，完成」），右下角前进 -->
@@ -293,7 +342,14 @@
           >
             {{ TEXT.nextToPreview(selEls.length) }}
           </button>
-          <button v-else type="button" class="pm-wiz-btn primary" data-testid="pm-wiz-save" @click="openSave">
+          <button
+            v-else
+            type="button"
+            class="pm-wiz-btn primary"
+            data-testid="pm-wiz-save"
+            :disabled="saving"
+            @click="doSave"
+          >
             {{ TEXT.save }}
           </button>
         </div>
@@ -323,36 +379,6 @@
       </form>
     </dialog>
 
-    <!-- 保存：选生效范围 + 确认；Esc = 再看看 -->
-    <dialog
-      ref="saveDlg"
-      class="pm-wiz-dialog"
-      aria-labelledby="pm-save-title"
-      data-testid="pm-wizard-save-pop"
-      @close="onSaveClose"
-    >
-      <form method="dialog">
-        <h2 id="pm-save-title">保存这 {{ drafts.length }} 项</h2>
-        <fieldset class="pm-wiz-field">
-          <legend>在哪些页面收起</legend>
-          <label class="pm-wiz-radio"><input v-model="scopeChoice" type="radio" value="all" /> 整个网站（默认）</label>
-          <template v-if="sitePattern">
-            <label class="pm-wiz-radio">
-              <input v-model="scopeChoice" type="radio" value="include" /> 只在这类页面：{{ sitePattern.label }}
-            </label>
-            <label class="pm-wiz-radio">
-              <input v-model="scopeChoice" type="radio" value="exclude" /> 除了这类页面：{{ sitePattern.label }}
-            </label>
-          </template>
-          <span v-else-if="scopeHint" class="pm-wiz-hint" data-testid="pm-wiz-scope-hint">{{ scopeHint }}</span>
-        </fieldset>
-        <div class="pm-wiz-actions">
-          <button value="cancel" class="pm-wiz-btn">再看看</button>
-          <button value="save" class="pm-wiz-btn primary" autofocus data-testid="pm-wiz-save-yes">保存</button>
-        </div>
-      </form>
-    </dialog>
-
     <!-- 无法保存的说明（例如向导期间这个网站的设置被清空了，N22） -->
     <dialog
       ref="noticeDlg"
@@ -378,7 +404,7 @@ import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
-import { STRATEGY_LABEL, newRuleId, type HideRule, type Scope, type StrategyId } from '@/core/types';
+import { STRATEGY_LABEL, newRuleId, type HideRule, type StrategyId } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
@@ -391,7 +417,9 @@ import { fileToIconDataUrl } from '@/entrypoints/management/tab-icon';
 import {
   badgePlacement,
   clampToViewport,
+  draftHitCounts,
   reconcileDrafts,
+  scopeFromChoice,
   selectionRows as buildSelectionRows,
   titleFromInput,
   titleOnlyPatch,
@@ -400,8 +428,10 @@ import {
   wizardNextPhase,
   wizardPrevPhase,
   wizardStep,
+  zeroRuleSavedNotice,
   type DraftItem,
   type MarkerRect,
+  type ScopeChoice,
   type SelectionRow,
   type WizardMode,
   type WizardPhase,
@@ -410,14 +440,14 @@ import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
 import { ElementFollower } from '../follow';
 
-/** 草稿：DraftItem + 当前候选选择器、自动命名、两种范围的实时命中数 */
+/** 草稿：DraftItem + 当前候选选择器、自动命名、「只这一个 / 同类一起」的两个命中数 */
 type Draft = DraftItem & {
   candidates: string[];
   /** 自动命名结果，清空名称时作为输入框的占位提示，保存时也回落到它 */
   autoName: string;
-  /** 当前这组候选在页面上命中的元素数（范围标签的 N） */
+  /** 当前这组候选在页面上命中的元素数（当前设置实际会收起几个） */
   hits: number;
-  /** 「同类一起收起」那组候选的命中数：切到「仅这一处」后据此判断还能不能切回去 */
+  /** 「同类一起」那组候选的命中数（行内的 N，实时算）；也是「同类一起」能不能选的依据 */
   sameHits: number;
 };
 
@@ -468,11 +498,28 @@ const TEXT = {
   deleteOne: (seq: number, name: string) => `删掉第 ${seq} 项：${name}`,
   /** 0 项时前进按钮是灰的，旁边的说明告诉用户去哪儿选 */
   nextBlocked: '先在页面上点一下要收起的内容',
-  previewHint: '滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、改范围。',
+  /** 第 3 步（#53）：每行两行排版——第一行序号 / 名字 / 删除，第二行收起方式与「只这一个 / 同类一起」 */
+  previewHint: '滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、决定收它一个还是同类一起。',
+  draftsLabel: '本次要收起的内容',
+  nameLabel: (seq: number) => `第 ${seq} 项的名称，留空则自动命名`,
+  methodLegend: '收起方式',
+  /** 行内那对选项说的是「收起几个」，与底部的「在哪些页面收起」不是一件事，两边用词不能撞 */
+  onlyLegend: (seq: number) => `第 ${seq} 项收起几个`,
+  onlyThis: '只这一个',
+  sameGroup: (n: number) => `同类一起（${n}）`,
+  /** 同类只有 1 个时第二项不可选，这句话解释为什么 */
+  sameNone: '页面上没有第二个同类',
+  /** 页面级的那件事：三选一放在这一步底部，不再点保存才问 */
+  scopeLegend: '在哪些页面收起',
+  scopeAll: '整个网站（默认）',
+  scopeInclude: (label: string) => `只在这类页面：${label}`,
+  scopeExclude: (label: string) => `除了这类页面：${label}`,
   back: '上一步',
   nextToPick: '下一步：选内容',
   nextToPreview: (n: number) => `下一步：看效果（${n}）`,
   save: '保存',
+  /** 保存后 0 条规则时的轻提示（不拦人，说明生效的是标签页名字） */
+  zeroRuleNotice: zeroRuleSavedNotice,
   titleDone: '只改标题，完成',
   exit: '退出设置',
   exitTitle: '退出设置？',
@@ -512,7 +559,7 @@ const props = defineProps<{
   /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
   setDraft: (css: string | null) => Promise<CssAck>;
 }>();
-const emit = defineEmits<{ done: [saved: boolean] }>();
+const emit = defineEmits<{ done: [saved: boolean, notice?: string] }>();
 
 /** 新站点第一次设置从「标题与图标」开始；已添加的网站直接进选内容 */
 const phase = ref<WizardPhase>(props.mode === 'newSite' ? 'title' : 'pick');
@@ -527,7 +574,8 @@ const lastSel = shallowRef<Element | null>(null);
 const warnText = ref('');
 const noticeText = ref('');
 const drafts = ref<Draft[]>([]);
-const scopeChoice = ref<'all' | 'include' | 'exclude'>('all');
+/** 这一步底部「在哪些页面收起」的选择；整批规则共用一份范围（默认整个网站） */
+const scopeChoice = ref<ScopeChoice>('all');
 const tbPos = ref<{ left: number; top: number } | null>(null);
 const dragging = ref(false);
 
@@ -537,7 +585,6 @@ const toolbarEl = ref<HTMLElement | null>(null);
 /** 已选清单本身（删到 0 项时把焦点放在这里，不丢回页面） */
 const listEl = ref<HTMLElement | null>(null);
 const exitDlg = ref<HTMLDialogElement | null>(null);
-const saveDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
 
 const follower = new ElementFollower();
@@ -639,7 +686,7 @@ function showWarn(text: string) {
 
 /** 是否有浮层打开（确认框）：有就让浮层自己按原生行为处理 Esc */
 function overlayOpen(): boolean {
-  return !!exitDlg.value?.open || !!saveDlg.value?.open || !!noticeDlg.value?.open;
+  return !!exitDlg.value?.open || !!noticeDlg.value?.open;
 }
 
 function onKeyDown(e: KeyboardEvent) {
@@ -679,25 +726,27 @@ function onExitClose() {
   if (choice === 'exit') void finish(false);
 }
 
-/** 结束向导：先等预览样式真正撤掉，再通知运行时（运行时随后恢复正式样式） */
-async function finish(saved: boolean) {
+/**
+ * 结束向导：先等预览样式真正撤掉，再通知运行时（运行时随后恢复正式样式）。
+ * `notice` 是保存后给用户的轻提示（例如 0 条规则时说明只有标签页名字变了），由运行时在关掉向导后显示。
+ */
+async function finish(saved: boolean, notice?: string) {
   if (finished) return;
   finished = true;
   if (!saved) {
     const res = await props.setDraft(null);
     if (!res.ok) console.warn('[PageMask] 预览样式没能撤掉', res.error);
   }
-  emit('done', saved);
+  emit('done', saved, notice);
 }
 
 // ---------- 三步骨架（#51） ----------
 
-/** 右下角前进：标题 → 选内容 → 看效果 → 保存 */
+/** 右下角前进：标题 → 选内容 → 看效果（看效果这一步的右下角直接是「保存」，不经过这里） */
 function goNext() {
   const next = wizardNextPhase(props.mode, phase.value);
   if (next === 'pick') enterPick();
   else if (next === 'preview') void enterPreview();
-  else openSave();
 }
 
 /** 左下角回退：看效果 → 选内容 → 标题（第 1 步没有上一步，按钮不渲染） */
@@ -804,7 +853,8 @@ async function saveTitleOnly() {
       noticeDlg.value?.showModal();
       return;
     }
-    await finish(true);
+    // 0 条规则：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
+    await finish(true, TEXT.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)));
   } finally {
     saving = false;
   }
@@ -1013,11 +1063,17 @@ async function enterPreview() {
   // 继续选择后回来：已有草稿（改过的名称、方案、同类设置）保留，只给新元素建草稿（N12）
   const existing = new Map(drafts.value.map((d) => [d.el, d] as const));
   drafts.value = [...reconcileDrafts(selEls.value, existing, newDraft).values()];
-  // 页面可能变过（滚动加载、懒渲染）：范围标签的数字按当前 DOM 重算
-  for (const d of drafts.value) {
-    d.hits = countCandidateHits(document, d.candidates);
-    if (!d.onlyThis) d.sameHits = d.hits;
-  }
+  // 页面可能变过（滚动加载、懒渲染）：两个数都按当前 DOM 重算——「同类一起（N）」的 N 与当前选项无关，
+  // 所以切到「只这一个」的行也要重算同类那组（#53）
+  const counts = draftHitCounts(
+    drafts.value,
+    (el) => generateCandidates(el, { onlyThis: false }),
+    (selectors) => countCandidateHits(document, selectors),
+  );
+  drafts.value.forEach((d, i) => {
+    d.hits = counts[i]!.hits;
+    d.sameHits = counts[i]!.sameHits;
+  });
 
   // 先确认没有预览样式（选择阶段本就没有），再量每项的位置，最后才应用预览
   await props.setDraft(null);
@@ -1059,23 +1115,26 @@ function setStrategy(d: Draft, s: StrategyId) {
   void applyPreview();
 }
 
-/** 范围标签：显示当前状态（「仅这一处」或「同类 N 处」） */
-function rangeLabel(d: Draft): string {
-  return d.onlyThis || d.hits <= 1 ? '仅这一处' : `同类 ${d.hits} 处`;
+/**
+ * 行内那对选项当前选中的是哪个：切到「只这一个」，或者同类本来就只有 1 个（两边是同一件事）。
+ * 只是显示口径——同类只有 1 个时不必改写已生效的候选选择器。
+ */
+function onlyOneOf(d: Draft): boolean {
+  return d.onlyThis || d.sameHits <= 1;
+}
+
+/** 删除按钮的读屏名字：改名后跟着变，清空名称时用自动命名（与保存时落库的名字一致） */
+function draftName(d: Draft): string {
+  return d.name.trim() || d.autoName;
 }
 
 /**
- * 只有「切过去确实不一样」时才可点：同类只有一处时两边是同一件事，标签不可点；
- * 切到「仅这一处」后仍要能切回来，所以这时看同类那组的命中数。
+ * 在「只这一个」与「同类一起（N）」之间换：换候选并立即刷新预览（N10）。
+ * 同类只有 1 个时第二种不可选——切过去是同一件事，按钮本身是 disabled，这里再兜一次。
  */
-function rangeClickable(d: Draft): boolean {
-  return d.onlyThis ? d.sameHits > 1 : d.hits > 1;
-}
-
-/** 范围标签：在「仅这一处」与「同类 N 处」之间切换，换候选并立即刷新预览（N10） */
-function toggleOnlyThis(d: Draft) {
-  if (!rangeClickable(d)) return;
-  const want = !d.onlyThis;
+function setOnlyOne(d: Draft, want: boolean) {
+  if (onlyOneOf(d) === want) return;
+  if (!want && d.sameHits <= 1) return;
   const next = generateCandidates(d.el, { onlyThis: want });
   if (next.length === 0) {
     // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
@@ -1136,29 +1195,11 @@ function reclampToolbar() {
   if (tbPos.value) moveToolbar(tbPos.value.left, tbPos.value.top);
 }
 
-// ---------- 保存 ----------
-
-function openSave() {
-  // 保存门槛：每条规则至少 1 个候选，空规则保存后什么也藏不掉
-  const warn = unsavableDraftWarning(drafts.value);
-  if (warn) {
-    showWarn(warn);
-    return;
-  }
-  scopeChoice.value = 'all';
-  saveDlg.value?.showModal();
-}
-
-function onSaveClose() {
-  const dlg = saveDlg.value;
-  if (!dlg) return;
-  const choice = dlg.returnValue;
-  dlg.returnValue = '';
-  if (choice === 'save') void doSave();
-}
+// ---------- 保存（#53：点保存就是最后一下，不再弹第二个确认框） ----------
 
 async function doSave() {
   if (saving || finished) return;
+  // 保存门槛：每条规则至少 1 个候选，空规则保存后什么也藏不掉
   const warn = unsavableDraftWarning(drafts.value);
   if (warn) {
     showWarn(warn);
@@ -1166,15 +1207,12 @@ async function doSave() {
   }
   saving = true;
   try {
-    const pattern = sitePattern.value;
-    let scope: Scope = { type: 'all' };
-    if (scopeChoice.value !== 'all' && pattern) {
-      scope = { type: scopeChoice.value, patterns: [pattern] } as Scope;
-    }
+    // 范围在这一步底部整批选一次（推不出「这类页面」时只能整站）
+    const scope = scopeFromChoice(scopeChoice.value, sitePattern.value);
     const now = Date.now();
     const rules: HideRule[] = drafts.value.map((d) => ({
       id: newRuleId(),
-      elementName: d.name.trim() || d.autoName,
+      elementName: draftName(d),
       candidates: [...d.candidates],
       strategy: d.strategy,
       scope,
@@ -1224,7 +1262,9 @@ async function doSave() {
       noticeDlg.value?.showModal();
       return;
     }
-    await finish(true);
+    // 保存即完成（#53）：不再弹第二个确认框；0 条规则时只给一句轻提示
+    const notice = rules.length === 0 ? TEXT.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)) : undefined;
+    await finish(true, notice);
   } finally {
     saving = false;
   }

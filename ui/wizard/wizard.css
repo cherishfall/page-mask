@@ -358,29 +358,53 @@
   color: var(--pm-danger);
 }
 
-/* 预览阶段的草稿清单：每一行就是一个完整的编辑单元，不用点开浮层 */
+/* 预览阶段的草稿清单：每一行是一个完整的编辑单元，分两行（#53）——第一行序号 / 名字 / 删除，
+ * 第二行收起方式与「只这一个 / 同类一起（N）」。四个控件不再挤在同一行里互相看不清。 */
 .pm-wiz-drafts {
   list-style: none;
   margin: var(--pm-space-2) 0 0;
   padding: 0;
-  max-block-size: 200px;
+  min-inline-size: 340px;
+  /* 每行两行控件 + 一行解释，限高留给三行整行可见，再多就内部滚动 */
+  max-block-size: 300px;
   overflow-y: auto;
   overscroll-behavior: contain;
   border-top: 1px solid var(--pm-border);
 }
 .pm-wiz-drafts li {
-  padding: 5px 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--pm-border);
   font-size: var(--pm-font-size-caption);
 }
-.pm-wiz-draft-main {
+.pm-wiz-draft-head {
   display: flex;
   align-items: center;
   gap: var(--pm-space-1);
 }
+.pm-wiz-draft-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  /* 与名称左对齐（让开序号牌 + 间距） */
+  margin-top: 4px;
+  padding-inline-start: 26px;
+}
+/* 「只这一个 / 同类一起（N）」：与收起方式同一套连体分段，但自成一组 */
+.pm-wiz-only {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+/* 同类只有 1 个时第二项不可选，这句话解释为什么 */
+.pm-wiz-only-note {
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
 .pm-wiz-draft-hint {
   margin: 0;
-  /* 与名称左对齐（让开序号牌 + 间距） */
   padding-inline-start: 26px;
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
@@ -480,32 +504,33 @@
   background: var(--pm-accent);
   color: var(--pm-on-accent);
 }
+/* 不可选的那一项（同类只有 1 个时的「同类一起」）要看得出来点不动 */
+.pm-wiz-seg-opt input:disabled + span {
+  color: var(--pm-fg-muted);
+}
+.pm-wiz-seg-opt input:disabled {
+  cursor: not-allowed;
+}
 .pm-wiz-seg-opt input:focus-visible + span {
   outline: var(--pm-focus-ring);
   outline-offset: -2px;
 }
 
-/* 范围标签：显示当前状态，点一下在「仅这一处」与「同类 N 处」之间切换 */
-.pm-wiz-range {
-  flex: none;
-  min-block-size: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-pill);
-  background: var(--pm-bg);
-  color: var(--pm-fg-muted);
-  font: inherit;
+/* 底部：在哪些页面收起（整批设置一次，取代原来点保存才弹出的框，#53） */
+.pm-wiz-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--pm-space-2) 0 0;
+  padding: 6px 8px;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-control);
+}
+.pm-wiz-scope-legend {
+  padding: 0;
   font-size: var(--pm-font-size-caption);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.pm-wiz-range:hover:not(:disabled) {
+  font-weight: var(--pm-font-weight-strong);
   color: var(--pm-fg);
-  background: var(--pm-bg-subtle);
-}
-.pm-wiz-range:disabled {
-  border-color: var(--pm-border);
-  cursor: default;
 }
 
 /* 删除这一项：默认中性灰，悬停 / 键盘聚焦变红 */
@@ -527,6 +552,19 @@
 .pm-wiz-del:focus-visible {
   color: var(--pm-danger);
   background: var(--pm-bg-subtle);
+}
+/* 看效果每行的删除：像一个真的按钮（有边、有底、悬停变色），不再是一枚飘着的符号（#53） */
+.pm-wiz-drafts .pm-wiz-del {
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid var(--pm-border-control);
+  background: var(--pm-bg-subtle);
+}
+.pm-wiz-drafts .pm-wiz-del:hover,
+.pm-wiz-drafts .pm-wiz-del:focus-visible {
+  border-color: var(--pm-danger);
+  background: var(--pm-bg);
+  color: var(--pm-danger);
 }
 
 /* 点页面上的号码牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除） */
@@ -659,19 +697,6 @@ button.pm-wiz-badge {
 }
 .pm-wiz-dialog p {
   margin: 0 0 var(--pm-space-3);
-}
-.pm-wiz-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--pm-space-1);
-  margin: 0 0 var(--pm-space-3);
-  padding: 0;
-  border: 0;
-}
-.pm-wiz-field legend {
-  padding: 0;
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
 }
 .pm-wiz-radio {
   display: flex;

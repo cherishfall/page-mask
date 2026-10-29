@@ -21,6 +21,7 @@
 
 /** 页内界面宿主的自定义元素名 */
 export const HOST_TAGS = {
+  notice: 'pagemask-notice',
   toggle: 'pagemask-toggle',
   editor: 'pagemask-editor',
   wizard: 'pagemask-wizard',
@@ -33,10 +34,11 @@ export type HostKind = keyof typeof HOST_TAGS;
 /** 各宿主的叠放层级（宿主是 fixed 盒子，自成层叠上下文；内部 z-index 只在宿主内比较） */
 export const HOST_Z_INDEX: Record<HostKind, number> = {
   wizard: 2147483647,
-  editor: 2147483646,
-  toggle: 2147483645,
-  curtain: 2147483644,
-  mask: 2147483643,
+  notice: 2147483646,
+  editor: 2147483645,
+  toggle: 2147483644,
+  curtain: 2147483643,
+  mask: 2147483642,
 };
 
 const ALL_HOSTS = Object.values(HOST_TAGS).join(', ');

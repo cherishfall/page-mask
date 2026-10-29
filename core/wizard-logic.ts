@@ -3,6 +3,7 @@
  * 面向不懂 CSS 的用户：选大/选小解决点选中内层文字的痛点。
  */
 import { DEFAULT_TITLE_EN } from './titles';
+import type { Scope, ScopePattern } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -200,6 +201,63 @@ export function reconcileDrafts<T, D>(selection: readonly T[], existing: Readonl
   const out = new Map<T, D>();
   for (const el of selection) out.set(el, existing.get(el) ?? make(el));
   return out;
+}
+
+// ---------- 预览这一步的两个数（#53） ----------
+// 每行第二行的那对选项说的是「收起什么」：只这一个 / 同类一起（N）。
+// N 是「同类一起」时页面上会收起几个，必须实时算——页面可能滚动加载过，也可能刚从第 2 步回来。
+
+/** 算这两个数只需要草稿的这几项 */
+export interface DraftCountInput {
+  el: Element;
+  /** 当前选的是「只这一个」 */
+  onlyThis: boolean;
+  /** 当前这一项实际会用的候选选择器 */
+  candidates: readonly string[];
+}
+
+export interface DraftHits {
+  /** 当前设置实际会收起的个数 */
+  hits: number;
+  /** 「同类一起」会收起的个数（N）；与当前设置无关，切换选项前后都一样 */
+  sameHits: number;
+}
+
+/**
+ * 重算每行的两个数。`sameCandidates` 给某个元素生成「同类一起」的候选，
+ * `count` 数这组候选在页面上命中几个——两个都注入进来，这里保持纯函数、可单测。
+ */
+export function draftHitCounts(
+  drafts: readonly DraftCountInput[],
+  sameCandidates: (el: Element) => readonly string[],
+  count: (selectors: readonly string[]) => number,
+): DraftHits[] {
+  return drafts.map((d) => {
+    const sameHits = count(sameCandidates(d.el));
+    return { sameHits, hits: d.onlyThis ? count(d.candidates) : sameHits };
+  });
+}
+
+// ---------- 保存（#53：底部三选一 + 保存即完成） ----------
+
+/** 这一步底部的「在哪些页面收起」三选一 */
+export type ScopeChoice = 'all' | 'include' | 'exclude';
+
+/**
+ * 三选一 → 落库的生效范围。整批规则共用一份（design.md 核心流程第 4 步）；
+ * 推不出「这类页面」时只能整站，界面上另外给一句说明。
+ */
+export function scopeFromChoice(choice: ScopeChoice, pattern: ScopePattern | null): Scope {
+  if (choice === 'all' || !pattern) return { type: 'all' };
+  return { type: choice, patterns: [pattern] };
+}
+
+/**
+ * 保存后给用户的轻提示：这次一条规则都没有（只改了标题 / 图标）时，
+ * 说清楚生效的是标签页名字，否则用户会以为保存没起作用（#53）。
+ */
+export function zeroRuleSavedNotice(title: string): string {
+  return `已保存，标签页名字换成「${title}」了`;
 }
 
 // ---------- 键盘 ----------
