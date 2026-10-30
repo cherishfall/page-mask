@@ -24,9 +24,9 @@
 ## 换模型或换工具之后怎么接着跑
 
 1. 读这份文件的进度表，再 `HTTPS_PROXY=http://127.0.0.1:7890 gh issue view <编号>` 取那张票的完整验收标准。
-2. 一次只做一张票。做完：`npm run compile` + `npx vitest run`（全量约 495 项）必须全绿。
+2. 一次只做一张票。做完：`npm run compile` + `npx vitest run`（全量约 534 项）必须全绿。
 3. `git commit`（Conventional Commits，**不要 push**，推送由批次收尾统一做）。
-4. 回来把本文件进度表的对应行改成 ✅ 并写上 commit，再进下一张。
+4. **做一个关一个**：`gh issue close <编号> --comment "已实现，commit <hash>：一句话"`，然后回来把本文件进度表的对应行改成 ✅ 并写上 commit，再进下一张。别忘了关 issue——2026-10-29 那天就是做完 8 张忘了关。
 
 ## 实现时必须守的硬约束（容易踩回去）
 
