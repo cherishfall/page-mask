@@ -13,8 +13,8 @@
     @toggle="onToggle"
   >
     <div class="pm-tp-head">
-      <h2 id="pm-tp-heading" class="pm-tp-heading">标签页标题和图标</h2>
-      <button type="button" class="pm-tp-close" aria-label="关闭" data-testid="pm-tp-close" @click="close">
+      <h2 id="pm-tp-heading" class="pm-tp-heading">{{ t.toggle.panelTitle }}</h2>
+      <button type="button" class="pm-tp-close" :aria-label="t.toggle.panelClose" data-testid="pm-tp-close" @click="close">
         <span aria-hidden="true">✕</span>
       </button>
     </div>
@@ -22,12 +22,12 @@
     <!-- 原样态下保存完的那一句：改了但看不到，给一个当场切过去的入口 -->
     <template v-if="savedOriginal">
       <p class="pm-tp-note" data-testid="pm-tp-original-note">
-        现在是原样态，切到清爽才会看到效果。
+        {{ t.toggle.panelOriginalNote }}
       </p>
       <div class="pm-tp-actions">
-        <button type="button" class="pm-tif-btn" data-testid="pm-tp-done" @click="close">知道了</button>
+        <button type="button" class="pm-tif-btn" data-testid="pm-tp-done" @click="close">{{ t.common.gotIt }}</button>
         <button type="button" class="pm-tif-btn primary" data-testid="pm-tp-switch-clean" @click="emit('switchClean')">
-          切到清爽
+          {{ t.toggle.panelSwitchClean }}
         </button>
       </div>
     </template>
@@ -38,12 +38,12 @@
         v-model:icon="iconValue"
         id-prefix="pm-tp"
         :placeholder="placeholder"
-        :title-hint="`保存后生效。留空则用「${placeholder}」——标题不会留成空白，空白时 Chrome 会改为显示网址。`"
-        :icon-hint="hasDefaultIcon ? '不传图标时用插件设置里的默认图标。' : '不传图标时标签页上的图标位留空。'"
+        :title-hint="t.toggle.panelTitleHint(placeholder)"
+        :icon-hint="hasDefaultIcon ? t.toggle.panelIconHintWithDefault : t.toggle.panelIconHintNoDefault"
       />
       <div class="pm-tp-actions">
-        <button type="button" class="pm-tif-btn" data-testid="pm-tp-cancel" @click="close">取消</button>
-        <button type="button" class="pm-tif-btn primary" data-testid="pm-tp-save" @click="onSave">保存</button>
+        <button type="button" class="pm-tif-btn" data-testid="pm-tp-cancel" @click="close">{{ t.common.cancel }}</button>
+        <button type="button" class="pm-tif-btn primary" data-testid="pm-tp-save" @click="onSave">{{ t.common.save }}</button>
       </div>
     </template>
   </div>
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import type { SiteProfile } from '@/core/types';
+import { t } from '@/ui/i18n';
 import TitleIconFields from './TitleIconFields.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */

@@ -48,6 +48,7 @@ const settingsOf = (defaultTitle: string | null) => ({
   defaultTitle,
   defaultIconDataUrl: null,
   curtainBtnPos: null,
+  uiLanguage: 'auto',
   settingsVersion: 2,
 });
 

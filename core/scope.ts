@@ -4,6 +4,7 @@
  */
 import type { HideRule, Scope } from './types';
 import { urlMatchesPattern } from './origin';
+import { t } from './i18n';
 
 export function scopeMatches(scope: Scope, url: string): boolean {
   switch (scope.type) {
@@ -21,28 +22,33 @@ export function rulesApplicableAt(rules: HideRule[], url: string): HideRule[] {
   return rules.filter((r) => scopeMatches(r.scope, url));
 }
 
+/** 一句话里的短范围（失效提示用：「最近在 … 没找到目标」） */
 export function scopeLabel(scope: Scope): string {
+  const s = t().common.scopeShort;
+  const labels = (patterns: { label: string }[]) => patterns.map((p) => p.label).join(t().common.listSeparator);
   switch (scope.type) {
     case 'all':
-      return '整站';
+      return s.all;
     case 'include':
-      return `仅 ${scope.patterns.map((p) => p.label).join('、')}`;
+      return s.include(labels(scope.patterns));
     case 'exclude':
-      return `除 ${scope.patterns.map((p) => p.label).join('、')} 外`;
+      return s.exclude(labels(scope.patterns));
   }
 }
 
 /**
- * 给用户看的生效范围（管理页的收起项清单用）：与向导保存对话框同一套说法，
+ * 给用户看的生效范围（管理页的收起项清单用）：与向导同一套说法，
  * 「整个网站 / 只在这类页面 / 除了这类页面」，不用「整站」「仅」「除外」这类缩写。
  */
 export function scopeHumanLabel(scope: Scope): string {
+  const s = t().common.scope;
+  const labels = (patterns: { label: string }[]) => patterns.map((p) => p.label).join(t().common.listSeparator);
   switch (scope.type) {
     case 'all':
-      return '整个网站';
+      return s.all;
     case 'include':
-      return `只在这类页面：${scope.patterns.map((p) => p.label).join('、')}`;
+      return s.include(labels(scope.patterns));
     case 'exclude':
-      return `除了这类页面：${scope.patterns.map((p) => p.label).join('、')}`;
+      return s.exclude(labels(scope.patterns));
   }
 }

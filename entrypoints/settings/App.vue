@@ -1,22 +1,64 @@
 <template>
   <div class="shell">
-    <a class="back" href="management.html#/sites" data-testid="pm-settings-back">← 你添加的网站</a>
+    <a class="back" href="management.html#/sites" data-testid="pm-settings-back">{{ t.settings.back }}</a>
 
     <header class="masthead">
-      <h1>插件设置</h1>
-      <p class="sub">这里的设置对所有网站生效。</p>
+      <h1>{{ t.settings.title }}</h1>
+      <p class="sub">{{ t.settings.sub }}</p>
     </header>
 
     <main>
-      <p v-if="!store.state.loaded" class="hint">正在读取…</p>
+      <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
 
       <template v-else>
+        <!-- 界面语言（#57）：三选一，切换即时生效 -->
+        <section class="card" aria-labelledby="pm-settings-language-heading" data-testid="pm-settings-language">
+          <h2 id="pm-settings-language-heading">{{ t.settings.languageHeading }}</h2>
+          <p class="hint">{{ t.settings.languageIntro }}</p>
+          <fieldset class="import-mode">
+            <legend>{{ t.settings.languageHeading }}</legend>
+            <div class="radio">
+              <input
+                id="pm-settings-lang-auto"
+                v-model="langPref"
+                type="radio"
+                name="pm-settings-language"
+                value="auto"
+                data-testid="pm-settings-lang-auto"
+              />
+              <label for="pm-settings-lang-auto">{{ t.settings.languageAuto(autoDetectedName) }}</label>
+            </div>
+            <div class="radio">
+              <input
+                id="pm-settings-lang-zh"
+                v-model="langPref"
+                type="radio"
+                name="pm-settings-language"
+                value="zh"
+                data-testid="pm-settings-lang-zh"
+              />
+              <label for="pm-settings-lang-zh">{{ t.settings.languageZh }}</label>
+            </div>
+            <div class="radio">
+              <input
+                id="pm-settings-lang-en"
+                v-model="langPref"
+                type="radio"
+                name="pm-settings-language"
+                value="en"
+                data-testid="pm-settings-lang-en"
+              />
+              <label for="pm-settings-lang-en">{{ t.settings.languageEn }}</label>
+            </div>
+          </fieldset>
+        </section>
+
         <!-- 默认标题 -->
         <section class="card" aria-labelledby="pm-settings-title-heading">
-          <h2 id="pm-settings-title-heading">默认标题</h2>
-          <p class="hint">网站没有单独设置标题时，清爽模式的标签页显示这段文字。</p>
+          <h2 id="pm-settings-title-heading">{{ t.settings.titleHeading }}</h2>
+          <p class="hint">{{ t.settings.titleIntro }}</p>
           <div class="row">
-            <label for="pm-settings-default-title">默认标签页标题</label>
+            <label for="pm-settings-default-title">{{ t.settings.titleLabel }}</label>
             <input
               id="pm-settings-default-title"
               v-model="store.state.drafts[DEFAULT_KEY]"
@@ -30,40 +72,38 @@
             />
           </div>
           <div class="row quick" role="group" aria-labelledby="pm-settings-title-quick">
-            <span id="pm-settings-title-quick" class="hint">快捷填入</span>
+            <span id="pm-settings-title-quick" class="hint">{{ t.common.quickFill }}</span>
             <button
               v-for="q in QUICK_TITLES"
-              :key="q.label"
+              :key="q.id"
               type="button"
               class="chip"
               @click="store.pickTitle(DEFAULT_KEY, q)"
             >
-              {{ quickTitleValue(q, store.uiLanguage) }}
+              {{ quickTitleValue(q, locale) }}
             </button>
           </div>
           <p id="pm-settings-title-hint" class="hint">
-            留空则用「{{ store.languageDefaultTitle }}」（跟随浏览器语言）。标签页标题不会留成空白：空白时 Chrome 会改为显示网址。
+            {{ t.settings.titleFootnote(store.languageDefaultTitle) }}
           </p>
         </section>
 
         <!-- 默认图标 -->
         <section class="card" aria-labelledby="pm-settings-icon-heading">
-          <h2 id="pm-settings-icon-heading">默认图标</h2>
-          <p class="hint">
-            网站自己没有设置图标时，清爽模式的标签页用这张图。改这里，没单独设过图标的网站会一起变。
-          </p>
+          <h2 id="pm-settings-icon-heading">{{ t.settings.iconHeading }}</h2>
+          <p class="hint">{{ t.settings.iconIntro }}</p>
           <div class="row">
-            <span class="row-label">当前默认图标</span>
+            <span class="row-label">{{ t.settings.currentIcon }}</span>
             <img
               v-if="store.state.defaultIcon"
               class="favicon"
               :src="store.state.defaultIcon"
-              alt="当前的默认图标"
+              :alt="t.settings.currentIconAlt"
               data-testid="pm-settings-default-icon"
             />
-            <span v-else class="hint" data-testid="pm-settings-default-icon-empty">未设置：标签页上不显示图标</span>
+            <span v-else class="hint" data-testid="pm-settings-default-icon-empty">{{ t.settings.iconUnset }}</span>
             <label class="button file-button">
-              {{ iconBusy ? '正在处理…' : store.state.defaultIcon ? '换一张图标' : '上传图标' }}
+              {{ iconBusy ? t.common.processing : store.state.defaultIcon ? t.common.replaceIcon : t.common.uploadIcon }}
               <input
                 type="file"
                 data-testid="pm-settings-icon-input"
@@ -80,27 +120,25 @@
               data-testid="pm-settings-icon-clear"
               @click="clearIcon"
             >
-              清除图标
+              {{ t.common.clearIcon }}
             </button>
           </div>
-          <p id="pm-settings-icon-hint" class="hint">
-            PNG、JPG、GIF、WebP 或 ICO，不超过 5MB，会自动缩小成 32×32。网站自己的图标优先，这里和网站都没设时标签页上不显示图标。
-          </p>
+          <p id="pm-settings-icon-hint" class="hint">{{ t.settings.iconHint }}</p>
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
         </section>
 
         <!-- 导出 / 导入 -->
         <section class="card" aria-labelledby="pm-settings-transfer-heading">
-          <h2 id="pm-settings-transfer-heading">导出 / 导入</h2>
-          <p class="hint">把全部网站的设置和这里的插件设置存成一个文件；换电脑或重装浏览器后导入，就能恢复。</p>
+          <h2 id="pm-settings-transfer-heading">{{ t.settings.transferHeading }}</h2>
+          <p class="hint">{{ t.settings.transferIntro }}</p>
           <div class="row">
             <button type="button" class="primary" data-testid="pm-settings-export" @click="store.doExport">
-              导出全部设置
+              {{ t.settings.exportAll }}
             </button>
           </div>
           <!-- 先选导入方式，再选文件（审查 N20） -->
           <fieldset class="import-mode">
-            <legend>导入方式</legend>
+            <legend>{{ t.settings.importModeLegend }}</legend>
             <div class="radio">
               <input
                 id="pm-settings-import-merge"
@@ -110,8 +148,8 @@
                 value="merge"
                 aria-describedby="pm-settings-import-merge-hint"
               />
-              <label for="pm-settings-import-merge">合并（推荐）</label>
-              <span id="pm-settings-import-merge-hint" class="hint">同一网站的收起项会合在一起，本机已有的设置不会丢</span>
+              <label for="pm-settings-import-merge">{{ t.settings.merge }}</label>
+              <span id="pm-settings-import-merge-hint" class="hint">{{ t.settings.mergeHint }}</span>
             </div>
             <div class="radio">
               <input
@@ -122,13 +160,13 @@
                 value="replace"
                 aria-describedby="pm-settings-import-replace-hint"
               />
-              <label for="pm-settings-import-replace">整体替换</label>
-              <span id="pm-settings-import-replace-hint" class="hint">先删掉本机现有的全部设置，再换成文件里的（导入前会再确认一次）</span>
+              <label for="pm-settings-import-replace">{{ t.settings.replace }}</label>
+              <span id="pm-settings-import-replace-hint" class="hint">{{ t.settings.replaceHint }}</span>
             </div>
           </fieldset>
           <div class="row">
             <label class="button file-button">
-              选择导出文件并导入
+              {{ t.settings.chooseFile }}
               <input type="file" accept="application/json" data-testid="pm-settings-import-input" @change="onImport" />
             </label>
           </div>
@@ -137,19 +175,19 @@
 
         <!-- 关于 -->
         <section class="card" aria-labelledby="pm-settings-about-heading">
-          <h2 id="pm-settings-about-heading">关于</h2>
+          <h2 id="pm-settings-about-heading">{{ t.settings.aboutHeading }}</h2>
           <dl class="about">
             <div class="about-row">
-              <dt>版本</dt>
+              <dt>{{ t.settings.version }}</dt>
               <dd data-testid="pm-settings-version">{{ version }}</dd>
             </div>
             <div class="about-row">
-              <dt>仓库</dt>
+              <dt>{{ t.settings.repo }}</dt>
               <dd><a :href="REPO_URL" target="_blank" rel="noopener noreferrer">github.com/cherishfall/page-mask</a></dd>
             </div>
             <div class="about-row">
-              <dt>反馈</dt>
-              <dd><a :href="ISSUES_URL" target="_blank" rel="noopener noreferrer">在 GitHub 上反馈问题</a></dd>
+              <dt>{{ t.settings.feedback }}</dt>
+              <dd><a :href="ISSUES_URL" target="_blank" rel="noopener noreferrer">{{ t.settings.feedbackLink }}</a></dd>
             </div>
           </dl>
         </section>
@@ -164,38 +202,50 @@
       @close="onReplaceClose"
     >
       <template v-if="store.state.replaceImpact">
-        <h2 id="pm-settings-replace-title">用这个文件整体替换现有设置？</h2>
+        <h2 id="pm-settings-replace-title">{{ t.settings.replaceDialog.title }}</h2>
         <ul data-testid="pm-settings-replace-impact">
           <li>
-            本机现有的 {{ store.state.replaceImpact.localSites }} 个网站、{{ store.state.replaceImpact.localRules }} 个收起项会全部被替换
+            {{ t.settings.replaceDialog.localSites(store.state.replaceImpact.localSites, store.state.replaceImpact.localRules) }}
           </li>
           <li v-if="store.state.replaceImpact.removedOrigins.length > 0">
-            其中 {{ store.state.replaceImpact.removedOrigins.length }} 个网站在文件里没有，本机不再保留（共
-            {{ store.state.replaceImpact.removedRules }} 个收起项）：{{ store.state.replaceImpact.removedOrigins.map(siteLabelOf).join('、') }}
+            {{ t.settings.replaceDialog.removed(store.state.replaceImpact.removedOrigins.length, store.state.replaceImpact.removedRules, store.state.replaceImpact.removedOrigins.map(siteLabelOf).join(t.common.listSeparator)) }}
           </li>
           <li>
-            换成文件里的 {{ store.state.replaceImpact.incomingSites }} 个网站、{{ store.state.replaceImpact.incomingRules }} 个收起项
+            {{ t.settings.replaceDialog.incoming(store.state.replaceImpact.incomingSites, store.state.replaceImpact.incomingRules) }}
           </li>
-          <li v-if="store.state.replaceImpact.replacesSettings">插件设置（默认标题、默认图标）也会换成文件里的</li>
-          <li>这一步不能撤销；不放心的话，先取消并「导出全部设置」留一份</li>
+          <li v-if="store.state.replaceImpact.replacesSettings">{{ t.settings.replaceDialog.settings }}</li>
+          <li>{{ t.settings.replaceDialog.irreversible }}</li>
         </ul>
       </template>
       <form method="dialog" class="dialog-actions">
-        <button value="cancel" autofocus>取消</button>
-        <button value="confirm" class="primary danger">确认替换</button>
+        <button value="cancel" autofocus>{{ t.common.cancel }}</button>
+        <button value="confirm" class="primary danger">{{ t.settings.replaceDialog.confirm }}</button>
       </form>
     </dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
+import { localeName } from '@/core/i18n';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
+import { locale, t } from '@/ui/i18n';
 import { siteLabelOf } from '../management/site';
 import { DEFAULT_KEY, managementStore as store } from '../management/store';
 import { fileToIconDataUrl } from '../management/tab-icon';
+
+/**
+ * 界面语言（#57）：单选绑定的是存储里的偏好。切换即写入全局设置，
+ * 所有打开的 PageMask 页面（包括本页）经 storage.onChanged 立即换语言。
+ */
+const langPref = computed({
+  get: () => store.state.uiLanguage,
+  set: (v) => void store.setUiLanguage(v),
+});
+/** 「自动」后面的当前探测结果：语言名各用本语言书写，不翻译 */
+const autoDetectedName = computed(() => localeName(locale.value));
 
 const REPO_URL = 'https://github.com/cherishfall/page-mask';
 const ISSUES_URL = 'https://github.com/cherishfall/page-mask/issues';
@@ -224,7 +274,7 @@ async function onIconChange(e: Event) {
     }
     await store.setDefaultIcon(res.dataUrl);
   } catch {
-    iconError.value = '没能保存图标，请再试一次';
+    iconError.value = t.value.errors.iconSave;
   } finally {
     iconBusy.value = false;
   }
@@ -235,7 +285,7 @@ async function clearIcon() {
   try {
     await store.setDefaultIcon(null);
   } catch {
-    iconError.value = '没能清除图标，请再试一次';
+    iconError.value = t.value.errors.iconClear;
   }
 }
 

@@ -10,18 +10,18 @@
     data-testid="pm-editor-panel"
   >
     <div class="pm-ed-head">
-      <h2 id="pm-ed-title" class="pm-ed-title">编辑收起的内容</h2>
-      <button type="button" class="pm-ed-close" aria-label="关闭编辑面板" data-testid="pm-editor-close" @click="emit('close')">
+      <h2 id="pm-ed-title" class="pm-ed-title">{{ t.editor.title }}</h2>
+      <button type="button" class="pm-ed-close" :aria-label="t.editor.close" data-testid="pm-editor-close" @click="emit('close')">
         <span aria-hidden="true">✕</span>
       </button>
     </div>
-    <p class="pm-ed-hint">只列当前页面生效的规则（{{ rules.length }} 条）；改动即时生效</p>
+    <p class="pm-ed-hint">{{ t.editor.hint(rules.length) }}</p>
 
     <!-- 没有规则：说清楚这是正常的「只改标题」形态，并给出开始点选的入口（#51） -->
     <div v-if="rules.length === 0" class="pm-ed-empty-box" data-testid="pm-ed-empty">
       <p class="pm-ed-empty">{{ emptyText }}</p>
       <button type="button" class="pm-ed-btn primary" data-testid="pm-editor-start" @click="emit('addElement')">
-        开始选要收起的内容
+        {{ t.editor.start }}
       </button>
     </div>
 
@@ -30,7 +30,7 @@
         <div class="pm-ed-cardhead">
           <span class="pm-ed-name">{{ rule.elementName }}</span>
           <span v-if="rule.lastHealth === 'stale'" class="pm-ed-stale" data-testid="pm-ed-stale">
-            <span aria-hidden="true">● </span>可能失效
+            <span aria-hidden="true">● </span>{{ t.common.stale }}
           </span>
         </div>
 
@@ -38,12 +38,12 @@
         <p v-if="rule.lastHealth === 'stale'" class="pm-ed-stale-msg">
           <span>{{ healthMsg(rule) }}</span>
           <button type="button" class="pm-ed-btn" :data-testid="`pm-ed-fix-${rule.id}`" @click="emit('reselect', rule.id)">
-            去处理
+            {{ t.editor.fix }}
           </button>
         </p>
 
         <fieldset class="pm-ed-field">
-          <legend>收起方式</legend>
+          <legend>{{ t.editor.methodLegend }}</legend>
           <!-- 原生单选组（同一 name = 一组）：方向键可切换，读屏报「3 选 1」；视觉上仍是一排分段 -->
           <div class="pm-ed-seg">
             <label v-for="s in STRATEGY_LIST" :key="s" class="pm-ed-seg-opt">
@@ -55,16 +55,16 @@
                 :data-testid="`pm-ed-strategy-${rule.id}-${s}`"
                 @change="setStrategy(rule, s)"
               />
-              <span>{{ STRATEGY_LABEL[s] }}</span>
+              <span>{{ t.common.strategy[s] }}</span>
             </label>
           </div>
         </fieldset>
 
         <fieldset class="pm-ed-field">
-          <legend>生效范围</legend>
+          <legend>{{ t.editor.scopeLegend }}</legend>
           <div class="pm-ed-seg">
             <button type="button" class="pm-ed-btn" :aria-pressed="rule.scope.type === 'all'" @click="setScope(rule, 'all')">
-              整站
+              {{ t.editor.scopeAll }}
             </button>
             <template v-if="pattern">
               <button
@@ -73,7 +73,7 @@
                 :aria-pressed="rule.scope.type === 'include'"
                 @click="setScope(rule, 'include')"
               >
-                仅这类页面
+                {{ t.editor.scopeInclude }}
               </button>
               <button
                 type="button"
@@ -81,40 +81,40 @@
                 :aria-pressed="rule.scope.type === 'exclude'"
                 @click="setScope(rule, 'exclude')"
               >
-                排除这类页面
+                {{ t.editor.scopeExclude }}
               </button>
             </template>
           </div>
           <p v-if="!pattern && scopeHint" class="pm-ed-hint" style="margin: 4px 0 0">{{ scopeHint }}</p>
           <p v-else-if="pattern && rule.scope.type !== 'all'" class="pm-ed-hint" style="margin: 4px 0 0">
-            {{ rule.scope.type === 'include' ? '仅' : '除' }}：{{ rule.scope.patterns[0]?.label ?? pattern.label }}
+            {{ rule.scope.type === 'include' ? t.editor.scopeValueInclude(rule.scope.patterns[0]?.label ?? pattern.label) : t.editor.scopeValueExclude(rule.scope.patterns[0]?.label ?? pattern.label) }}
           </p>
         </fieldset>
 
         <div class="pm-ed-actions">
           <button type="button" class="pm-ed-btn" :data-testid="`pm-ed-reselect-${rule.id}`" @click="emit('reselect', rule.id)">
-            重选元素
+            {{ t.editor.reselect }}
           </button>
           <button type="button" class="pm-ed-btn danger" :data-testid="`pm-ed-delete-${rule.id}`" @click="removeRule(rule)">
-            删除
+            {{ t.common.delete }}
           </button>
         </div>
 
         <details class="pm-ed-adv">
-          <summary>高级：选择器原文</summary>
-          <p class="pm-ed-hint" style="margin: 4px 0 0">每行一个，保存前会在当前页面检查</p>
+          <summary>{{ t.editor.advancedSummary }}</summary>
+          <p class="pm-ed-hint" style="margin: 4px 0 0">{{ t.editor.advancedHint }}</p>
           <textarea
             v-model="advanced[rule.id]"
             class="pm-ed-textarea"
             rows="2"
             spellcheck="false"
-            :aria-label="`「${rule.elementName}」的选择器，每行一个`"
+            :aria-label="t.editor.selectorAria(rule.elementName)"
             :data-testid="`pm-ed-selector-${rule.id}`"
           ></textarea>
           <p v-if="advError[rule.id]" class="pm-ed-error" role="alert" :data-testid="`pm-ed-selector-error-${rule.id}`">
             {{ advError[rule.id] }}
           </p>
-          <button type="button" class="pm-ed-btn" style="margin-top: 4px" @click="saveAdvanced(rule)">保存选择器</button>
+          <button type="button" class="pm-ed-btn" style="margin-top: 4px" @click="saveAdvanced(rule)">{{ t.editor.saveSelectors }}</button>
         </details>
       </li>
     </ul>
@@ -126,14 +126,14 @@
       data-testid="pm-editor-add"
       @click="emit('addElement')"
     >
-      ＋ 收起更多内容
+      ＋ {{ t.editor.addMore }}
     </button>
 
     <!-- 删除后约 5 秒可撤销。容器常驻（live region 只有内容出现时才播报） -->
     <div class="pm-ed-undo" role="status" data-testid="pm-editor-undo">
       <template v-if="undo">
-        <span>已删除「{{ undo.name }}」</span>
-        <button type="button" class="pm-ed-btn" data-testid="pm-editor-undo-btn" @click="undoDelete">撤销</button>
+        <span>{{ t.common.deleted(undo.name) }}</span>
+        <button type="button" class="pm-ed-btn" data-testid="pm-editor-undo-btn" @click="undoDelete">{{ t.common.undo }}</button>
       </template>
     </div>
   </dialog>
@@ -148,7 +148,8 @@ import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { healthMessage } from '@/core/health';
 import { selectorHitsElement } from '@/core/selectors';
 import { isSafeSelector } from '@/core/validate';
-import { STRATEGY_LABEL, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
+import type { HideRule, Scope, SiteProfile, StrategyId } from '@/core/types';
+import { t } from '@/ui/i18n';
 import { useRuleUndo } from '../rule-undo';
 import { adoptEditorStyles } from './editor-styles';
 
@@ -185,9 +186,7 @@ const rules = computed(() => {
 /** 空状态文案：整站没有规则（只改标题的站点）与「这一页没有生效规则」分开说 */
 const emptyText = computed(() => {
   const total = profile.value?.hideRules.length ?? 0;
-  return total === 0
-    ? '这个网站还没有收起任何内容。先到页面上点选你想收起来的东西。'
-    : '这个页面还没有生效的收起项。可以在页面上再选一些内容。';
+  return total === 0 ? t.value.editor.emptyAll : t.value.editor.emptyPage;
 });
 
 /** 删除与撤销（与管理页的站点设置共用同一套逻辑与 5 秒计时，core/rule-undo.ts） */
@@ -276,7 +275,7 @@ function removeRule(rule: HideRule) {
 function saveAdvanced(rule: HideRule) {
   const text = (advanced[rule.id] ?? '').trim();
   if (!text) {
-    advError[rule.id] = '选择器不能为空';
+    advError[rule.id] = t.value.editor.errorEmpty;
     return;
   }
   const lines = text
@@ -285,11 +284,11 @@ function saveAdvanced(rule: HideRule) {
     .filter(Boolean);
   for (const [i, line] of lines.entries()) {
     if (!isSafeSelector(line)) {
-      advError[rule.id] = `第 ${i + 1} 行不是有效的选择器：每行只能写一个，不能包含 { } ; @ 或逗号`;
+      advError[rule.id] = t.value.editor.errorInvalid(i + 1);
       return;
     }
     if (selectorHitsElement(line) < 1) {
-      advError[rule.id] = `第 ${i + 1} 行在当前页面没有找到目标，不能保存`;
+      advError[rule.id] = t.value.editor.errorNoHit(i + 1);
       return;
     }
   }

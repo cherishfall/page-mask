@@ -14,6 +14,7 @@
  *   拖动结束后只回传坐标，写回存储的策略由调用方决定
  */
 import { isCurtainDrag } from '@/core/curtain';
+import { onLocaleChange, t } from '@/core/i18n';
 import type { ButtonPos } from '@/core/types';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 
@@ -69,12 +70,17 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
   btn.type = 'button';
   btn.className = 'pm-curtain-restore';
   btn.dataset.testid = 'pm-curtain-restore';
-  btn.setAttribute('aria-label', '撤掉幕布，回到刚才的页面');
-  btn.title = '恢复';
+  // 语言切换时就地换字（#57：幕布按钮已打开的页面也要跟着变）
+  const syncText = () => {
+    btn.setAttribute('aria-label', t().curtain.restoreAria);
+    btn.title = t().curtain.restore;
+    label.textContent = t().curtain.restore;
+  };
   const label = doc.createElement('span');
   label.className = 'pm-curtain-restore-label';
-  label.textContent = '恢复';
   btn.append(createEyeIcon(doc), label);
+  syncText();
+  const offLocale = onLocaleChange(syncText);
 
   const rootNode = deps.root.getRootNode();
   if (rootNode instanceof ShadowRoot) adoptToggleStyles(rootNode);
@@ -194,6 +200,7 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      offLocale();
       ac.abort();
       btn.remove();
     },

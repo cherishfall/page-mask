@@ -10,8 +10,9 @@
  */
 import { reactive } from 'vue';
 import { browser } from 'wxt/browser';
-import { createPageMaskStorage, INVALID_EXPORT_FILE, type ImportResult } from '@/core/storage';
+import { createPageMaskStorage, invalidExportFile, type ImportResult } from '@/core/storage';
 import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } from '@/core/titles';
+import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile } from '@/core/types';
 import { originPattern } from '@/core/registration';
 import type { Ack, EnableSiteResponse, OpenEditorMsg, ReconcileResponse } from '@/core/messages';
@@ -31,6 +32,8 @@ export interface ManagementState {
   defaultTitle: string | null;
   /** 存储里的全局默认标签页图标（null = 内置透明图标） */
   defaultIcon: string | null;
+  /** 界面语言偏好（#57）：auto 跟随浏览器，zh / en 锁定 */
+  uiLanguage: UiLanguage;
   /** 输入框草稿：键 = origin，全局默认标题用 DEFAULT_KEY */
   drafts: Record<string, string>;
   /** 当前聚焦的字段 */
@@ -54,7 +57,10 @@ export interface ManagementState {
 
 export function createManagementStore() {
   const storage = createPageMaskStorage(browser.storage.local);
-  /** 浏览器界面语言：决定默认标题与快捷标题填入中文还是英文 */
+  /**
+   * 浏览器界面语言：只用于兜底标题的默认值（「留空则用「阅读」」）。
+   * 快捷标题填入什么跟着**界面语言**走（按钮上写什么就填什么），见 pickTitle。
+   */
   const uiLanguage = currentUiLanguage();
   const languageDefaultTitle = defaultTitleFor(uiLanguage);
 
@@ -63,6 +69,7 @@ export function createManagementStore() {
     loaded: false,
     defaultTitle: null,
     defaultIcon: null,
+    uiLanguage: 'auto',
     drafts: {},
     focusedKey: null,
     pendingOrigins: [],
@@ -99,6 +106,7 @@ export function createManagementStore() {
     state.profiles = list;
     state.defaultTitle = settings.defaultTitle;
     state.defaultIcon = settings.defaultIconDataUrl;
+    state.uiLanguage = settings.uiLanguage;
     state.pendingOrigins = list.filter((_, i) => !granted[i]).map((p) => p.origin);
     state.loaded = true;
   }
@@ -158,11 +166,11 @@ export function createManagementStore() {
   }
 
   /*
-   * 快捷标题：按钮上显示、点击填入的都是按浏览器界面语言取的值（中文浏览器「阅读」，
-   * 英文浏览器 "Reading"）——标签页标题给浏览器标签栏看，按钮上写什么就填什么。填入后立即保存。
+   * 快捷标题：按钮上显示、点击填入的都是当前**界面语言**的那一个（英文界面不会出现一排中文
+   * 按钮）——按钮上写什么就填什么。填入后立即保存。
    */
   async function pickTitle(key: string, q: QuickTitle) {
-    state.drafts[key] = quickTitleValue(q, uiLanguage);
+    state.drafts[key] = quickTitleValue(q, getLocale());
     dirty.add(key);
     await saveDraft(key);
   }
@@ -183,7 +191,7 @@ export function createManagementStore() {
     void (async () => {
       const ok = await request.catch(() => false);
       if (!ok) {
-        state.authError = '没有拿到访问权限，网站设置仍然保留；需要时再点一次并选择「允许」';
+        state.authError = t().management.error.auth;
         return;
       }
       await reconcileNow();
@@ -204,7 +212,7 @@ export function createManagementStore() {
       });
     } catch {
       input.checked = p.switchState === 'disguised';
-      state.toggleError[p.origin] = '没能切换清爽模式，请稍后再试一次';
+      state.toggleError[p.origin] = t().management.error.toggle;
     } finally {
       state.toggling[p.origin] = false;
     }
@@ -221,7 +229,7 @@ export function createManagementStore() {
         d.hideRules = update(d.hideRules);
       });
     } catch {
-      state.ruleError[origin] = '没能保存这次改动，请稍后再试一次';
+      state.ruleError[origin] = t().management.error.rules;
     }
   }
 
@@ -236,6 +244,14 @@ export function createManagementStore() {
   async function setDefaultIcon(dataUrl: string | null): Promise<void> {
     await storage.putSettings({ defaultIconDataUrl: dataUrl });
     state.defaultIcon = dataUrl;
+  }
+
+  /**
+   * 界面语言偏好（#57）：写进全局设置，所有打开的页面（含本页）通过 storage.onChanged
+   * 即时切换，不需要刷新。
+   */
+  async function setUiLanguage(pref: UiLanguage): Promise<void> {
+    await storage.putSettings({ uiLanguage: pref });
   }
 
   /**
@@ -285,7 +301,7 @@ export function createManagementStore() {
     if (!p || !confirmed) return;
     state.resetError[p.origin] = '';
     const res: Ack | undefined = await browser.runtime.sendMessage({ t: 'resetSite', origin: p.origin }).catch(() => undefined);
-    if (!res?.ok) state.resetError[p.origin] = '没能删除这个网站的设置，请稍后再试一次';
+    if (!res?.ok) state.resetError[p.origin] = t().management.error.reset;
     await reload();
   }
 
@@ -312,7 +328,7 @@ export function createManagementStore() {
     try {
       bundle = JSON.parse(await file.text());
     } catch {
-      state.importResult = importErrorText(new Error(INVALID_EXPORT_FILE));
+      state.importResult = importErrorText(new Error(invalidExportFile()));
       return 'failed';
     }
     if (state.importMode === 'replace') {
@@ -334,7 +350,7 @@ export function createManagementStore() {
     pendingBundle = null;
     state.replaceImpact = null;
     if (!confirmed) {
-      state.importResult = '已取消导入，本机设置没有改动';
+      state.importResult = t().management.import.cancelled;
       return;
     }
     if (bundle === null) return;
@@ -355,11 +371,12 @@ export function createManagementStore() {
 
   /** 如实报告导入结果：新增 / 更新 / 删掉 / 跳过 */
   function describeImport(res: ImportResult): string {
-    const parts = [`新增 ${res.added} 个网站`, `更新 ${res.updated} 个网站`];
-    if (res.removed) parts.push(`删掉 ${res.removed} 个本机网站`);
-    if (res.skipped) parts.push(`跳过 ${res.skipped} 个无效网站`);
-    if (res.skippedRules) parts.push(`忽略 ${res.skippedRules} 个无效收起项`);
-    return `导入完成：${parts.join('，')}（${res.mode === 'merge' ? '合并' : '整体替换'}）`;
+    const im = t().management.import;
+    const parts = [im.partAdded(res.added), im.partUpdated(res.updated)];
+    if (res.removed) parts.push(im.partRemoved(res.removed));
+    if (res.skipped) parts.push(im.partSkipped(res.skipped));
+    if (res.skippedRules) parts.push(im.partSkippedRules(res.skippedRules));
+    return im.done(parts.join(t().common.listSeparator), res.mode === 'merge' ? im.modeMerge : im.modeReplace);
   }
 
   return {
@@ -378,6 +395,7 @@ export function createManagementStore() {
     updateRules,
     setIcon,
     setDefaultIcon,
+    setUiLanguage,
     openPageEditor,
     askReset,
     confirmReset,

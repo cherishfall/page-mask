@@ -62,11 +62,23 @@ describe('快捷标题', () => {
       ]),
     );
   });
-  it('填入值按界面语言取', () => {
+  it('填入值按界面语言（Locale）取：按钮上写什么就填什么', () => {
     const notes = QUICK_TITLES.find((q) => q.zh === '笔记')!;
-    expect(quickTitleValue(notes, 'zh-CN')).toBe('笔记');
-    expect(quickTitleValue(notes, 'zh-TW')).toBe('笔记');
-    expect(quickTitleValue(notes, 'en-US')).toBe('Notes');
+    expect(quickTitleValue(notes, 'zh')).toBe('笔记');
+    expect(quickTitleValue(notes, 'en')).toBe('Notes');
+  });
+});
+
+describe('兜底标题不受界面语言偏好（#57 uiLanguage）影响', () => {
+  it('锁定英文时，中文浏览器的默认标题仍是「阅读」（它跟浏览器语言走）', async () => {
+    const { resolveLocale } = await import('./i18n');
+    expect(resolveLocale('en', 'zh-CN')).toBe('en');
+    expect(defaultTitleFor('zh-CN')).toBe('阅读');
+  });
+  it('锁定中文时，英文浏览器的默认标题仍是 "Reading"', async () => {
+    const { resolveLocale } = await import('./i18n');
+    expect(resolveLocale('zh', 'en-US')).toBe('zh');
+    expect(defaultTitleFor('en-US')).toBe('Reading');
   });
 });
 

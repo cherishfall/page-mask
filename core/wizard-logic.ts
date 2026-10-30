@@ -3,6 +3,7 @@
  * 面向不懂 CSS 的用户：选大/选小解决点选中内层文字的痛点。
  */
 import { DEFAULT_TITLE_EN } from './titles';
+import { t } from './i18n';
 import type { Scope, ScopePattern } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
@@ -42,7 +43,7 @@ export interface DraftItem {
 export function unsavableDraftWarning(drafts: readonly { candidates: readonly string[] }[]): string | null {
   const idx = drafts.findIndex((d) => d.candidates.length === 0);
   if (idx < 0) return null;
-  return `第 ${idx + 1} 个元素没法稳定识别：请点它右边的 ✕ 不收起这一项，再用「选大一点」重新选`;
+  return t().wizard.warnUnsavable(idx + 1);
 }
 
 // ---------- 三步骨架（#51） ----------
@@ -257,7 +258,7 @@ export function scopeFromChoice(choice: ScopeChoice, pattern: ScopePattern | nul
  * 说清楚生效的是标签页名字，否则用户会以为保存没起作用（#53）。
  */
 export function zeroRuleSavedNotice(title: string): string {
-  return `已保存，标签页名字换成「${title}」了`;
+  return t().wizard.zeroRuleNotice(title);
 }
 
 // ---------- 键盘 ----------

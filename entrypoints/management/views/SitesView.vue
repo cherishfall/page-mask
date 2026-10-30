@@ -1,25 +1,25 @@
 <template>
   <section class="view" aria-labelledby="pm-sites-title">
-    <h2 id="pm-sites-title" class="view-title">你添加的网站</h2>
-    <p class="hint">点一个网站进入它的设置页；没有添加的网站，PageMask 完全不碰。</p>
+    <h2 id="pm-sites-title" class="view-title">{{ t.management.sitesTitle }}</h2>
+    <p class="hint">{{ t.management.sitesHint }}</p>
 
-    <p v-if="!store.state.loaded" class="hint">正在读取…</p>
+    <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
 
     <p v-else-if="store.state.profiles.length === 0" class="card empty" data-testid="pm-mgmt-empty">
-      还没有添加任何网站。打开想变清爽的网站，点浏览器工具栏上的 PageMask 图标，就能开始设置。
+      {{ t.management.sitesEmpty }}
     </p>
 
     <template v-else>
       <!-- 有配置、没授权的站点不少于 2 个（典型：刚导入）：一次请求全部授权 -->
       <div v-if="store.state.pendingOrigins.length >= 2" class="card pending-all" data-testid="pm-mgmt-pending-all">
-        <span>{{ store.state.pendingOrigins.length }} 个网站待授权，授权前这些网站的设置不会生效。</span>
+        <span>{{ t.management.pendingAll(store.state.pendingOrigins.length) }}</span>
         <button
           type="button"
           class="primary"
           data-testid="pm-mgmt-authorize-all"
           @click="store.authorize(store.state.pendingOrigins)"
         >
-          一次授权全部
+          {{ t.management.authorizeAll }}
         </button>
       </div>
       <p v-if="store.state.authError" class="hint error" role="alert">{{ store.state.authError }}</p>
@@ -32,14 +32,14 @@
             <span class="site-text">
               <span class="site-host">{{ siteLabelOf(p.origin) }}</span>
               <span class="site-meta">
-                <span>{{ p.switchState === 'disguised' ? '清爽' : '原样' }}</span>
+                <span>{{ p.switchState === 'disguised' ? t.common.clean : t.common.original }}</span>
                 <span aria-hidden="true">·</span>
                 <!-- 0 条规则不写「已收起 0 项」 -->
-                <span>{{ p.hideRules.length > 0 ? `已收起 ${p.hideRules.length} 项` : '没有收起任何内容' }}</span>
+                <span>{{ p.hideRules.length > 0 ? t.common.hiddenCount(p.hideRules.length) : t.common.hiddenNone }}</span>
                 <template v-if="staleCount(p) > 0">
                   <span aria-hidden="true">·</span>
                   <span class="stale" data-testid="pm-mgmt-row-stale">
-                    <span aria-hidden="true">● </span>{{ staleCount(p) }} 项可能失效
+                    <span aria-hidden="true">● </span>{{ t.common.staleCount(staleCount(p)) }}
                   </span>
                 </template>
               </span>
@@ -48,10 +48,10 @@
           </a>
 
           <div v-if="isPending(p)" class="site-pending" data-testid="pm-mgmt-pending">
-            <span class="badge">待授权</span>
-            <span class="hint">浏览器没有这个网站的访问权限，设置都还在，授权后立即生效。</span>
+            <span class="badge">{{ t.management.pendingBadge }}</span>
+            <span class="hint">{{ t.management.pendingHint }}</span>
             <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([p.origin])">
-              授权并启用
+              {{ t.management.authorize }}
             </button>
           </div>
         </li>
@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import type { SiteProfile } from '@/core/types';
+import { t } from '@/ui/i18n';
 import { siteHash } from '../router';
 import { siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { managementStore as store } from '../store';

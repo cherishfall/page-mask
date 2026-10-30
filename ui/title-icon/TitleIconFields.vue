@@ -3,7 +3,7 @@
        这里只有「编辑」：读写值走 v-model，保存由外面决定（向导在最后一步保存，小面板点「保存」）。
        两处文案相同，所以标签与按钮文案写在这里；随场景变化的提示由 titleHint / iconHint 传入。 -->
   <div class="pm-tif">
-    <label class="pm-tif-label" :for="`${idPrefix}-title-input`">标签页标题</label>
+    <label class="pm-tif-label" :for="`${idPrefix}-title-input`">{{ t.management.titleHeading }}</label>
     <input
       :id="`${idPrefix}-title-input`"
       class="pm-tif-input"
@@ -15,33 +15,33 @@
       :aria-describedby="titleHint ? `${idPrefix}-title-hint` : undefined"
       @input="onTitleInput"
     />
-    <div class="pm-tif-chips" role="group" aria-label="快捷标题" :data-testid="`${idPrefix}-quick`">
-      <span class="pm-tif-label">快捷标题</span>
+    <div class="pm-tif-chips" role="group" :aria-label="t.common.quickTitle" :data-testid="`${idPrefix}-quick`">
+      <span class="pm-tif-label">{{ t.common.quickTitle }}</span>
       <button
         v-for="(q, i) in QUICK_TITLES"
-        :key="q.label"
+        :key="q.id"
         type="button"
         class="pm-tif-chip"
         :data-testid="`${idPrefix}-quick-${i}`"
-        @click="emit('update:title', quickTitleValue(q, uiLanguage))"
+        @click="emit('update:title', quickTitleValue(q, locale))"
       >
-        {{ quickTitleValue(q, uiLanguage) }}
+        {{ quickTitleValue(q, locale) }}
       </button>
     </div>
     <p v-if="titleHint" :id="`${idPrefix}-title-hint`" class="pm-tif-hint">{{ titleHint }}</p>
 
     <div class="pm-tif-icon-row">
-      <span class="pm-tif-label">标签页图标</span>
+      <span class="pm-tif-label">{{ t.management.iconHeading }}</span>
       <img
         v-if="icon"
         class="pm-tif-icon-preview"
         :src="icon"
-        alt="将显示在标签页上的图标"
+        :alt="t.toggle.iconAlt"
         :data-testid="`${idPrefix}-icon-preview`"
       />
       <span v-else class="pm-tif-icon-empty" aria-hidden="true" :data-testid="`${idPrefix}-icon-empty`"></span>
       <label class="pm-tif-btn pm-tif-file">
-        {{ busy ? '正在处理…' : icon ? '换一张图标' : '上传图标' }}
+        {{ busy ? t.common.processing : icon ? t.common.replaceIcon : t.common.uploadIcon }}
         <input
           type="file"
           :accept="ICON_SOURCE_TYPES.join(',')"
@@ -57,7 +57,7 @@
         :data-testid="`${idPrefix}-icon-clear`"
         @click="emit('update:icon', null)"
       >
-        清除图标
+        {{ t.common.clearIcon }}
       </button>
     </div>
     <p v-if="iconHint" class="pm-tif-hint">{{ iconHint }}</p>
@@ -68,7 +68,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
-import { QUICK_TITLES, currentUiLanguage, quickTitleValue } from '@/core/titles';
+import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
+import { locale, t } from '@/ui/i18n';
 // 与管理页的站点设置页共用同一套图标压缩与校验管线（#26）
 import { fileToIconDataUrl } from '@/entrypoints/management/tab-icon';
 
@@ -89,7 +90,6 @@ defineProps<{
 
 const emit = defineEmits<{ 'update:title': [value: string]; 'update:icon': [value: string | null] }>();
 
-const uiLanguage = currentUiLanguage();
 const busy = ref(false);
 const error = ref('');
 
@@ -112,7 +112,7 @@ async function onIconChange(e: Event) {
     }
     emit('update:icon', res.dataUrl);
   } catch {
-    error.value = '没能处理这张图标，请再试一次';
+    error.value = t.value.errors.iconProcess;
   } finally {
     busy.value = false;
   }

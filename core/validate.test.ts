@@ -168,12 +168,14 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
       defaultTitle: '新建标签页',
       defaultIconDataUrl: null,
       curtainBtnPos: null,
+      uiLanguage: 'auto',
       settingsVersion: 2,
     });
     expect(readStoredSettings(stored)).toEqual({
       defaultTitle: '新建标签页',
       defaultIconDataUrl: null,
       curtainBtnPos: null,
+      uiLanguage: 'auto',
     });
   });
 });

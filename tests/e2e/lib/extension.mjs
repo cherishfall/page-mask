@@ -66,10 +66,11 @@ export async function launchExtension({
   extraPermissions = [],
   revocable = true,
   srcDir,
+  args = [],
 } = {}) {
   const prepared = prepareExtension({ hostOrigins, hostPatterns, extraPermissions, srcDir });
   const patterns = [...hostOrigins.map((o) => `${o}/*`), ...hostPatterns];
-  const launched = await launchWithExtension({ extDir: prepared.dir });
+  const launched = await launchWithExtension({ extDir: prepared.dir, args });
   if (process.env.PM_E2E_DEBUG) {
     // PM_E2E_DEBUG=1：打印所有 target 变化，排查扩展页面/SW 生命周期问题
     for (const ev of ['targetcreated', 'targetchanged', 'targetdestroyed']) {

@@ -4,11 +4,11 @@
        与站点设置页的确认框用同一套文案（core/site-delete.ts）。 -->
   <dialog ref="dlg" class="pm-tg-del" aria-labelledby="pm-tg-del-title" data-testid="pm-tg-delete-dialog">
     <h2 id="pm-tg-del-title" class="pm-tg-del-title" data-testid="pm-tg-delete-title">{{ deleteSiteTitle(label) }}</h2>
-    <p class="pm-tg-del-text" data-testid="pm-tg-delete-impact">{{ DELETE_SITE_IMPACT }}</p>
+    <p class="pm-tg-del-text" data-testid="pm-tg-delete-impact">{{ deleteSiteImpact() }}</p>
     <form method="dialog" class="pm-tg-del-actions">
-      <button type="submit" value="cancel" autofocus data-testid="pm-tg-delete-cancel">取消</button>
+      <button type="submit" value="cancel" autofocus data-testid="pm-tg-delete-cancel">{{ t.common.cancel }}</button>
       <button type="submit" value="confirm" class="primary danger" data-testid="pm-tg-delete-confirm">
-        {{ DELETE_SITE_ACTION }}
+        {{ deleteSiteAction() }}
       </button>
     </form>
   </dialog>
@@ -16,7 +16,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { DELETE_SITE_ACTION, DELETE_SITE_IMPACT, deleteSiteTitle } from '@/core/site-delete';
+import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site-delete';
+import { t } from '@/ui/i18n';
 
 defineProps<{ label: string }>();
 const emit = defineEmits<{ confirm: []; cancel: [] }>();

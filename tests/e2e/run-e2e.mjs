@@ -444,7 +444,7 @@ async function main() {
     await sPage.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
     await sPage.waitForSelector('input[type="file"][accept="application/json"]', { timeout: 3000 });
     const hasExport = await sPage.evaluate(() =>
-      !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出配置')),
+      !!Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('导出全部设置')),
     );
     check(hasExport, '插件设置页有导出/导入');
     await sPage.close();
@@ -891,7 +891,7 @@ async function main() {
     async function exportFromManagement(m) {
       await m.bringToFront();
       await m.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
-      await m.waitForSelector('xpath/.//button[normalize-space()="导出配置"]', { timeout: 3000 });
+      await m.waitForSelector('xpath/.//button[normalize-space()="导出全部设置"]', { timeout: 3000 });
       await m.evaluate(() => {
         window.__pmBlobs = [];
         const orig = URL.createObjectURL.bind(URL);
@@ -904,7 +904,7 @@ async function main() {
           if (!this.download) click.call(this);
         };
       });
-      await m.click('xpath/.//button[normalize-space()="导出配置"]');
+      await m.click('xpath/.//button[normalize-space()="导出全部设置"]');
       await waitFor(m, '导出文件生成', () => window.__pmBlobs.length > 0);
       const text = await m.evaluate(() => window.__pmBlobs[0].text());
       // 后面的步骤还在用这个页面（站点设置、删除设置），导完回到管理页

@@ -11,6 +11,7 @@
 import type { ButtonPos, ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
 import { createEmptyProfile } from './types';
 import { isValidOrigin, readSettings, readStoredSettings, sanitizeProfile, toStoredSettings } from './validate';
+import { t } from './i18n';
 
 export interface KVArea {
   get(keys: string[] | null): Promise<Record<string, unknown>>;
@@ -21,8 +22,10 @@ export interface KVArea {
 export const PROFILE_PREFIX = 'profile:';
 export const SETTINGS_KEY = 'settings';
 
-/** 用户可见的导入报错（GLOSSARY：说"导出文件"，不说"配置文件"） */
-export const INVALID_EXPORT_FILE = '不是有效的 PageMask 导出文件';
+/** 用户可见的导入报错（GLOSSARY：说"导出文件"，不说"配置文件"）。按当前界面语言取 */
+export function invalidExportFile(): string {
+  return t().errors.invalidExportFile;
+}
 
 export const profileKey = (origin: string) => PROFILE_PREFIX + origin;
 
@@ -97,7 +100,7 @@ export function createPageMaskStorage(area: KVArea) {
    * 返回写入后的最新配置；站点不存在且未要求新建时返回 null（不写入）。
    */
   function updateProfile(origin: string, mutate: ProfileMutator, opts: UpdateOptions = {}): Promise<SiteProfile | null> {
-    if (!isValidOrigin(origin)) return Promise.reject(new Error(`无效的站点地址：${origin}`));
+    if (!isValidOrigin(origin)) return Promise.reject(new Error(t().errors.invalidOrigin(origin)));
     return serialize(area, async () => {
       const current = await readProfile(origin);
       if (!current && !opts.create) return null;
@@ -108,7 +111,7 @@ export function createPageMaskStorage(area: KVArea) {
       draft.origin = origin;
       if (opts.touch !== false || !current) draft.updatedAt = Date.now();
       const clean = sanitizeProfile(clone(draft));
-      if (!clean) throw new Error('站点配置数据不合法，未保存');
+      if (!clean) throw new Error(t().errors.invalidProfile);
       await area.set({ [profileKey(origin)]: clean.profile });
       return clean.profile;
     });
@@ -196,17 +199,18 @@ export function createPageMaskStorage(area: KVArea) {
    *   本地已设置过的全局设置保留
    * - 整体替换：以导入文件为准（含全局设置），本地多出的站点移除
    * 旧导出文件（没有 settings 字段）只导网站，插件设置保持本机不变，不报错（#55）。
-   * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑），「遮住」按钮的全局位置同理。
+   * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑），「遮住」按钮的全局位置同理；
+   * 界面语言偏好（#57）也是本机偏好，导入不改它。
    */
   async function importBundle(bundle: unknown, mode: 'merge' | 'replace' = 'merge'): Promise<ImportResult> {
     if (!isObject(bundle) || bundle.app !== 'pagemask' || !Array.isArray(bundle.profiles)) {
-      throw new Error(INVALID_EXPORT_FILE);
+      throw new Error(invalidExportFile());
     }
     if (bundle.formatVersion !== 1) {
       throw new Error(
         typeof bundle.formatVersion === 'number' && bundle.formatVersion > 1
-          ? '这个导出文件来自更新版本的 PageMask，请先升级后再导入'
-          : INVALID_EXPORT_FILE,
+          ? t().errors.newerImport
+          : invalidExportFile(),
       );
     }
 
@@ -225,7 +229,7 @@ export function createPageMaskStorage(area: KVArea) {
       incoming.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
     }
     if (incoming.size === 0) {
-      throw new Error(`${INVALID_EXPORT_FILE}：里面没有可导入的站点配置，本地数据没有改动`);
+      throw new Error(t().errors.noSitesInFile(invalidExportFile()));
     }
     // 导出文件从 0.2.0 起才带全局设置，不存在 0.1.0 旧值的问题，按 schema 读取即可（不做旧版迁移）
     const importedSettings = isObject(bundle.settings) ? readSettings(bundle.settings) : null;
@@ -256,9 +260,13 @@ export function createPageMaskStorage(area: KVArea) {
         writes[profileKey(origin)] = next;
       }
       if (importedSettings && (mode === 'replace' || !(SETTINGS_KEY in all))) {
-        // 「遮住」按钮位置是本机界面状态（屏幕相关）：只换标题，保留本机的坐标
-        const localPos = readStoredSettings(all[SETTINGS_KEY]).curtainBtnPos;
-        writes[SETTINGS_KEY] = toStoredSettings({ ...importedSettings, curtainBtnPos: localPos });
+        // 本机界面状态（屏幕相关 / 本机偏好）：只换标题与图标，保留本机的坐标与界面语言
+        const local = readStoredSettings(all[SETTINGS_KEY]);
+        writes[SETTINGS_KEY] = toStoredSettings({
+          ...importedSettings,
+          curtainBtnPos: local.curtainBtnPos,
+          uiLanguage: local.uiLanguage,
+        });
       }
 
       await area.set(writes);

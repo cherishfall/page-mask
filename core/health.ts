@@ -6,6 +6,7 @@
 import type { HideRule } from './types';
 import { rulesApplicableAt } from './scope';
 import { isOwnUiNode } from './host-shield';
+import { t } from './i18n';
 
 export type HitCounter = (selector: string) => number;
 
@@ -102,5 +103,5 @@ export async function runHealthCheck(
 
 /** 人话体检提醒（design.md：表达用大白话 + 「去处理」跳编辑由 UI 承担） */
 export function healthMessage(rule: HideRule, scopeText: string): string {
-  return `「${rule.elementName}」的隐藏规则最近在${scopeText}没找到目标，可能网站改版了`;
+  return t().editor.health(rule.elementName, scopeText);
 }

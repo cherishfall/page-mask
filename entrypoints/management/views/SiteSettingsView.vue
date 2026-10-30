@@ -1,20 +1,20 @@
 <template>
   <section class="view" aria-labelledby="pm-site-title">
-    <a class="back" href="#/sites" data-testid="pm-mgmt-back">← 返回网站列表</a>
+    <a class="back" href="#/sites" data-testid="pm-mgmt-back">{{ t.management.back }}</a>
 
-    <p v-if="!store.state.loaded" class="hint">正在读取…</p>
+    <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
 
     <div v-else-if="!profile" class="card empty" data-testid="pm-mgmt-site-missing">
-      <h2 id="pm-site-title">没有这个网站的设置</h2>
-      <p class="hint">打开这个网站，点浏览器工具栏上的 PageMask 图标，就能为它开启清爽模式。</p>
-      <a class="button" href="#/sites">回到网站列表</a>
+      <h2 id="pm-site-title">{{ t.management.missingTitle }}</h2>
+      <p class="hint">{{ t.management.missingHint }}</p>
+      <a class="button" href="#/sites">{{ t.management.backShort }}</a>
     </div>
 
     <template v-else>
       <div class="site-head">
         <h2 id="pm-site-title" class="host">{{ siteLabelOf(profile.origin) }}</h2>
         <div class="switch-row">
-          <label for="pm-mgmt-switch">清爽模式</label>
+          <label for="pm-mgmt-switch">{{ t.common.cleanMode }}</label>
           <input
             id="pm-mgmt-switch"
             type="checkbox"
@@ -30,11 +30,11 @@
 
       <!-- 0 条规则时不写「已收起 0 项」：没有内容可收起是很正常的状态 -->
       <p class="state" data-testid="pm-mgmt-count">
-        {{ profile.hideRules.length > 0 ? `已收起 ${profile.hideRules.length} 项` : '没有收起任何内容' }}
+        {{ profile.hideRules.length > 0 ? t.common.hiddenCount(profile.hideRules.length) : t.common.hiddenNone }}
         <template v-if="stale.length > 0">
           ·
           <span class="stale" data-testid="pm-mgmt-stale-count">
-            <span aria-hidden="true">● </span>{{ stale.length }} 项可能失效
+            <span aria-hidden="true">● </span>{{ t.common.staleCount(stale.length) }}
           </span>
         </template>
       </p>
@@ -44,20 +44,20 @@
       </p>
 
       <div v-if="isPending" class="pending" data-testid="pm-mgmt-pending">
-        <span class="badge">待授权</span>
-        <span class="hint">浏览器没有这个网站的访问权限，设置都还在，授权后立即生效。</span>
+        <span class="badge">{{ t.management.pendingBadge }}</span>
+        <span class="hint">{{ t.management.pendingHint }}</span>
         <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([profile.origin])">
-          授权并启用
+          {{ t.management.authorize }}
         </button>
       </div>
       <p v-if="isPending && store.state.authError" class="hint error" role="alert">{{ store.state.authError }}</p>
 
       <!-- 标签页标题 -->
       <section class="card">
-        <h3>标签页标题</h3>
-        <p class="hint">清爽模式下，这个网站的标签页显示这段文字。</p>
+        <h3>{{ t.management.titleHeading }}</h3>
+        <p class="hint">{{ t.management.titleIntro }}</p>
         <div class="row">
-          <label class="visually-hidden" for="pm-site-title-input">标签页标题</label>
+          <label class="visually-hidden" for="pm-site-title-input">{{ t.management.titleHeading }}</label>
           <input
             id="pm-site-title-input"
             v-model="store.state.drafts[profile.origin]"
@@ -72,40 +72,40 @@
           />
         </div>
         <div class="row quick" role="group" aria-labelledby="pm-site-title-quick" data-testid="pm-mgmt-title-quick">
-          <span id="pm-site-title-quick" class="hint">快捷填入</span>
+          <span id="pm-site-title-quick" class="hint">{{ t.common.quickFill }}</span>
           <button
             v-for="q in QUICK_TITLES"
-            :key="q.label"
+            :key="q.id"
             type="button"
             class="chip"
             @click="store.pickTitle(profile.origin, q)"
           >
-            {{ quickTitleValue(q, store.uiLanguage) }}
+            {{ quickTitleValue(q, locale) }}
           </button>
         </div>
         <p id="pm-site-title-hint" class="hint">
-          停止输入后自动保存。留空则用「{{ fallbackTitle }}」；标题不会留成空白——空白时 Chrome 会改为显示网址。
+          {{ t.management.titleFootnote(fallbackTitle) }}
         </p>
       </section>
 
       <!-- 标签页图标 -->
       <section class="card">
-        <h3>标签页图标</h3>
-        <p class="hint">清爽模式下替换这个网站的标签页图标。</p>
+        <h3>{{ t.management.iconHeading }}</h3>
+        <p class="hint">{{ t.management.iconIntro }}</p>
         <div class="row">
-          <span class="row-label">当前图标</span>
+          <span class="row-label">{{ t.management.currentIcon }}</span>
           <img
             v-if="profile.faviconDataUrl"
             class="favicon"
             :src="profile.faviconDataUrl"
-            alt="当前的标签页图标"
+            :alt="t.management.currentIconAlt"
             data-testid="pm-mgmt-favicon"
           />
           <span v-else class="hint" data-testid="pm-mgmt-favicon-empty">
-            未设置：{{ store.state.defaultIcon ? '用插件设置里的默认图标' : '标签页上不显示图标' }}
+            {{ store.state.defaultIcon ? t.management.iconUnsetDefault : t.management.iconUnsetBlank }}
           </span>
           <label class="button file-button">
-            {{ iconBusy ? '正在处理…' : profile.faviconDataUrl ? '换一张图标' : '上传图标' }}
+            {{ iconBusy ? t.common.processing : profile.faviconDataUrl ? t.common.replaceIcon : t.common.uploadIcon }}
             <input
               type="file"
               data-testid="pm-mgmt-icon-input"
@@ -122,21 +122,21 @@
             data-testid="pm-mgmt-icon-clear"
             @click="clearIcon"
           >
-            清除图标
+            {{ t.common.clearIcon }}
           </button>
         </div>
         <p id="pm-site-icon-hint" class="hint">
-          PNG、JPG、GIF、WebP 或 ICO，不超过 5MB，会自动缩小成 32×32。没有单独设置时用插件设置里的默认图标。
+          {{ t.management.iconHint }}
         </p>
         <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
       </section>
 
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card">
-        <h3>收起的内容</h3>
+        <h3>{{ t.management.rulesHeading }}</h3>
 
         <p v-if="profile.hideRules.length === 0" class="hint" data-testid="pm-mgmt-no-rules">
-          没有收起任何内容。点下面的「在页面上编辑」到网站上挑要收起的东西。
+          {{ t.management.rulesEmpty }}
         </p>
         <ul v-else class="rule-list" data-testid="pm-mgmt-rule-list">
           <li
@@ -149,26 +149,26 @@
             <span class="rule-text">
               <span class="rule-name">{{ r.elementName }}</span>
               <span class="rule-meta">
-                <span>{{ STRATEGY_LABEL[r.strategy] }}</span>
+                <span>{{ t.common.strategy[r.strategy] }}</span>
                 <span aria-hidden="true">·</span>
                 <span>{{ scopeHumanLabel(r.scope) }}</span>
                 <template v-if="r.lastHealth === 'stale'">
                   <span aria-hidden="true">·</span>
-                  <span class="stale" data-testid="pm-mgmt-rule-stale"><span aria-hidden="true">● </span>可能失效</span>
+                  <span class="stale" data-testid="pm-mgmt-rule-stale"><span aria-hidden="true">● </span>{{ t.common.stale }}</span>
                 </template>
               </span>
               <span v-if="r.lastHealth === 'stale'" class="rule-stale-note">
-                「{{ r.elementName }}」最近没找到，可能网站改版了；打开这个网站重新选一次。
+                {{ t.management.ruleStaleNote(r.elementName) }}
               </span>
             </span>
             <button
               type="button"
               class="ghost danger rule-del"
               :data-testid="`pm-mgmt-rule-delete-${r.id}`"
-              :aria-label="`删除「${r.elementName}」`"
+              :aria-label="t.common.deleteNamed(r.elementName)"
               @click="removeRule(r)"
             >
-              删除
+              {{ t.common.delete }}
             </button>
           </li>
         </ul>
@@ -176,8 +176,8 @@
         <!-- 删除后 5 秒内可撤销；容器常驻（live region 只有内容出现时才播报） -->
         <div class="undo" :class="{ 'undo-on': !!undo }" role="status" data-testid="pm-mgmt-undo">
           <template v-if="undo">
-            <span>已删除「{{ undo.name }}」</span>
-            <button type="button" data-testid="pm-mgmt-undo-btn" @click="undoDelete">撤销</button>
+            <span>{{ t.common.deleted(undo.name) }}</span>
+            <button type="button" data-testid="pm-mgmt-undo-btn" @click="undoDelete">{{ t.common.undo }}</button>
           </template>
         </div>
 
@@ -193,17 +193,17 @@
             :disabled="isPending || editBusy"
             @click="editOnPage"
           >
-            {{ editBusy ? '正在打开…' : '在页面上编辑' }}
+            {{ editBusy ? t.common.opening : t.management.editOnPage }}
           </button>
         </div>
-        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHint }}</p>
+        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHint || editHintDefault }}</p>
       </section>
 
       <!-- 页脚：删除这个网站的设置（与页面右下角 ⋯ 菜单里的那一项是同一件事、同一个叫法） -->
       <footer class="danger-zone">
-        <h3>{{ DELETE_SITE_HEADING }}</h3>
-        <p class="hint">{{ DELETE_SITE_IMPACT }}</p>
-        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="openReset">{{ DELETE_SITE_ACTION }}</button>
+        <h3>{{ deleteSiteHeading() }}</h3>
+        <p class="hint">{{ deleteSiteImpact() }}</p>
+        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="openReset">{{ deleteSiteAction() }}</button>
         <p v-if="store.state.resetError[profile.origin]" class="hint error" role="alert">
           {{ store.state.resetError[profile.origin] }}
         </p>
@@ -221,12 +221,12 @@
         <h2 id="pm-mgmt-reset-title">
           {{ deleteSiteTitle(siteLabelOf(store.state.resetTarget.origin)) }}
         </h2>
-        <p data-testid="pm-mgmt-reset-impact">{{ DELETE_SITE_IMPACT }}</p>
+        <p data-testid="pm-mgmt-reset-impact">{{ deleteSiteImpact() }}</p>
       </template>
       <form method="dialog" class="dialog-actions">
-        <button value="cancel" autofocus data-testid="pm-mgmt-reset-cancel">取消</button>
+        <button value="cancel" autofocus data-testid="pm-mgmt-reset-cancel">{{ t.common.cancel }}</button>
         <button value="confirm" class="primary danger" data-testid="pm-mgmt-reset-confirm">
-          {{ DELETE_SITE_ACTION }}
+          {{ deleteSiteAction() }}
         </button>
       </form>
     </dialog>
@@ -236,16 +236,18 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
+import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import {
-  DELETE_SITE_ACTION,
-  DELETE_SITE_HEADING,
-  DELETE_SITE_IMPACT,
+  deleteSiteAction,
+  deleteSiteHeading,
+  deleteSiteImpact,
   deleteSiteTitle,
 } from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
-import { STRATEGY_LABEL, type HideRule } from '@/core/types';
+import type { HideRule } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
+import { locale, t } from '@/ui/i18n';
 import { SITES_HASH } from '../router';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
@@ -270,7 +272,7 @@ const resetDialog = ref<HTMLDialogElement | null>(null);
 const iconBusy = ref(false);
 const iconError = ref('');
 const editBusy = ref(false);
-const editHint = ref('换收起方式、重新选元素都要页面上下文，在网站的页面上改，改动即时生效。');
+const editHint = ref('');
 
 // 删除 / 撤销：与页面内编辑面板共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
 const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
@@ -302,7 +304,7 @@ async function onIconChange(e: Event) {
     }
     await store.setIcon(p.origin, res.dataUrl);
   } catch {
-    iconError.value = '没能保存图标，请再试一次';
+    iconError.value = t.value.errors.iconSave;
   } finally {
     iconBusy.value = false;
   }
@@ -314,15 +316,13 @@ async function clearIcon() {
   try {
     await store.setIcon(profile.value.origin, null);
   } catch {
-    iconError.value = '没能清除图标，请再试一次';
+    iconError.value = t.value.errors.iconClear;
   }
 }
 
-const EDIT_HINT: Record<'opened' | 'noTab' | 'failed', string> = {
-  opened: '已在那个网站的标签页里打开编辑面板。',
-  noTab: '这个网站没有打开的标签页：先打开它，再回来点「在页面上编辑」。',
-  failed: '没能打开编辑面板，刷新那个网站的页面后再试一次。',
-};
+/** 编辑入口的结果提示（初始为空：默认显示的是 editHintDefault） */
+const editHintDefault = computed(() => t.value.management.editHint);
+const EDIT_HINT_KEYS = { opened: 'editOpened', noTab: 'editNoTab', failed: 'editFailed' } as const;
 
 async function editOnPage() {
   const p = profile.value;
@@ -330,7 +330,8 @@ async function editOnPage() {
   editBusy.value = true;
   editHint.value = '';
   try {
-    editHint.value = EDIT_HINT[await store.openPageEditor(p.origin)];
+    const key = EDIT_HINT_KEYS[await store.openPageEditor(p.origin)];
+    editHint.value = t.value.management[key];
   } finally {
     editBusy.value = false;
   }

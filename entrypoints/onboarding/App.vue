@@ -1,12 +1,12 @@
 <template>
   <main class="page">
-    <h1>欢迎使用 PageMask</h1>
-    <p class="sub">一键收起网页上的干扰内容，给自己一个清爽、专注的阅读界面。你不设置的网站，PageMask 完全不碰。</p>
+    <h1>{{ t.onboarding.title }}</h1>
+    <p class="sub">{{ t.onboarding.sub }}</p>
 
     <ol class="steps">
       <li
-        v-for="(s, i) in STEPS"
-        :key="s.title"
+        v-for="(s, i) in t.onboarding.steps"
+        :key="i"
         class="step"
         :class="{ active: step === i + 1, done: step > i + 1 }"
         :aria-current="step === i + 1 ? 'step' : undefined"
@@ -14,7 +14,7 @@
         <div class="num" aria-hidden="true">{{ i + 1 }}</div>
         <div class="body">
           <h2>
-            {{ s.title }}<span v-if="step > i + 1" class="visually-hidden">（已完成）</span>
+            {{ s.title }}<span v-if="step > i + 1" class="visually-hidden">{{ t.onboarding.done }}</span>
           </h2>
           <p>{{ s.text }}</p>
         </div>
@@ -22,38 +22,20 @@
     </ol>
 
     <div class="nav">
-      <button v-if="step > 1" type="button" class="ghost" @click="step--">上一步</button>
+      <button v-if="step > 1" type="button" class="ghost" @click="step--">{{ t.onboarding.prev }}</button>
       <span v-else></span>
       <!-- 圆点只是装饰，步骤状态已由列表里的 aria-current 表达 -->
-      <span class="dots" aria-hidden="true"><i v-for="i in STEPS.length" :key="i" :class="{ on: i === step }"></i></span>
-      <button v-if="step < STEPS.length" type="button" class="primary" @click="step++">下一步</button>
-      <button v-else type="button" class="primary" @click="finish">开始使用</button>
+      <span class="dots" aria-hidden="true"><i v-for="i in t.onboarding.steps.length" :key="i" :class="{ on: i === step }"></i></span>
+      <button v-if="step < t.onboarding.steps.length" type="button" class="primary" @click="step++">{{ t.onboarding.next }}</button>
+      <button v-else type="button" class="primary" @click="finish">{{ t.onboarding.start }}</button>
     </div>
-    <p class="tip">小提示：管理全部网站、导出 / 导入设置，都在 PageMask 图标菜单的「管理全部网站」里。</p>
+    <p class="tip">{{ t.onboarding.tip }}</p>
   </main>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-
-const STEPS = [
-  {
-    title: '把 PageMask 固定到工具栏',
-    text: '新装的扩展默认收在菜单里。点浏览器右上角的拼图图标（扩展程序），在列表里找到 PageMask，点它右边的图钉，图标就会一直显示在工具栏上。',
-  },
-  {
-    title: '打开你想变清爽的网站',
-    text: '比如你常用的阅读、学习类网站。PageMask 不会主动处理任何网站，只有你自己开启过的网站才会生效。',
-  },
-  {
-    title: '点工具栏图标，选要收起的内容',
-    text: '点 PageMask 图标，选「为当前网站开启清爽模式」。鼠标移到页面上会高亮元素，点一下选中（可以连续选），选到内层文字时可以用「选大一点 / 选小一点」调整。',
-  },
-  {
-    title: '预览、保存，清爽常驻',
-    text: '预览时每一行就是一项：可以直接改名字、换收起方式（消失 / 留空 / 盖住）、把「仅这一处」切成「同类 N 处」，或者点 ✕ 不收起这一项。保存后页面立刻变清爽；标签页也可以换成更简洁的标题和图标（在管理页设置）。想看原样？点页面右下角的小按钮就能切换。',
-  },
-] as const;
+import { t } from '@/ui/i18n';
 
 const step = ref(1);
 

@@ -2,7 +2,7 @@
   <div class="shell">
     <header class="masthead">
       <h1>PageMask</h1>
-      <p class="sub">管理你添加的网站：清爽模式开关、标签页标题和图标，以及收起项的状态。</p>
+      <p class="sub">{{ t.management.appSub }}</p>
     </header>
 
     <main id="pm-main" ref="mainEl" tabindex="-1">
@@ -14,6 +14,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue';
+import { t } from '@/ui/i18n';
 import SiteSettingsView from './views/SiteSettingsView.vue';
 import SitesView from './views/SitesView.vue';
 import { useHashRoute } from './router';

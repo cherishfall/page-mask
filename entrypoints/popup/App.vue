@@ -5,21 +5,21 @@
       <h1 class="logo">PageMask</h1>
     </header>
 
-    <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">正在读取当前网页…</p>
+    <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">{{ t.popup.loading }}</p>
     <p v-else-if="phase === 'unsupported'" class="hint" data-testid="pm-popup-unsupported">
-      {{ supported.reason || '这个页面无法使用清爽模式' }}
+      {{ supported.reason || t.popup.unsupportedFallback }}
     </p>
 
     <template v-else>
       <div class="site">
         <div class="site-head">
           <h2 class="host">{{ host }}</h2>
-          <span v-if="phase === 'pending'" class="badge" data-testid="pm-popup-pending-badge">待授权</span>
+          <span v-if="phase === 'pending'" class="badge" data-testid="pm-popup-pending-badge">{{ t.popup.pendingBadge }}</span>
         </div>
 
         <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"（modern-web-guidance「switch」） -->
         <div v-if="phase === 'ready' && profile" class="switch-row">
-          <label for="pm-popup-switch">清爽模式</label>
+          <label for="pm-popup-switch">{{ t.common.cleanMode }}</label>
           <input
             id="pm-popup-switch"
             type="checkbox"
@@ -35,25 +35,25 @@
         <p v-if="profile" class="meta">
           {{ ruleSummary }}<template v-if="staleCount > 0">
             ·
-            <span class="stale" data-testid="pm-popup-stale"><span aria-hidden="true">● </span>{{ staleCount }} 项可能失效</span>
+            <span class="stale" data-testid="pm-popup-stale"><span aria-hidden="true">● </span>{{ t.common.staleCount(staleCount) }}</span>
           </template>
         </p>
-        <p v-else class="hint">这个网站还没有设置过，开启后 PageMask 才会处理它。</p>
+        <p v-else class="hint">{{ t.popup.newSiteHint }}</p>
       </div>
 
       <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
 
       <template v-if="phase === 'pending'">
         <!-- 有配置、没授权：配置还在，只是浏览器收回了这个网站的访问权限 -->
-        <p class="hint" data-testid="pm-popup-pending">浏览器收回了这个网站的访问权限，设置都还在，重新授权后立即恢复。</p>
+        <p class="hint" data-testid="pm-popup-pending">{{ t.popup.pendingHint }}</p>
         <button class="primary" data-testid="pm-popup-reauth" :disabled="busy !== ''" @click="reauthorize">
-          {{ busy === 'reauth' ? '正在授权…' : '重新授权' }}
+          {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
         </button>
       </template>
       <button v-else class="primary" data-testid="pm-popup-setup" :disabled="busy !== ''" @click="setup">
-        <template v-if="busy === 'setup'">正在打开…</template>
-        <template v-else-if="profile"><span aria-hidden="true">＋</span> 收起更多内容</template>
-        <template v-else>为当前网站开启清爽模式</template>
+        <template v-if="busy === 'setup'">{{ t.common.opening }}</template>
+        <template v-else-if="profile"><span aria-hidden="true">＋</span> {{ t.popup.setupMore }}</template>
+        <template v-else>{{ t.popup.setupNew }}</template>
       </button>
 
       <!-- 页面内编辑面板的第二个入口（普通按钮，不是右键菜单） -->
@@ -63,19 +63,19 @@
         :disabled="busy !== ''"
         @click="editSite"
       >
-        {{ busy === 'edit' ? '正在打开…' : '编辑当前网站' }}
+        {{ busy === 'edit' ? t.common.opening : t.popup.editSite }}
       </button>
 
       <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
       <button data-testid="pm-popup-cover" :disabled="busy !== ''" @click="toggleCurtain">
-        <template v-if="busy === 'curtain'">{{ covered ? '正在恢复…' : '正在遮住…' }}</template>
-        <template v-else>{{ covered ? '恢复本页' : '遮住本页' }}</template>
+        <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
+        <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
       </button>
     </template>
 
     <div class="links">
-      <button class="ghost link" data-testid="pm-popup-manage" @click="manage">管理全部网站</button>
-      <button class="ghost link" data-testid="pm-popup-settings" @click="openSettings">插件设置</button>
+      <button class="ghost link" data-testid="pm-popup-manage" @click="manage">{{ t.popup.manageAll }}</button>
+      <button class="ghost link" data-testid="pm-popup-settings" @click="openSettings">{{ t.popup.settings }}</button>
     </div>
   </main>
 </template>
@@ -83,6 +83,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
+import { t } from '@/ui/i18n';
 import { createPageMaskStorage } from '@/core/storage';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
@@ -107,22 +108,14 @@ const granted = ref<boolean | null>(null);
 const covered = ref(false);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
 const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'curtain'>('');
-/** 失败 / 授权被拒时给用户看的话 */
-const message = ref('');
-
-/** 失败时给用户看的话（不暴露内部错误） */
-const ERROR_TEXT: Record<string, string> = {
-  tabMismatch: '页面已经换了，请回到要设置的网站再点一次 PageMask',
-  notGranted: '还没有拿到这个网站的访问权限，请再点一次并选择「允许」',
-  injectFailed: '没能在这个页面启动，刷新页面后再试一次',
-  // denied / gestureLost 都用这句：能做的只有再点一次
-  denied: '需要允许访问这个网站，才能开启清爽模式。可以再点一次并选择「允许」',
-  gestureLost: '没能打开权限弹窗，请再点一次 PageMask',
-};
-const TOGGLE_FAILED_TEXT = '没能切换清爽模式，请稍后再试一次';
-const EDIT_FAILED_TEXT = '没能打开编辑面板，刷新这个页面后再试一次';
-const COVER_FAILED_TEXT = '没能遮住这个页面，刷新这个页面后再试一次';
-const RESTORE_FAILED_TEXT = '没能恢复这个页面，刷新这个页面后再试一次';
+/** 失败时给用户看的话（不暴露内部错误）：存 code，文案从 t 里取（语言切换后跟着变） */
+const errorCode = ref<string>('');
+const message = computed(() => {
+  const code = errorCode.value;
+  if (!code) return '';
+  const errors = t.value.popup.error as Record<string, string | undefined>;
+  return errors[code] ?? errors.injectFailed ?? '';
+});
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -131,7 +124,7 @@ const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastH
 /** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
 const ruleSummary = computed(() => {
   const n = profile.value?.hideRules.length ?? 0;
-  return n > 0 ? `已收起 ${n} 项` : '没有收起任何内容';
+  return n > 0 ? t.value.common.hiddenCount(n) : t.value.common.hiddenNone;
 });
 
 /**
@@ -197,7 +190,7 @@ async function toggleSwitch(e: Event) {
   // 目标态 = 用户刚拨到的位置；只改开关字段，不覆盖页面里刚写入的体检结果等
   const target = input.checked ? 'disguised' : 'original';
   busy.value = 'toggle';
-  message.value = '';
+  errorCode.value = '';
   try {
     const storage = createPageMaskStorage(browser.storage.local);
     profile.value = await storage.updateProfile(origin.value, (p) => {
@@ -205,7 +198,7 @@ async function toggleSwitch(e: Event) {
     });
   } catch {
     input.checked = profile.value?.switchState === 'disguised'; // 写入失败：开关拨回实际状态
-    message.value = TOGGLE_FAILED_TEXT;
+    errorCode.value = 'toggleFailed';
   } finally {
     busy.value = '';
   }
@@ -231,7 +224,7 @@ function setup() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
-  message.value = '';
+  errorCode.value = '';
   busy.value = 'setup';
   void (async () => {
     try {
@@ -244,7 +237,7 @@ function setup() {
         window.close();
         return;
       }
-      message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
+      errorCode.value = res?.code ?? 'injectFailed';
     } finally {
       busy.value = '';
     }
@@ -256,13 +249,13 @@ function reauthorize() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
-  message.value = '';
+  errorCode.value = '';
   busy.value = 'reauth';
   void (async () => {
     try {
       const res = await enableSite(tabId, o, { requestPermission: true });
       if (!res?.ok) {
-        message.value = ERROR_TEXT[res?.code ?? ''] ?? ERROR_TEXT.injectFailed!;
+        errorCode.value = res?.code ?? 'injectFailed';
         return;
       }
       granted.value = true;
@@ -281,7 +274,7 @@ async function editSite() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
-  message.value = '';
+  errorCode.value = '';
   busy.value = 'edit';
   try {
     const send = () => browser.tabs.sendMessage(tabId, { t: 'openEditor' } satisfies OpenEditorMsg);
@@ -293,7 +286,7 @@ async function editSite() {
     }
     window.close();
   } catch {
-    message.value = EDIT_FAILED_TEXT;
+    errorCode.value = 'editFailed';
   } finally {
     busy.value = '';
   }
@@ -307,12 +300,12 @@ async function toggleCurtain() {
   const tabId = tab.value?.id;
   if (tabId === undefined || busy.value) return;
   const wantRestore = covered.value;
-  message.value = '';
+  errorCode.value = '';
   busy.value = 'curtain';
   try {
     const ok = wantRestore ? await dismissCurtain(tabId) : await coverCurtain(tabId);
     if (!ok) {
-      message.value = wantRestore ? RESTORE_FAILED_TEXT : COVER_FAILED_TEXT;
+      errorCode.value = wantRestore ? 'restoreFailed' : 'coverFailed';
       return;
     }
     window.close();

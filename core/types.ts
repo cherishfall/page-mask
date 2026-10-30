@@ -1,20 +1,16 @@
 /**
  * PageMask 领域模型（docs/design.md「数据模型」节的代码化）。
  * 术语见 GLOSSARY.md：站点配置 / 隐藏规则 / 收起方案 / 生效范围。
+ *
+ * 界面文案不在这里：全部集中在 core/i18n（收起方式的三个名字也从 `t().common.strategy` 取）。
  */
+import type { UiLanguage } from './i18n/locale';
 
-/** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖（界面用词见下方 STRATEGY_LABEL） */
+/** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖（界面用词见 core/i18n 的 common.strategy） */
 export type StrategyId = 'remove' | 'blank' | 'mask';
 
 /** 站点开关两态：伪装态 / 原样态 */
 export type SwitchState = 'disguised' | 'original';
-
-/** 界面用词（GLOSSARY「收起方式」）：全项目唯一的三个名字，界面上一律用这三个 */
-export const STRATEGY_LABEL: Record<StrategyId, string> = {
-  remove: '消失',
-  blank: '留空',
-  mask: '盖住',
-};
 
 /**
  * 一条生效范围模式：零专业输入，用 URL 前缀表达"这类页面"。
@@ -96,12 +92,18 @@ export interface GlobalSettings {
    * 导入时保留本机的值，不被导入文件覆盖。
    */
   curtainBtnPos: ButtonPos | null;
+  /**
+   * 界面语言偏好（#57）：'auto'（默认，跟随浏览器界面语言）/ 'zh' / 'en'。
+   * 只影响界面文字；标签页的兜底标题永远按浏览器界面语言取（core/titles.ts）。
+   */
+  uiLanguage: UiLanguage;
 }
 
 export const DEFAULT_SETTINGS: GlobalSettings = {
   defaultTitle: null,
   defaultIconDataUrl: null,
   curtainBtnPos: null,
+  uiLanguage: 'auto',
 };
 
 /** 导出文件结构：带版本号字段供未来迁移（ADR-0004） */

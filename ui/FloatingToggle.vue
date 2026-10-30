@@ -7,8 +7,8 @@
       type="button"
       class="pm-tg-grip"
       :class="{ dragging }"
-      aria-label="移动按钮（也可以用方向键）"
-      title="拖动可移动按钮"
+      :aria-label="t.toggle.gripAria"
+      :title="t.toggle.gripTitle"
       data-testid="pm-toggle-grip"
       @pointerdown="onGripDown"
       @pointermove="onGripMove"
@@ -27,15 +27,15 @@
       @click="emit('toggle')"
     >
       <span class="pm-tg-dot" aria-hidden="true"></span>
-      <span class="pm-tg-label">{{ state === 'disguised' ? '清爽' : '原样' }}</span>
+      <span class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
     </button>
 
     <!-- 遮住整页（图标即可，读屏文案「遮住整页」） -->
     <button
       type="button"
       class="pm-tg-cover"
-      aria-label="遮住整页"
-      title="遮住整页"
+      :aria-label="t.toggle.coverAria"
+      :title="t.toggle.coverAria"
       data-testid="pm-toggle-cover"
       @click="emit('cover')"
     >
@@ -60,7 +60,7 @@
       ref="moreEl"
       type="button"
       class="pm-tg-more"
-      aria-label="更多操作"
+      :aria-label="t.toggle.moreAria"
       :aria-expanded="menuOpen ? 'true' : 'false'"
       data-testid="pm-toggle-more"
       @click="toggleMenu"
@@ -73,18 +73,18 @@
          分隔线隔开、写成红字，免得顺手点错 -->
     <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="openTitlePanel">
-        标签页标题和图标
+        {{ t.toggle.menuTitle }}
       </button>
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">
-        编辑收起的内容
+        {{ t.toggle.menuEdit }}
       </button>
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
-        按钮放回右下角
+        {{ t.toggle.menuResetPos }}
       </button>
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item danger" data-testid="pm-toggle-delete" @click="onDelete">
-        删除这个网站的设置
+        {{ t.toggle.menuDelete }}
       </button>
     </div>
 
@@ -115,6 +115,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
+import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import TitleIconPanel from './title-icon/TitleIconPanel.vue';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
@@ -193,7 +194,7 @@ const rootStyle = computed(() => {
   return { left: `${p.x}px`, top: `${p.y}px` };
 });
 
-const tipText = computed(() => (props.state === 'disguised' ? 'PageMask：清爽中，点击还原' : 'PageMask：点击开启清爽模式'));
+const tipText = computed(() => (props.state === 'disguised' ? t.value.toggle.tipOn : t.value.toggle.tipOff));
 
 /** 存下来的坐标可能来自更宽的窗口：挂载与窗口变化时夹紧 */
 function reclamp() {

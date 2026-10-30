@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { importErrorText, previewReplace } from './import-preview';
-import { INVALID_EXPORT_FILE } from './storage';
+import { invalidExportFile } from './storage';
 import { createEmptyProfile, type HideRule, type SiteProfile } from './types';
 
 const rule = (id: string): HideRule => ({
@@ -64,7 +64,7 @@ describe('previewReplace', () => {
 
 describe('importErrorText', () => {
   it('保留 storage 层关于文件内容的中文原因', () => {
-    expect(importErrorText(new Error(INVALID_EXPORT_FILE))).toBe(`导入失败：${INVALID_EXPORT_FILE}`);
+    expect(importErrorText(new Error(invalidExportFile()))).toBe(`导入失败：${invalidExportFile()}`);
     expect(importErrorText(new Error('这个导出文件来自更新版本的 PageMask，请先升级后再导入'))).toContain('升级');
   });
   it('其它错误不暴露英文原文', () => {

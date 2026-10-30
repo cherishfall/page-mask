@@ -10,6 +10,8 @@
  * - 全局设置：按 schema 读取，类型不对用默认值
  */
 import { normalizeOrigin } from './origin';
+import { isUiLanguage } from './i18n/locale';
+import { t } from './i18n';
 import {
   DEFAULT_SETTINGS,
   type GlobalSettings,
@@ -151,7 +153,7 @@ export function sanitizeRule(
   if (candidates.length === 0) return null;
   const rule: HideRule = {
     id: v.id,
-    elementName: typeof v.elementName === 'string' && v.elementName.trim() ? v.elementName : '未命名元素',
+    elementName: typeof v.elementName === 'string' && v.elementName.trim() ? v.elementName : t().common.unnamedElement,
     candidates,
     strategy: v.strategy,
     scope,
@@ -218,6 +220,8 @@ export function readSettings(v: unknown): GlobalSettings {
       typeof o.defaultTitle === 'string' && o.defaultTitle.trim() ? o.defaultTitle : DEFAULT_SETTINGS.defaultTitle,
     defaultIconDataUrl: isSafeFaviconDataUrl(o.defaultIconDataUrl) ? o.defaultIconDataUrl : null,
     curtainBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
+    // 界面语言偏好（#57）：坏值 / 旧数据一律回到 auto
+    uiLanguage: isUiLanguage(o.uiLanguage) ? o.uiLanguage : DEFAULT_SETTINGS.uiLanguage,
   };
 }
 

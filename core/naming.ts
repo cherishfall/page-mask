@@ -1,20 +1,25 @@
 /**
  * 元素自动命名（design.md 数据模型）：无障碍标签 > 元素自身文本 > 后代文本 > 标签名兜底。
- * 面向不懂 CSS 的用户，名字必须是人话。
+ * 面向不懂 CSS 的用户，名字必须是人话。名字按**当前界面语言**生成（core/i18n），
+ * 生成后就存进配置了——它是用户数据，之后切界面语言不会去改已经存下的名字。
  */
+import { t } from './i18n';
 
-const TAG_NAMES: Record<string, string> = {
-  nav: '导航栏',
-  header: '页头',
-  footer: '页脚',
-  aside: '侧栏',
-  main: '主内容区',
-  form: '表单',
-  button: '按钮',
-  search: '搜索框',
-  video: '视频',
-  audio: '音频',
-  canvas: '画布',
+/** 语义标签 → 人话名字的键（文案在 core/i18n 的 common.elementName） */
+type TagKey = 'nav' | 'header' | 'footer' | 'aside' | 'main' | 'form' | 'button' | 'search' | 'video' | 'audio' | 'canvas';
+
+const TAG_KEYS: Record<string, TagKey> = {
+  nav: 'nav',
+  header: 'header',
+  footer: 'footer',
+  aside: 'aside',
+  main: 'main',
+  form: 'form',
+  button: 'button',
+  search: 'search',
+  video: 'video',
+  audio: 'audio',
+  canvas: 'canvas',
 };
 
 const MAX_TEXT_LEN = 8;
@@ -35,12 +40,13 @@ export function describeElement(el: Element): string {
 
   // 2. 语义化标签 → 位置描述（如"顶部导航栏"的"导航栏"部分）
   const tag = el.tagName.toLowerCase();
-  if (TAG_NAMES[tag]) return TAG_NAMES[tag];
+  const tagKey = TAG_KEYS[tag];
+  if (tagKey) return t().common.elementName[tagKey];
 
   // 3. 图像的替代文本
   if (tag === 'img') {
     const alt = el.getAttribute('alt');
-    if (alt && alt.trim()) return `图片：${clip(alt)}`;
+    if (alt && alt.trim()) return t().common.elementName.image(clip(alt));
   }
 
   // 4. 表单控件的占位/值
@@ -58,7 +64,7 @@ export function describeElement(el: Element): string {
   if (nestedText) return clip(nestedText);
 
   // 7. 兜底：标签名
-  return `${tag} 元素`;
+  return t().common.elementName.fallback(tag);
 }
 
 function ariaLabelledby(el: Element): string | null {

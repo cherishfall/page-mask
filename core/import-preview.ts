@@ -5,8 +5,8 @@
  * 其中哪些网站在文件里没有、会被彻底移除；文件里有多少网站 / 规则。
  * 真正的校验与写入仍由 storage.importBundle 负责（预览只读，不改任何数据）。
  */
-import { INVALID_EXPORT_FILE } from './storage';
 import { sanitizeProfile } from './validate';
+import { t } from './i18n';
 import type { SiteProfile } from './types';
 
 export interface ReplaceImpact {
@@ -53,14 +53,17 @@ export function previewReplace(local: SiteProfile[], bundle: unknown): ReplaceIm
 }
 
 /**
- * 导入失败时给用户看的话：storage 层对文件内容抛出的中文原因原样保留；
+ * 导入失败时给用户看的话：storage 层对文件内容抛出的原因原样保留；
  * 其它错误（读文件失败、写入存储失败等，可能带英文报错）不暴露原文，统一成人话。
- * 文件不是 JSON 时调用方应先换成 INVALID_EXPORT_FILE。
+ * 文件不是 JSON 时调用方应先换成 invalidExportFile()。
  */
 export function importErrorText(err: unknown): string {
   const msg = err instanceof Error ? err.message : '';
-  if (msg.startsWith(INVALID_EXPORT_FILE) || msg.includes('更新版本的 PageMask')) return `导入失败：${msg}`;
-  return '导入失败：这次没能完成导入，请稍后再试一次';
+  const messages = t().errors;
+  if (msg.startsWith(messages.invalidExportFile) || msg.includes(messages.newerImport)) {
+    return messages.importFailed(msg);
+  }
+  return messages.importFailedGeneric;
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

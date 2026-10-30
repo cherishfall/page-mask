@@ -6,6 +6,7 @@
  * 32×32 是 Chrome 在 2 倍屏上画 16px 标签页图标用的尺寸；PNG 最坏（随机噪点）约 4KB 原始像素，
  * base64 后也远低于 20KB。
  */
+import { t } from './i18n';
 
 /**
  * 默认图标：1×1 真正全透明 PNG（RGBA 全 0，单测解码校验）。图片能正常加载，Chrome 就照常
@@ -48,12 +49,24 @@ export const ICON_SOURCE_TYPES = [
   'image/vnd.microsoft.icon',
 ] as const;
 
+/**
+ * 给用户看的图标错误（按当前界面语言，core/i18n）。用 getter 而不是常量字符串：
+ * 语言切换后取到的就是新语言的那句，调用方不必自己重新拼。
+ */
 export const ICON_ERROR = {
-  type: '只支持 PNG、JPG、GIF、WebP、ICO 格式的图片',
-  tooLarge: '图片太大了（超过 5MB），请换一张小一点的图片',
-  decode: '这张图片打不开，请换一张 PNG 或 JPG 图片',
-  encode: '图片处理失败，请换一张图片再试',
-} as const;
+  get type(): string {
+    return t().errors.iconType;
+  },
+  get tooLarge(): string {
+    return t().errors.iconTooLarge;
+  },
+  get decode(): string {
+    return t().errors.iconDecode;
+  },
+  get encode(): string {
+    return t().errors.iconEncode;
+  },
+};
 
 /** 检查原图；通过返回 null，否则返回给用户看的话 */
 export function checkIconSource(file: { size: number; type: string }): string | null {

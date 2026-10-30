@@ -46,6 +46,8 @@ import WizardApp from './wizard/WizardApp.vue';
 import EditorPanel from './editor/EditorPanel.vue';
 // 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
 import { siteLabelOf } from '@/entrypoints/management/site';
+import { t } from '@/core/i18n';
+import { applySettingsLanguage } from '@/ui/i18n';
 import { MaskLayer } from './mask-layer';
 import { CurtainLayer } from './curtain';
 import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain-restore';
@@ -133,7 +135,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const uiReady = Promise.all([whenDomReady(ctx), activated]).then(() => undefined);
 
   let profile: SiteProfile | null = null;
-  let settings: GlobalSettings = { defaultTitle: null, defaultIconDataUrl: null, curtainBtnPos: null }; // null = 跟随界面语言默认（core/titles.ts）
+  let settings: GlobalSettings = { defaultTitle: null, defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto' }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
   const toggleState = reactive<{
     state: SiteProfile['switchState'];
@@ -306,7 +308,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         p.faviconDataUrl = icon;
       });
     } catch {
-      showPageNotice(ctx, '没能保存这次改动，请稍后再试一次');
+      showPageNotice(ctx, t().notice.saveFailed);
     }
   }
 
@@ -333,7 +335,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     const res: Ack | undefined = await browser.runtime
       .sendMessage({ t: 'resetSiteHere' } satisfies BgRequest)
       .catch(() => undefined);
-    if (!res?.ok) showPageNotice(ctx, '没能删除这个网站的设置，请稍后再试一次');
+    if (!res?.ok) showPageNotice(ctx, t().notice.deleteFailed);
   }
 
   // ---------- 方案C 遮罩覆盖层 ----------
@@ -639,6 +641,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (wizardActive || disposed) return; // 向导期间不动样式，退出时会再刷新
     const [p, s] = await Promise.all([storage.getProfile(origin), storage.getSettings()]);
     settings = s;
+    applySettingsLanguage(s); // 界面语言（#57）：设置变了所有页内界面立刻跟着换
     if (wizardActive || disposed) return;
     if (!p) {
       // 站点被一键清空（或新站点向导取消）：撤掉一切痕迹
@@ -682,8 +685,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   function onStorageChanged(changes: Record<string, unknown>, area: string): void {
     // storage 变化驱动：开关切换、规则增删改、标题/图标修改、健康状态回写（回写只更新按钮，见 refreshState）。
-    // 向导打开期间屏蔽（避免向导内的临时状态被真样式覆盖），退出时统一 refreshState
-    if (area !== 'local' || wizardActive || disposed) return;
+    // 向导打开期间屏蔽（避免向导内的临时状态被真样式覆盖），退出时统一 refreshState；
+    // 但界面语言（#57）不屏蔽——向导 / 编辑面板 / 胶囊正开着也要立刻换语言
+    if (area !== 'local' || disposed) return;
+    // storage.onChanged 的 changes 值是 { oldValue, newValue } 包装，取 newValue
+    if ('settings' in changes) {
+      const wrapped = changes.settings as { newValue?: { uiLanguage?: unknown } } | undefined;
+      applySettingsLanguage(wrapped?.newValue);
+    }
+    if (wizardActive) return;
     const keys = Object.keys(changes);
     if (!keys.some((k) => k === profileKey(origin) || k === 'settings')) return;
     if (refreshTimer) clearTimeout(refreshTimer);

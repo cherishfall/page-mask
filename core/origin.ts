@@ -3,6 +3,7 @@
  * 全部纯函数，vitest 可测。
  */
 import type { ScopePattern } from './types';
+import { t } from './i18n';
 
 /** 提取站点身份：scheme + host（+非默认端口）。如 https://weread.qq.com */
 export function normalizeOrigin(url: string): string | null {
@@ -23,29 +24,30 @@ function isDefaultPort(protocol: string, port: string): boolean {
 /**
  * 判断 URL 能否使用清爽模式：chrome:// 、file:// 、应用商店等页面扩展无法注入脚本（design.md「入口拦截」）。
  * 应用商店有新旧两个地址：chromewebstore.google.com 与 chrome.google.com/webstore。
+ * 返回的 reason 是给用户看的一句话（按当前界面语言，core/i18n）。
  */
 export function isSupportedPage(url: string): { ok: boolean; reason?: string } {
   let u: URL;
   try {
     u = new URL(url);
   } catch {
-    return { ok: false, reason: '无法识别的网址' };
+    return { ok: false, reason: t().popup.unsupported.unparsable };
   }
   const unsupported = ['chrome:', 'edge:', 'about:', 'devtools:', 'view-source:', 'chrome-extension:'];
   if (unsupported.includes(u.protocol)) {
-    return { ok: false, reason: '浏览器内部页面无法使用清爽模式' };
+    return { ok: false, reason: t().popup.unsupported.internal };
   }
   if (u.protocol === 'file:') {
-    return { ok: false, reason: '本地文件无法使用清爽模式' };
+    return { ok: false, reason: t().popup.unsupported.localFile };
   }
   const isStore =
     u.hostname === 'chromewebstore.google.com' ||
     (u.hostname === 'chrome.google.com' && /^\/webstore(?:\/|$)/.test(u.pathname));
   if ((u.protocol === 'https:' || u.protocol === 'http:') && isStore) {
-    return { ok: false, reason: 'Chrome 应用商店页面无法使用清爽模式' };
+    return { ok: false, reason: t().popup.unsupported.webStore };
   }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-    return { ok: false, reason: '这类页面无法使用清爽模式' };
+    return { ok: false, reason: t().popup.unsupported.other };
   }
   return { ok: true };
 }
@@ -151,7 +153,7 @@ export function isHashRouted(url: string): boolean {
 
 /** 当前网址不提供"这类页面"选项时给用户的说明；有选项时返回 null */
 export function scopeUnavailableHint(url: string): string | null {
-  return isHashRouted(url) ? '这个网站用 # 区分页面，暂时只能按整站生效' : null;
+  return isHashRouted(url) ? t().wizard.scopeHintHash : null;
 }
 
 /**
@@ -171,11 +173,11 @@ export function deriveScopePattern(url: string): ScopePattern | null {
   const segs = u.pathname.split('/').filter(Boolean);
   if (segs.length === 0) {
     if (isHashRouted(url)) return null;
-    return { label: `${host} 的首页`, prefix: `${origin}/`, match: 'exact' };
+    return { label: t().common.scopePattern.home(host), prefix: `${origin}/`, match: 'exact' };
   }
   const keep = u.pathname.endsWith('/') || segs.length === 1 ? segs : segs.slice(0, -1);
   const path = `/${keep.join('/')}`;
-  return { label: `${host} 上 ${decodePath(path)} 下的页面`, prefix: `${origin}${path}` };
+  return { label: t().common.scopePattern.under(host, decodePath(path)), prefix: `${origin}${path}` };
 }
 
 /** 把网址规范成浏览器的标准形式（编码中文、去默认端口），解析失败原样返回 */

@@ -17,8 +17,8 @@
           type="button"
           class="pm-wiz-handle"
           :class="{ dragging }"
-          aria-label="移动工具条（也可以用方向键）"
-          title="拖动可移动工具条"
+          :aria-label="t.wizard.dragAria"
+          :title="t.wizard.dragTitle"
           data-testid="pm-wiz-drag"
           @pointerdown="onHandleDown"
           @pointermove="onHandleMove"
@@ -28,14 +28,14 @@
           ⠿
         </button>
         <div class="pm-wiz-headtext">
-          <h2 id="pm-wiz-title" class="pm-wiz-title" data-testid="pm-wiz-heading">{{ TEXT.heading[phase] }}</h2>
+          <h2 id="pm-wiz-title" class="pm-wiz-title" data-testid="pm-wiz-heading">{{ t.wizard.heading[phase] }}</h2>
           <p class="pm-wiz-progress" data-testid="pm-wiz-progress">{{ progressText }}</p>
         </div>
         <button
           type="button"
           class="pm-wiz-close"
-          :aria-label="TEXT.exit"
-          :title="TEXT.exit"
+          :aria-label="t.wizard.exit"
+          :title="t.wizard.exit"
           data-testid="pm-wiz-exit"
           @click="requestExit"
         >
@@ -51,8 +51,8 @@
             v-model:title="titleInput"
             v-model:icon="iconDataUrl"
             id-prefix="pm-wiz"
-            :title-hint="TEXT.titleHint(initialTitle)"
-            :icon-hint="TEXT.iconHint(hasDefaultIcon)"
+            :title-hint="t.wizard.titleHint(initialTitle)"
+            :icon-hint="hasDefaultIcon ? t.wizard.iconHintWithDefault : t.wizard.iconHintNoDefault"
           />
         </div>
       </template>
@@ -61,17 +61,17 @@
         <div class="pm-wiz-pick">
           <!-- 说明：一行一件事，不再堆成一整段 -->
           <ul class="pm-wiz-lead" data-testid="pm-wiz-pick-lead">
-            <li v-for="line in TEXT.pickLead" :key="line">{{ line }}</li>
+            <li v-for="line in t.wizard.pickLead" :key="line">{{ line }}</li>
           </ul>
 
           <!-- 分组一：调整选中项（浅底 + 小标题；组内标明现在调的是第几项） -->
           <div class="pm-wiz-group" role="group" aria-labelledby="pm-wiz-adjust-title" data-testid="pm-wiz-group-adjust">
-            <p id="pm-wiz-adjust-title" class="pm-wiz-group-title">{{ TEXT.adjustGroup }}</p>
+            <p id="pm-wiz-adjust-title" class="pm-wiz-group-title">{{ t.wizard.adjustGroup }}</p>
             <p class="pm-wiz-group-note" data-testid="pm-wiz-adjust-target">
               <template v-if="lastSel">
-                {{ TEXT.adjustNow }}<strong>第 {{ lastSelIndex + 1 }} 项（{{ lastSelName }}）</strong>
+                {{ t.wizard.adjustNow }}<strong>{{ t.wizard.adjustTarget(lastSelIndex + 1, lastSelName) }}</strong>
               </template>
-              <template v-else>{{ TEXT.adjustEmpty }}</template>
+              <template v-else>{{ t.wizard.adjustEmpty }}</template>
             </p>
             <div class="pm-wiz-group-row">
               <button
@@ -81,7 +81,7 @@
                 :disabled="!lastSel"
                 @click="adjust('bigger')"
               >
-                {{ TEXT.bigger }}
+                {{ t.wizard.bigger }}
               </button>
               <button
                 type="button"
@@ -90,7 +90,7 @@
                 :disabled="!lastSel"
                 @click="adjust('smaller')"
               >
-                {{ TEXT.smaller }}
+                {{ t.wizard.smaller }}
               </button>
             </div>
           </div>
@@ -105,7 +105,7 @@
           >
             <div class="pm-wiz-group-head">
               <h3 id="pm-wiz-list-title" class="pm-wiz-group-title" data-testid="pm-wiz-list-title">
-                {{ TEXT.listTitle(selectionRows.length) }}
+                {{ t.wizard.listTitle(selectionRows.length) }}
               </h3>
               <button
                 v-if="selectionRows.length > 0"
@@ -114,7 +114,7 @@
                 data-testid="pm-wiz-clear-all"
                 @click="clearSelection"
               >
-                {{ TEXT.clearAll }}
+                {{ t.wizard.clearAll }}
               </button>
             </div>
             <ol v-if="selectionRows.length > 0" class="pm-wiz-rows" data-testid="pm-wiz-selected">
@@ -124,7 +124,7 @@
                 <button
                   type="button"
                   class="pm-wiz-del"
-                  :aria-label="TEXT.deleteOne(row.seq, row.name)"
+                  :aria-label="t.wizard.deleteOne(row.seq, row.name)"
                   :data-testid="`pm-sel-${row.seq}-remove`"
                   @click="removeSelected(row)"
                 >
@@ -132,14 +132,14 @@
                 </button>
               </li>
             </ol>
-            <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ TEXT.listEmpty }}</p>
+            <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ t.wizard.listEmpty }}</p>
           </section>
         </div>
       </template>
 
       <template v-else>
-        <p class="pm-wiz-sub">{{ TEXT.previewHint }}</p>
-        <ol class="pm-wiz-drafts" :aria-label="TEXT.draftsLabel" data-testid="pm-wiz-drafts">
+        <p class="pm-wiz-sub">{{ t.wizard.previewHint }}</p>
+        <ol class="pm-wiz-drafts" :aria-label="t.wizard.draftsLabel" data-testid="pm-wiz-drafts">
           <li v-for="(d, i) in drafts" :key="rowKey(d.el)" :data-testid="`pm-draft-${i + 1}`">
             <!-- 第一行：序号、名字、删除（#53：每行拆成两行，控件不再互相挤压） -->
             <div class="pm-wiz-draft-head" :data-testid="`pm-draft-${i + 1}-head`">
@@ -149,13 +149,13 @@
                 class="pm-wiz-name"
                 type="text"
                 :placeholder="d.autoName"
-                :aria-label="TEXT.nameLabel(i + 1)"
+                :aria-label="t.wizard.nameLabel(i + 1)"
                 :data-testid="`pm-draft-name-${i + 1}`"
               />
               <button
                 type="button"
                 class="pm-wiz-del"
-                :aria-label="TEXT.deleteOne(i + 1, draftName(d))"
+                :aria-label="t.wizard.deleteOne(i + 1, draftName(d))"
                 :data-testid="`pm-draft-${i + 1}-remove`"
                 @click="removeDraft(d)"
               >
@@ -166,7 +166,7 @@
             <div class="pm-wiz-draft-opts" :data-testid="`pm-draft-${i + 1}-opts`">
               <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
               <fieldset class="pm-wiz-method">
-                <legend class="pm-wiz-sr">{{ TEXT.methodLegend }}</legend>
+                <legend class="pm-wiz-sr">{{ t.wizard.methodLegend }}</legend>
                 <div class="pm-wiz-seg">
                   <label v-for="s in STRATEGY_ORDER" :key="s" class="pm-wiz-seg-opt">
                     <input
@@ -177,13 +177,13 @@
                       :data-testid="`pm-draft-${i + 1}-strategy-${s}`"
                       @change="setStrategy(d, s)"
                     />
-                    <span>{{ STRATEGY_LABEL[s] }}</span>
+                    <span>{{ t.common.strategy[s] }}</span>
                   </label>
                 </div>
               </fieldset>
               <!-- 收起几个：这一项自己，还是页面上同类的全部（N 实时算） -->
               <fieldset class="pm-wiz-only">
-                <legend class="pm-wiz-sr">{{ TEXT.onlyLegend(i + 1) }}</legend>
+                <legend class="pm-wiz-sr">{{ t.wizard.onlyLegend(i + 1) }}</legend>
                 <div class="pm-wiz-seg">
                   <label class="pm-wiz-seg-opt">
                     <input
@@ -193,7 +193,7 @@
                       :data-testid="`pm-draft-${i + 1}-only`"
                       @change="setOnlyOne(d, true)"
                     />
-                    <span>{{ TEXT.onlyThis }}</span>
+                    <span>{{ t.wizard.onlyThis }}</span>
                   </label>
                   <label class="pm-wiz-seg-opt">
                     <input
@@ -204,7 +204,7 @@
                       :data-testid="`pm-draft-${i + 1}-same`"
                       @change="setOnlyOne(d, false)"
                     />
-                    <span>{{ TEXT.sameGroup(d.sameHits) }}</span>
+                    <span>{{ t.wizard.sameGroup(d.sameHits) }}</span>
                   </label>
                 </div>
               </fieldset>
@@ -213,28 +213,28 @@
                 class="pm-wiz-only-note"
                 :data-testid="`pm-draft-${i + 1}-same-note`"
               >
-                {{ TEXT.sameNone }}
+                {{ t.wizard.sameNone }}
               </span>
             </div>
-            <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ STRATEGY_HINT[d.strategy] }}</p>
+            <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ t.common.strategyHint[d.strategy] }}</p>
           </li>
         </ol>
 
         <!-- 在哪些页面收起：整批设置一次，就在这一步底部（取代原来点保存才弹出的框） -->
         <fieldset class="pm-wiz-scope" data-testid="pm-wiz-scope">
-          <legend class="pm-wiz-scope-legend">{{ TEXT.scopeLegend }}</legend>
+          <legend class="pm-wiz-scope-legend">{{ t.wizard.scopeLegend }}</legend>
           <label class="pm-wiz-radio">
             <input v-model="scopeChoice" type="radio" value="all" data-testid="pm-wiz-scope-all" />
-            {{ TEXT.scopeAll }}
+            {{ t.wizard.scopeAll }}
           </label>
           <template v-if="sitePattern">
             <label class="pm-wiz-radio">
               <input v-model="scopeChoice" type="radio" value="include" data-testid="pm-wiz-scope-include" />
-              {{ TEXT.scopeInclude(sitePattern.label) }}
+              {{ t.wizard.scopeInclude(sitePattern.label) }}
             </label>
             <label class="pm-wiz-radio">
               <input v-model="scopeChoice" type="radio" value="exclude" data-testid="pm-wiz-scope-exclude" />
-              {{ TEXT.scopeExclude(sitePattern.label) }}
+              {{ t.wizard.scopeExclude(sitePattern.label) }}
             </label>
           </template>
           <span v-else-if="scopeHint" class="pm-wiz-hint" data-testid="pm-wiz-scope-hint">{{ scopeHint }}</span>
@@ -252,7 +252,7 @@
             :disabled="saving"
             @click="saveTitleOnly"
           >
-            {{ TEXT.titleDone }}
+            {{ t.wizard.titleDone }}
           </button>
           <button
             v-else-if="canGoBack"
@@ -261,7 +261,7 @@
             data-testid="pm-wiz-back"
             @click="goBack"
           >
-            {{ TEXT.back }}
+            {{ t.wizard.back }}
           </button>
         </div>
         <div class="pm-wiz-footer-right">
@@ -271,7 +271,7 @@
             class="pm-wiz-foot-hint"
             data-testid="pm-wiz-next-hint"
           >
-            {{ TEXT.nextBlocked }}
+            {{ t.wizard.nextBlocked }}
           </span>
           <button
             v-if="phase === 'title'"
@@ -281,7 +281,7 @@
             :disabled="saving"
             @click="goNext"
           >
-            {{ TEXT.nextToPick }}
+            {{ t.wizard.nextToPick }}
           </button>
           <button
             v-else-if="phase === 'pick'"
@@ -291,7 +291,7 @@
             :disabled="selEls.length === 0"
             @click="goNext"
           >
-            {{ TEXT.nextToPreview(selEls.length) }}
+            {{ t.wizard.nextToPreview(selEls.length) }}
           </button>
           <button
             v-else
@@ -301,7 +301,7 @@
             :disabled="saving"
             @click="doSave"
           >
-            {{ TEXT.save }}
+            {{ t.wizard.save }}
           </button>
         </div>
       </div>
@@ -321,11 +321,11 @@
       @close="onExitClose"
     >
       <form method="dialog">
-        <h2 id="pm-exit-title">{{ TEXT.exitTitle }}</h2>
+        <h2 id="pm-exit-title">{{ t.wizard.exitTitle }}</h2>
         <p>{{ exitBody }}</p>
         <div class="pm-wiz-actions">
-          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">{{ TEXT.exitStay }}</button>
-          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">{{ TEXT.exitConfirm }}</button>
+          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">{{ t.wizard.exitStay }}</button>
+          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
         </div>
       </form>
     </dialog>
@@ -339,10 +339,10 @@
       @close="finish(false)"
     >
       <form method="dialog">
-        <h2 id="pm-notice-title">没有保存</h2>
+        <h2 id="pm-notice-title">{{ t.wizard.notSavedTitle }}</h2>
         <p>{{ noticeText }}</p>
         <div class="pm-wiz-actions">
-          <button value="ok" class="pm-wiz-btn primary" autofocus data-testid="pm-wiz-notice-ok">知道了</button>
+          <button value="ok" class="pm-wiz-btn primary" autofocus data-testid="pm-wiz-notice-ok">{{ t.wizard.noticeOk }}</button>
         </div>
       </form>
     </dialog>
@@ -355,7 +355,7 @@ import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
-import { STRATEGY_LABEL, newRuleId, type HideRule, type StrategyId } from '@/core/types';
+import { newRuleId, type HideRule, type StrategyId } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
@@ -383,6 +383,7 @@ import {
   type WizardMode,
   type WizardPhase,
 } from '@/core/wizard-logic';
+import { t } from '@/ui/i18n';
 import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
 import TitleIconFields from '../title-icon/TitleIconFields.vue';
@@ -398,78 +399,6 @@ type Draft = DraftItem & {
   /** 「同类一起」那组候选的命中数（行内的 N，实时算）；也是「同类一起」能不能选的依据 */
   sameHits: number;
 };
-
-/** 每种收起方式下面的一行白话解释（只显示当前选中的那一条） */
-const STRATEGY_HINT: Record<StrategyId, string> = {
-  remove: '下面的内容往上补',
-  blank: '位置留着不动',
-  mask: '盖一块和背景同色的板',
-};
-
-/**
- * 向导的界面文案（#51 新增的外壳与第 1 步）。集中放在这里，方便 #57 抽成中英双语表；
- * 还没改到的第 2 / 3 步文案暂时留在各自的模板里。
- */
-const TEXT = {
-  heading: {
-    title: '标签页标题和图标',
-    pick: '点选要收起的内容',
-    preview: '看效果',
-  },
-  progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
-  titleHint: (fallback: string) =>
-    `上面写什么，标签页就显示什么，现在就能看到。留空会用「${fallback}」——标题不会留成空白，空白时 Chrome 会改为显示网址。`,
-  iconHint: (hasDefault: boolean) =>
-    hasDefault
-      ? '图标可以不传；不传时用插件设置里的默认图标。'
-      : '图标可以不传；不传时标签页上的图标位留空。',
-  pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消，可以连着选好几个。', '选中的都列在下面，随时能删。'],
-  /** 调整组（#52）：自成一组，组内标明现在调的是第几项 */
-  adjustGroup: '调整选中的那一项',
-  adjustNow: '现在调的是',
-  adjustEmpty: '还没选中东西。先在页面上点一下要调整的那一项。',
-  bigger: '选大一点',
-  smaller: '选小一点',
-  /** 已选清单（#52）：一行一项，逐项删除；「全部删掉」是文字链接 */
-  listTitle: (n: number) => (n > 0 ? `已选的 ${n} 项` : '已选的内容'),
-  listEmpty: '还没有选任何东西。',
-  clearAll: '全部删掉',
-  deleteOne: (seq: number, name: string) => `删掉第 ${seq} 项：${name}`,
-  /** 0 项时前进按钮是灰的，旁边的说明告诉用户去哪儿选 */
-  nextBlocked: '先在页面上点一下要收起的内容',
-  /** 第 3 步（#53）：每行两行排版——第一行序号 / 名字 / 删除，第二行收起方式与「只这一个 / 同类一起」 */
-  previewHint: '滚动页面确认效果（盖住要能跟住元素）。每一行可以直接改名称、换收起方式、决定收它一个还是同类一起。',
-  draftsLabel: '本次要收起的内容',
-  nameLabel: (seq: number) => `第 ${seq} 项的名称，留空则自动命名`,
-  methodLegend: '收起方式',
-  /** 行内那对选项说的是「收起几个」，与底部的「在哪些页面收起」不是一件事，两边用词不能撞 */
-  onlyLegend: (seq: number) => `第 ${seq} 项收起几个`,
-  onlyThis: '只这一个',
-  sameGroup: (n: number) => `同类一起（${n}）`,
-  /** 同类只有 1 个时第二项不可选，这句话解释为什么 */
-  sameNone: '页面上没有第二个同类',
-  /** 页面级的那件事：三选一放在这一步底部，不再点保存才问 */
-  scopeLegend: '在哪些页面收起',
-  scopeAll: '整个网站（默认）',
-  scopeInclude: (label: string) => `只在这类页面：${label}`,
-  scopeExclude: (label: string) => `除了这类页面：${label}`,
-  back: '上一步',
-  nextToPick: '下一步：选内容',
-  nextToPreview: (n: number) => `下一步：看效果（${n}）`,
-  save: '保存',
-  /** 保存后 0 条规则时的轻提示（不拦人，说明生效的是标签页名字） */
-  zeroRuleNotice: zeroRuleSavedNotice,
-  titleDone: '只改标题，完成',
-  exit: '退出设置',
-  exitTitle: '退出设置？',
-  /** 退出确认：说清楚已选内容不保存、标签页会变回原来的名字（#51） */
-  exitBody: (selected: number) =>
-    selected > 0
-      ? `已经选的 ${selected} 项不会保存；退出后标签页会变回原来的名字，页面恢复原样。`
-      : '改过的标题和图标不会保存；退出后标签页会变回原来的名字，页面恢复原样。',
-  exitStay: '继续设置',
-  exitConfirm: '退出',
-} as const;
 
 /** 方向键每次移动工具条的距离 */
 const KEY_STEP = 16;
@@ -557,11 +486,14 @@ function rowKey(el: Element): number {
 /** 「第 N 步 / 共 M 步」：新站 3 步、老站 2 步 */
 const progressText = computed(() => {
   const { index, total } = wizardStep(props.mode, phase.value);
-  return TEXT.progress(index, total);
+  return t.value.wizard.progress(index, total);
 });
 /** 第 1 步没有上一步（老站点进入就是选内容，左下角同样不出现「上一步」） */
 const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== null);
-const exitBody = computed(() => TEXT.exitBody(phase.value === 'preview' ? drafts.value.length : selEls.value.length));
+const exitBody = computed(() => {
+  const selected = phase.value === 'preview' ? drafts.value.length : selEls.value.length;
+  return selected > 0 ? t.value.wizard.exitBodySelected(selected) : t.value.wizard.exitBodyPlain;
+});
 
 // 第 1 步的实时预览：改标题 / 换图标时立刻压到标签页上（不点保存也能看到）
 watch([titleInput, iconDataUrl], () => {
@@ -584,7 +516,7 @@ onMounted(() => {
       lastSel.value = pick.last;
       renderMarkers();
     },
-    onWarnTooBig: () => showWarn('选到接近整页的内容了，可能不是你想要的；试试「选小一点」'),
+    onWarnTooBig: () => showWarn(t.value.wizard.warnTooBig),
   });
   pick.attach(pickLayer);
   // 打开时不是点选阶段（新站点先看标题与图标）：捕获层不接管指针，光标也不改
@@ -671,7 +603,7 @@ async function finish(saved: boolean, notice?: string) {
   finished = true;
   if (!saved) {
     const res = await props.setDraft(null);
-    if (!res.ok) console.warn('[PageMask] 预览样式没能撤掉', res.error);
+    if (!res.ok) console.warn('[PageMask] preview clear failed', res.error);
   }
   emit('done', saved, notice);
 }
@@ -734,7 +666,7 @@ async function saveTitleOnly() {
   try {
     const cleared = await props.setDraft(null);
     if (!cleared.ok) {
-      showWarn('预览效果没能撤掉，本次没有保存。请刷新页面后重试');
+      showWarn(t.value.wizard.warnNotCleared);
       return;
     }
     const storage = createPageMaskStorage(browser.storage.local);
@@ -755,16 +687,16 @@ async function saveTitleOnly() {
         { create: props.mode === 'newSite' },
       );
     } catch (e) {
-      showWarn(`保存没有成功（${e instanceof Error ? e.message : String(e)}），可以再点一次`);
+      showWarn(t.value.wizard.warnSaveFailedTitleOnly(e instanceof Error ? e.message : String(e)));
       return;
     }
     if (!saved) {
-      noticeText.value = '这个网站的设置在别处被删掉了，本次修改没有保存。可以从扩展图标重新开始设置。';
+      noticeText.value = t.value.wizard.noticeGone;
       noticeDlg.value?.showModal();
       return;
     }
     // 0 条规则：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
-    await finish(true, TEXT.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)));
+    await finish(true, t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)));
   } finally {
     saving = false;
   }
@@ -831,7 +763,7 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
     const btn = tag as HTMLButtonElement;
     btn.type = 'button';
     btn.tabIndex = -1; // 鼠标捷径：跳转到清单里对应的行；键盘入口是清单本身，不在这里
-    btn.setAttribute('aria-label', `跳转到清单里的第 ${seq} 项`);
+    btn.setAttribute('aria-label', t.value.wizard.badgeJump(seq));
     btn.dataset.testid = `pm-marker-${seq}`;
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1013,7 +945,7 @@ async function applyPreview() {
 
 async function setDraftCss(css: string | null): Promise<boolean> {
   const res = await props.setDraft(css);
-  if (!res.ok) showWarn(css ? '预览没能生效，请再点一次预览试试' : '预览效果没能撤掉，刷新页面即可恢复');
+  if (!res.ok) showWarn(css ? t.value.wizard.warnPreviewFailed : t.value.wizard.warnPreviewClearFailed);
   return res.ok;
 }
 
@@ -1048,7 +980,7 @@ function setOnlyOne(d: Draft, want: boolean) {
   const next = generateCandidates(d.el, { onlyThis: want });
   if (next.length === 0) {
     // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
-    showWarn('切换后没法稳定识别这个元素，已保持原来的设置');
+    showWarn(t.value.wizard.warnUnstable);
     return;
   }
   d.onlyThis = want;
@@ -1134,7 +1066,7 @@ async function doSave() {
     const cleared = await props.setDraft(null);
     if (!cleared.ok) {
       console.warn('[PageMask] 保存前预览样式没能撤掉', cleared.error);
-      showWarn('预览效果没能撤掉，本次没有保存。请刷新页面后重试');
+      showWarn(t.value.wizard.warnNotCleared);
       return;
     }
 
@@ -1163,17 +1095,17 @@ async function doSave() {
       );
     } catch (e) {
       // 写入失败（例如存储空间不足）：恢复预览，留在向导里，可以再试
-      showWarn(`保存没有成功（${e instanceof Error ? e.message : String(e)}），可以再点一次保存`);
+      showWarn(t.value.wizard.warnSaveFailed(e instanceof Error ? e.message : String(e)));
       await applyPreview();
       return;
     }
     if (!saved) {
-      noticeText.value = '这个网站的设置在别处被删掉了，本次选择没有保存。可以从扩展图标重新开始设置。';
+      noticeText.value = t.value.wizard.noticeGoneRules;
       noticeDlg.value?.showModal();
       return;
     }
     // 保存即完成（#53）：不再弹第二个确认框；0 条规则时只给一句轻提示
-    const notice = rules.length === 0 ? TEXT.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)) : undefined;
+    const notice = rules.length === 0 ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)) : undefined;
     await finish(true, notice);
   } finally {
     saving = false;
