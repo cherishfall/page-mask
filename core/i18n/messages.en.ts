@@ -250,23 +250,23 @@ export const en: Messages = {
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
-    tip: 'Tip: managing every site and exporting / importing settings both live under “Manage all sites” in the PageMask menu.',
+    tip: 'Tip: “Manage all sites” and “Settings” (export / import and the interface language live there) sit side by side at the bottom of the popup.',
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
         text: 'A freshly installed extension hides in the menu. Click the puzzle-piece icon (Extensions) at the top right of the browser, find PageMask in the list and click the pin next to it — the icon then stays on the toolbar.',
       },
       {
-        title: 'Open a site you want to clean up',
-        text: 'A reading or study site you use often, for example. PageMask never acts on its own: only sites you turned on yourself are affected.',
+        title: 'Meet the popup',
+        text: 'Click the PageMask toolbar icon to open the popup: the main button “Turn on clean mode for this site” cleans that site’s pages right away. Two entries sit side by side at the bottom — “Manage all sites” and “Settings”. “Cover this page” temporarily covers the whole page along with the tab title; click “Restore this page” to come back.',
       },
       {
-        title: 'Click the toolbar icon and pick what to hide',
-        text: 'Click the PageMask icon and choose “Turn on clean mode for this site”. Elements highlight as you move the mouse; click to pick (you can pick several in a row). If you land on text inside an element, use “bigger” / “smaller” to adjust.',
+        title: 'A three-step wizard',
+        text: 'Turning a site on opens a three-step wizard: first the tab title and icon (title only is fine — finish right there); then pick what to hide on the page (everything you pick is listed and can be removed one by one); then “Check the result” — confirm the scope, save, done.',
       },
       {
-        title: 'Preview, save, and it stays clean',
-        text: 'Each row in the preview is one item: rename it, change the hide method (Disappear / Keep space / Cover), switch “just this one” to “all N alike”, or click ✕ to skip it. Saving cleans the page right away; the tab can also show a quieter title and icon (set that on the management page). Want the original back? Click the small button at the bottom-right of the page.',
+        title: 'Every day after that',
+        text: 'The small capsule at the bottom-right of the page is the daily switch: one click flips between clean and original. The capsule’s “⋯” menu edits the tab title and icon in place, or what’s hidden. When someone walks over, use “Cover this page” — a small open-eye button stays on the page; click it to restore.',
       },
     ],
   },

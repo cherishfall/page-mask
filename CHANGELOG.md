@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.4.0] - 2026-10-30
+
+一次「把界面捋顺」的批次：面板更简单、设置分成两个页面、向导变成三步、整套界面有中英文。/ A batch that straightens out the interface: a simpler popup, settings split into two pages, a three-step wizard, and a bilingual UI.
+
+### 中文
+
+#### 新增
+
+- **面板只留三件事**：主操作、编辑当前网站、还有一个能来回点的「遮住本页 / 恢复本页」；底部并排两个入口——「管理全部网站」与「插件设置」。原来的「设置标题和图标」从面板移除，改到页面右下角小胶囊的菜单里
+- **设置分成两个独立页面**：「你添加的网站」是网站列表，点进去是一个网站的设置页；「插件设置」单独一页，放默认标题、默认图标、导出 / 导入、界面语言与版本信息，也注册成了扩展的「扩展程序选项」
+- **默认标签页图标**：插件有一张自己的默认图标，生效顺序是网站自己设的 > 插件默认 > 透明（不显示）。改了默认图标，没单独设过图标的网站会一起变
+- **设置向导变成三步**：标签页标题和图标 → 点选要收起的内容 → 看效果。选中的内容列成清单、可逐项删掉；生效范围也在「看效果」这一步定；点保存即完成
+- **页面右下角小胶囊的菜单变成四项**：标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 / 删除这个网站的设置
+- **「一键清空」改叫「删除这个网站的设置」**：确认框里写清删的是什么、影响哪些东西；网站的设置页和页面菜单里是同一个名字
+- **遮住整页后是一颗睁眼的小按钮**：和平时那根小胶囊同一套长相，可以拖动、记住位置；鼠标移上去（或键盘聚焦）才显出「恢复」两个字
+- **导出文件更完整**：除了全部网站的设置，还带上插件设置（默认标题、默认图标）与导出时的版本号；文件名形如 `pagemask-0.4.0-20261030120000.json`
+- **全界面中英双语**：面板、管理页、向导、页面内的按钮与提示都有中文和英文两套文案；「插件设置」里可以选界面语言（跟随浏览器 / 简体中文 / English），切换立即生效
+
+#### 修复
+
+- **标签页标题不再和网站"对抢"**：个别网站反复改写标签页标题时，插件补写频率受控；实在抢不过（网站用定时器死守）就彻底放手，浏览器保持流畅，不再卡顿
+
+### English
+
+#### Added
+
+- **The popup keeps three things**: the main action, "Edit this site", and a two-way "Cover this page / Restore this page" switch; two side-by-side entries at the bottom — "Manage all sites" and "Settings". The old "Set tab title & icon" is gone from the popup; it moved into the menu of the small capsule at the bottom-right of the page
+- **Settings split into two pages**: "Your sites" lists the sites you added; clicking one opens that site's settings page. "Settings" is its own page with the default title, default icon, export / import, interface language and version info, and it is registered as the extension's "Options" page
+- **Default tab icon**: PageMask now has its own default icon; the order is the site's own icon > the default icon > transparent (nothing shown). Change the default and every site without its own icon follows
+- **The setup wizard is now three steps**: tab title and icon → pick what to hide → check the result. Everything picked is listed and can be removed item by item; the scope is decided on the "check the result" step too; saving finishes it in one click
+- **The capsule's ⋯ menu now has four items**: tab title and icon / edit what's hidden / put the button back at the bottom-right / delete this site's settings
+- **"Reset" is now "Delete this site's settings"**: the confirmation spells out what is deleted and what it affects; the site's settings page and the on-page menu share the same name
+- **After covering the page there is a small open-eye button**: same look as the capsule, draggable, remembers its position; hover (or keyboard focus) reveals the word "Restore"
+- **Export files are more complete**: besides every site's settings they now include the plugin settings (default title, default icon) and the version at export time; the file name looks like `pagemask-0.4.0-20261030120000.json`
+- **The whole interface is bilingual**: the popup, management pages, wizard and on-page controls all have Chinese and English; pick the interface language ("follow the browser" / 简体中文 / English) in Settings and it takes effect immediately
+
+#### Fixed
+
+- **The tab title is no longer fought over**: on sites that rewrite their title in a loop, PageMask now writes back at a controlled rate; if the site simply won't yield (a timer keeps resetting it), PageMask lets go entirely — the browser stays smooth, no more freezing
+
 ## [0.3.0] - 2026-10-28
 
 真实使用一周后的反馈批次：加不进去的网站、只想改标题的网站、向导不好用的地方，以及一个应急能力。/ A batch of fixes and features from a week of real use: sites that could not be added, sites that only needed a new tab title, wizard friction, and one emergency capability.
@@ -141,5 +181,7 @@ Under each version, the Chinese and English sections correspond item by item.
 - First-run onboarding
 - Privacy: settings stay on your device, PageMask itself makes no network requests, minimal permissions (per-site optional host permissions)
 
+[0.4.0]: https://github.com/cherishfall/page-mask/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/cherishfall/page-mask/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cherishfall/page-mask/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cherishfall/page-mask/releases/tag/v0.1.0
