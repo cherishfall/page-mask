@@ -1,4 +1,4 @@
-# HANDOFF · 0.4.0 进行中（9 / 10）
+# HANDOFF · 0.4.0 十张票全部完成，待发版
 
 > 本文件只在批次进行中临时放根目录（见 `AGENTS.md`），批次收尾后删除。设计共识在 `docs/design.md`，术语在 `GLOSSARY.md`，过程记录在 `docs/dev/`。
 
@@ -17,11 +17,17 @@
 | [#54](https://github.com/cherishfall/page-mask/issues/54) | 面板只留三件事 | #50 ✅ #55 ✅ | ✅ `09aaa7e` |
 | [#56](https://github.com/cherishfall/page-mask/issues/56) | 站点设置与 ⋯ 菜单对齐 | #51 ✅ | ✅ `373f0cd` |
 | [#57](https://github.com/cherishfall/page-mask/issues/57) | 中英双语 | #51–#56 | ✅ `16c0364` |
-| [#58](https://github.com/cherishfall/page-mask/issues/58) | 文档、引导、截图 | #57 ✅ | ⏭ 下一个 |
+| [#58](https://github.com/cherishfall/page-mask/issues/58) | 文档、引导、截图 | #57 ✅ | ✅ `e250df9` |
 
-（#49–#57 都已在 GitHub 关闭，收尾评论里写了 commit。）
+（#49–#58 十张票都已在 GitHub 关闭，收尾评论里写了 commit。）
 
-**建议顺序**：49 ✅ → 50 ✅ → 55 ✅ → 51 ✅ → 52 ✅ → 53 ✅ → 54 ✅ → 56 ✅ → 57 ✅ → 58。
+**建议顺序**：49 ✅ → 50 ✅ → 55 ✅ → 51 ✅ → 52 ✅ → 53 ✅ → 54 ✅ → 56 ✅ → 57 ✅ → 58 ✅。
+
+## 剩下的事（发 0.4.0）
+
+1. 推送 master，打 `v0.4.0` tag，建 GitHub Release 并附 `npm run zip` 产出的 zip（tag message 即 Release body，用 CHANGELOG 的 0.4.0 中文小节）。
+2. 收尾：把本文件删掉（按 `AGENTS.md`，批次结束不留在根目录），过程记录沉淀到 `docs/dev/`。
+3. 上传商店：材料在 `CHROMEWEBSTORE.md` 与 `docs/store-assets/`。商店上传由人工完成。
 
 ## 换模型或换工具之后怎么接着跑
 
