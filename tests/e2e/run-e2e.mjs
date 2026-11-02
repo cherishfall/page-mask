@@ -43,7 +43,8 @@ const DISGUISED_TITLE = '工作笔记';
 const RENAMED_CARD = '推荐卡片（改名）';
 // 页内界面宿主是自定义元素（core/host-shield.ts HOST_TAGS）
 const TOGGLE_HOST = 'pagemask-toggle';
-const TOGGLE_BTN = '[title^="PageMask"]';
+// 用 data-testid 而不是悬停提示来定位：提示文案会随界面用词调整（0.4.1 就不以 PageMask 开头了）
+const TOGGLE_BTN = '[data-testid="pm-toggle-main"]';
 const WIZARD_HOST = 'pagemask-wizard';
 const EDITOR_HOST = 'pagemask-editor';
 const MASK_HOST = 'pagemask-mask';
@@ -438,7 +439,7 @@ async function main() {
       state: document.querySelector('.site-row .site-meta')?.textContent ?? '',
     }));
     check(mgmt.host.includes('127.0.0.1'), `管理页列出站点（${mgmt.host}）`);
-    check(mgmt.state.includes('已收起'), `管理页显示收起项数与状态（${mgmt.state.trim()}）`);
+    check(mgmt.state.includes('收起设置'), `管理页显示收起项数与状态（${mgmt.state.trim()}）`);
     // 导出 / 导入在独立的「插件设置」页（#55）
     const sPage = await browser.newPage();
     await sPage.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
@@ -698,8 +699,8 @@ async function main() {
     await site.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
     let popup = await openPopup(ext, site);
     await popup.waitForSelector(tid('pm-popup-reauth'), { timeout: 5000 });
-    check(true, 'popup 显示「重新授权」');
-    check(!(await popup.$(tid('pm-popup-setup'))), '待授权时不显示「添加要去掉的元素」');
+    check(true, 'popup 显示「允许访问」');
+    check(!(await popup.$(tid('pm-popup-setup'))), '需要允许访问时不显示主按钮');
     // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），popup 里已经没有可替换的
     // permissions.request；真实权限弹窗无法自动化，这里只验证「允许之后恢复生效」这一半。
     await popup.close().catch(() => undefined);
@@ -714,7 +715,7 @@ async function main() {
     await popup.close().catch(() => undefined);
     await site.close();
 
-    // ===================== 导出 → 删除设置 → 导入 → 一次授权全部（#21） =====================
+    // ===================== 导出 → 删除设置 → 导入 → 全部允许（#21） =====================
     console.log('\n--- 导出配置 ---');
     await setProfile(ext.control, ORIGIN2, seedProfile(ORIGIN2));
     await expectDisguisedInNewPage(ORIGIN2, '第二个站点配置后生效');
@@ -762,15 +763,15 @@ async function main() {
     await resetInManagement(mgmtPage, ORIGIN2);
     await waitFor(mgmtPage, '两个站点的设置都已删除', () => document.querySelectorAll('.site-row').length === 0);
 
-    console.log('\n--- 导入后一次授权全部 ---');
+    console.log('\n--- 导入后全部允许 ---');
     await importInManagement(mgmtPage, exported);
     await mgmtPage.evaluate(() => {
       location.hash = '#/sites';
     });
     await mgmtPage.waitForSelector(tid('pm-mgmt-authorize-all'), { timeout: 5000 });
     const pendingCount = await mgmtPage.$$eval(tid('pm-mgmt-pending'), (els) => els.length);
-    check(pendingCount === 2, `导入后两个站点都显示「待授权」（${pendingCount}）`);
-    check(true, '管理页出现「一次授权全部」');
+    check(pendingCount === 2, `导入后两个站点都显示「需要允许访问」（${pendingCount}）`);
+    check(true, '管理页出现「全部允许」');
     const unregistered = await browser.newPage();
     await unregistered.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 1000)); // 负向断言：等过注入时机
@@ -783,7 +784,7 @@ async function main() {
     const batch = await mgmtPage.evaluate(() => window.__pmRequests);
     check(
       batch.length === 1 && [...batch[0].origins].sort().join() === [`${ORIGIN}/*`, `${ORIGIN2}/*`].sort().join(),
-      `一次权限请求带上全部待授权站点（${JSON.stringify(batch)}）`,
+      `一次权限请求带上全部需要允许访问的站点（${JSON.stringify(batch)}）`,
     );
     await mgmtPage.close().catch(() => undefined);
     await grantPermissions(ext, [ORIGIN, ORIGIN2]);
@@ -791,7 +792,7 @@ async function main() {
     await expectDisguisedInNewPage(ORIGIN2, '授权后导入的站点 2 生效');
     mgmtPage = await openManagement();
     await waitFor(mgmtPage, '管理页列出两个站点', () => document.querySelectorAll('.site-row').length === 2);
-    check(!(await mgmtPage.$(tid('pm-mgmt-pending'))), '授权后管理页不再显示「待授权」');
+    check(!(await mgmtPage.$(tid('pm-mgmt-pending'))), '允许之后管理页不再显示「需要允许访问」');
     await mgmtPage.close();
 
     // ===================== 安装警告（#21） =====================

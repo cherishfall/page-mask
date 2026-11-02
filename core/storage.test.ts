@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createPageMaskStorage, mergeProfiles, profileKey, SETTINGS_KEY, type KVArea } from './storage';
 import { createEmptyProfile, type ExportBundle, type HideRule, type SiteProfile } from './types';
+import { t } from './i18n';
 
 /** 假存储；delayMs > 0 时每次读写都让出事件循环，用来制造交错 */
 function memoryArea(delayMs = 0): KVArea & { data: Map<string, unknown> } {
@@ -230,10 +231,10 @@ describe('导出/导入', () => {
 
   it('非法文件报人话错误（用"导出文件"一词）', async () => {
     const store = createPageMaskStorage(memoryArea());
-    await expect(store.importBundle({})).rejects.toThrow('不是有效的 PageMask 导出文件');
-    await expect(store.importBundle(null)).rejects.toThrow('不是有效的 PageMask 导出文件');
+    await expect(store.importBundle({})).rejects.toThrow(t().errors.invalidExportFile);
+    await expect(store.importBundle(null)).rejects.toThrow(t().errors.invalidExportFile);
     await expect(store.importBundle(bundleOf([createEmptyProfile('https://a.com')], { app: 'other' }))).rejects.toThrow(
-      '不是有效的 PageMask 导出文件',
+      t().errors.invalidExportFile,
     );
   });
 
@@ -241,7 +242,7 @@ describe('导出/导入', () => {
     const store = createPageMaskStorage(memoryArea());
     const p = createEmptyProfile('https://a.com');
     await expect(store.importBundle(bundleOf([p], { formatVersion: 2 }))).rejects.toThrow('更新版本');
-    await expect(store.importBundle(bundleOf([p], { formatVersion: '1' }))).rejects.toThrow('不是有效的');
+    await expect(store.importBundle(bundleOf([p], { formatVersion: '1' }))).rejects.toThrow(t().errors.invalidExportFile);
   });
 
   it('全无效的文件做「整体替换」后本地数据原样保留', async () => {
@@ -257,7 +258,7 @@ describe('导出/导入', () => {
       { ...createEmptyProfile('https://new.com'), hideRules: 'nope' },
       'garbage',
     ]);
-    await expect(store.importBundle(bundle, 'replace')).rejects.toThrow('本地数据没有改动');
+    await expect(store.importBundle(bundle, 'replace')).rejects.toThrow('没有改动');
     expect(JSON.stringify([...area.data])).toBe(snapshot);
   });
 

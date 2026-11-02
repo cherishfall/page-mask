@@ -5,6 +5,42 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.4.1] - 2026-11-02
+
+把界面上说的话重写了一遍：不再用自造的名词指代功能，每个按钮和提示都落到具体的动作上。/ Rewrote what the interface says: no more invented nouns standing in for features — every button and hint now names the action.
+
+### 中文
+
+#### 变更
+
+- **按钮和菜单改成说人话**：主按钮「为当前网站开启清爽模式」→「设置这个网站」；「编辑当前网站」→「编辑收起的内容」；底部入口「管理全部网站」→「你添加的网站」；「遮住本页 / 恢复本页」→「遮住这一页 / 恢复这一页」
+- **两个状态换了名字**：「清爽 / 原样」→「按你的设置显示 / 网站原样」。开关标签、页面右下角小按钮的悬停提示、网站列表里的状态都跟着改，不用先猜「清爽」是什么意思
+- **技术词全部下架**：「授权 / 待授权 / 授权并启用 / 一次授权全部」→「允许访问 / 需要允许访问 / 允许访问 / 全部允许」；「生效范围」统一成「在哪些页面收起」；「规则」→「收起设置 / 收起项」；「去处理」→「重新选一次」；「快捷填入」→「现成的标题」；「小胶囊」→「页面右下角的小按钮」
+- **同一件事全项目只留一个叫法**：设置第 3 步和页面内编辑面板原来一个叫「在哪些页面收起」、一个叫「生效范围」，现在统一；「整站 / 仅 / 除外」这类缩写全部删掉
+- **说不清的地方补足**：用不了的页面说清原因（「Chrome 自己的页面不让扩展改动，换一个普通网页再试」）；第一次打开时说清能做什么（改标签页标题和图标、点选页面内容收起来）；失效提醒改成「「顶部导航栏」最近找不到目标了，可能网站改版了。在哪些页面收起：整个网站」
+- **数量说法不再自相矛盾**：网站显示原样时，「已收起 N 项」是句假话，改成中性的「N 项收起设置」
+- **扩展简介与工具栏提示**：简介去掉「一键收起」，悬停提示从「让当前网站更清爽」改成「设置这个网站的标签页标题、收起内容」
+
+#### 修复
+
+- 插件设置页的标签页标题现在跟随界面语言（原来固定是中文）
+
+### English
+
+#### Changed
+
+- **Buttons and menus now say what they do**: the main button "Turn on clean mode for this site" → "Set up this site"; "Edit this site" → "Edit hidden items"; the bottom entry "Manage all sites" → "Your sites"; "Cover this page / Restore this page" stays, and the page-side wording matches
+- **The two states were renamed**: "Clean / Original" → "Shown your way / As the site is". The switch label, the small button's tooltip and the site list follow, so nobody has to guess what "Clean" means
+- **Jargon is gone**: "authorize / needs access / allow and turn on / allow all" → "allow access / needs access / allow access / allow all"; "where it applies" is one name everywhere; "rule" → "hidden item / items set to hide"; "fix it" → "pick again"; "quick fill" → "ready-made titles"; "the small capsule" → "the small button at the bottom-right"
+- **One name per thing**: step 3 and the on-page editor used to call the same setting two different things; they now match, and abbreviations like "whole site / only / except" are gone
+- **Where it was vague, it now explains**: unsupported pages say why ("Chrome's own pages don't let extensions change them. Try a normal web page"); the first-time hint says what you can do; broken items read "“Nav bar” can't be found any more — the site may have changed. Where it applies: the whole site"
+- **Counts no longer contradict the state**: "N items hidden" was untrue while a site showed as-is; it is now the neutral "N items set to hide"
+- **Store blurb and toolbar tooltip**: dropped "with a click" from the short description, and the tooltip now names the action instead of "make this site clean & focused"
+
+#### Fixed
+
+- The Settings page tab title now follows the interface language (it used to stay Chinese)
+
 ## [0.4.0] - 2026-10-30
 
 一次「把界面捋顺」的批次：面板更简单、设置分成两个页面、向导变成三步、整套界面有中英文。/ A batch that straightens out the interface: a simpler popup, settings split into two pages, a three-step wizard, and a bilingual UI.

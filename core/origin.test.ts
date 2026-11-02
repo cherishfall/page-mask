@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { t } from './i18n';
 import {
   deriveScopePattern,
   displayHost,
@@ -36,7 +37,7 @@ describe('isSupportedPage', () => {
   });
   it('浏览器内部页面拦截并给出清爽话术', () => {
     expect(isSupportedPage('chrome://extensions').ok).toBe(false);
-    expect(isSupportedPage('chrome://newtab').reason).toBe('浏览器内部页面无法使用清爽模式');
+    expect(isSupportedPage('chrome://newtab').reason).toBe(t().popup.unsupported.internal);
     expect(isSupportedPage('about:blank').ok).toBe(false);
     expect(isSupportedPage('devtools://devtools/bundled/devtools_app.html').ok).toBe(false);
   });
@@ -79,7 +80,7 @@ describe('deriveScopePattern 零输入推导"这类页面"', () => {
     expect(isHashRouted('https://x.com/#top')).toBe(false);
     expect(isHashRouted('https://x.com/app/#/reader')).toBe(false);
     expect(deriveScopePattern('https://x.com/#/reader/1')).toBeNull();
-    expect(scopeUnavailableHint('https://x.com/#/reader/1')).toBe('这个网站用 # 区分页面，暂时只能按整站生效');
+    expect(scopeUnavailableHint('https://x.com/#/reader/1')).toBe(t().wizard.scopeHintHash);
     expect(scopeUnavailableHint('https://x.com/web/a')).toBeNull();
   });
   it('普通锚点 # 不算 hash 路由：根路径仍是首页', () => {

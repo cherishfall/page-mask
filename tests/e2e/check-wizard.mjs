@@ -407,7 +407,7 @@ async function main() {
       (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
       '每一项的收起方式默认是「消失」（原生 radio 的选中值）',
     );
-    check((await rowHint(page, 1)) === '下面的内容往上补', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
+    check((await rowHint(page, 1)) === '整块消失，下面的内容往上顶', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
     const before = await shadowRect(page, tid('pm-marker-2'));
     check(before && before.w > 0 && before.h > 0, `第 2 项号码牌可见（${JSON.stringify(before)}）`);
 
@@ -480,7 +480,7 @@ async function main() {
     // 行内切到「留空」：页面立刻变、解释跟着换
     await clickInShadow(page, HOST, tid('pm-draft-1-strategy-blank'));
     await waitFor(page, '活动栏改为留空', () => getComputedStyle(document.querySelector('#promo')).visibility === 'hidden');
-    check((await rowHint(page, 1)) === '位置留着不动', `切到「留空」后解释跟着变（${await rowHint(page, 1)}）`);
+    check((await rowHint(page, 1)) === '看不见了，但位置还占着', `切到「留空」后解释跟着变（${await rowHint(page, 1)}）`);
     const after = await shadowRect(page, tid('pm-marker-2'));
     check(
       after && after.w > 0 && after.h > 0 && Math.abs(after.x - before.x) < 1 && Math.abs(after.y - before.y) < 1,
@@ -499,7 +499,7 @@ async function main() {
       },
       [HOST],
     );
-    check((await rowHint(page, 2)) === '盖一块和背景同色的板', `「盖住」下面显示对应解释（${await rowHint(page, 2)}）`);
+    check((await rowHint(page, 2)) === '在原位盖一块和背景同色的方块', `「盖住」下面显示对应解释（${await rowHint(page, 2)}）`);
     await clickInShadow(page, HOST, tid('pm-draft-2-strategy-remove'));
     await waitVisible(page, '改回消失：横幅又被移除', '#banner', false);
 
@@ -926,7 +926,7 @@ async function main() {
     await mgmt.waitForSelector(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, { timeout: 8000 });
     const onlyRow = await mgmt.$eval(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, (e) => e.innerText);
     check(
-      onlyRow.includes('清爽') && onlyRow.includes('没有收起任何内容'),
+      onlyRow.includes('按你的设置显示') && onlyRow.includes('还没有收起设置'),
       `列表里能看到这个只改标题的网站（${onlyRow.split('\n').join(' / ')}）`,
     );
     await mgmt.close();

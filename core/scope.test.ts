@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesApplicableAt, scopeHumanLabel, scopeLabel, scopeMatches } from './scope';
+import { rulesApplicableAt, scopeHumanLabel, scopeMatches } from './scope';
 import type { HideRule } from './types';
 
 const rule = (scope: HideRule['scope']): HideRule => ({
@@ -69,15 +69,7 @@ describe('rulesApplicableAt 只取范围内规则', () => {
   });
 });
 
-describe('scopeLabel', () => {
-  it('人话展示', () => {
-    expect(scopeLabel({ type: 'all' })).toBe('整站');
-    expect(scopeLabel({ type: 'include', patterns: [{ label: '读者页', prefix: 'x' }] })).toBe('仅 读者页');
-    expect(scopeLabel({ type: 'exclude', patterns: [{ label: '书架', prefix: 'x' }] })).toBe('除 书架 外');
-  });
-});
-
-describe('scopeHumanLabel（管理页的收起项清单）', () => {
+describe('scopeHumanLabel（管理页、编辑面板、失效提示共用）', () => {
   it('与向导保存对话框同一套说法，不用「整站 / 仅 …」缩写', () => {
     expect(scopeHumanLabel({ type: 'all' })).toBe('整个网站');
     expect(scopeHumanLabel({ type: 'include', patterns: [{ label: '读者页', prefix: 'x' }] })).toBe('只在这类页面：读者页');

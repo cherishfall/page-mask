@@ -143,7 +143,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage } from '@/core/storage';
-import { rulesApplicableAt, scopeLabel } from '@/core/scope';
+import { rulesApplicableAt, scopeHumanLabel } from '@/core/scope';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { healthMessage } from '@/core/health';
 import { selectorHitsElement } from '@/core/selectors';
@@ -300,6 +300,6 @@ function saveAdvanced(rule: HideRule) {
 }
 
 function healthMsg(rule: HideRule): string {
-  return healthMessage(rule, scopeLabel(rule.scope));
+  return healthMessage(rule, scopeHumanLabel(rule.scope));
 }
 </script>

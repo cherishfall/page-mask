@@ -154,10 +154,10 @@ async function main() {
     await waitVisible(page, '规则生效：广告位被收起', '#ad', false);
 
     // ===================== popup 入口 =====================
-    console.log('\n--- popup 的「编辑当前网站」打开面板 ---');
+    console.log('\n--- popup 的「编辑收起的内容」打开面板 ---');
     const popup = await openPopup(ext, page);
     await popup.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
-    check(true, 'popup 里有「编辑当前网站」按钮');
+    check(true, 'popup 里有「编辑收起的内容」按钮');
     await popup.bringToFront();
     await popup.click(tid('pm-popup-edit'));
     await waitForShadow(page, EDITOR, tid('pm-editor-panel'), { timeout: 8000 });

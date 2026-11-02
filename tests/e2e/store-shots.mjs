@@ -257,8 +257,8 @@ try {
   await compose(
     'screenshot-2-wizard',
     `<div style="padding:30px 44px 0">
-      <div class="big">三步向导：标签页标题和图标 → 点选要收起的内容 → 看效果</div>
-      <div class="sub">选中的内容列成清单、可逐项删掉；生效范围在「看效果」这一步定，保存即完成</div>
+      <div class="big">设置分三步：标签页标题和图标 → 点选要收起的内容 → 看效果</div>
+      <div class="sub">选中的内容列成清单、可逐项删掉；在哪些页面收起在「看效果」这一步定，保存即完成</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
@@ -295,7 +295,7 @@ try {
        <img src="${dataUrl(afterFile)}" style="width:1280px;display:block">
      </div>
      <div style="position:absolute;left:44px;bottom:26px;background:#1f2329e6;color:#fff;border-radius:10px;padding:12px 18px;font-size:17px">
-       开启清爽模式后，标签页标题与图标也会一起变低调
+       开关打开后，标签页标题和图标也会一起变低调
      </div>`,
   );
 
@@ -324,8 +324,8 @@ try {
     'screenshot-4-popup',
     `<div style="height:800px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#eef1f5">
        <img src="${dataUrl(popupFile)}" style="width:476px;display:block;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);border:1px solid #dfe3e8">
-       <div class="cap" style="font-size:18px">工具栏图标：清爽开关 · 编辑当前网站 · 遮住本页 / 恢复本页</div>
-       <div class="cap" style="font-size:18px;margin-top:-12px">底部两个入口：管理全部网站 · 插件设置</div>
+       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 编辑收起的内容 · 遮住这一页 / 恢复这一页</div>
+       <div class="cap" style="font-size:18px;margin-top:-12px">底部两个入口：你添加的网站 · 插件设置</div>
      </div>`,
   );
 
@@ -448,7 +448,7 @@ try {
   await compose(
     'screenshot-6-curtain',
     `<div style="padding:30px 44px 0">
-      <div class="big">页面右下角的小胶囊，与遮住整页后的那颗小按钮</div>
+      <div class="big">页面右下角的小按钮，与遮住整页后的那颗恢复按钮</div>
       <div class="sub">「⋯」菜单就地编辑；遮住后页面上只剩一颗可拖动的睁眼按钮，点一下就恢复</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
@@ -469,7 +469,7 @@ try {
     `<div style="width:440px;height:280px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:12px">
        <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:76px;height:76px;display:block">
        <div style="font-size:28px;font-weight:700;line-height:1.2">PageMask</div>
-       <div style="font-size:16px;color:#3f4a58;line-height:1.5">点选要收起的部分，<br>页面与标签页一起变清爽</div>
+       <div style="font-size:16px;color:#3f4a58;line-height:1.5">点选不想要的部分，<br>标签页一起变低调</div>
      </div>`,
     { width: 440, height: 280 },
   );

@@ -6,8 +6,8 @@
  * 覆盖：
  * - popup：开关在无障碍树里是 switch 角色、状态正确、点击 / 空格切换后状态变化并写入存储；
  *   不支持页面的说明、待授权、授权被拒、处理中（按钮禁用 + aria-busy）；h1 标题、装饰符号不进无障碍树
- * - popup 只留三件事（#54）：主按钮 + 编辑当前网站 + 遮住开关（遮住后写「恢复本页」），
- *   底部一行「管理全部网站」「插件设置」各自落地；三种站点状态（未添加 / 已添加 / 待授权）都能遮住与恢复；
+ * - popup 只留三件事（#54）：主按钮 + 编辑当前网站 + 遮住开关（遮住后写「恢复这一页」），
+ *   底部一行「你添加的网站」「插件设置」各自落地；三种站点状态（未添加 / 已添加 / 待授权）都能遮住与恢复；
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
@@ -262,8 +262,8 @@ function checkSources() {
 async function checkPopupChrome(popup, label) {
   check(!(await popup.$(tid('pm-popup-title-settings'))), `${label}：面板里不再有「设置标题和图标」`);
   check(
-    (await popup.$eval(tid('pm-popup-cover'), (b) => b.textContent.trim())) === '遮住本页',
-    `${label}：未遮住时开关写「遮住本页」`,
+    (await popup.$eval(tid('pm-popup-cover'), (b) => b.textContent.trim())) === '遮住这一页',
+    `${label}：未遮住时开关写「遮住这一页」`,
   );
   const entries = await popup.evaluate(
     (s) =>
@@ -275,7 +275,7 @@ async function checkPopupChrome(popup, label) {
     [tid('pm-popup-manage'), tid('pm-popup-settings')],
   );
   check(
-    entries[0].text === '管理全部网站' && entries[1].text === '插件设置',
+    entries[0].text === '你添加的网站' && entries[1].text === '插件设置',
     `${label}：底部是「${entries[0].text}」「${entries[1].text}」`,
   );
   const minH = Math.min(entries[0].height, entries[1].height);
@@ -294,7 +294,7 @@ async function checkPopupChrome(popup, label) {
 async function coverAndRestore(ext, popup, page, label) {
   await popup.click(tid('pm-popup-cover'));
   await waitFor(page, `${label}：页面铺上幕布`, (h) => !!document.querySelector(h), ['pagemask-curtain'], { timeout: 5000 });
-  check(true, `${label}：点「遮住本页」后页面被遮住`);
+  check(true, `${label}：点「遮住这一页」后页面被遮住`);
   await poll(() => popup.isClosed(), `${label}：遮住后面板关闭`);
   check(true, `${label}：遮住后面板关闭`);
 
@@ -302,18 +302,18 @@ async function coverAndRestore(ext, popup, page, label) {
   await popup.waitForSelector(tid('pm-popup-cover'), { timeout: 5000 });
   await waitFor(
     popup,
-    `${label}：重开面板显示「恢复本页」`,
-    (s) => document.querySelector(s).textContent.trim() === '恢复本页',
+    `${label}：重开面板显示「恢复这一页」`,
+    (s) => document.querySelector(s).textContent.trim() === '恢复这一页',
     [tid('pm-popup-cover')],
     { timeout: 5000 },
   );
-  check(true, `${label}：遮住后重新打开面板，按钮显示「恢复本页」`);
+  check(true, `${label}：遮住后重新打开面板，按钮显示「恢复这一页」`);
   const h = await popupHeight(popup);
   check(h <= 600, `${label}：遮住状态下重开的面板高度 ${h.toFixed(1)}px 不超过 600px`);
 
   await popup.click(tid('pm-popup-cover'));
   await waitFor(page, `${label}：幕布撤掉`, (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 5000 });
-  check(true, `${label}：点「恢复本页」后页面恢复`);
+  check(true, `${label}：点「恢复这一页」后页面恢复`);
   await poll(() => popup.isClosed(), `${label}：恢复后面板关闭`);
   check(true, `${label}：恢复后面板关闭`);
 }
@@ -331,7 +331,7 @@ async function footerLandings(ext, browser, page, label) {
     return tab;
   };
   const mgmt = await openAndClick('pm-popup-manage', '/management.html#/sites');
-  check(mgmt.url().endsWith('/management.html#/sites'), `${label}：「管理全部网站」落到 ${mgmt.url()}`);
+  check(mgmt.url().endsWith('/management.html#/sites'), `${label}：「你添加的网站」落到 ${mgmt.url()}`);
   await mgmt.close();
   const settings = await openAndClick('pm-popup-settings', '/settings.html');
   check(settings.url().endsWith('/settings.html'), `${label}：「插件设置」落到 ${settings.url()}`);
@@ -362,7 +362,7 @@ async function main() {
     await popup.waitForSelector(tid('pm-popup-switch'), { timeout: 5000 });
     await checkCommon(popup, 'popup');
     let sw = await findSwitch(popup);
-    check(sw.node?.name === '清爽模式' && sw.node.checked === false, `无障碍树：switch「${sw.node?.name}」checked=${sw.node?.checked}`);
+    check(sw.node?.name === '按你的设置显示' && sw.node.checked === false, `无障碍树：switch「${sw.node?.name}」checked=${sw.node?.checked}`);
     const axAll = axTexts(sw.tree);
     check(!axAll.includes('●') && !axAll.includes('＋'), '装饰符号 ● / ＋ 不进无障碍树');
     check(/heading/.test(JSON.stringify(sw.tree)) && (await popup.$eval('h1', (h) => h.textContent)) === 'PageMask', 'popup 有 h1 标题');
@@ -394,7 +394,7 @@ async function main() {
     popup = await openPopup(ext, blank);
     await popup.waitForSelector(tid('pm-popup-unsupported'), { timeout: 5000 });
     const reason = await popup.$eval(tid('pm-popup-unsupported'), (e) => e.textContent.trim());
-    check(reason === '浏览器内部页面无法使用清爽模式', `不支持页面显示原因（${reason}）`);
+    check(reason === 'Chrome 自己的页面不让扩展改动，换一个普通网页再试', `不支持页面显示原因（${reason}）`);
     check(!(await popup.$(tid('pm-popup-setup'))), '不支持页面不显示开启按钮');
     await popup.close().catch(() => undefined);
     await blank.close();
@@ -408,8 +408,8 @@ async function main() {
     check(!(await site2.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
-    check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '为当前网站开启清爽模式', '新站点显示「为当前网站开启清爽模式」');
-    check(!(await popup.$(tid('pm-popup-edit'))), '未配置站点不显示「编辑当前网站」（那个按钮只在已配置时才有意义）');
+    check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '设置这个网站', '新站点主按钮写「设置这个网站」');
+    check(!(await popup.$(tid('pm-popup-edit'))), '未配置站点不显示「编辑收起的内容」（那个按钮只在已配置时才有意义）');
     await checkPopupChrome(popup, '未添加的网站');
     await coverAndRestore(ext, popup, site2, '未添加的网站');
 
@@ -440,7 +440,7 @@ async function main() {
       role: document.querySelector(e).getAttribute('role'),
       enabled: !document.querySelector(b).disabled,
     }), tid('pm-popup-error'), tid('pm-popup-setup'));
-    check(denied.text.includes('需要允许访问这个网站') && denied.role === 'alert' && denied.enabled, `授权被拒：role=alert「${denied.text}」，按钮恢复可点`);
+    check(denied.text.includes('允许 PageMask 访问这个网站') && denied.role === 'alert' && denied.enabled, `授权被拒：role=alert「${denied.text}」，按钮恢复可点`);
 
     // 遮住失败：给一句人话，按钮恢复可点（页面上没有接收方、后台也注入不了）
     await popup.evaluate(() => {
@@ -494,7 +494,7 @@ async function main() {
       '网站列表页没有页内 tab 切换（插件设置是独立页面，#55）',
     );
     const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
-    check(rowText.includes('原样') && rowText.includes('已收起 2 项'), `一行一站：${rowText.split('\n').join(' / ')}`);
+    check(rowText.includes('原样') && rowText.includes('2 项收起设置'), `一行一站：${rowText.split('\n').join(' / ')}`);
     check((await m.$eval(tid('pm-mgmt-site-link'), (a) => a.getAttribute('href'))) === SITE_HASH, `行链接指向 ${SITE_HASH}`);
     // #41 / #56：删除入口只在站点设置页页脚，列表行上没有
     check(
@@ -509,7 +509,7 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
     check((await m.$eval('#pm-site-title', (h) => h.textContent.trim())) === HOST, `站点设置页标题显示域名（${HOST}）`);
     const mgmtSwitch = await findSwitch(m);
-    check(mgmtSwitch.node?.name === '清爽模式', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
+    check(mgmtSwitch.node?.name === '按你的设置显示', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
     // 四块与页面右下角 ⋯ 菜单用同一批名字（#56）
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
@@ -565,7 +565,7 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-rule-stale'), { timeout: 5000 });
     const staleRowText = await m.$eval('li[data-rule-id="r1"]', (e) => e.innerText);
     check(
-      staleRowText.includes('可能失效') && staleRowText.includes('「页头」最近没找到'),
+      staleRowText.includes('可能失效') && staleRowText.includes('「页头」最近在网站上找不到'),
       '「可能失效」写在那一行里，用可读文字说明（不只靠颜色）',
     );
 
@@ -652,7 +652,7 @@ async function main() {
     await m.evaluate(() => history.back());
     await poll(async () => (await hash()) === '#/sites', '浏览器后退回到 #/sites');
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
-    check((await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText)).includes('清爽'), '列表反映刚切换的清爽状态');
+    check((await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText)).includes('按你的设置显示'), '列表反映刚切换的状态');
 
     // 直接打开带 hash 的地址（含站点设置页）
     await m.goto(`${extOrigin}/management.html${SITE_HASH}`, { waitUntil: 'load' });
@@ -663,7 +663,7 @@ async function main() {
     await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), disguisedTitle: SITE_TITLE, hideRules: [] });
     await m.waitForSelector(tid('pm-mgmt-no-rules'), { timeout: 5000 });
     const zeroCount = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
-    check(zeroCount.includes('没有收起任何内容') && !zeroCount.includes('0 项'), `0 条规则时本页说「${zeroCount}」`);
+    check(zeroCount.includes('还没有收起设置') && !zeroCount.includes('0 项'), `0 条规则时本页说「${zeroCount}」`);
     await m.click(tid('pm-mgmt-reset'));
     await waitFor(m, '0 条规则的确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
     const zeroImpact = await m.$eval(tid('pm-mgmt-reset-impact'), (e) => e.innerText);
@@ -679,8 +679,8 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
     const zeroRow = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
     check(
-      zeroRow.includes('没有收起任何内容') && !zeroRow.includes('已收起 0 项'),
-      `列表行也不写「已收起 0 项」（${zeroRow.split('\n').join(' / ')}）`,
+      zeroRow.includes('还没有收起设置') && !zeroRow.includes('0 项'),
+      `列表行也不写「0 项」（${zeroRow.split('\n').join(' / ')}）`,
     );
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
 
@@ -742,7 +742,7 @@ async function main() {
     await (await importInput()).uploadFile(writeJson('broken.json', '{ not json'));
     await waitFor(m, '导入失败提示', (s) => document.querySelector(s).textContent.includes('导入失败'), [tid('pm-settings-import-result')]);
     const failText = await m.$eval(tid('pm-settings-import-result'), (e) => e.textContent.trim());
-    check(failText === '导入失败：不是有效的 PageMask 导出文件' && !/[A-Za-z]/.test(failText.replace(/PageMask/g, '')), `导入失败用人话（${failText}）`);
+    check(failText.startsWith('导入失败：这个文件不是 PageMask') && !/[A-Za-z]/.test(failText.replace(/PageMask/g, '')), `导入失败用人话（${failText}）`);
     // 整体替换：先确认，列出影响
     const OTHER = 'https://example.com';
     const bundle = { app: 'pagemask', formatVersion: 1, exportedAt: new Date().toISOString(), profiles: [profileOf(OTHER, { hideRules: [rule('x1', '广告', ['.ad'])] })] };
@@ -752,7 +752,7 @@ async function main() {
     await waitFor(m, '替换确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-settings-replace-dialog')]);
     const impact = await m.evaluate((s) => ({ text: document.querySelector(s).innerText, focus: document.activeElement?.textContent?.trim() }), tid('pm-settings-replace-impact'));
     check(
-      impact.text.includes('1 个网站、2 个收起项会全部被替换') && impact.text.includes('本机不再保留') && impact.text.includes('127.0.0.1') && impact.text.includes('文件里的 1 个网站、1 个收起项'),
+      impact.text.includes('1 个网站、2 项收起设置会全部被替换') && impact.text.includes('本机不再保留') && impact.text.includes('127.0.0.1') && impact.text.includes('换成文件里的 1 个网站、1 项收起设置'),
       `替换确认框列出影响：\n      ${impact.text.split('\n').join('\n      ')}`,
     );
     check(impact.focus === '取消', '替换确认框默认聚焦「取消」');
@@ -783,7 +783,7 @@ async function main() {
     );
     await m.waitForSelector(tid('pm-mgmt-pending-all'), { timeout: 5000 });
     const pendingText = await m.$eval(tid('pm-mgmt-pending-all'), (e) => e.innerText);
-    check(pendingText.includes('2 个网站待授权') && pendingText.includes('一次授权全部'), `两个以上待授权时出现「一次授权全部」（${pendingText.split('\n')[0]}）`);
+    check(pendingText.includes('2 个网站还没允许访问') && pendingText.includes('全部允许'), `两个以上待授权时出现「一次授权全部」（${pendingText.split('\n')[0]}）`);
     const pendingRows = await m.$$eval(tid('pm-mgmt-pending'), (rows) => rows.length);
     check(pendingRows === 2, `待授权站点在行里给出「授权并启用」（${pendingRows} 行）`);
     await checkSchemes(m, '管理页 · 待授权', 'bgSubtle');

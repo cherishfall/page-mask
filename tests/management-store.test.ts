@@ -5,6 +5,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { AUTOSAVE_MS, createManagementStore, DEFAULT_KEY } from '@/entrypoints/management/store';
+import { t } from '@/core/i18n';
 import { createEmptyProfile, type SiteProfile } from '@/core/types';
 
 const A = 'https://reader.example';
@@ -227,7 +228,7 @@ describe('管理页 store', () => {
     await store.reload();
 
     expect(await store.importFile(new File(['{ not json'], 'broken.json'))).toBe('failed');
-    expect(store.state.importResult).toBe('导入失败：不是有效的 PageMask 导出文件');
+    expect(store.state.importResult).toBe(`导入失败：${t().errors.invalidExportFile}`);
 
     store.state.importMode = 'replace';
     const bundle = {
@@ -241,7 +242,7 @@ describe('管理页 store', () => {
     expect(store.state.replaceImpact?.removedOrigins).toEqual([A]);
 
     await store.confirmReplace(false);
-    expect(store.state.importResult).toBe('已取消导入，本机设置没有改动');
+    expect(store.state.importResult).toBe(t().management.import.cancelled);
     expect(await fakeBrowser.storage.local.get(`profile:${A}`)).toHaveProperty(`profile:${A}`);
   });
 });

@@ -10,7 +10,7 @@
  * - 菜单四项与两条分隔线（#56）：标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 /
  *   删除这个网站的设置（红字，与上面用分隔线隔开）
  * - 点菜单「编辑收起的内容」打开编辑面板，且开关状态不变（N1 的实测故障）
- * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完提示「切到清爽」并给入口
+ * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完说明「现在是网站原样」并给切换入口
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
  *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
@@ -333,10 +333,10 @@ async function main() {
     await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
     await waitForShadow(page, TOGGLE, tid('pm-tp-original-note'), { timeout: 3000 });
     const noteText = await shadowText(page, TOGGLE, tid('pm-tp-original-note'));
-    check(noteText.includes('原样态') && noteText.includes('切到清爽'), `原样态下保存给出说明（${noteText.trim()}）`);
+    check(noteText.includes('网站原样') && noteText.includes('看不到效果'), `原样态下保存给出说明（${noteText.trim()}）`);
     check((await page.title()) === 'Acme 阅读', '原样态下标签页仍是真名（保存不硬改）');
     await clickInShadow(page, TOGGLE, tid('pm-tp-switch-clean'));
-    await waitFor(page, '面板里的「切到清爽」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
+    await waitFor(page, '面板里的「按你的设置显示」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
     check(!(await panelOpen()), '切换后面板收起');
     // 复位：后面的幕布用例断言固定的清爽标题
     await patchProfile(ext.control, ORIGIN, { disguisedTitle: '低调阅读', switchState: 'disguised' });
@@ -357,7 +357,7 @@ async function main() {
       },
       TOGGLE,
     );
-    check(aria.pressed === 'true' && aria.text === '清爽', `主按钮有 aria-pressed 与可见文字（aria-pressed=${aria.pressed}，文字「${aria.text}」）`);
+    check(aria.pressed === 'true' && aria.text === '按你的设置显示', `主按钮有 aria-pressed 与可见文字（aria-pressed=${aria.pressed}，文字「${aria.text}」）`);
     check(!!aria.gripLabel && !!aria.moreLabel, `把手与菜单按钮都有可访问名称（${aria.gripLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面
@@ -380,7 +380,7 @@ async function main() {
     })();
     check(switched.switchState === 'original', `主按钮上按回车切换开关（${switched.switchState}）`);
     const label = await shadowText(page, TOGGLE, '.pm-tg-label');
-    check(label === '原样', `按钮文字随状态变化（${label}）`);
+    check(label === '网站原样', `按钮文字随状态变化（${label}）`);
     // 复位
     await setProfile(ext.control, ORIGIN, { ...switched, switchState: 'disguised' });
     await waitFor(page, '回到清爽态', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
@@ -516,7 +516,7 @@ async function main() {
       `常态只显示图标：「恢复」在 DOM 里但不显示（文字不透明度 ${covered.labelOpacity}）`,
     );
     check(covered.radius === '999px' && covered.btnBg === 'rgb(255, 255, 255)', `与胶囊同一套材质（圆角 ${covered.radius}、底色 ${covered.btnBg}）`);
-    check(!!covered.aria && covered.aria.includes('撤掉幕布'), `按钮有可读名字（${covered.aria}）`);
+    check(!!covered.aria && covered.aria.includes('取消遮住'), `按钮有可读名字（${covered.aria}）`);
 
     // 悬停 / 键盘聚焦：整体升到 100% 并显出「恢复」，而且不产生位移（#50 的硬指标）
     const restBox = covered.btn;
@@ -932,10 +932,12 @@ async function main() {
 
     // Esc 取消：什么都不删
     await page.keyboard.press('Escape');
+    // 等元素真正从 DOM 移除：只看 :modal 会在 Vue 移除前的这一帧里返回，
+    // 紧接着的第二次「⋯ → 删除」会落在还没卸载的对话框上（deleteOpen 仍为 true，不会重新挂载）
     await waitFor(
       page,
       'Esc 关闭确认框',
-      (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-delete-dialog"]')?.matches(':modal'),
+      (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-delete-dialog"]'),
       [TOGGLE],
       { timeout: 3000 },
     );

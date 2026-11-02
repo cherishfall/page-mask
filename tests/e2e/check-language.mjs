@@ -77,11 +77,14 @@ try {
 
   // ---------- 初始：auto = 浏览器中文 ----------
   console.log('\n--- 初始状态（自动 → 浏览器中文） ---');
-  check((await shadowText(page, TOGGLE, `${tid('pm-toggle-main')} .pm-tg-label`)) === '清爽', '小胶囊显示「清爽」');
+  // 断言「是不是中文」而不是断言具体某句话：界面用词会调整（0.4.1 就整体重写过），
+  // 这个用例要守的是「语言真的换了」，不是某个按钮叫什么。
+  const hasCJK = (s) => /[\u4e00-\u9fff]/.test(s);
+  check(hasCJK(await shadowText(page, TOGGLE, `${tid('pm-toggle-main')} .pm-tg-label`)), '小胶囊显示中文');
   check(await bodyHas(mgmt, '你添加的网站'), '管理页是中文');
   check(await bodyHas(settingsPage, '插件设置'), '插件设置页是中文');
   const autoLabel = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
-  check(autoLabel === '自动（当前：简体中文）', `「自动」后面显示当前探测结果（${autoLabel}）`);
+  check(autoLabel.startsWith('自动（') && autoLabel.includes('简体中文'), `「自动」后面显示当前探测结果（${autoLabel}）`);
   check((await textOf(settingsPage, 'label[for="pm-settings-lang-zh"]')) === '简体中文', '语言名用本语言书写（简体中文）');
   check((await textOf(settingsPage, 'label[for="pm-settings-lang-en"]')) === 'English', '语言名用本语言书写（English）');
   const checked = await settingsPage.$eval('input[name="pm-settings-language"]:checked', (el) => el.value);
@@ -89,8 +92,8 @@ try {
 
   // 弹窗（popup 会死上下文，每次重新开）
   let popup = await openPopup(ext, page);
-  check(await popup.evaluate(() => document.body.textContent.includes('管理全部网站')), '弹窗是中文');
-  check(await popup.evaluate(() => document.body.textContent.includes('遮住本页')), '弹窗「遮住本页」是中文');
+  check(hasCJK(await popup.evaluate(() => document.body.textContent)), '弹窗是中文');
+  check(await popup.evaluate(() => document.body.textContent.includes('遮住这一页')), '弹窗「遮住这一页」是中文');
   await popup.close();
 
   // 页内向导
@@ -118,7 +121,10 @@ try {
   check(true, '管理页（另一个标签页）没刷新就变英文');
 
   await page.waitForFunction(
-    (h) => document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent === 'Clean',
+    (h) => {
+      const s = document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent ?? '';
+      return s !== '' && !/[\u4e00-\u9fff]/.test(s);
+    },
     { timeout: 5000 },
     TOGGLE,
   );
@@ -142,7 +148,7 @@ try {
   await page.keyboard.press('Escape');
 
   popup = await openPopup(ext, page);
-  check(await popup.evaluate(() => document.body.textContent.includes('Manage all sites')), '弹窗变英文');
+  check(!hasCJK(await popup.evaluate(() => document.body.textContent)), '弹窗变英文');
   check(await popup.evaluate(() => document.body.textContent.includes('Cover this page')), '弹窗「Cover this page」');
   // 英文排版：320px 最窄弹窗不横向溢出
   const overflow = await popup.evaluate(() => ({
@@ -157,7 +163,7 @@ try {
   // 语言名不翻译：英文界面下仍是 简体中文 / English
   check((await textOf(settingsPage, 'label[for="pm-settings-lang-zh"]')) === '简体中文', '英文界面下「简体中文」不翻译');
   const intro = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
-  check(intro.startsWith('Automatic (currently '), `英文下「自动」显示探测结果（${intro}）`);
+  check(intro.startsWith('Automatic (now '), `英文下「自动」显示探测结果（${intro}）`);
 
   // ---------- 切回自动：立刻变回中文 ----------
   console.log('\n--- 切回自动（浏览器中文） ---');
@@ -171,13 +177,16 @@ try {
   await mgmt.waitForFunction(() => document.body.textContent.includes('你添加的网站'), { timeout: 5000 });
   check(true, '管理页变回中文');
   await page.waitForFunction(
-    (h) => document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent === '清爽',
+    (h) => {
+      const s = document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent ?? '';
+      return /[\u4e00-\u9fff]/.test(s);
+    },
     { timeout: 5000 },
     TOGGLE,
   );
   check(true, '小胶囊变回中文');
   const popup2 = await openPopup(ext, page);
-  check(await popup2.evaluate(() => document.body.textContent.includes('管理全部网站')), '重开的弹窗也是中文');
+  check(hasCJK(await popup2.evaluate(() => document.body.textContent)), '重开的弹窗也是中文');
   await popup2.close();
 
   // 设置确实落库（uiLanguage 回到 auto）
