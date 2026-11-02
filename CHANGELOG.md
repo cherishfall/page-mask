@@ -5,6 +5,20 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [Unreleased]
+
+### 中文
+
+#### 变更
+
+- **扩展改名**：`PageMask · 页面清爽模式` → `PageMask · 收起网页上不想看的部分`（英文 `PageMask — Hide the Parts You Don't Want`）。界面上早就不用「清爽模式」这个词了，名字也跟着改成一句能直接看懂的话
+
+### English
+
+#### Changed
+
+- **Renamed**: `PageMask — Clean & Focused Pages` → `PageMask — Hide the Parts You Don't Want` (Chinese: `PageMask · 收起网页上不想看的部分`). The interface stopped using "clean mode" in 0.4.1, so the name now says what it does too
+
 ## [0.4.1] - 2026-11-02
 
 把界面上说的话重写了一遍：不再用自造的名词指代功能，每个按钮和提示都落到具体的动作上。/ Rewrote what the interface says: no more invented nouns standing in for features — every button and hint now names the action.

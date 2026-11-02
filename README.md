@@ -1,4 +1,4 @@
-# PageMask · 页面清爽模式
+# PageMask · 收起网页上不想看的部分
 
 > 点选网页上不想看的元素把它们收起来；标签页标题和图标也能一起变低调。
 > Hide the parts of a page you don't want — and keep the tab low-key.

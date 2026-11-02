@@ -17,7 +17,7 @@ const BANNED = [
   { word: '伪装', hint: '改用「清爽 / 收起 / 标签页标题 / 标签页图标」' },
   { word: '摸鱼', hint: '改用「分心 / 想安静看内容」' },
   { word: '泄露', hint: '改用「显示网址」等具体说法' },
-  { word: '页面面具', hint: '改用「PageMask · 页面清爽模式」' },
+  { word: '页面面具', hint: '改用「PageMask · 收起网页上不想看的部分」' },
   { word: 'disguise', hint: 'use "clean mode" / "hide" / "tab title" instead' },
   { word: 'page mask', hint: 'the product is written "PageMask"' },
 ];

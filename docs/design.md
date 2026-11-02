@@ -2,7 +2,7 @@
 
 本文档是 PageMask 的最终设计共识，是后续开发、建仓的唯一依据。术语定义见 [GLOSSARY.md](../GLOSSARY.md)，关键决策的背景与理由见 [docs/adr/](./adr/)。
 
-- **项目名**：PageMask（界面显示「PageMask · 页面清爽模式」）
+- **项目名**：PageMask（界面显示「PageMask · 收起网页上不想看的部分」）
 - **一句话定位**：点选网页上让你分心的元素，一键收起；标签页标题与图标也能一起变低调；有人走近时一键把整页遮住
 - **技术栈**：WXT + Vue 3 + TypeScript，Chrome Manifest V3，成熟组件优先
 - **分发路径**：先自用（开发者模式加载）→ GitHub 开源 → Chrome Web Store 上架

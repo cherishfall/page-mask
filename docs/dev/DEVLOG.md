@@ -13,7 +13,7 @@
 - **文案改动会打到测试**：单测与 E2E 里有 ~20 处写死中文的断言。处理原则——**能改成「语义断言」的就改语义**（语言用例改成「有没有中文字符」而不是「是不是某一个词」；toggle 主按钮改用 `data-testid` 定位，不再靠 `title^="PageMask"`），确实要锁文案的改成从 `t()` 取值。
 - **E2E 里挖出一个真竞态**（与文案无关，已顺手修测试）：删除确认框按 Esc 关闭后，元素要等 Vue 下一帧才移除；用例只看 `:modal` 就返回，紧接着第二次「⋯ → 删除」时 `deleteOpen` 仍为 true，`v-if` 不会重新挂载 → 确认框不出现。把等待条件改成「元素真的从 DOM 消失」。两次连跑稳定。
 - **门禁**：单测 573 项、E2E（run-e2e 103 / pages 184 / toggle 121 / wizard 129 / mask 16 / editor 20 / language 27）、`check:docs`、`check:package` 全绿；产物 `.output/page-mask-0.4.1-chrome.zip`（27 文件 / 192 KB）。
-- **未做**：商店截图（screenshot-4/6）里的按钮名需要按新文案重拍，`CHROMEWEBSTORE.md` §8 已标 ⚠️；扩展名 `PageMask · 页面清爽模式` 保持不动（改名等于换商店身份，留待用户决定）。
+- **扩展改名**（用户当日决定）：`PageMask · 页面清爽模式` → `PageMask · 收起网页上不想看的部分`，英文 `Clean & Focused Pages` → `Hide the Parts You Don't Want`。理由：界面上 0.4.1 起不再出现「清爽模式」，名字再挂着它就成了唯一一处要用户先学会的词；未上架商店，换名字零成本。`package.json` 升到 0.4.2 承接这次改名。
 
 ## 0.4.0 · #48 十张票收尾（2026-10-30）
 

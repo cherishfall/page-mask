@@ -21,7 +21,7 @@
 
 | 字段 | en（default_locale） | zh_CN |
 |---|---|---|
-| 名称（≤45） | `PageMask — Clean & Focused Pages`（32） | `PageMask · 页面清爽模式`（17） |
+| 名称（≤45） | `PageMask — Hide the Parts You Don't Want`（40） | `PageMask · 收起网页上不想看的部分`（22） |
 | 简短说明（≤132） | `Hide the page elements you don't want, on sites you choose. Optional tab title and icon. Settings stay on this computer.`（120） | `点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只对你添加的网站生效，设置只存在这台电脑上。`（55） |
 
 - 类别：`Productivity › Tools`（备选 `Make Chrome Yours › Functionality & UI`，以控制台当次选项为准）
