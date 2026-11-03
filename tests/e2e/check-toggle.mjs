@@ -333,10 +333,10 @@ async function main() {
     await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
     await waitForShadow(page, TOGGLE, tid('pm-tp-original-note'), { timeout: 3000 });
     const noteText = await shadowText(page, TOGGLE, tid('pm-tp-original-note'));
-    check(noteText.includes('网站原样') && noteText.includes('看不到效果'), `原样态下保存给出说明（${noteText.trim()}）`);
+    check(noteText.includes('现在是原样') && noteText.includes('看不到效果'), `原样态下保存给出说明（${noteText.trim()}）`);
     check((await page.title()) === 'Acme 阅读', '原样态下标签页仍是真名（保存不硬改）');
     await clickInShadow(page, TOGGLE, tid('pm-tp-switch-clean'));
-    await waitFor(page, '面板里的「按你的设置显示」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
+    await waitFor(page, '面板里的「按设置」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
     check(!(await panelOpen()), '切换后面板收起');
     // 复位：后面的幕布用例断言固定的清爽标题
     await patchProfile(ext.control, ORIGIN, { disguisedTitle: '低调阅读', switchState: 'disguised' });
@@ -357,7 +357,7 @@ async function main() {
       },
       TOGGLE,
     );
-    check(aria.pressed === 'true' && aria.text === '按你的设置显示', `主按钮有 aria-pressed 与可见文字（aria-pressed=${aria.pressed}，文字「${aria.text}」）`);
+    check(aria.pressed === 'true' && aria.text === '按设置', `主按钮有 aria-pressed 与可见文字（aria-pressed=${aria.pressed}，文字「${aria.text}」）`);
     check(!!aria.gripLabel && !!aria.moreLabel, `把手与菜单按钮都有可访问名称（${aria.gripLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面
@@ -380,7 +380,7 @@ async function main() {
     })();
     check(switched.switchState === 'original', `主按钮上按回车切换开关（${switched.switchState}）`);
     const label = await shadowText(page, TOGGLE, '.pm-tg-label');
-    check(label === '网站原样', `按钮文字随状态变化（${label}）`);
+    check(label === '原样', `按钮文字随状态变化（${label}）`);
     // 复位
     await setProfile(ext.control, ORIGIN, { ...switched, switchState: 'disguised' });
     await waitFor(page, '回到清爽态', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
@@ -921,7 +921,7 @@ async function main() {
     check(
       del.impact.includes('标签页标题、图标、收起的内容都会删掉') &&
         del.impact.includes('访问权限也会收回') &&
-        del.impact.includes('你添加的网站'),
+        del.impact.includes('从列表里消失'),
       `正文说清删什么、还会发生什么（${del.impact}）`,
     );
     check(del.focus === 'pm-tg-delete-cancel', `默认焦点在「取消」上（${del.focus}）`);
@@ -965,13 +965,13 @@ async function main() {
       '浏览器给 PageMask 的访问权限已收回',
     );
 
-    // 「你添加的网站」列表里也没有了
+    // 「网站设置」列表里也没有了
     const mgmt = await ext.browser.newPage();
     await mgmt.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
     await mgmt.waitForSelector(tid('pm-mgmt-empty'), { timeout: 5000 });
     check(
       (await mgmt.$$eval('li[data-origin]', (rows) => rows.length)) === 0,
-      '管理页「你添加的网站」里已经没有它',
+      '管理页「网站设置」里已经没有它',
     );
     await mgmt.close();
   } catch (e) {

@@ -26,8 +26,8 @@ export const en: Messages = {
     uploadIcon: 'Upload icon',
     replaceIcon: 'Replace icon',
     clearIcon: 'Clear icon',
-    clean: 'Shown your way',
-    original: 'As the site is',
+    clean: 'Your settings',
+    original: 'As is',
     cleanMode: 'Show this site your way',
     quickFill: 'Ready-made titles',
     quickTitle: 'Ready-made titles',
@@ -100,7 +100,7 @@ export const en: Messages = {
     restorePage: 'Restore this page',
     covering: 'Covering…',
     restoring: 'Restoring…',
-    manageAll: 'Your sites',
+    manageAll: 'Site settings',
     settings: 'Settings',
     error: {
       tabMismatch: 'The page changed. Go back to the site you want and click PageMask again',
@@ -116,10 +116,10 @@ export const en: Messages = {
   },
 
   management: {
-    pageTitle: 'PageMask · Your sites',
+    pageTitle: 'PageMask · Site settings',
     appSub: 'These are the sites you added. Open one to change its tab title and icon, or see what it hides.',
 
-    sitesTitle: 'Your sites',
+    sitesTitle: 'Site settings',
     sitesHint: 'Pick a site to open its settings. PageMask never touches sites you didn’t add.',
     sitesEmpty: 'No sites yet. Open a site you want to tidy up and click the PageMask icon in the toolbar to start.',
     pendingAll: (n: number) =>
@@ -131,8 +131,8 @@ export const en: Messages = {
     pendingHint: 'The browser hasn’t allowed PageMask to open this site. Your settings are kept and apply once you allow it.',
     authorize: 'Allow access',
 
-    back: '← Back to your sites',
-    backShort: 'Back to your sites',
+    back: '← Site settings',
+    backShort: 'Back to site settings',
     missingTitle: 'No settings for this site',
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
@@ -164,7 +164,7 @@ export const en: Messages = {
       action: 'Delete settings',
       title: (label: string) => `Delete the settings for ${label}?`,
       impact:
-        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and it will disappear from “Your sites”.',
+        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and it will disappear from the list.',
     },
 
     error: {
@@ -191,7 +191,7 @@ export const en: Messages = {
     pageTitle: 'PageMask · Settings',
     title: 'Settings',
     sub: 'These settings apply to every site.',
-    back: '← Your sites',
+    back: '← Site settings',
 
     titleHeading: 'Default title',
     titleIntro: 'When a site has no title of its own, its tab shows this text once the switch is on.',
@@ -252,7 +252,7 @@ export const en: Messages = {
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
-    tip: 'Tip: “Your sites” and “Settings” (export / import and the language live there) sit side by side at the bottom of the popup.',
+    tip: 'Tip: “Site settings” and “Settings” (export / import and the language live there) sit side by side at the bottom of the popup.',
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
@@ -260,7 +260,7 @@ export const en: Messages = {
       },
       {
         title: 'Click the icon to open a small window',
-        text: 'Click the PageMask toolbar icon and a small window opens. The main button says “Set up this site”: it lets you change this site’s tab title and icon and hide the parts you don’t want. Two entries sit side by side at the bottom — “Your sites” and “Settings”. “Cover this page” covers the whole page along with the tab title; click “Restore this page” to come back.',
+        text: 'Click the PageMask toolbar icon and a small window opens. The main button says “Set up this site”: it lets you change this site’s tab title and icon and hide the parts you don’t want. Two entries sit side by side at the bottom — “Site settings” and “Settings”. “Cover this page” covers the whole page along with the tab title; click “Restore this page” to come back.',
       },
       {
         title: 'Setting up takes three steps',
@@ -287,7 +287,7 @@ export const en: Messages = {
     pickLead: [
       'Click something on the page to pick it.',
       'Click it again to unpick. You can pick several in a row.',
-      'Everything you pick is listed below and can be removed any time.',
+      'Everything you pick is listed below, and you can unpick any of it at any time.',
     ],
     adjustGroup: 'Adjust the last pick',
     adjustNow: 'Adjusting',
@@ -297,8 +297,8 @@ export const en: Messages = {
     smaller: 'Smaller',
     listTitle: (n: number) => (n > 0 ? `${n} picked` : 'Picked items'),
     listEmpty: 'Nothing picked yet.',
-    clearAll: 'Remove all',
-    deleteOne: (seq: number, name: string) => `Remove item ${seq}: ${name}`,
+    clearAll: 'Deselect all',
+    deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     nextBlocked: 'Click something on the page to hide first',
     previewHint:
       'Scroll the page to check the result (Cover should stay glued to its element). Each row lets you rename the item, change the hide method, and choose one or all alike.',
@@ -379,8 +379,8 @@ export const en: Messages = {
   toggle: {
     gripAria: 'Move the button (arrow keys work too)',
     gripTitle: 'Drag to move the button',
-    tipOn: 'Shown the way you set it — click to see the site as it is',
-    tipOff: 'Showing the site as it is — click to show it your way',
+    tipOn: 'Click to see the site as it is',
+    tipOff: 'Click to use your settings',
     coverAria: 'Cover the whole page',
     moreAria: 'More actions',
     menuTitle: 'Tab title and icon',
@@ -390,7 +390,7 @@ export const en: Messages = {
     panelTitle: 'Tab title and icon',
     panelClose: 'Close',
     panelOriginalNote: 'Saved. The site is shown as-is, so you can’t see the change yet.',
-    panelSwitchClean: 'Show it your way',
+    panelSwitchClean: 'Use your settings',
     panelTitleHint: (placeholder: string) =>
       `Changes when you save. Leave it empty to use “${placeholder}” — a title can’t be blank, or Chrome would show the address instead.`,
     panelIconHintWithDefault: 'Without an icon, the default icon from Settings is used.',
