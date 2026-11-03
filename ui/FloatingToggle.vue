@@ -6,6 +6,7 @@
     <!-- 拖动把手：六个点的 SVG（图形 10×16，命中区由 CSS 撑到 24×24）
          不用点阵字符：各平台字形大小不一，还会把字号压到 12px 以下 -->
     <button
+      v-if="!mini"
       type="button"
       class="pm-tg-grip"
       :class="{ dragging }"
@@ -41,7 +42,8 @@
       @click="emit('toggle')"
     >
       <span class="pm-tg-dot" aria-hidden="true"></span>
-      <span class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
+      <!-- mini：只留圆点，状态靠颜色与悬停提示（#78） -->
+      <span v-if="!mini" class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
     </button>
 
     <!-- 遮住整页（图标即可，读屏文案「遮住整页」） -->
@@ -69,8 +71,30 @@
       </svg>
     </button>
 
-    <!-- 展开式按钮组：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
+    <!-- 收成小按钮 / 展开成完整（#78）：一对图标钮，一键互切，不进菜单 -->
     <button
+      type="button"
+      class="pm-tg-cover"
+      :aria-label="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
+      :title="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
+      :data-testid="mini ? 'pm-toggle-expand' : 'pm-toggle-shrink'"
+      @click="emit('setMini', !mini)"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <template v-if="mini">
+          <polyline points="9 5 4 12 9 19" />
+          <polyline points="15 5 20 12 15 19" />
+        </template>
+        <template v-else>
+          <polyline points="15 5 20 12 15 19" />
+          <polyline points="9 5 4 12 9 19" />
+        </template>
+      </svg>
+    </button>
+
+    <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
+    <button
+      v-if="!mini"
       ref="moreEl"
       type="button"
       class="pm-tg-more"
@@ -129,6 +153,8 @@ const KEY_STEP = 15;
 const props = defineProps<{
   state: SiteProfile['switchState'];
   position: { x: number; y: number } | null;
+  /** mini 形态（#78）：状态圆点 + 遮住 + 展开，没有文字、菜单与把手；按站点记忆 */
+  mini: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
 }>();
@@ -141,6 +167,8 @@ const emit = defineEmits<{
   moreItems: [];
   resetPos: [];
   cover: [];
+  /** mini ↔ 全功能互切（#78） */
+  setMini: [mini: boolean];
   /** 菜单里的「删除这个网站的设置」被点下：运行时先撤幕布，确认框随后弹出 */
   delete: [];
   deleteSite: [];

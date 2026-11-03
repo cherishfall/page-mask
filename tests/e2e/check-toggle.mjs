@@ -836,6 +836,78 @@ async function main() {
     // 复位开关，不让幕布用例影响后面的叠放用例
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
 
+    // ===================== mini 形态（#78）：圆点 + 遮住 + 展开，按站点记忆 =====================
+    console.log('\n--- 胶囊 mini：收成三个小钮，状态与遮住都在，展开回来 ---');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-shrink'));
+    await waitFor(
+      page,
+      '切成 mini',
+      (h) => {
+        const sr = document.querySelector(h)?.shadowRoot;
+        return !!sr?.querySelector('[data-testid="pm-toggle-expand"]') && !sr.querySelector('[data-testid="pm-toggle-shrink"]');
+      },
+      [TOGGLE],
+      { timeout: 3000 },
+    );
+    const miniShape = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const main = sr.querySelector('[data-testid="pm-toggle-main"]');
+      return {
+        label: main?.querySelector('.pm-tg-label')?.textContent ?? null,
+        pressed: main?.getAttribute('aria-pressed'),
+        grip: !!sr.querySelector('[data-testid="pm-toggle-grip"]'),
+        more: !!sr.querySelector('[data-testid="pm-toggle-more"]'),
+        cover: !!sr.querySelector('[data-testid="pm-toggle-cover"]'),
+        dot: !!main?.querySelector('.pm-tg-dot'),
+      };
+    }, TOGGLE);
+    check(
+      miniShape.label === null && miniShape.dot && miniShape.pressed === 'true',
+      `mini 主按钮只剩状态圆点（无文字，aria-pressed=${miniShape.pressed}）`,
+    );
+    check(!miniShape.grip && !miniShape.more, 'mini 没有把手与菜单');
+    check(miniShape.cover, 'mini 保留遮住（急用一步直达，#78）');
+    check((await getProfile(ext.control, ORIGIN)).capsuleMini === true, 'mini 记在站点配置里');
+
+    // mini 上点圆点 = 照常切换两态（切回清爽，后面的用例要）
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(
+      page,
+      'mini 圆点切换生效',
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"]')?.getAttribute('aria-pressed') === 'false',
+      [TOGGLE],
+      { timeout: 3000 },
+    );
+    check((await getProfile(ext.control, ORIGIN)).switchState === 'original', 'mini 上切换写进配置');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+
+    // mini 上的眼睛照常一键遮住整页，恢复后形态不变
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
+    check(!(await page.$(TOGGLE)), '遮住期间整根胶囊让位');
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    check(
+      !!(await page.evaluate((h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-expand"]'), TOGGLE)),
+      '幕布恢复后还是 mini',
+    );
+    check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '幕布恢复后回到清爽态');
+
+    // 展开回全功能
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-expand'));
+    await waitFor(
+      page,
+      '展开回全功能',
+      (h) => {
+        const sr = document.querySelector(h)?.shadowRoot;
+        return !!sr?.querySelector('[data-testid="pm-toggle-shrink"]') && !!sr?.querySelector('[data-testid="pm-toggle-more"]');
+      },
+      [TOGGLE],
+      { timeout: 3000 },
+    );
+    // 存储里「缺省即全功能」：false 不落字段（与 sanitize 的本机偏好口径一致）
+    check(!(await getProfile(ext.control, ORIGIN)).capsuleMini, '展开后站点配置记回全功能（缺省不落字段）');
+
     // ===================== 叠放：页面超高浮层之上的模态对话框 =====================
     console.log('\n--- 页面浮层 z-index:2147483647 时，向导对话框仍在最上层 ---');
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });

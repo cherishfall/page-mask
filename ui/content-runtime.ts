@@ -140,9 +140,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const toggleState = reactive<{
     state: SiteProfile['switchState'];
     position: SiteProfile['floatingBtnPos'];
+    /** mini 形态（#78）：按站点记忆，缺省全功能 */
+    mini: boolean;
   }>({
     state: 'original',
     position: null,
+    mini: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -184,6 +187,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
+    toggleState.mini = profile?.capsuleMini === true;
   }
 
   /**
@@ -212,6 +216,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
+          mini: toggleState.mini,
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
@@ -219,6 +224,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           onMoreItems: handleMoreItems,
           onResetPos: handleResetPos,
           onCover: handleCover,
+          onSetMini: handleSetMini,
           onDelete: handleDeleteRequest,
           onDeleteSite: handleDeleteSite,
         }),
@@ -268,6 +274,20 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       },
       { touch: false },
     );
+  }
+
+  /** mini ↔ 全功能互切（#78）：写进站点配置，胶囊就地换形态，位置不变 */
+  async function handleSetMini(mini: boolean): Promise<void> {
+    if (!profile || !ctx.isValid) return;
+    profile.capsuleMini = mini;
+    syncToggleState();
+    try {
+      await storage.updateProfile(origin, (p) => {
+        p.capsuleMini = mini;
+      });
+    } catch {
+      showPageNotice(ctx, t().notice.saveFailed);
+    }
   }
 
   /** 菜单「标题和图标」（#77）：进向导第 1 步，改完可「只改标题，完成」提前走 */

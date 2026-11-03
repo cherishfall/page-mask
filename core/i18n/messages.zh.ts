@@ -406,6 +406,9 @@ export const zh = {
     menuTitle: '标题和图标',
     menuContent: '收起内容',
     menuResetPos: '按钮放回右下角',
+    /** mini 与全功能互切的一对图标钮（不进菜单，#78） */
+    shrinkAria: '切换成小按钮',
+    expandAria: '切换成完整按钮',
     menuDelete: '删除这个网站的设置',
     iconAlt: '将要显示在标签页上的图标',
   },

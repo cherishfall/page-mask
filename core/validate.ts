@@ -202,6 +202,8 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
     faviconDataUrl: isSafeFaviconDataUrl(v.faviconDataUrl) ? v.faviconDataUrl : null,
     hideRules,
     floatingBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
+    // mini 形态是本机界面偏好（与 floatingBtnPos 同口径）：只有显式 true 才落字段，缺省即全功能
+    ...(v.capsuleMini === true ? { capsuleMini: true as const } : {}),
     createdAt: finiteOr(v.createdAt, 0),
     updatedAt: finiteOr(v.updatedAt, 0),
   };

@@ -369,6 +369,8 @@ export const en: Messages = {
     menuTitle: 'Title & icon',
     menuContent: 'Hide items',
     menuResetPos: 'Move button back to the corner',
+    shrinkAria: 'Switch to the mini button',
+    expandAria: 'Switch to the full button',
     menuDelete: 'Delete this site’s settings',
     iconAlt: 'Icon that will show in the tab',
   },

@@ -68,6 +68,8 @@ export interface SiteProfile {
   hideRules: HideRule[];
   /** 悬浮按钮记住的位置（视口坐标）；null = 默认右下角 */
   floatingBtnPos: ButtonPos | null;
+  /** 胶囊用 mini 形态（只有状态圆点、遮住、展开三个小钮）；缺省 = 全功能（#78，按站点各自记） */
+  capsuleMini?: boolean;
   createdAt: number;
   /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */
   updatedAt: number;
