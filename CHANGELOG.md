@@ -5,19 +5,53 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
-## [Unreleased]
+## [0.5.0] - 2026-11-04
+
+把界面从上到下过了一遍：同一个东西只有一个样子、一个叫法，一个动作只剩一条路。/ Went over the whole interface: one look and one name per thing, one path per action.
 
 ### 中文
 
 #### 变更
 
-- **扩展改名**：`PageMask · 页面清爽模式` → `PageMask · 收起网页上不想看的部分`（英文 `PageMask — Hide the Parts You Don't Want`）。界面上早就不用「清爽模式」这个词了，名字也跟着改成一句能直接看懂的话
+- **改收起的内容只剩一条路**：页面内那个独立的编辑面板删掉了。点「编辑收起的内容」直接进设置向导的「看效果」——页面按你的设置显示着，逐行改名、换收起方式、换范围、重新选这一项；「上一步」回到点选，可以再加新的。已经收起的项在页面上用虚线框加「之前收起了」标出来
+- **「只这一个 / 同类一起（N）」换成一道勾选框**：「页面上另外 2 个一样的也一起收起」，回答一个是非题，不用先学会「同类」这个词。页面上没有第二个一样的，这道勾选框根本不出现；勾上或取消，页面当场变，工具条上说一句「另外 2 个也收起了」/「现在只收这一个」
+- **「看效果」每行只放一件事**：序号、名称、一句摘要（例如「消失 · 整个网站」）、「调整」、✕。收起方式、在哪些页面收起、重新选、高级（选择器原文）都折进「调整」
+- **页面右下角的小按钮**：这个网站只要有设置就出现（只改过标题也算，以前不出现）；「⋯」菜单补上「收起更多内容」，按用途分三组——标题和图标 / 收起更多 / 编辑收起 ｜ 按钮放回右下角 ｜ 删除这个网站的设置（永远排在最后）
+- **「你添加的网站」改名「网站设置」**：和「插件设置」配成一对。这个页面上那个「在页面上编辑」删掉了——它不知道该去哪个页面；改成一句说明：想到页面上改，就点工具栏图标再点「编辑收起的内容」
+- **按钮全项目一套**：主操作（实心）/ 次操作（有底有边）/ 轻操作（无底无边）/ 危险（红字红边），五种状态齐全。一屏最多一个实心主按钮；能不禁用就不禁用
+- **删除只有两种**：从清单里去掉一项，一律是行尾一个 ✕；删除整个网站的设置，才是红字按钮加二次确认
+- **向导底栏只放按钮**：退出改成文字按钮「退出设置」；「上一步」带上目的地（「上一步：改标题」「上一步：重新选内容」）
+- **文案**：「按你的设置显示 / 网站原样」缩成「按设置 / 原样」（开关的标签仍用全称）；「全部删掉」→「全部取消选择」；「N 项已收起」这类说法彻底不用
+- **扩展改名**：`PageMask · 页面清爽模式` → `PageMask · 收起网页上不想看的部分`（英文 `PageMask — Hide the Parts You Don't Want`）
+
+#### 修复
+
+- 「盖住」的预览原来只盖住点中的那一个，保存后却盖住整组；现在预览与保存结果一致
+- 保存中的按钮不显示「正在保存…」（状态没跟着变）
+- 页面右下角三个小图标按钮的可点区域太小（16 / 22 像素），提到 24×24，触屏 40×40
+- 界面里最后一处 10 像素的字没有了
 
 ### English
 
 #### Changed
 
-- **Renamed**: `PageMask — Clean & Focused Pages` → `PageMask — Hide the Parts You Don't Want` (Chinese: `PageMask · 收起网页上不想看的部分`). The interface stopped using "clean mode" in 0.4.1, so the name now says what it does too
+- **One way to edit what's hidden**: the separate in-page editor is gone. “Edit hidden items” now opens the setup wizard at its last step — the page is showing your settings, and you rename, change the hide method, change where it applies, or pick the element again, row by row. “Back” takes you to picking, to add more. Items you already hid are outlined with a dashed border and a “Hidden before” tag
+- **“Just this one / All N alike” is now a checkbox**: “Also hide the other 2 like this one” — a yes-or-no question instead of a word to learn. When there's no second one on the page, the checkbox doesn't appear at all. Tick or untick and the page changes right away, with a line in the toolbar: “The other 2 are hidden too” / “Only this one is hidden now”
+- **One decision per row in the result step**: number, name, a one-line summary (e.g. “Disappear · The whole site”), “Adjust”, ✕. Hide method, where it applies, pick again, and the advanced selector all live inside “Adjust”
+- **The small button in the corner**: now appears whenever the site has any setting (a changed tab title counts; it used to stay hidden). Its “⋯” menu gained “Hide more” and is grouped by purpose — title and icon / hide more / edit hidden | put the button back | delete this site's settings (always last)
+- **“Your sites” renamed “Site settings”**, pairing with “Settings”. The “Edit on the page” button there is gone — it couldn't know which page to open; a sentence now says: use the toolbar icon, then “Edit hidden items”
+- **One set of buttons everywhere**: primary (solid) / secondary (filled, bordered) / quiet (no fill, no border) / danger (red text and border), with all five states. At most one solid primary button per screen; avoid disabling buttons where possible
+- **Only two kinds of removal**: taking one item off a list is always a ✕ at the end of its row; deleting a whole site's settings is a red button plus a confirmation
+- **The wizard's bottom bar holds buttons only**: exit is a text button “Exit setup”; “Back” names its destination (“Back: tab title”, “Back: pick again”)
+- **Wording**: “Shown your way / As the site is” shortened to “Your settings / As is” (the switch keeps the full label); “Remove all” became “Deselect all”; “N items hidden” is no longer used anywhere
+- **Renamed**: `PageMask — Clean & Focused Pages` → `PageMask — Hide the Parts You Don't Want` (Chinese: `PageMask · 收起网页上不想看的部分`)
+
+#### Fixed
+
+- “Cover” used to preview only the element you clicked, but covered the whole group once saved; the preview now matches the result
+- Buttons didn't show “Saving…” while saving (the state wasn't reactive)
+- The three small icon buttons in the corner were too small to hit (16 / 22 px); they're 24×24 now, 40×40 on touch screens
+- The last 10 px text in the interface is gone
 
 ## [0.4.1] - 2026-11-02
 

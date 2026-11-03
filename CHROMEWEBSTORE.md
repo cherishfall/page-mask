@@ -11,7 +11,7 @@
 - [x] 版本号已改（`package.json` → `0.4.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.4.1`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.4.1 改了界面用词，截图 4、6 里的按钮名需要跟上）
-- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（0.4.1 界面：按你的设置显示 / 网站原样、设置这个网站、你添加的网站、允许访问）
+- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（0.5.0 界面：按设置 / 原样、设置这个网站、网站设置、允许访问；菜单五项按用途分三组）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
 - [x] `npm run check:docs` 通过（用户可见文档无禁用词、内部链接有效）
 
@@ -46,8 +46,8 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 标签页标题与图标：可为该网站设置标签页标题和图标；没单独设置的网站用插件默认图标
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时）；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 每个网站一个开关：页面右下角的小按钮点一下，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
-• 页面内编辑：右下角小按钮的「⋯」菜单可以就地改标签页标题和图标、编辑收起的内容（换收起方式、改在哪些页面收起、重新选元素、删除 5 秒内可撤销）
-• 设置分成两个页面：「你添加的网站」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
+• 页面内编辑：右下角小按钮的「⋯」菜单可以就地改标签页标题和图标；「编辑收起的内容」打开设置向导的「看效果」，页面上逐行换收起方式、换在哪些页面收起、重新选这一项，删掉的行随保存移除
+• 设置分成两个页面：「网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
 • 失效提醒：网站改版导致某一项找不到目标时，会提醒你重新选一次
 • 中英双语：弹窗、管理页、设置与页面内的按钮都有中文和英文，可在插件设置里选界面语言
 • 导出 / 导入：全部网站的设置和插件设置导出成一个文件（文件名带版本号与导出时间），换电脑后导入
@@ -84,7 +84,7 @@ FEATURES
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over); a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • One switch per site: the small button at the bottom-right flips between 「按你的设置显示」 (Shown your way) and 「网站原样」 (As the site is); all tabs of that site switch together
 • On-page editing: the small button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
-• Settings split into two pages: "Your sites" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
+• Settings split into two pages: "Site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
 • Broken-item notices: if a site redesign means an item can no longer be found, you're asked to pick it again
 • Bilingual: the popup, management pages, settings and on-page controls all have Chinese and English; pick the interface language in Settings
 • Export / import: move all site settings plus the plugin settings to another computer as one file (the file name carries the version and the export time)
@@ -151,19 +151,19 @@ Test steps (no login needed):
 3. Step 2: click on the "From today's featured article" box (or any element you'd like to hide) — it is highlighted and listed in the toolbar's picked list. Click 「下一步：看效果」 (Next: check the result).
 4. Step 3: the picked element is hidden with ghost markers; the list on the right lets you change the hide method or delete an item, and the "where it applies" options are on this step too. Click 保存 (Save). The element is hidden and the tab title changes to "Reading" («阅读» when Chrome's UI language is Chinese).
 5. Click the small button at the bottom-right to switch the site back to as-is: the element reappears and the title reverts.
-6. Click 「⋯」 on the small button. The menu has four items: 「标签页标题和图标」 (Tab title and icon — opens an in-place editor), 「编辑收起的内容」 (Edit hidden items — opens the on-page editor; press Esc to close it), 「按钮放回右下角」 (put the button back at the bottom-right) and 「删除这个网站的设置」 (Delete this site's settings, in red — removes the site's settings and its permission).
-7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore) and two entries at the bottom: 「你添加的网站」 (Your sites — the site list; a site's settings page has 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
+6. Click 「⋯」 on the small button. The menu has five items in three groups: 「标签页标题和图标」 (Tab title and icon — opens an in-place editor) / 「收起更多内容」 (Hide more) / 「编辑收起的内容」 (Edit hidden items — opens the wizard at its last step; only shown when the site has something hidden) | 「按钮放回右下角」 (put the button back at the bottom-right) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission).
+7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore) and two entries at the bottom: 「网站设置」 (Site settings — the site list; a site's settings page has 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.4.1 待重走**：上面 7 步按 0.4.1 界面核对一遍（主按钮「设置这个网站」、底部「你添加的网站」、「遮住这一页 / 恢复这一页」、「允许访问」），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 103 项、各界面 184/121/16/129/20/27 项全绿）。
+**0.5.0 待重走**：上面 7 步按 0.5.0 界面核对一遍（主按钮「设置这个网站」、底部「网站设置」与「插件设置」、「遮住这一页 / 恢复这一页」、「允许访问」、胶囊五项菜单分三组），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 98 项，check-pages 187 / check-wizard 147 / check-toggle 142 / check-edit-rules 59 / check-language 27，浅深色实测通过）。
 
 ## 7. 版本历史
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
-| 0.4.1 | 2026-11-02 | 只说人话的批次：全界面文案重写一遍——菜单与按钮改成具体动作（「设置这个网站」「编辑收起的内容」「你添加的网站」），两态改叫「按你的设置显示 / 网站原样」，技术词「授权 / 生效 / 规则」全部换成「允许访问 / 起作用 / 收起设置」，同一概念在四个界面只留一种叫法；扩展简介去掉「一键」，工具栏提示改成具体动作。详见 `CHANGELOG.md` |
-| 0.4.0 | 2026-10-30 | 界面捋顺批次：面板只留三件事并新增「遮住本页 / 恢复本页」开关、设置拆成「你添加的网站」与「插件设置」两个独立页面（插件设置注册为扩展选项）、默认标签页图标三层生效、向导改三步（标题和图标 → 点选内容 → 看效果）、⋯ 菜单四项、「一键清空」改名「删除这个网站的设置」、幕布恢复按钮改为可拖动的睁眼图标、导出文件带插件设置与版本号、全界面中英双语与界面语言设置。详见 `CHANGELOG.md` |
+| 0.4.1 | 2026-11-02 | 只说人话的批次：全界面文案重写一遍——菜单与按钮改成具体动作（「设置这个网站」「编辑收起的内容」「网站设置」），两态改叫「按你的设置显示 / 网站原样」，技术词「授权 / 生效 / 规则」全部换成「允许访问 / 起作用 / 收起设置」，同一概念在四个界面只留一种叫法；扩展简介去掉「一键」，工具栏提示改成具体动作。详见 `CHANGELOG.md` |
+| 0.4.0 | 2026-10-30 | 界面捋顺批次：面板只留三件事并新增「遮住本页 / 恢复本页」开关、设置拆成「网站设置」与「插件设置」两个独立页面（插件设置注册为扩展选项）、默认标签页图标三层生效、向导改三步（标题和图标 → 点选内容 → 看效果）、⋯ 菜单四项、「一键清空」改名「删除这个网站的设置」、幕布恢复按钮改为可拖动的睁眼图标、导出文件带插件设置与版本号、全界面中英双语与界面语言设置。详见 `CHANGELOG.md` |
 | 0.3.0 | 2026-10-28 | 真实使用反馈批次：新站点授权后直接进入向导、只想改标题也能配置、站点设置页、向导清空与取消、预览清单行内编辑、幕布（含未添加网站）。详见 `CHANGELOG.md` |
 | 0.2.0 | 2026-10-27 | 上架前质量加固：遮罩覆盖、设置向导、编辑规则、悬浮按钮的可用性修复，无障碍与对比度，文档一致性。构建产物 `.output/page-mask-0.2.0-chrome.zip`（22 个文件 / 115 KB），tag `v0.2.0`。详见 `CHANGELOG.md` |
 | 0.1.0 | 2026-10-26 | 首个功能完整版本（未提交商店） |
@@ -179,7 +179,7 @@ Test steps (no login needed):
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：三步设置第 2 步（点选，选中项列成清单）与第 3 步（看效果，逐项编辑 + 在哪些页面收起）并排 |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
 | 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ⚠️ 待按 0.4.1 文案重拍 1280×800：弹窗（按你的设置显示开关、＋ 收起更多内容、编辑收起的内容、遮住这一页、底部两个入口） |
-| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「你添加的网站」（网站列表）与「插件设置」两个独立页面并排 |
+| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「网站设置」（网站列表）与「插件设置」两个独立页面并排 |
 | 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ⚠️ 待按 0.4.1 文案重拍 1280×800：右下角小按钮「⋯」菜单四项 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」） |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
