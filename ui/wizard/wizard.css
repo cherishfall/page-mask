@@ -78,27 +78,10 @@
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
 }
-/* 右上角退出：✕ 只是一个图标按钮，视觉上比底栏按钮弱 */
-.pm-wiz-close {
+/* 右上角退出：文字按钮（.pm-btn.small），排在标题右侧；✕ 只留给「去掉列表里这一项」。
+   窄窗口下标题换行，这个按钮不跟着压扁 */
+.pm-wiz-head > .pm-btn {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 28px;
-  block-size: 28px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--pm-radius-control);
-  background: transparent;
-  color: var(--pm-fg-muted);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-}
-.pm-wiz-close:hover,
-.pm-wiz-close:focus-visible {
-  background: var(--pm-bg-subtle);
-  color: var(--pm-fg);
 }
 .pm-wiz-sub {
   margin: 2px 0 0;
@@ -209,26 +192,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 0 项时前进按钮旁边的说明 */
-.pm-wiz-foot-hint {
-  align-self: center;
-  max-inline-size: 220px;
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
-}
-
-/* 底栏：左下角回退（第 1 步是「只改标题，完成」），右下角前进 */
+/* 底栏：只有按钮。左边是退路（第 1 步是「只改标题，完成」），右边是前进；
+   最后一个按钮吃掉剩余空间，所以只有一个按钮时它靠右，说明文字没有位置也不许进这里 */
 .pm-wiz-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--pm-space-2);
   margin-top: var(--pm-space-2);
 }
-.pm-wiz-footer-left,
-.pm-wiz-footer-right {
-  display: flex;
-  gap: var(--pm-space-2);
+.pm-wiz-footer > .pm-btn:last-child {
+  margin-inline-start: auto;
 }
 
 /* ── 第 1 步：标签页标题和图标 ──

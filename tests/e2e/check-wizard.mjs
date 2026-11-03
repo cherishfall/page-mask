@@ -5,6 +5,8 @@
  *
  * 覆盖：
  * - 新站点三步（标题与图标 → 选内容 → 看效果）、老站点两步；每一步显示「第 N 步 / 共 M 步」
+ * - 底栏只放按钮（说明文字不进操作栏）；退出是文字按钮「退出设置」；「上一步」写清退回去做什么；
+ *   退出确认的两个按钮同一次级（继续设置 = 次按钮，退出 = 红字红边的次按钮）
  * - 第 1 步：默认标题已填、快捷标题、上传图标后标签页标题 / 图标实时跟着变；回第 1 步再回来已选内容不丢
  * - 第 1 步退出：确认框说明已选内容不保存、标签页会变回原来的名字；退出后标题与图标完全还原、授权收回
  * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上没有小胶囊，列表里能看到它；
@@ -205,6 +207,42 @@ const badgeCount = (page) =>
 const progressOf = async (page) => (await shadowTexts(page, tid('pm-wiz-progress')))[0] ?? '';
 const headingOf = async (page) => (await shadowTexts(page, tid('pm-wiz-heading')))[0] ?? '';
 
+/**
+ * 底栏的直接子元素（纯空白文本节点不算）。
+ * 操作栏只放按钮：任何说明文字都不许塞进这里（AGENTS.md「界面整屏审查」第 1 条）。
+ */
+const footerChildren = (page) =>
+  page.evaluate(
+    (h) => {
+      const foot = document.querySelector(h)?.shadowRoot?.querySelector('.pm-wiz-footer');
+      if (!foot) return null;
+      return [...foot.childNodes]
+        .filter((n) => n.nodeType === 1 || (n.textContent ?? '').trim() !== '')
+        .map((n) => (n.nodeType === 1 ? { tag: n.tagName, testid: n.dataset?.testid ?? null } : { tag: '#text', testid: null }));
+    },
+    HOST,
+  );
+
+/** 某个按钮属于四档里的哪一档：看类名，也看实际算出来的底色 / 文字色 / 边框 */
+const buttonLook = (page, id) =>
+  page.evaluate(
+    (h, s) => {
+      const b = document.querySelector(h)?.shadowRoot?.querySelector(s);
+      if (!b) return null;
+      const cs = getComputedStyle(b);
+      return {
+        cls: String(b.className),
+        text: b.textContent.trim(),
+        bg: cs.backgroundColor,
+        color: cs.color,
+        border: parseFloat(cs.borderTopWidth),
+        h: b.getBoundingClientRect().height,
+      };
+    },
+    HOST,
+    tid(id),
+  );
+
 /** 真实鼠标点页面元素（相对左上角的偏移，默认中心） */
 async function clickEl(page, sel, dx, dy) {
   const rc = await rectOf(page, sel);
@@ -266,6 +304,16 @@ async function main() {
       !(await shadowExists(page, HOST, tid('pm-wiz-back'))),
       '左下角没有「上一步」（已经添加过的网站只有两步）',
     );
+    // 右上角退出：文字按钮，不再是 28px 的裸 ✕
+    const exitBtn = await buttonLook(page, 'pm-wiz-exit');
+    check(
+      exitBtn?.text === '退出设置' && exitBtn.cls.includes('pm-btn') && exitBtn.border > 0 && exitBtn.bg !== 'rgba(0, 0, 0, 0)',
+      `右上角退出是文字按钮「退出设置」（${exitBtn?.text}，边框 ${exitBtn?.border}px、高 ${Math.round(exitBtn?.h ?? 0)}）`,
+    );
+    check(
+      !(await shadowTexts(page, '.pm-wiz-head')).join(' ').includes('✕'),
+      '右上角不再是一个裸的 ✕（✕ 只留给「去掉列表里这一项」）',
+    );
     const tb = await shadowRect(page, tid('pm-wizard-toolbar'));
     const vh = await page.evaluate(() => innerHeight);
     check(tb.y > vh / 2 && tb.y + tb.h <= vh, `工具条默认在底部，不挡页面顶部导航（top=${Math.round(tb.y)}，视口高 ${vh}）`);
@@ -307,8 +355,13 @@ async function main() {
       '0 项时前进按钮是灰的（disabled）',
     );
     check(
-      (await shadowTexts(page, tid('pm-wiz-next-hint')))[0]?.includes('先在页面上点一下'),
-      '0 项时前进按钮旁边有一行说明为什么',
+      !(await shadowExists(page, HOST, tid('pm-wiz-next-hint'))),
+      '底栏里没有说明文字（「先在页面上点一下要收起的内容」已从操作栏删掉，空状态在清单里说）',
+    );
+    const footEmpty = await footerChildren(page);
+    check(
+      footEmpty?.length === 1 && footEmpty.every((n) => n.tag === 'BUTTON'),
+      `底栏的直接子元素只有按钮（${JSON.stringify(footEmpty)}）`,
     );
     check((await shadowTexts(page, tid('pm-wiz-list-empty')))[0]?.includes('还没有选任何东西'), '0 项时清单是空状态');
     check(!(await shadowExists(page, HOST, tid('pm-wiz-clear-all'))), '清单为空时不显示「全部删掉」');
@@ -376,7 +429,7 @@ async function main() {
       (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').disabled, HOST)) === true,
       '全部删掉后前进按钮又变灰',
     );
-    check((await shadowTexts(page, tid('pm-wiz-next-hint')))[0]?.includes('先在页面上点一下'), '前进按钮旁边重新出现说明');
+    check(!(await shadowExists(page, HOST, tid('pm-wiz-next-hint'))), '全部删掉后底栏也没有多出说明文字');
     const focusAfterClear = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
     check(focusAfterClear === 'pm-wiz-group-list', `全部删掉后焦点留在清单上（${focusAfterClear}）`);
 
@@ -402,6 +455,13 @@ async function main() {
     await waitVisible(page, '预览：横幅被移除', '#banner', false);
     check((await progressOf(page)) === '第 2 步 / 共 2 步', `看效果是第 2 步（${await progressOf(page)}）`);
     check((await shadowExists(page, HOST, tid('pm-wiz-back'))), '看效果这一步左下角有「上一步」');
+    const backToPick = (await shadowTexts(page, tid('pm-wiz-back')))[0] ?? '';
+    check(backToPick === '上一步：重新选内容', `「上一步」写清退回去重新选内容（${backToPick}）`);
+    const footPreview = await footerChildren(page);
+    check(
+      footPreview?.length === 2 && footPreview.every((n) => n.tag === 'BUTTON'),
+      `看效果这一步底栏也只有两个按钮（${JSON.stringify(footPreview)}）`,
+    );
     check((await draftCount(page)) === 2, `草稿清单是一行一项（实际 ${await draftCount(page)} 行）`);
     check(
       (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
@@ -538,6 +598,20 @@ async function main() {
     check(
       dialogText.includes('不会保存') && dialogText.includes('标签页会变回原来的名字'),
       `退出确认说清楚已选内容不保存、标签页会变回原来的名字（${dialogText.split('\n').join(' / ')}）`,
+    );
+    // 两个按钮同一次级：继续设置是默认档，退出只是红字红边（不实心红——放弃的是还没保存的改动）
+    const dlgStay = await buttonLook(page, 'pm-wiz-exit-no');
+    const dlgExit = await buttonLook(page, 'pm-wiz-exit-yes');
+    check(
+      dlgStay?.cls.includes('pm-btn') &&
+        !dlgStay.cls.includes('danger') &&
+        dlgExit?.cls.includes('danger') &&
+        !dlgExit.cls.includes('primary'),
+      `退出确认沿用同一套档位：继续设置是次按钮、退出是红字红边的次按钮（${dlgStay?.cls} / ${dlgExit?.cls}）`,
+    );
+    check(
+      dlgStay?.bg === dlgExit?.bg && dlgExit?.border > 0 && dlgExit?.color !== dlgStay?.color,
+      `「退出」不实心红：底色与「继续设置」一样，只把文字与描边换成危险色（${dlgExit?.bg} / ${dlgExit?.color}）`,
     );
     const focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
     check(focused === 'pm-wiz-exit-no', `退出确认默认聚焦「继续设置」（${focused}）`);
@@ -781,6 +855,17 @@ async function main() {
       '第 1 步左下角没有「上一步」',
     );
     check(await shadowExists(pageNew, HOST, tid('pm-wiz-title-done')), '第 1 步左下角是「只改标题，完成」');
+    // 次按钮档：有底有边，明显弱于右下角实心的「下一步」
+    const titleDone = await buttonLook(pageNew, 'pm-wiz-title-done');
+    const titleNext = await buttonLook(pageNew, 'pm-wiz-next');
+    check(
+      titleDone?.cls.includes('pm-btn') && !titleDone.cls.includes('primary') && !titleDone.cls.includes('ghost') && titleDone.border > 0,
+      `「只改标题，完成」是次按钮：有底有边、不是实心（${titleDone?.cls}，边框 ${titleDone?.border}px）`,
+    );
+    check(
+      titleDone?.bg !== titleNext?.bg && titleNext?.cls.includes('primary'),
+      `次按钮与「下一步」分得开：它浅灰底，主按钮实心（${titleDone?.bg} vs ${titleNext?.bg}）`,
+    );
     await waitFor(pageNew, '打开第 1 步就把默认标题压到标签页', (t) => document.title === t, [initialTitle]);
 
     // 打字：标签页标题立刻跟着变（不点保存）
@@ -827,6 +912,8 @@ async function main() {
     await waitFor(pageNew, '进入选内容', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-bigger"]'), [HOST]);
     check((await progressOf(pageNew)) === '第 2 步 / 共 3 步', `第 2 步是选内容（${await progressOf(pageNew)}）`);
     check(await shadowExists(pageNew, HOST, tid('pm-wiz-back')), '第 2 步左下角出现「上一步」');
+    const backToTitle = (await shadowTexts(pageNew, tid('pm-wiz-back')))[0] ?? '';
+    check(backToTitle === '上一步：改标题', `第 2 步的「上一步」写清退回去改标题（${backToTitle}）`);
     await clickEl(pageNew, '#promo');
     await waitFor(pageNew, '已选 1 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('1'), [HOST]);
     await clickInShadow(pageNew, HOST, tid('pm-wiz-back'));
@@ -842,6 +929,8 @@ async function main() {
     await clickInShadow(pageNew, HOST, tid('pm-wiz-preview'));
     await waitForShadow(pageNew, HOST, tid('pm-wiz-save'));
     check((await progressOf(pageNew)) === '第 3 步 / 共 3 步', `看效果是第 3 步（${await progressOf(pageNew)}）`);
+    const backOnStep3 = (await shadowTexts(pageNew, tid('pm-wiz-back')))[0] ?? '';
+    check(backOnStep3 === '上一步：重新选内容', `第 3 步的「上一步」写清退回去重新选内容（${backOnStep3}）`);
     check((await pageNew.title()) === '阅读', '进入看效果后，第 1 步设置的标题仍然生效');
     await clickInShadow(pageNew, HOST, tid('pm-wiz-back'));
     await waitForShadow(pageNew, HOST, tid('pm-wiz-preview'));

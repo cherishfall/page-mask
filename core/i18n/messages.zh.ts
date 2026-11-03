@@ -319,7 +319,6 @@ export const zh = {
     listEmpty: '还没有选任何东西。',
     clearAll: '全部取消选择',
     deleteOne: (seq: number, name: string) => `取消选择第 ${seq} 项：${name}`,
-    nextBlocked: '先在页面上点一下要收起的内容',
     /** 第 3 步：每行两行排版 */
     previewHint: '滚动页面看看效果（「盖住」要能跟着元素一起滚）。每一行可以直接改名字、换收起方式，也可以决定只收这一个还是同类一起收。',
     draftsLabel: '这次要收起的内容',
@@ -335,10 +334,14 @@ export const zh = {
     scopeExclude: (label: string) => `除了这类页面：${label}`,
     /** 用 # 区分页面的网站推不出「这类页面」时的一句说明 */
     scopeHintHash: '这个网站用 # 后面的内容区分页面，暂时只能整个网站一起收起',
-    back: '上一步',
+    /** 「上一步」写清退回去做什么：第 2 步退回去改标题，第 3 步退回去重新选内容 */
+    backToTitle: '上一步：改标题',
+    backToPick: '上一步：重新选内容',
     nextToPick: '下一步：选内容',
     nextToPreview: (n: number) => `下一步：看效果（${n}）`,
     save: '保存',
+    /** 保存中：按钮文字变进行时，不另写原因 */
+    saving: '正在保存…',
     titleDone: '只改标题，完成',
     exit: '退出设置',
     exitTitle: '退出设置？',

@@ -33,13 +33,12 @@
         </div>
         <button
           type="button"
-          class="pm-wiz-close"
+          class="pm-btn small"
           :aria-label="t.wizard.exit"
-          :title="t.wizard.exit"
           data-testid="pm-wiz-exit"
           @click="requestExit"
         >
-          <span aria-hidden="true">✕</span>
+          {{ t.wizard.exit }}
         </button>
       </div>
 
@@ -241,69 +240,58 @@
         </fieldset>
       </template>
 
-      <!-- 底栏：左下角回退（第 1 步换成「只改标题，完成」），右下角前进 -->
+      <!-- 底栏：只放按钮（一行一件事，说明文字不塞进操作栏）。
+           左边是退路（第 1 步换成「只改标题，完成」），右边是前进；只有一个按钮时靠右 -->
       <div class="pm-wiz-footer">
-        <div class="pm-wiz-footer-left">
-          <button
-            v-if="phase === 'title'"
-            type="button"
-            class="pm-btn small"
-            data-testid="pm-wiz-title-done"
-            :disabled="saving"
-            @click="saveTitleOnly"
-          >
-            {{ t.wizard.titleDone }}
-          </button>
-          <button
-            v-else-if="canGoBack"
-            type="button"
-            class="pm-btn small"
-            data-testid="pm-wiz-back"
-            @click="goBack"
-          >
-            {{ t.wizard.back }}
-          </button>
-        </div>
-        <div class="pm-wiz-footer-right">
-          <!-- 0 项时前进按钮是灰的，旁边的这一行说明为什么 -->
-          <span
-            v-if="phase === 'pick' && selectionRows.length === 0"
-            class="pm-wiz-foot-hint"
-            data-testid="pm-wiz-next-hint"
-          >
-            {{ t.wizard.nextBlocked }}
-          </span>
-          <button
-            v-if="phase === 'title'"
-            type="button"
-            class="pm-btn small primary"
-            data-testid="pm-wiz-next"
-            :disabled="saving"
-            @click="goNext"
-          >
-            {{ t.wizard.nextToPick }}
-          </button>
-          <button
-            v-else-if="phase === 'pick'"
-            type="button"
-            class="pm-btn small primary"
-            data-testid="pm-wiz-preview"
-            :disabled="selEls.length === 0"
-            @click="goNext"
-          >
-            {{ t.wizard.nextToPreview(selEls.length) }}
-          </button>
-          <button
-            v-else
-            type="button"
-            class="pm-btn small primary"
-            data-testid="pm-wiz-save"
-            :disabled="saving"
-            @click="doSave"
-          >
-            {{ t.wizard.save }}
-          </button>
-        </div>
+        <button
+          v-if="phase === 'title'"
+          type="button"
+          class="pm-btn small"
+          data-testid="pm-wiz-title-done"
+          :disabled="saving"
+          @click="saveTitleOnly"
+        >
+          {{ saving ? t.wizard.saving : t.wizard.titleDone }}
+        </button>
+        <button
+          v-else-if="canGoBack"
+          type="button"
+          class="pm-btn small"
+          data-testid="pm-wiz-back"
+          @click="goBack"
+        >
+          {{ backLabel }}
+        </button>
+        <button
+          v-if="phase === 'title'"
+          type="button"
+          class="pm-btn small primary"
+          data-testid="pm-wiz-next"
+          :disabled="saving"
+          @click="goNext"
+        >
+          {{ t.wizard.nextToPick }}
+        </button>
+        <button
+          v-else-if="phase === 'pick'"
+          type="button"
+          class="pm-btn small primary"
+          data-testid="pm-wiz-preview"
+          :disabled="selEls.length === 0"
+          @click="goNext"
+        >
+          {{ t.wizard.nextToPreview(selEls.length) }}
+        </button>
+        <button
+          v-else
+          type="button"
+          class="pm-btn small primary"
+          data-testid="pm-wiz-save"
+          :disabled="saving"
+          @click="doSave"
+        >
+          {{ saving ? t.wizard.saving : t.wizard.save }}
+        </button>
       </div>
     </section>
 
@@ -312,7 +300,8 @@
       <span v-if="warnText" class="pm-wiz-toast" data-testid="pm-wizard-warn">{{ warnText }}</span>
     </div>
 
-    <!-- 退出确认：模态；Esc = 继续设置，焦点默认在「继续设置」（危险动作实底红，N9） -->
+    <!-- 退出确认：模态；Esc = 继续设置，焦点默认在「继续设置」。
+         两个都是次按钮档：继续设置是默认档，退出只是红字红边（放弃本次未保存的改动，还没到不可撤销那一步） -->
     <dialog
       ref="exitDlg"
       class="pm-wiz-dialog"
@@ -325,7 +314,7 @@
         <p>{{ exitBody }}</p>
         <div class="pm-wiz-actions">
           <button value="cancel" class="pm-btn" autofocus data-testid="pm-wiz-exit-no">{{ t.wizard.exitStay }}</button>
-          <button value="exit" class="pm-btn primary danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
+          <button value="exit" class="pm-btn danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
         </div>
       </form>
     </dialog>
@@ -464,7 +453,8 @@ let markerBoxes: HTMLElement[] = [];
  * 它的标记一直用这份缓存，改别的项、删掉别的项都不会让它坍缩（N7）
  */
 const baseRects = new WeakMap<Element, { left: number; top: number; width: number; height: number }>();
-let saving = false;
+/** 正在保存：按钮当场变灰并把文字换成进行时（「正在保存…」），不另写原因 */
+const saving = ref(false);
 let finished = false;
 
 const sitePattern = computed(() => deriveScopePattern(props.url));
@@ -490,6 +480,8 @@ const progressText = computed(() => {
 });
 /** 第 1 步没有上一步（老站点进入就是选内容，左下角同样不出现「上一步」） */
 const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== null);
+/** 「上一步」写清退回去做什么：从选内容退回第 1 步是改标题，从看效果退回是重新选内容 */
+const backLabel = computed(() => (phase.value === 'pick' ? t.value.wizard.backToTitle : t.value.wizard.backToPick));
 const exitBody = computed(() => {
   const selected = phase.value === 'preview' ? drafts.value.length : selEls.value.length;
   return selected > 0 ? t.value.wizard.exitBodySelected(selected) : t.value.wizard.exitBodyPlain;
@@ -661,8 +653,8 @@ function pushTitlePreview() {
  * 不弹保存对话框（#51）。新站点的第一份配置在这里才第一次写入。
  */
 async function saveTitleOnly() {
-  if (saving || finished) return;
-  saving = true;
+  if (saving.value || finished) return;
+  saving.value = true;
   try {
     const cleared = await props.setDraft(null);
     if (!cleared.ok) {
@@ -698,7 +690,7 @@ async function saveTitleOnly() {
     // 0 条规则：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
     await finish(true, t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)));
   } finally {
-    saving = false;
+    saving.value = false;
   }
 }
 
@@ -1040,14 +1032,14 @@ function reclampToolbar() {
 // ---------- 保存（#53：点保存就是最后一下，不再弹第二个确认框） ----------
 
 async function doSave() {
-  if (saving || finished) return;
+  if (saving.value || finished) return;
   // 保存门槛：每条规则至少 1 个候选，空规则保存后什么也藏不掉
   const warn = unsavableDraftWarning(drafts.value);
   if (warn) {
     showWarn(warn);
     return;
   }
-  saving = true;
+  saving.value = true;
   try {
     // 范围在这一步底部整批选一次（推不出「这类页面」时只能整站）
     const scope = scopeFromChoice(scopeChoice.value, sitePattern.value);
@@ -1108,7 +1100,7 @@ async function doSave() {
     const notice = rules.length === 0 ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)) : undefined;
     await finish(true, notice);
   } finally {
-    saving = false;
+    saving.value = false;
   }
 }
 </script>
