@@ -41,7 +41,7 @@
     "@wxt-dev/module-vue": "1.0.3",
     "jsdom": "29.1.1",
     "puppeteer-core": "25.16.0",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "5.0.5",
     "vue-tsc": "2.2.12",
     "wxt": "0.21.4"
