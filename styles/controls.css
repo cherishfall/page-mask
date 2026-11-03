@@ -204,3 +204,25 @@
     min-block-size: var(--pm-control-lg);
   }
 }
+
+/* ── 图标按钮：只负责几何，颜色交给档位（与 .ghost 搭配 = 内容里的小动作） ──
+ * 正方 28×28、无内边距；min-block-size 也要一起压住，否则会被基础规则的 32 撑高。
+ * 各处只写几何、不写颜色，避免和基础规则（悬停 0,2,0）抢优先级，也不多出第五档。 */
+.pm-icon-btn {
+  flex: none;
+  inline-size: var(--pm-control-sm);
+  block-size: var(--pm-control-sm);
+  min-block-size: var(--pm-control-sm);
+  padding: 0;
+  border-radius: var(--pm-radius-control);
+  font-size: var(--pm-font-size-body);
+}
+
+/* 触屏：可点区域同样放大到 40 */
+@media (pointer: coarse) {
+  .pm-icon-btn {
+    inline-size: var(--pm-control-lg);
+    block-size: var(--pm-control-lg);
+    min-block-size: var(--pm-control-lg);
+  }
+}

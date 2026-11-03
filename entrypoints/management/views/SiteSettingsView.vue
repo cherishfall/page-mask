@@ -167,12 +167,12 @@
             </span>
             <button
               type="button"
-              class="ghost danger rule-del small"
+              class="ghost pm-icon-btn"
               :data-testid="`pm-mgmt-rule-delete-${r.id}`"
               :aria-label="t.common.deleteNamed(r.elementName)"
               @click="removeRule(r)"
             >
-              {{ t.common.delete }}
+              <span aria-hidden="true">✕</span>
             </button>
           </li>
         </ul>
@@ -181,7 +181,9 @@
         <div class="undo" :class="{ 'undo-on': !!undo }" role="status" data-testid="pm-mgmt-undo">
           <template v-if="undo">
             <span>{{ t.common.deleted(undo.name) }}</span>
-            <button type="button" data-testid="pm-mgmt-undo-btn" @click="undoDelete">{{ t.common.undo }}</button>
+            <button type="button" class="ghost small" data-testid="pm-mgmt-undo-btn" @click="undoDelete">
+              {{ t.common.undo }}
+            </button>
           </template>
         </div>
 
@@ -193,7 +195,6 @@
           <!-- 待授权时不可点（没有权限，页面里没有能接消息的脚本）：原因写在按钮下面那一行 -->
           <button
             type="button"
-            class="primary"
             data-testid="pm-mgmt-edit-on-page"
             :disabled="isPending"
             @click="editOnPage"
@@ -500,11 +501,6 @@ async function onResetClose() {
 .rule-stale-note {
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg);
-}
-
-/* 清单里的「删除」是文字按钮（.ghost.danger.small），这里只保证它不被挤扁 */
-.rule-del {
-  flex: none;
 }
 
 /* 撤销条：常驻的 live region，只有内容出现时才播报（空的时候高度为 0，不占位） */

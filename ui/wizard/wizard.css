@@ -389,29 +389,6 @@
   color: var(--pm-fg);
 }
 
-/* 删除这一项：两根清单（选内容 / 看效果）共用同一套外观——有边、有底，像一个真按钮，
-   默认中性灰，悬停或键盘聚焦变红。两处不许再各写一份，否则视觉会分叉（#53） */
-.pm-wiz-del {
-  flex: none;
-  inline-size: 28px;
-  block-size: 28px;
-  padding: 0;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  background: var(--pm-bg-subtle);
-  color: var(--pm-fg-muted);
-  font: inherit;
-  font-size: var(--pm-font-size-caption);
-  line-height: 1;
-  cursor: pointer;
-}
-.pm-wiz-del:hover,
-.pm-wiz-del:focus-visible {
-  border-color: var(--pm-danger);
-  background: var(--pm-bg);
-  color: var(--pm-danger);
-}
-
 /* 点页面上的号码牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除） */
 .pm-wiz-drafts li.flash {
   animation: pm-wiz-flash 1.2s ease-out;

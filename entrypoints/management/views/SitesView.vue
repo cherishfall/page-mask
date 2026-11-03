@@ -52,7 +52,7 @@
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.management.pendingBadge }}
             </span>
             <span class="hint">{{ t.management.pendingHint }}</span>
-            <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([p.origin])">
+            <button type="button" data-testid="pm-mgmt-authorize" @click="store.authorize([p.origin])">
               {{ t.management.authorize }}
             </button>
           </div>

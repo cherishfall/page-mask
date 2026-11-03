@@ -498,13 +498,20 @@ async function main() {
       (h) => {
         const b = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-remove"]');
         const cs = getComputedStyle(b);
-        return { bg: cs.backgroundColor, border: cs.borderTopWidth, w: b.getBoundingClientRect().width };
+        return {
+          bg: cs.backgroundColor,
+          border: cs.borderTopWidth,
+          borderColor: cs.borderTopColor,
+          w: b.getBoundingClientRect().width,
+        };
       },
       HOST,
     );
     check(
-      delBox.bg !== 'rgba(0, 0, 0, 0)' && parseFloat(delBox.border) > 0,
-      `删除按钮有底色和边框，不再是一枚飘着的 ✕（底色 ${delBox.bg}、边框 ${delBox.border}、宽 ${Math.round(delBox.w)}）`,
+      delBox.bg === 'rgba(0, 0, 0, 0)' &&
+        delBox.borderColor === 'rgba(0, 0, 0, 0)' &&
+        Math.round(delBox.w) === 28,
+      `删除按钮是无框 28px 的 ✕，悬停才出底色（底色 ${delBox.bg}、边框 ${delBox.borderColor}、宽 ${Math.round(delBox.w)}）`,
     );
     const delName = await page.evaluate(
       (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-remove"]').getAttribute('aria-label'),

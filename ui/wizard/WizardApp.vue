@@ -122,7 +122,7 @@
                 <span class="pm-wiz-row-name" :data-testid="`pm-sel-name-${row.seq}`">{{ row.name }}</span>
                 <button
                   type="button"
-                  class="pm-wiz-del"
+                  class="pm-btn ghost pm-icon-btn"
                   :aria-label="t.wizard.deleteOne(row.seq, row.name)"
                   :data-testid="`pm-sel-${row.seq}-remove`"
                   @click="removeSelected(row)"
@@ -153,7 +153,7 @@
               />
               <button
                 type="button"
-                class="pm-wiz-del"
+                class="pm-btn ghost pm-icon-btn"
                 :aria-label="t.wizard.deleteOne(i + 1, draftName(d))"
                 :data-testid="`pm-draft-${i + 1}-remove`"
                 @click="removeDraft(d)"
