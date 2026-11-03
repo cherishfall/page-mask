@@ -23,6 +23,11 @@ export interface PickCallbacks {
   onHoverChange(el: Element | null): void;
   onSelectionChange(els: Element[]): void;
   onWarnTooBig(el: Element): void;
+  /**
+   * 点到一个元素、还没切换选择集之前先问一句（#69）：返回 true = 调用方已经处理，
+   * 这次点击不再增删选择集（编辑已有规则时点到「之前收起了」的元素 = 原地重选那一条）。
+   */
+  onPickBefore?(el: Element): boolean;
 }
 
 export class PickController {
@@ -79,6 +84,14 @@ export class PickController {
   remove(el: Element): void {
     if (!this.selection.includes(el)) return;
     this.selection = removeFromSelection(this.selection, el);
+    this.cb.onSelectionChange(this.selected);
+  }
+
+  /** 直接加入选择集（编辑已有规则时「重选这一项」用：它已经是列表里的一条，不经过增删切换，#69） */
+  add(el: Element): void {
+    if (this.selection.includes(el)) return;
+    this.selection = [...this.selection, el];
+    this.lastEl = el;
     this.cb.onSelectionChange(this.selected);
   }
 
@@ -144,6 +157,8 @@ export class PickController {
     const target = this.elementUnderPoint(e.clientX, e.clientY);
     this.setHover(target);
     if (!target) return;
+    // 调用方先处理（编辑已有规则时点到之前收起过的元素 = 原地重选，不切换选择集）
+    if (this.cb.onPickBefore?.(target)) return;
     const adding = !this.selection.includes(target);
     if (adding && isTooBigForPick(target.getBoundingClientRect(), viewport())) this.cb.onWarnTooBig(target);
     this.selection = toggleSelection(this.selection, target);

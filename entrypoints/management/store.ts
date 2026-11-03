@@ -15,7 +15,7 @@ import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } 
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile } from '@/core/types';
 import { originPattern } from '@/core/registration';
-import type { Ack, EnableSiteResponse, OpenEditorMsg, ReconcileResponse } from '@/core/messages';
+import type { Ack, EnableSiteResponse, OpenWizardMsg, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
 import { exportFileName } from '@/core/export-file';
@@ -260,7 +260,8 @@ export function createManagementStore() {
   }
 
   /**
-   * 「在页面上编辑」：找到该站已打开的标签页，让页面里的内容脚本打开编辑面板，并把那个标签页切到前台。
+   * 「在页面上编辑」：找到该站已打开的标签页，让页面里的内容脚本打开设置向导的「编辑收起的内容」模式
+   * （#69，直接停在「看效果」），并把那个标签页切到前台。
    * 换收起方式、重选元素都要页面上下文，只能这样跳过去。
    * - noTab：没有打开这个网站的页面（列表为空时也是它——未授权的站点读不到网址，会一并落到这里）
    * - failed：页面里的内容脚本喊不起来（页面在安装 / 授权前就打开了，或后台拒绝注入）
@@ -273,7 +274,7 @@ export function createManagementStore() {
     const tab = mine.find((t) => t.active) ?? mine[0];
     const tabId = tab?.id;
     if (tabId === undefined) return 'noTab';
-    const open = () => browser.tabs.sendMessage(tabId, { t: 'openEditor' } satisfies OpenEditorMsg);
+    const open = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editRules' } satisfies OpenWizardMsg);
     try {
       await open();
     } catch {

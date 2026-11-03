@@ -237,14 +237,89 @@
   align-items: center;
   gap: var(--pm-space-1);
 }
-.pm-wiz-draft-opts {
+/* 默认行：调整按钮不参与名称输入框的伸展 */
+.pm-wiz-draft-head .pm-wiz-adjust {
+  flex: none;
+}
+/* 一句话摘要（收起方式 · 范围；失效项换成「可能失效…」） */
+.pm-wiz-draft-summary {
+  margin: 2px 0 0;
+  padding-inline-start: 26px;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+/* 失效项：摘要下面一句看得见的说明 + 修复入口，不只靠角标 */
+.pm-wiz-draft-stale {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  /* 与名称左对齐（让开序号牌 + 间距） */
-  margin-top: 4px;
+  margin: 4px 0 0;
   padding-inline-start: 26px;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg);
+}
+/* 展开「调整」后的控件区：竖排，与名称左对齐 */
+.pm-wiz-draft-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding-inline-start: 26px;
+}
+.pm-wiz-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pm-wiz-field-title {
+  padding: 0;
+  font-size: var(--pm-font-size-caption);
+  font-weight: var(--pm-font-weight-strong);
+  color: var(--pm-fg);
+}
+.pm-wiz-scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-1);
+}
+.pm-wiz-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pm-space-2);
+}
+/* 高级：选择器原文（收起状态只占一行 summary） */
+.pm-wiz-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pm-wiz-advanced > summary {
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.pm-wiz-textarea {
+  inline-size: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  padding: var(--pm-space-1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--pm-font-size-caption);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+.pm-wiz-error {
+  margin: 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-danger);
 }
 /* 「只这一个 / 同类一起（N）」：与收起方式同一套连体分段，但自成一组 */
 .pm-wiz-only {
@@ -254,14 +329,8 @@
   border: 0;
   min-inline-size: 0;
 }
-/* 同类只有 1 个时第二项不可选，这句话解释为什么 */
-.pm-wiz-only-note {
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
-}
 .pm-wiz-draft-hint {
   margin: 0;
-  padding-inline-start: 26px;
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
 }
@@ -302,26 +371,7 @@
   color: var(--pm-fg-muted);
 }
 
-/* 收起方式：原生单选组（同一 name 一组），视觉上连体分段 */
-.pm-wiz-method {
-  flex: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-inline-size: 0;
-}
-/* 只需要读屏读到，视觉上不出现 */
-.pm-wiz-sr {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
+/* 收起方式 / 同类：原生单选组（同一 name 一组），视觉上连体分段 */
 .pm-wiz-seg {
   display: inline-flex;
   overflow: hidden;
@@ -417,6 +467,10 @@
   z-index: 3;
   top: var(--pm-space-4);
   left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -429,6 +483,11 @@
   border-radius: var(--pm-radius-control);
   font-size: var(--pm-font-size-caption);
   box-shadow: var(--pm-shadow-overlay);
+}
+/* 中性的一句「刚发生了什么」：不是错误，不用危险色 */
+.pm-wiz-toast.info {
+  background: var(--pm-fg);
+  color: var(--pm-bg);
 }
 
 /* ── 页内标记（命令式创建，跟随元素位置；本身不拦截指针） ── */
@@ -457,6 +516,19 @@
 /* 彻底移除的预览：只剩一个号码牌（不画框，免得盖住补位上来的内容，N8） */
 .pm-wiz-ghost {
   border: 0;
+}
+/* 选内容阶段：页面上已经收起的元素（#69）。层在点选捕获层之下，pointer-events 也是 none，
+ * 指针事件一律落到捕获层，点选行为不受影响 */
+.pm-wiz-hidden {
+  z-index: 0;
+  border: 2px dashed var(--pm-accent);
+}
+/* 「之前收起了」角标：与号码牌同一套定位，只换中性外观（不抢号码牌的主次） */
+.pm-wiz-badge.pm-wiz-hidden-tag {
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+  border-color: var(--pm-border-control);
+  font-weight: var(--pm-font-weight-medium);
 }
 /* 号码牌自己一个盒子：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧（#52），
  * 所以牌子不会压住元素自己的文字；盒子里只有牌子本身，不画框。 */

@@ -11,7 +11,7 @@
  *   删除这个网站的设置（红字，与上面用分隔线隔开）；「收起更多内容」直接进向导点选新元素
  * - 显示条件（#67）：站点有任何设置（标题 / 图标 / 收起项）就显示胶囊，三样全空才不显示；
  *   0 条收起项时菜单里没有「编辑收起的内容」
- * - 点菜单「编辑收起的内容」打开编辑面板，且开关状态不变（N1 的实测故障）
+ * - 点菜单「编辑收起的内容」打开向导的「看效果」，且开关状态不变（N1 的实测故障、#69）
  * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完说明「现在是网站原样」并给切换入口
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
  *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
@@ -317,17 +317,24 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '退出向导后胶囊挂回来');
 
-    // ===================== 菜单「编辑收起的内容」不切开关（N1） =====================
-    console.log('\n--- 点菜单「编辑收起的内容」：打开面板、开关不变 ---');
+    // ===================== 菜单「编辑收起的内容」不切开关（N1、#69） =====================
+    console.log('\n--- 点菜单「编辑收起的内容」：打开向导的看效果、开关不变 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-edit'));
-    await waitForShadow(page, EDITOR, tid('pm-editor-panel'), { timeout: 5000 });
-    check(true, '菜单「编辑收起的内容」打开了编辑面板');
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
+    check(
+      (await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 2 步 / 共 2 步',
+      '菜单「编辑收起的内容」打开向导，直接停在「看效果」（#69）',
+    );
+    check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '看效果', '向导标题是「看效果」');
     const afterMenu = await getProfile(ext.control, ORIGIN);
     check(afterMenu.switchState === 'disguised', `开关没有被菜单点击切掉（${afterMenu.switchState}）`);
-    await page.keyboard.press('Escape');
-    await waitFor(page, '面板关闭', (h) => !document.querySelector(h), [EDITOR], { timeout: 3000 });
+    // 没有改动时退出不弹确认框（编辑已有规则按草稿快照判断）
+    await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
+    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    // 进向导时胶囊让位；退出后运行时重新挂回来，再继续点菜单
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
 
     // ===================== 就地改标题与图标（#56） =====================
     console.log('\n--- 菜单「标签页标题和图标」：就地弹出小面板、保存即生效 ---');

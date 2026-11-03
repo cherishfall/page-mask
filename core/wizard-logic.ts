@@ -4,7 +4,7 @@
  */
 import { DEFAULT_TITLE_EN } from './titles';
 import { t } from './i18n';
-import type { Scope, ScopePattern } from './types';
+import type { HideRule, Scope, ScopePattern, StrategyId } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -30,7 +30,8 @@ export function navigateLevel(el: Element, dir: LevelDir): Element | null {
 
 /** 向导里的临时草稿（保存时才转成正式 HideRule） */
 export interface DraftItem {
-  el: Element;
+  /** null = 这条规则在页面上找不到对应元素（可能失效），只能重选或删掉 */
+  el: Element | null;
   name: string;
   strategy: 'remove' | 'blank' | 'mask';
   onlyThis: boolean;
@@ -50,12 +51,21 @@ export function unsavableDraftWarning(drafts: readonly { candidates: readonly st
 // 新网站第一次设置：标题与图标 → 选内容 → 看效果；已经添加过的网站只有后两步。
 // 第 1 步只在这里出现，第 2 / 3 步的内容重排在 #52、#53。
 
-export type WizardMode = 'newSite' | 'addElement';
+export type WizardMode = 'newSite' | 'addElement' | 'editRules';
 export type WizardPhase = 'title' | 'pick' | 'preview';
 
 /** 这个入口的步骤顺序 */
 export function wizardPhases(mode: WizardMode): readonly WizardPhase[] {
   return mode === 'newSite' ? ['title', 'pick', 'preview'] : ['pick', 'preview'];
+}
+
+/**
+ * 打开时停在哪一步（#69）：编辑已有规则一进来就在「看效果」——规则本来就在页面上生效着，
+ * 第 2 步 / 共 2 步是准确的，不为了好看压成 1/1。
+ */
+export function wizardInitialPhase(mode: WizardMode): WizardPhase {
+  if (mode === 'newSite') return 'title';
+  return mode === 'editRules' ? 'preview' : 'pick';
 }
 
 /** 「第 N 步 / 共 M 步」里的两个数（1 起） */
@@ -204,13 +214,46 @@ export function reconcileDrafts<T, D>(selection: readonly T[], existing: Readonl
   return out;
 }
 
+/**
+ * 「编辑收起的内容」回到看效果时的草稿合并（#69）。
+ * 与 reconcileDrafts 的区别：这里的选择集只装「本次新点选 / 重选过」的元素，
+ * 从旧规则带进来的草稿不在选择集里，不能因此被丢掉。
+ * - 从旧规则带进来的草稿（sourceOf 非空）全部保留、顺序不变（含页面上找不到元素的失效项）；
+ * - 本次新点选的元素：已有同元素草稿就沿用，没有就新建，追加在后面；
+ * - 本次新点选、后来又取消了的新草稿丢弃（只对没有旧规则来源的草稿生效）。
+ */
+export function mergeEditDrafts<T, D>(
+  drafts: readonly D[],
+  selection: readonly T[],
+  sourceOf: (d: D) => string | null | undefined,
+  elOf: (d: D) => T | null,
+  make: (el: T) => D,
+): D[] {
+  const selected = new Set(selection);
+  const out: D[] = [];
+  const covered = new Set<T>();
+  for (const d of drafts) {
+    const el = elOf(d);
+    if (!sourceOf(d) && !(el !== null && selected.has(el))) continue;
+    out.push(d);
+    if (el !== null) covered.add(el);
+  }
+  for (const el of selection) {
+    if (covered.has(el)) continue;
+    covered.add(el);
+    out.push(make(el));
+  }
+  return out;
+}
+
 // ---------- 预览这一步的两个数（#53） ----------
 // 每行第二行的那对选项说的是「收起什么」：只这一个 / 同类一起（N）。
 // N 是「同类一起」时页面上会收起几个，必须实时算——页面可能滚动加载过，也可能刚从第 2 步回来。
 
 /** 算这两个数只需要草稿的这几项 */
 export interface DraftCountInput {
-  el: Element;
+  /** null = 页面上找不到对应元素（可能失效）：没有「同类」概念，两个数都按候选命中数算 */
+  el: Element | null;
   /** 当前选的是「只这一个」 */
   onlyThis: boolean;
   /** 当前这一项实际会用的候选选择器 */
@@ -227,6 +270,7 @@ export interface DraftHits {
 /**
  * 重算每行的两个数。`sameCandidates` 给某个元素生成「同类一起」的候选，
  * `count` 数这组候选在页面上命中几个——两个都注入进来，这里保持纯函数、可单测。
+ * 找不到元素的草稿（el === null）没有同类可言：两个数都按它自己的候选命中数算。
  */
 export function draftHitCounts(
   drafts: readonly DraftCountInput[],
@@ -234,6 +278,10 @@ export function draftHitCounts(
   count: (selectors: readonly string[]) => number,
 ): DraftHits[] {
   return drafts.map((d) => {
+    if (!d.el) {
+      const hits = count(d.candidates);
+      return { sameHits: hits, hits };
+    }
     const sameHits = count(sameCandidates(d.el));
     return { sameHits, hits: d.onlyThis ? count(d.candidates) : sameHits };
   });
@@ -251,6 +299,65 @@ export type ScopeChoice = 'all' | 'include' | 'exclude';
 export function scopeFromChoice(choice: ScopeChoice, pattern: ScopePattern | null): Scope {
   if (choice === 'all' || !pattern) return { type: 'all' };
   return { type: choice, patterns: [pattern] };
+}
+
+/** 保存时一条草稿要落库的内容（id 由合并算法决定：有来源就原地更新，没有就新建） */
+export interface DraftRuleInput {
+  /** 对应的旧规则 id：有就原地更新它（保留 id 与体检记录），没有就新增一条 */
+  sourceRuleId?: string | null;
+  elementName: string;
+  candidates: readonly string[];
+  strategy: StrategyId;
+  scope: Scope;
+  onlyThis: boolean;
+}
+
+/**
+ * 「编辑收起的内容」保存时的规则合并（#69）——纯函数，便于单测：
+ * 1. sourceRuleId 命中现有规则的草稿 → 原地更新（保留 id、createdAt、lastHealth / lastHealthAt，位置不动）；
+ * 2. 没有来源（或来源已被别处删掉）的草稿 → 追加一条新规则（新 id）；
+ * 3. editIds（本次打开时属于这个页面的规则 id）里有、但草稿里没有的 → 从列表移除。
+ *    只动 editIds 里的 id，页面上不适用的规则绝不碰。
+ */
+export function mergeSavedRules(
+  existing: readonly HideRule[],
+  incoming: readonly DraftRuleInput[],
+  opts: { editIds?: readonly string[] | null; now: number; makeId: () => string },
+): HideRule[] {
+  const updates = new Map<string, DraftRuleInput>();
+  for (const d of incoming) if (d.sourceRuleId) updates.set(d.sourceRuleId, d);
+  const deleting = opts.editIds ? new Set(opts.editIds) : null;
+  const present = new Set(existing.map((r) => r.id));
+  const out: HideRule[] = [];
+  for (const rule of existing) {
+    const update = updates.get(rule.id);
+    if (update) {
+      out.push({
+        ...rule,
+        elementName: update.elementName,
+        candidates: [...update.candidates],
+        strategy: update.strategy,
+        scope: update.scope,
+        onlyThis: update.onlyThis,
+      });
+      continue;
+    }
+    if (deleting?.has(rule.id)) continue;
+    out.push(rule);
+  }
+  for (const d of incoming) {
+    if (d.sourceRuleId && present.has(d.sourceRuleId)) continue;
+    out.push({
+      id: opts.makeId(),
+      elementName: d.elementName,
+      candidates: [...d.candidates],
+      strategy: d.strategy,
+      scope: d.scope,
+      onlyThis: d.onlyThis,
+      createdAt: opts.now,
+    });
+  }
+  return out;
 }
 
 /**

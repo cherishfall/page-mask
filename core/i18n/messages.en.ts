@@ -301,8 +301,12 @@ export const en: Messages = {
     clearAll: 'Deselect all',
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
-      'Scroll the page to check the result (Cover should stay glued to its element). Each row lets you rename the item, change the hide method, and choose one or all alike.',
+      'Scroll the page to check the result (Cover should stay glued to its element). Rename any row right here; open Adjust to change how it hides, where it applies, or whether it takes alike items with it.',
     draftsLabel: 'What will be hidden',
+    adjust: 'Adjust',
+    staleSummary: 'May be broken · can’t be found on this page',
+    badgeHidden: 'Hidden before',
+    repicked: 'This item is already in the list — updated to where you just clicked',
     nameLabel: (seq: number) => `Name of item ${seq}; leave empty to name it automatically`,
     methodLegend: 'Hide method',
     onlyLegend: (seq: number) => `How many item ${seq} hides`,

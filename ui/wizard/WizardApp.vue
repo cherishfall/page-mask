@@ -138,9 +138,9 @@
 
       <template v-else>
         <p class="pm-wiz-sub">{{ t.wizard.previewHint }}</p>
-        <ol class="pm-wiz-drafts" :aria-label="t.wizard.draftsLabel" data-testid="pm-wiz-drafts">
-          <li v-for="(d, i) in drafts" :key="rowKey(d.el)" :data-testid="`pm-draft-${i + 1}`">
-            <!-- 第一行：序号、名字、删除（#53：每行拆成两行，控件不再互相挤压） -->
+        <ol v-if="drafts.length > 0" class="pm-wiz-drafts" :aria-label="t.wizard.draftsLabel" data-testid="pm-wiz-drafts">
+          <li v-for="(d, i) in drafts" :key="d.key" :data-testid="`pm-draft-${i + 1}`">
+            <!-- 默认行：序号、名称、调整、删除（审查第 8 条：收起方式等控件折进「调整」，不摊在行上） -->
             <div class="pm-wiz-draft-head" :data-testid="`pm-draft-${i + 1}-head`">
               <span class="pm-wiz-num" aria-hidden="true">{{ i + 1 }}</span>
               <input
@@ -153,6 +153,15 @@
               />
               <button
                 type="button"
+                class="pm-btn ghost small pm-wiz-adjust"
+                :aria-expanded="!!d.expanded"
+                :data-testid="`pm-draft-${i + 1}-adjust`"
+                @click="d.expanded = !d.expanded"
+              >
+                {{ t.wizard.adjust }}
+              </button>
+              <button
+                type="button"
                 class="pm-btn ghost pm-icon-btn"
                 :aria-label="t.wizard.deleteOne(i + 1, draftName(d))"
                 :data-testid="`pm-draft-${i + 1}-remove`"
@@ -161,11 +170,22 @@
                 <span aria-hidden="true">✕</span>
               </button>
             </div>
-            <!-- 第二行：收起方式 +「只这一个 / 同类一起（N）」 -->
-            <div class="pm-wiz-draft-opts" :data-testid="`pm-draft-${i + 1}-opts`">
-              <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
-              <fieldset class="pm-wiz-method">
-                <legend class="pm-wiz-sr">{{ t.wizard.methodLegend }}</legend>
+            <!-- 一句话摘要：收起方式 · 范围；失效项换成「可能失效 · 在页面上找不到了」 -->
+            <p class="pm-wiz-draft-summary" :data-testid="`pm-draft-${i + 1}-summary`">{{ draftSummary(d) }}</p>
+
+            <!-- 失效项：摘要下面给一句看得见的说明 + 修复入口（不能只靠角标） -->
+            <p v-if="!d.el" class="pm-wiz-draft-stale" :data-testid="`pm-draft-${i + 1}-stale`">
+              <span>{{ staleText(d) }}</span>
+              <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-stale-fix`" @click="reselectDraft(d)">
+                {{ t.editor.fix }}
+              </button>
+            </p>
+
+            <!-- 展开「调整」之后才出现的控件：收起方式、范围、重新选、高级选择器、同类 -->
+            <div v-if="d.expanded" class="pm-wiz-draft-body" :data-testid="`pm-draft-${i + 1}-body`">
+              <fieldset class="pm-wiz-field">
+                <legend class="pm-wiz-field-title">{{ t.editor.methodLegend }}</legend>
+                <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
                 <div class="pm-wiz-seg">
                   <label v-for="s in STRATEGY_ORDER" :key="s" class="pm-wiz-seg-opt">
                     <input
@@ -179,10 +199,76 @@
                     <span>{{ t.common.strategy[s] }}</span>
                   </label>
                 </div>
+                <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ t.common.strategyHint[d.strategy] }}</p>
               </fieldset>
-              <!-- 收起几个：这一项自己，还是页面上同类的全部（N 实时算） -->
-              <fieldset class="pm-wiz-only">
-                <legend class="pm-wiz-sr">{{ t.wizard.onlyLegend(i + 1) }}</legend>
+
+              <fieldset class="pm-wiz-field" :data-testid="`pm-draft-${i + 1}-scope`">
+                <legend class="pm-wiz-field-title">{{ t.editor.scopeLegend }}</legend>
+                <div class="pm-wiz-scope-row">
+                  <button
+                    type="button"
+                    class="pm-btn small"
+                    :aria-pressed="draftScopeType(d) === 'all'"
+                    :data-testid="`pm-draft-${i + 1}-scope-all`"
+                    @click="setDraftScope(d, 'all')"
+                  >
+                    {{ t.editor.scopeAll }}
+                  </button>
+                  <template v-if="sitePattern">
+                    <button
+                      type="button"
+                      class="pm-btn small"
+                      :aria-pressed="draftScopeType(d) === 'include'"
+                      :data-testid="`pm-draft-${i + 1}-scope-include`"
+                      @click="setDraftScope(d, 'include')"
+                    >
+                      {{ t.editor.scopeInclude }}
+                    </button>
+                    <button
+                      type="button"
+                      class="pm-btn small"
+                      :aria-pressed="draftScopeType(d) === 'exclude'"
+                      :data-testid="`pm-draft-${i + 1}-scope-exclude`"
+                      @click="setDraftScope(d, 'exclude')"
+                    >
+                      {{ t.editor.scopeExclude }}
+                    </button>
+                  </template>
+                </div>
+                <p v-if="!sitePattern && scopeHint" class="pm-wiz-hint">{{ scopeHint }}</p>
+                <p v-else-if="draftScopeType(d) !== 'all'" class="pm-wiz-hint" :data-testid="`pm-draft-${i + 1}-scope-value`">
+                  {{ scopeHumanLabel(draftScope(d)) }}
+                </p>
+              </fieldset>
+
+              <div class="pm-wiz-draft-actions">
+                <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-reselect`" @click="reselectDraft(d)">
+                  {{ t.editor.reselect }}
+                </button>
+              </div>
+
+              <details class="pm-wiz-advanced" :data-testid="`pm-draft-${i + 1}-advanced`">
+                <summary>{{ t.editor.advancedSummary }}</summary>
+                <p class="pm-wiz-hint">{{ t.editor.advancedHint }}</p>
+                <textarea
+                  v-model="d.selectorText"
+                  class="pm-wiz-textarea"
+                  rows="2"
+                  spellcheck="false"
+                  :aria-label="t.editor.selectorAria(draftName(d))"
+                  :data-testid="`pm-draft-${i + 1}-selector`"
+                ></textarea>
+                <p v-if="d.selectorError" class="pm-wiz-error" role="alert" :data-testid="`pm-draft-${i + 1}-selector-error`">
+                  {{ d.selectorError }}
+                </p>
+                <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-selector-save`" @click="saveSelectors(d)">
+                  {{ t.editor.saveSelectors }}
+                </button>
+              </details>
+
+              <!-- 收起几个：这一项自己，还是页面上同类的全部（N 实时算）；找不到元素 / 同类只有 1 个时不出现 -->
+              <fieldset v-if="d.el && d.sameHits > 1" class="pm-wiz-only" :data-testid="`pm-draft-${i + 1}-only-group`">
+                <legend class="pm-wiz-field-title">{{ t.wizard.onlyLegend(i + 1) }}</legend>
                 <div class="pm-wiz-seg">
                   <label class="pm-wiz-seg-opt">
                     <input
@@ -199,7 +285,6 @@
                       type="radio"
                       :name="`pm-only-${i + 1}`"
                       :checked="!onlyOneOf(d)"
-                      :disabled="d.sameHits <= 1"
                       :data-testid="`pm-draft-${i + 1}-same`"
                       @change="setOnlyOne(d, false)"
                     />
@@ -207,20 +292,14 @@
                   </label>
                 </div>
               </fieldset>
-              <span
-                v-if="d.sameHits <= 1"
-                class="pm-wiz-only-note"
-                :data-testid="`pm-draft-${i + 1}-same-note`"
-              >
-                {{ t.wizard.sameNone }}
-              </span>
             </div>
-            <p class="pm-wiz-draft-hint" :data-testid="`pm-draft-${i + 1}-hint`">{{ t.common.strategyHint[d.strategy] }}</p>
           </li>
         </ol>
+        <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-drafts-empty">{{ t.editor.emptyPage }}</p>
 
-        <!-- 在哪些页面收起：整批设置一次，就在这一步底部（取代原来点保存才弹出的框） -->
-        <fieldset class="pm-wiz-scope" data-testid="pm-wiz-scope">
+        <!-- 在哪些页面收起：新加的这几项整批设置一次（取代原来点保存才弹出的框）。
+             编辑已有规则时不出现——每一行在自己的「调整」里各有范围，两个控件管同一件事只会互相打架 -->
+        <fieldset v-if="props.mode !== 'editRules'" class="pm-wiz-scope" data-testid="pm-wiz-scope">
           <legend class="pm-wiz-scope-legend">{{ t.wizard.scopeLegend }}</legend>
           <label class="pm-wiz-radio">
             <input v-model="scopeChoice" type="radio" value="all" data-testid="pm-wiz-scope-all" />
@@ -277,17 +356,17 @@
           type="button"
           class="pm-btn small primary"
           data-testid="pm-wiz-preview"
-          :disabled="selEls.length === 0"
+          :disabled="previewCount === 0"
           @click="goNext"
         >
-          {{ t.wizard.nextToPreview(selEls.length) }}
+          {{ t.wizard.nextToPreview(previewCount) }}
         </button>
         <button
           v-else
           type="button"
           class="pm-btn small primary"
           data-testid="pm-wiz-save"
-          :disabled="saving"
+          :disabled="saving || drafts.length === 0"
           @click="doSave"
         >
           {{ saving ? t.wizard.saving : t.wizard.save }}
@@ -298,6 +377,7 @@
     <!-- 提示（读屏按 polite 状态消息播报；容器常驻，内容出现时才播报） -->
     <div class="pm-wiz-status" role="status">
       <span v-if="warnText" class="pm-wiz-toast" data-testid="pm-wizard-warn">{{ warnText }}</span>
+      <span v-if="infoText" class="pm-wiz-toast info" data-testid="pm-wizard-info">{{ infoText }}</span>
     </div>
 
     <!-- 退出确认：模态；Esc = 继续设置，焦点默认在「继续设置」。
@@ -342,9 +422,11 @@
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
-import { generateCandidates } from '@/core/selectors';
+import { generateCandidates, selectorHitsElement } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
-import { newRuleId, type HideRule, type StrategyId } from '@/core/types';
+import { scopeHumanLabel } from '@/core/scope';
+import { isSafeSelector } from '@/core/validate';
+import { newRuleId, type HideRule, type Scope, type StrategyId } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
@@ -354,6 +436,8 @@ import {
   badgePlacement,
   clampToViewport,
   draftHitCounts,
+  mergeEditDrafts,
+  mergeSavedRules,
   reconcileDrafts,
   scopeFromChoice,
   selectionRows as buildSelectionRows,
@@ -361,11 +445,13 @@ import {
   titleOnlyPatch,
   unsavableDraftWarning,
   wizardEscAction,
+  wizardInitialPhase,
   wizardNextPhase,
   wizardPrevPhase,
   wizardStep,
   zeroRuleSavedNotice,
   type DraftItem,
+  type DraftRuleInput,
   type MarkerRect,
   type ScopeChoice,
   type SelectionRow,
@@ -380,6 +466,8 @@ import { ElementFollower } from '../follow';
 
 /** 草稿：DraftItem + 当前候选选择器、自动命名、「只这一个 / 同类一起」的两个命中数 */
 type Draft = DraftItem & {
+  /** 行内稳定 key：el 可能为 null，不能再用元素当 key */
+  key: number;
   candidates: string[];
   /** 自动命名结果，清空名称时作为输入框的占位提示，保存时也回落到它 */
   autoName: string;
@@ -387,7 +475,19 @@ type Draft = DraftItem & {
   hits: number;
   /** 「同类一起」那组候选的命中数（行内的 N，实时算）；也是「同类一起」能不能选的依据 */
   sameHits: number;
+  /** 对应的旧规则 id：保存时原地更新它（保留 id 与体检记录），不是新增一条 */
+  sourceRuleId?: string | null;
+  /** 这条草稿自己的生效范围；从旧规则带进来的原样保留，新选的用底部三选一算 */
+  scope?: Scope | null;
+  /** 「调整」是否展开（只是界面状态，不落库） */
+  expanded?: boolean;
+  /** 高级：选择器原文的输入框内容与逐行校验的报错（本地草稿） */
+  selectorText?: string;
+  selectorError?: string;
 };
+
+/** 行内草稿的 key 计数器（元素可能为 null，不能用元素本身当 key） */
+let draftKeySeq = 0;
 
 /** 方向键每次移动工具条的距离 */
 const KEY_STEP = 16;
@@ -403,6 +503,8 @@ const props = defineProps<{
   url: string;
   /** 重选元素：保存时用新规则替换这条旧规则（取消则旧规则原样保留，N5） */
   replaceRuleId?: string | null;
+  /** 编辑收起的内容（#69）：这个页面上用得上的旧规则，按原顺序铺成草稿 */
+  initialRules?: HideRule[];
   /** 第 1 步标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
   initialTitle: string;
   /** 站点现有的图标（新站点为 null） */
@@ -418,14 +520,20 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ done: [saved: boolean, notice?: string] }>();
 
-/** 新站点第一次设置从「标题与图标」开始；已添加的网站直接进选内容 */
-const phase = ref<WizardPhase>(props.mode === 'newSite' ? 'title' : 'pick');
+/** 打开时停在哪一步：新站点从标题开始，编辑已有规则直接停在「看效果」（#69） */
+const phase = ref<WizardPhase>(wizardInitialPhase(props.mode));
+/** 打开这一刻属于这个页面的规则 id：保存时只有这些可以被删除（#69） */
+const initialIds = (props.initialRules ?? []).map((r) => r.id);
+/** 点了「重新选这一项」之后，下一次点页面就替换这一条（不新增） */
+let pendingReplace: Draft | null = null;
 const titleInput = ref(props.initialTitle);
 const iconDataUrl = ref<string | null>(props.initialIcon);
 /** 选择集（有序，顺序 = 序号）；元素本身不做响应式代理 */
 const selEls = shallowRef<Element[]>([]);
 const lastSel = shallowRef<Element | null>(null);
 const warnText = ref('');
+/** 中性的一句轻提示（例如「这一项已经在列表里」），2 秒后自己消失 */
+const infoText = ref('');
 const noticeText = ref('');
 const drafts = ref<Draft[]>([]);
 /** 这一步底部「在哪些页面收起」的选择；整批规则共用一份范围（默认整个网站） */
@@ -445,6 +553,7 @@ const follower = new ElementFollower();
 let pick: PickController;
 let pickLayer: HTMLElement | null = null;
 let warnTimer: ReturnType<typeof setTimeout> | null = null;
+let infoTimer: ReturnType<typeof setTimeout> | null = null;
 let hoverBox: HTMLElement | null = null;
 /** 当前页内标记（序号牌 / 预览标记），每次重画全部换新 */
 let markerBoxes: HTMLElement[] = [];
@@ -483,8 +592,29 @@ const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== nu
 /** 「上一步」写清退回去做什么：从选内容退回第 1 步是改标题，从看效果退回是重新选内容 */
 const backLabel = computed(() => (phase.value === 'pick' ? t.value.wizard.backToTitle : t.value.wizard.backToPick));
 const exitBody = computed(() => {
-  const selected = phase.value === 'preview' ? drafts.value.length : selEls.value.length;
+  // 编辑已有规则时，草稿本身就是「这次要改的 N 项」；不管是看效果还是回到选内容，都按它计数
+  const selected =
+    props.mode === 'editRules' ? drafts.value.length : phase.value === 'preview' ? drafts.value.length : selEls.value.length;
   return selected > 0 ? t.value.wizard.exitBodySelected(selected) : t.value.wizard.exitBodyPlain;
+});
+
+/**
+ * 「下一步：看效果（N）」里的 N：编辑已有规则时，旧规则带来的草稿本来就要进看效果，
+ * 不能只数本次新点选的元素（否则一进来是 0，按钮还会被禁用）。
+ */
+const previewCount = computed(() => {
+  if (props.mode !== 'editRules') return selEls.value.length;
+  const picked = new Set(selEls.value);
+  const covered = new Set<Element>();
+  let n = 0;
+  for (const d of drafts.value) {
+    // 旧规则带来的草稿一定会进看效果；本次新选的只有在选择集里才留下（取消了的不算）
+    if (!d.sourceRuleId && !(d.el && picked.has(d.el))) continue;
+    n++;
+    if (d.el) covered.add(d.el);
+  }
+  for (const el of selEls.value) if (!covered.has(el)) n++;
+  return n;
 });
 
 // 第 1 步的实时预览：改标题 / 换图标时立刻压到标签页上（不点保存也能看到）
@@ -503,6 +633,17 @@ onMounted(() => {
     // 插件自己的界面（向导宿主、以及别的宿主）都不算页面元素
     isOwnNode: (n) => isOwnUiNode(n),
     onHoverChange: updateHoverBox,
+    // 编辑已有规则时点到一条已经收起的项：原地替换那条，不再新增一条重复规则（#69）
+    onPickBefore: (el) => {
+      if (props.mode !== 'editRules') return false;
+      const target = pendingReplace ?? draftHitBy(el);
+      if (!target) return false;
+      pendingReplace = null;
+      replaceDraftElement(target, el);
+      pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
+      showInfo(t.value.wizard.repicked);
+      return true;
+    },
     onSelectionChange: (els) => {
       selEls.value = els;
       lastSel.value = pick.last;
@@ -523,6 +664,8 @@ onMounted(() => {
   window.addEventListener('resize', reclampToolbar);
   // 第 1 步：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
   if (phase.value === 'title') pushTitlePreview();
+  // 编辑已有规则（#69）：一打开就在「看效果」，用这个页面上用得上的规则铺草稿
+  else if (props.mode === 'editRules') void initEditRules();
 });
 
 onBeforeUnmount(() => {
@@ -534,12 +677,20 @@ onBeforeUnmount(() => {
   // 兜底：任何退出路径都撤掉预览样式（不允许免保存临时隐藏）
   void props.setDraft(null);
   if (warnTimer) clearTimeout(warnTimer);
+  if (infoTimer) clearTimeout(infoTimer);
 });
 
 function showWarn(text: string) {
   warnText.value = text;
   if (warnTimer) clearTimeout(warnTimer);
   warnTimer = setTimeout(() => (warnText.value = ''), 4000);
+}
+
+/** 中性轻提示（不是错误）：说一句刚发生了什么，2 秒后消失 */
+function showInfo(text: string) {
+  infoText.value = text;
+  if (infoTimer) clearTimeout(infoTimer);
+  infoTimer = setTimeout(() => (infoText.value = ''), 2000);
 }
 
 // ---------- 键盘：向导级 Esc（N9） ----------
@@ -570,10 +721,30 @@ function requestExit() {
   exitDlg.value?.showModal();
 }
 
-/** 有没有还没保存的东西：第 1 步看标题 / 图标是否动过，后两步看选了几项 */
+/** 编辑已有规则：打开那一刻的草稿快照，用来判断「有没有改过」（没改过就直接退出，不弹确认框） */
+let baselineDrafts: string | null = null;
+
+/** 草稿的可比较快照：名称、候选、方式、同类、范围、来源规则 id（不含界面展开状态） */
+function draftSignature(): string {
+  return JSON.stringify(
+    drafts.value.map((d) => [
+      d.sourceRuleId ?? null,
+      draftName(d),
+      d.candidates,
+      d.strategy,
+      d.onlyThis,
+      d.scope ?? null,
+    ]),
+  );
+}
+
+/** 有没有还没保存的东西：第 1 步看标题 / 图标是否动过，编辑已有规则看草稿有没有变，其余看选了几项 */
 function isDirty(): boolean {
   if (phase.value === 'title') {
     return titleInput.value.trim() !== props.initialTitle.trim() || iconDataUrl.value !== props.initialIcon;
+  }
+  if (props.mode === 'editRules') {
+    return selEls.value.length > 0 || (baselineDrafts !== null && draftSignature() !== baselineDrafts);
   }
   return phase.value === 'pick' ? selEls.value.length > 0 : drafts.value.length > 0;
 }
@@ -646,6 +817,203 @@ function enterTitle() {
 /** 把标题 / 图标实时压到当前标签页（第 1 步专用；退出时由内容脚本运行时还原） */
 function pushTitlePreview() {
   props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconDataUrl.value || props.fallbackIcon);
+}
+
+// ---------- 编辑已有规则（#69） ----------
+
+/** 依次用候选选择器找页面上第一个命中的元素（不算插件自己的界面） */
+function firstElementFor(selectors: readonly string[]): Element | null {
+  for (const sel of selectors) {
+    let found: NodeListOf<Element>;
+    try {
+      found = document.querySelectorAll(sel);
+    } catch {
+      continue;
+    }
+    for (const el of found) if (!isOwnUiNode(el)) return el;
+  }
+  return null;
+}
+
+function sameSelectors(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((s, i) => s === b[i]);
+}
+
+/**
+ * 打开这一刻用旧规则铺草稿：字段原样搬过来，候选选择器不重新生成（不悄悄改掉用户的选择）。
+ * 「只这一个 / 同类一起」按候选与两种生成结果比对；都对不上时保留规则里存的那个值。
+ */
+function initialDrafts(): Draft[] {
+  const out: Draft[] = [];
+  for (const rule of props.initialRules ?? []) {
+    const el = firstElementFor(rule.candidates);
+    const candidates = [...rule.candidates];
+    const autoName = rule.elementName;
+    const hits = countCandidateHits(document, candidates);
+    let sameHits = hits;
+    let onlyThis = rule.onlyThis;
+    if (el) {
+      sameHits = countCandidateHits(document, generateCandidates(el, { onlyThis: false }));
+      if (sameSelectors(candidates, generateCandidates(el, { onlyThis: true }))) onlyThis = true;
+      else if (sameSelectors(candidates, generateCandidates(el, { onlyThis: false }))) onlyThis = false;
+    }
+    out.push({
+      key: ++draftKeySeq,
+      el: el ? markRaw(el) : null,
+      name: rule.elementName,
+      autoName,
+      strategy: rule.strategy,
+      onlyThis,
+      candidates,
+      hits,
+      sameHits,
+      sourceRuleId: rule.id,
+      scope: rule.scope,
+      expanded: false,
+      selectorText: candidates.join('\n'),
+    });
+  }
+  return out;
+}
+
+/** 进入看效果前量一遍每项在页面上的位置（彻底移除的元素之后没有矩形，靠这份缓存跟着页面滚） */
+function captureBaseRects() {
+  for (const d of drafts.value) {
+    if (!d.el) continue;
+    const r = d.el.getBoundingClientRect();
+    baseRects.set(d.el, { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height });
+  }
+}
+
+/** 一打开就在看效果：先把旧规则铺成草稿，再按同一套预览实现画出效果 */
+async function initEditRules() {
+  drafts.value = initialDrafts();
+  baselineDrafts = draftSignature();
+  await props.setDraft(null);
+  captureBaseRects();
+  await applyPreview();
+}
+
+/** 这个元素是不是已经被某条「从旧规则带进来」的草稿命中（点它就是重选那一条，不新增） */
+function draftHitBy(el: Element): Draft | null {
+  for (const d of drafts.value) {
+    if (!d.sourceRuleId) continue;
+    if (d.el === el) return d;
+    const hit = d.candidates.some((sel) => {
+      try {
+        return el.matches(sel);
+      } catch {
+        return false;
+      }
+    });
+    if (hit) return d;
+  }
+  return null;
+}
+
+/** 重算这一条的两个数（hits / sameHits） */
+function refreshDraftCounts(d: Draft) {
+  const [counts] = draftHitCounts(
+    [d],
+    (el) => generateCandidates(el, { onlyThis: false }),
+    (selectors) => countCandidateHits(document, selectors),
+  );
+  if (!counts) return;
+  d.hits = counts.hits;
+  d.sameHits = counts.sameHits;
+}
+
+/**
+ * 换掉一条草稿的元素之后：旧位置如果还在本次选择集里、又没有别的草稿用它，就先移出去。
+ * 否则回到看效果时会被当成「新点选的元素」再补一条重复规则。
+ */
+function dropOldSelection(old: Element | null, d: Draft, next: Element) {
+  if (!old || old === next) return;
+  if (drafts.value.some((x) => x !== d && x.el === old)) return;
+  pick.remove(old);
+}
+
+/** 用刚点到的地方原地替换这一条：旧规则 id 不变，保存时仍是更新同一条（不新增重复规则） */
+function replaceDraftElement(d: Draft, el: Element) {
+  const old = d.el;
+  d.el = markRaw(el);
+  d.candidates = generateCandidates(el, { onlyThis: d.onlyThis });
+  d.selectorText = d.candidates.join('\n');
+  d.selectorError = '';
+  // 名字是自动起的就跟着换；用户改过的名字保留
+  const autoName = describeElement(el);
+  if (d.name.trim() === d.autoName.trim()) d.name = autoName;
+  d.autoName = autoName;
+  refreshDraftCounts(d);
+  dropOldSelection(old, d, el);
+}
+
+/** 行内「重新选这一项」：下一处点到的就是这一条的新位置（失效项也走这里） */
+function reselectDraft(d: Draft) {
+  pendingReplace = d;
+  if (phase.value !== 'pick') void backToPick();
+  else renderMarkers();
+}
+
+/** 这一条要用的范围：旧规则带来的原样保留，没有才用底部三选一（#69） */
+function draftScope(d: Draft): Scope {
+  return d.scope ?? scopeFromChoice(scopeChoice.value, sitePattern.value);
+}
+
+function draftScopeType(d: Draft): ScopeChoice {
+  return draftScope(d).type;
+}
+
+/** 默认行上的一句话摘要：收起方式 · 范围；失效项换一句（#69、审查第 8 条） */
+function draftSummary(d: Draft): string {
+  if (!d.el) return t.value.wizard.staleSummary;
+  return `${t.value.common.strategy[d.strategy]} · ${scopeHumanLabel(draftScope(d))}`;
+}
+
+/** 失效说明：为什么这条可能没用了 + 它在哪些页面收起（复用编辑器里同一句） */
+function staleText(d: Draft): string {
+  return t.value.editor.health(draftName(d), scopeHumanLabel(draftScope(d)));
+}
+
+function setDraftScope(d: Draft, type: ScopeChoice) {
+  const pattern = sitePattern.value;
+  d.scope = type === 'all' || !pattern ? { type: 'all' } : { type, patterns: [{ ...pattern }] };
+  void applyPreview();
+}
+
+/**
+ * 高级：选择器原文（从旧编辑面板原样搬来）——每行一个合法选择器，且保存前每行都要在当前页面命中；
+ * 逐行检查并指出第几行。成功后同步这条草稿的候选、元素与两个命中数。
+ */
+function saveSelectors(d: Draft) {
+  const text = (d.selectorText ?? '').trim();
+  if (!text) {
+    d.selectorError = t.value.editor.errorEmpty;
+    return;
+  }
+  const lines = text
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const [i, line] of lines.entries()) {
+    if (!isSafeSelector(line)) {
+      d.selectorError = t.value.editor.errorInvalid(i + 1);
+      return;
+    }
+    if (selectorHitsElement(line) < 1) {
+      d.selectorError = t.value.editor.errorNoHit(i + 1);
+      return;
+    }
+  }
+  d.selectorError = '';
+  d.candidates = lines;
+  d.selectorText = lines.join('\n');
+  const old = d.el;
+  const found = firstElementFor(lines);
+  d.el = found ? markRaw(found) : null;
+  refreshDraftCounts(d);
+  if (found) dropOldSelection(old, d, found);
+  void recaptureAndPreview();
 }
 
 /**
@@ -770,16 +1138,20 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
 
 /** 号码牌的固定尺寸：定位要先知道尺寸，才能算在元素外面放不放得下 */
 const BADGE_SIZE = { width: 24, height: 24 };
+/** 「之前收起了」角标的定位尺寸（比号码牌宽，给五个字留位置） */
+const HIDDEN_BADGE_SIZE = { width: 76, height: 24 };
+/** 选内容阶段最多标出多少个「之前收起了」的元素（多了反而看不清页面） */
+const HIDDEN_MARK_LIMIT = 40;
 
 /**
  * 号码牌自己一个盒子（#52）：位置由 badgePlacement 算在元素边界外侧，不再压在元素自己的文字上。
  * 元素贴着视口顶边时号码牌翻到元素下方；实在没有空间才回到内侧，并改用半透明底。
  */
-function badgePlace(box: HTMLElement) {
+function badgePlace(box: HTMLElement, size = BADGE_SIZE) {
   return (rect: MarkerRect): MarkerRect => {
-    const placed = badgePlacement(rect, BADGE_SIZE, { width: window.innerWidth, height: window.innerHeight });
+    const placed = badgePlacement(rect, size, { width: window.innerWidth, height: window.innerHeight });
     box.classList.toggle('inside', placed.side === 'inside');
-    return { left: placed.left, top: placed.top, width: BADGE_SIZE.width, height: BADGE_SIZE.height };
+    return { left: placed.left, top: placed.top, width: size.width, height: size.height };
   };
 }
 
@@ -821,18 +1193,22 @@ function renderMarkers() {
       const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
+    // 编辑已有规则：把页面上之前收起过的元素标出来（虚线框 +「之前收起了」，不吃指针）
+    if (props.mode === 'editRules') renderHiddenMarkers();
     return;
   }
   drafts.value.forEach((d, i) => {
+    if (!d.el) return; // 失效项不画标记：页面上没有它，行里另有说明与「重新选」
     const jump = () => flashRow(i);
     if (d.strategy === 'remove') {
       // 彻底移除：元素已没有矩形，用进入预览时缓存的页面坐标 + 滚动差值跟随，只显示号码牌（N7、N8）
       const base = baseRects.get(d.el);
+      if (!base) return;
       addMarker({
         seq: i + 1,
         kind: 'ghost',
         jump,
-        ghost: base && {
+        ghost: {
           left: base.left - window.scrollX,
           top: base.top - window.scrollY,
           width: base.width,
@@ -846,6 +1222,51 @@ function renderMarkers() {
       addMarker({ seq: i + 1, kind: 'mask', el: d.el, jump });
     }
   });
+}
+
+/**
+ * 选内容阶段标出「这些已经收起了」（#69）：每条旧规则命中的元素（含同类）画虚线框 + 角标，
+ * 总量封顶 HIDDEN_MARK_LIMIT。已经进入本次选择集的元素不重复标（它有自己的号码牌）。
+ */
+function renderHiddenMarkers() {
+  const selected = new Set(selEls.value);
+  const seen = new Set<Element>();
+  let count = 0;
+  for (const d of drafts.value) {
+    // 只标「从旧规则带进来」的草稿：本次新选的还没保存，不算「之前收起了」
+    if (!d.sourceRuleId || !d.el || selected.has(d.el)) continue;
+    for (const sel of d.candidates) {
+      let found: NodeListOf<Element>;
+      try {
+        found = document.querySelectorAll(sel);
+      } catch {
+        continue;
+      }
+      for (const el of found) {
+        if (count >= HIDDEN_MARK_LIMIT) return;
+        if (seen.has(el) || selected.has(el) || isOwnUiNode(el)) continue;
+        seen.add(el);
+        addHiddenMarker(el);
+        count++;
+      }
+    }
+  }
+}
+
+/** 一条「之前收起了」标记：虚线框跟元素，角标同样用 badgePlacement 贴到元素外面 */
+function addHiddenMarker(el: Element) {
+  const box = makeBox('pm-wiz-hidden');
+  box.dataset.testid = 'pm-hidden-mark';
+  const badgeBox = makeBox('pm-wiz-badge-box', 'hidden');
+  const tag = document.createElement('span');
+  tag.className = 'pm-wiz-badge pm-wiz-hidden-tag';
+  tag.textContent = t.value.wizard.badgeHidden;
+  tag.dataset.testid = 'pm-hidden-badge';
+  badgeBox.appendChild(tag);
+  markerBoxes.push(box, badgeBox);
+  const place = badgePlace(badgeBox, HIDDEN_BADGE_SIZE);
+  follower.trackLive(el, box);
+  follower.trackLive(el, badgeBox, place);
 }
 
 /**
@@ -875,6 +1296,7 @@ function newDraft(el: Element): Draft {
   const hits = countCandidateHits(document, candidates);
   const autoName = describeElement(el);
   return {
+    key: ++draftKeySeq,
     el: markRaw(el),
     name: autoName,
     autoName,
@@ -883,20 +1305,42 @@ function newDraft(el: Element): Draft {
     candidates,
     hits,
     sameHits: hits,
+    expanded: false,
+    selectorText: candidates.join('\n'),
   };
 }
 
 async function enterPreview() {
-  if (selEls.value.length === 0) return;
+  if (previewCount.value === 0) return;
   phase.value = 'preview';
   document.documentElement.style.cursor = '';
   pick.stop();
   if (pickLayer) pickLayer.style.display = 'none';
   updateHoverBox(null);
+  pendingReplace = null;
 
-  // 继续选择后回来：已有草稿（改过的名称、方案、同类设置）保留，只给新元素建草稿（N12）
-  const existing = new Map(drafts.value.map((d) => [d.el, d] as const));
-  drafts.value = [...reconcileDrafts(selEls.value, existing, newDraft).values()];
+  if (props.mode === 'editRules') {
+    // 编辑已有规则：旧规则带来的草稿全部保留，本次新点选的追加在后面（#69）
+    drafts.value = mergeEditDrafts(
+      drafts.value,
+      selEls.value,
+      (d) => d.sourceRuleId,
+      (d) => d.el,
+      newDraft,
+    );
+    // 失效的草稿再看一眼页面（页面加载晚了 / 从别处改回来）：能找回元素就找回
+    for (const d of drafts.value) {
+      if (d.el) continue;
+      const found = firstElementFor(d.candidates);
+      if (found) d.el = markRaw(found);
+    }
+  } else {
+    // 继续选择后回来：已有草稿（改过的名称、方案、同类设置）保留，只给新元素建草稿（N12）
+    const existing = new Map(
+      drafts.value.filter((d): d is Draft & { el: Element } => !!d.el).map((d) => [d.el, d] as const),
+    );
+    drafts.value = [...reconcileDrafts(selEls.value, existing, newDraft).values()];
+  }
   // 页面可能变过（滚动加载、懒渲染）：两个数都按当前 DOM 重算——「同类一起（N）」的 N 与当前选项无关，
   // 所以切到「只这一个」的行也要重算同类那组（#53）
   const counts = draftHitCounts(
@@ -911,10 +1355,7 @@ async function enterPreview() {
 
   // 先确认没有预览样式（选择阶段本就没有），再量每项的位置，最后才应用预览
   await props.setDraft(null);
-  for (const d of drafts.value) {
-    const r = d.el.getBoundingClientRect();
-    baseRects.set(d.el, { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height });
-  }
+  captureBaseRects();
   await applyPreview();
   const warn = unsavableDraftWarning(drafts.value);
   if (warn) showWarn(warn);
@@ -933,6 +1374,13 @@ async function backToPick() {
 async function applyPreview() {
   renderMarkers();
   await setDraftCss(buildPreviewCss(drafts.value));
+}
+
+/** 改了选择器之后元素可能换了：先撤预览、重新量一遍位置，再应用预览（否则移除项没有矩形可跟） */
+async function recaptureAndPreview() {
+  await props.setDraft(null);
+  captureBaseRects();
+  await applyPreview();
 }
 
 async function setDraftCss(css: string | null): Promise<boolean> {
@@ -967,6 +1415,7 @@ function draftName(d: Draft): string {
  * 同类只有 1 个时第二种不可选——切过去是同一件事，按钮本身是 disabled，这里再兜一次。
  */
 function setOnlyOne(d: Draft, want: boolean) {
+  if (!d.el) return; // 页面上找不到这一项：没有「同类」可选
   if (onlyOneOf(d) === want) return;
   if (!want && d.sameHits <= 1) return;
   const next = generateCandidates(d.el, { onlyThis: want });
@@ -977,6 +1426,7 @@ function setOnlyOne(d: Draft, want: boolean) {
   }
   d.onlyThis = want;
   d.candidates = next;
+  d.selectorText = next.join('\n');
   d.hits = countCandidateHits(document, next);
   if (!want) d.sameHits = d.hits;
   void applyPreview();
@@ -984,8 +1434,9 @@ function setOnlyOne(d: Draft, want: boolean) {
 
 /** 删除这一项：草稿和选择集一起移除；删到最后一项时回到点选阶段（N11） */
 function removeDraft(d: Draft) {
-  drafts.value = drafts.value.filter((x) => x.el !== d.el);
-  pick.remove(d.el);
+  drafts.value = drafts.value.filter((x) => x.key !== d.key);
+  if (d.el) pick.remove(d.el);
+  if (pendingReplace === d) pendingReplace = null;
   if (drafts.value.length === 0) void backToPick();
   else void applyPreview();
 }
@@ -1041,17 +1492,16 @@ async function doSave() {
   }
   saving.value = true;
   try {
-    // 范围在这一步底部整批选一次（推不出「这类页面」时只能整站）
-    const scope = scopeFromChoice(scopeChoice.value, sitePattern.value);
+    // 范围：从旧规则带进来的按它自己的；新选的用这一步底部整批选的那一个（#69）
+    const fallbackScope = scopeFromChoice(scopeChoice.value, sitePattern.value);
     const now = Date.now();
-    const rules: HideRule[] = drafts.value.map((d) => ({
-      id: newRuleId(),
+    const incoming: DraftRuleInput[] = drafts.value.map((d) => ({
+      sourceRuleId: d.sourceRuleId ?? null,
       elementName: draftName(d),
       candidates: [...d.candidates],
       strategy: d.strategy,
-      scope,
+      scope: d.scope ?? fallbackScope,
       onlyThis: d.onlyThis,
-      createdAt: now,
     }));
 
     // 先等预览样式真正撤掉，再落库；撤销失败时保留草稿，不能把“预览已关”当作既成事实（N22）
@@ -1066,16 +1516,32 @@ async function doSave() {
     const origin = new URL(props.url).origin;
     let saved;
     try {
-      // 原子追加：基于最新存储值只加规则。新站点的配置在这里才第一次写入（保存前不写，退出即不留痕迹）；
-      // 添加内容时站点若已被清空则不写入。重选元素：同一次写入里用新规则换掉旧规则（旧规则不在就只追加）
+      // 原子写入：基于最新存储值改。
       saved = await storage.updateProfile(
         origin,
         (p) => {
-          if (props.replaceRuleId) {
-            const i = p.hideRules.findIndex((r) => r.id === props.replaceRuleId);
-            if (i >= 0) p.hideRules.splice(i, 1);
+          if (props.mode === 'editRules') {
+            // 编辑已有规则（#69）：有来源的原地更新（保留 id 与体检记录），没有的追加；
+            // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动
+            p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: initialIds, now, makeId: newRuleId });
+          } else {
+            // 添加内容：纯追加。重选元素：同一次写入里用新规则换掉旧规则（旧规则不在就只追加）
+            if (props.replaceRuleId) {
+              const i = p.hideRules.findIndex((r) => r.id === props.replaceRuleId);
+              if (i >= 0) p.hideRules.splice(i, 1);
+            }
+            p.hideRules.push(
+              ...incoming.map((d) => ({
+                id: newRuleId(),
+                elementName: d.elementName,
+                candidates: [...d.candidates],
+                strategy: d.strategy,
+                scope: d.scope,
+                onlyThis: d.onlyThis,
+                createdAt: now,
+              })),
+            );
           }
-          p.hideRules.push(...rules);
           if (props.mode === 'newSite') {
             // 第 1 步填的标题 / 图标随这次保存一起落库（#51）；老站点不碰标题
             p.disguisedTitle = titleFromInput(titleInput.value, props.initialTitle);
@@ -1097,7 +1563,10 @@ async function doSave() {
       return;
     }
     // 保存即完成（#53）：不再弹第二个确认框；0 条规则时只给一句轻提示
-    const notice = rules.length === 0 ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)) : undefined;
+    const notice =
+      incoming.length === 0
+        ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle))
+        : undefined;
     await finish(true, notice);
   } finally {
     saving.value = false;

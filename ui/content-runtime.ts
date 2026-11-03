@@ -34,6 +34,7 @@ import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
 import { effectiveIcon } from '@/core/icon';
 import { curtainRestoreAction, curtainTitle } from '@/core/curtain';
 import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
+import { rulesApplicableAt } from '@/core/scope';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles, type StyleRecord } from '@/core/doc-styles';
 import { applyKey } from '@/core/apply-key';
@@ -298,7 +299,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   }
 
   function handleEdit() {
-    if (ctx.isValid) openEditorPanel();
+    if (ctx.isValid) void openWizard('editRules');
   }
 
   /** 菜单「收起更多内容」（#67）：直接进向导点选新元素，保存后按新配置挂回胶囊 */
@@ -431,6 +432,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     healthGen++;
     hideCurtain(); // 进向导前先撤幕布（#45）
     closeEditorPanel();
+    // 向导按打开这一刻的地址工作（页面地址在 SPA 换页后跟着变，先对齐，打开后不再改）
+    const pageUrl = location.href;
+    pageState.url = pageUrl;
 
     // 排在进行中的状态刷新之后，避免刷新在向导打开后又把正式样式注回去
     await exclusive(async () => {
@@ -449,8 +453,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
     wizardApp = createApp(WizardApp, {
       mode,
-      url: location.href,
+      url: pageUrl,
       replaceRuleId: replaceRuleId ?? null,
+      // 编辑已有规则（#69）：草稿来自「这个页面上用得上的规则」，按打开这一刻的地址算
+      initialRules: mode === 'editRules' ? rulesApplicableAt(profile?.hideRules ?? [], pageUrl) : [],
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,

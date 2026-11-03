@@ -620,14 +620,24 @@ async function main() {
     );
     check(true, '该站没有打开的标签页时，「在页面上编辑」给出可理解的提示');
 
-    // 有打开的页面时能打开编辑面板
+    // 有打开的页面时打开「编辑收起的内容」（#69 起由向导接管，直接停在看效果）
     const editorTab = await browser.newPage();
     await editorTab.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
     await editorTab.waitForSelector('pagemask-toggle', { timeout: 8000 });
     await m.bringToFront();
     await m.click(tid('pm-mgmt-edit-on-page'));
-    await waitForShadow(editorTab, 'pagemask-editor', tid('pm-editor-panel'), { timeout: 8000 });
-    check(true, '「在页面上编辑」在该站的标签页里打开了编辑面板');
+    await waitForShadow(editorTab, 'pagemask-wizard', tid('pm-wizard-toolbar'), { timeout: 8000 });
+    check(true, '「在页面上编辑」在该站的标签页里打开了向导');
+    const editProgress = await editorTab.evaluate(
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-progress"]')?.textContent?.trim() ?? '',
+      'pagemask-wizard',
+    );
+    check(editProgress === '第 2 步 / 共 2 步', `打开即停在「看效果」（${editProgress}）`);
+    await editorTab.evaluate(
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-exit"]')?.click(),
+      'pagemask-wizard',
+    );
+    await waitFor(editorTab, '向导关闭', (h) => !document.querySelector(h), ['pagemask-wizard'], { timeout: 5000 });
     await editorTab.close();
     await m.bringToFront();
 

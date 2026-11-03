@@ -1,12 +1,12 @@
 /**
- * 编辑面板验收（#24，审查 N4、N5、N39）：popup 入口、重选不丢规则、开关不被覆盖、
+ * 旧编辑面板验收（#24，审查 N4、N5、N39）：重选不丢规则、开关不被覆盖、
  * 高级后门逐行校验、删除可撤销。
  *
  * 运行：npm run build && node tests/e2e/check-editor.mjs     （约 20 秒；HEADFUL=1 有界面运行）
  *
  * 覆盖：
- * - popup 的「编辑当前网站」真实点击 → 页面内出现编辑面板，且面板以 <dialog popover="manual"> 打开；
- *   面板标题与 ⋯ 菜单同一套叫法「编辑收起的内容」（#56）
+ * - 旧编辑面板（#69 起三个产品入口都改为打开向导，面板留到 #71 删）：用 openEditor 消息直接打开，
+ *   面板以 <dialog popover="manual"> 打开；标题与 ⋯ 菜单同一套叫法「编辑收起的内容」（#56）
  * - 重选 → 退出向导：规则数、规则 id、页面效果都不变（旧规则不再先删）
  * - 重选 → 选中新元素 → 预览 → 保存：旧规则被同一次写入替换（id 变、候选变），旧元素恢复可见、新元素被收起
  * - 面板打开期间在 popup 里关掉清爽模式，之后面板内改收起方案：开关仍是「原样」，不被面板写回
@@ -154,15 +154,11 @@ async function main() {
     await page.waitForSelector('pagemask-toggle', { timeout: 8000 });
     await waitVisible(page, '规则生效：广告位被收起', '#ad', false);
 
-    // ===================== popup 入口 =====================
-    console.log('\n--- popup 的「编辑收起的内容」打开面板 ---');
-    const popup = await openPopup(ext, page);
-    await popup.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
-    check(true, 'popup 里有「编辑收起的内容」按钮');
-    await popup.bringToFront();
-    await popup.click(tid('pm-popup-edit'));
+    // ===================== 旧编辑面板（产品入口已改指向向导，#69） =====================
+    console.log('\n--- 旧编辑面板：用 openEditor 消息直接打开（三个产品入口已改指向向导的 editRules） ---');
+    await sendToTab(ext.control, tabId, { t: 'openEditor' });
     await waitForShadow(page, EDITOR, tid('pm-editor-panel'), { timeout: 8000 });
-    check(await panelOpen(page), '从 popup 点按钮后页面内出现编辑面板');
+    check(await panelOpen(page), '旧编辑面板仍能通过 openEditor 打开（组件留到 #71 删）');
     check(await panelIsPopover(page), '面板以 <dialog popover="manual"> 打开（进 top layer，页面仍可操作）');
     check(
       (await shadowText(page, EDITOR, '#pm-ed-title')).trim() === '编辑收起的内容',

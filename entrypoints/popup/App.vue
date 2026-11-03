@@ -98,8 +98,8 @@ import type {
   CurtainStateMsg,
   CurtainStateReply,
   EnableSiteResponse,
-  OpenEditorMsg,
   OpenIntent,
+  OpenWizardMsg,
 } from '@/core/messages';
 
 const tab = ref<{ id?: number; url?: string } | null>(null);
@@ -276,8 +276,8 @@ function reauthorize() {
 }
 
 /**
- * 打开页面内的编辑面板。内容脚本可能还没注入（页面是刚打开、或扩展刚更新）：
- * 发送失败时先让后台对账注入，再发一次
+ * 打开页面上的「编辑收起的内容」（#69：由向导接管，直接停在「看效果」）。
+ * 内容脚本可能还没注入（页面是刚打开、或扩展刚更新）：发送失败时先让后台对账注入，再发一次
  */
 async function editSite() {
   const o = origin.value;
@@ -286,7 +286,7 @@ async function editSite() {
   errorCode.value = '';
   busy.value = 'edit';
   try {
-    const send = () => browser.tabs.sendMessage(tabId, { t: 'openEditor' } satisfies OpenEditorMsg);
+    const send = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editRules' } satisfies OpenWizardMsg);
     try {
       await send();
     } catch {

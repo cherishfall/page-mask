@@ -13,10 +13,11 @@
  *   列表里能看到它；关掉向导后有一句轻提示说明标签页名字已经换了（#53）
  * - 0 条规则的页内编辑面板：空状态说明 +「开始选要收起的内容」入口
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
- * - 预览：每行两行排版（第一行序号 / 名字 / 删除，第二行收起方式与同类选项）、删除按钮有底有边（#53）；
+ * - 预览：默认行只有序号 / 名字 / 一句话摘要 / 调整 / ✕，收起方式等折在「调整」里（#69、审查第 8 条）；
+ *   删除按钮无框、悬停才出底色（#53）；
  *   行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
  *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
- * - 「只这一个 / 同类一起（N）」：N 实时算、切换后预览立即更新、同类只有一处时第二项不可选并说明（#53）
+ * - 「只这一个 / 同类一起（N）」：N 实时算、切换后预览立即更新；同类只有一处时整组不出现（#53、#69）
  * - 底部「在哪些页面收起」三选一；点保存直接落库并关掉向导，没有第二个确认框（#53）
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
  * - Esc：没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
@@ -179,10 +180,28 @@ const checkedStrategy = (page, n) =>
     n,
   );
 
+/** 展开第 n 行的「调整」：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
+async function openAdjust(page, n) {
+  const open = await page.evaluate(
+    (h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-adjust"]`)?.getAttribute('aria-expanded') === 'true',
+    HOST,
+    n,
+  );
+  if (!open) await clickInShadow(page, HOST, tid(`pm-draft-${n}-adjust`));
+}
+
+const adjustExpanded = (page, n) =>
+  page.evaluate(
+    (h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-adjust"]`)?.getAttribute('aria-expanded'),
+    HOST,
+    n,
+  );
+
 /** 第 n 行下面那行解释文字 */
 const rowHint = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-hint`)))[0] ?? '';
-/** 第 n 行的「只这一个 / 同类一起（N）」两个选项的文字（#53） */
-const onlyChoices = (page, n) => shadowTexts(page, `${tid(`pm-draft-${n}-opts`)} .pm-wiz-only .pm-wiz-seg-opt span`);
+/** 第 n 行的「只这一个 / 同类一起（N）」两个选项的文字（#53、#69 展开后才有） */
+const onlyChoices = (page, n) =>
+  shadowTexts(page, `${tid(`pm-draft-${n}-only-group`)} .pm-wiz-seg-opt span`);
 /** 第 n 行那对选项当前选中的是哪个：one / same */
 const onlyChecked = (page, n) =>
   page.evaluate(
@@ -195,8 +214,6 @@ const onlyChecked = (page, n) =>
     HOST,
     n,
   );
-const sameDisabled = (page, n) =>
-  page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-same"]`)?.disabled, HOST, n);
 const scopeChoices = (page) => shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-radio`);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
@@ -463,37 +480,19 @@ async function main() {
       `看效果这一步底栏也只有两个按钮（${JSON.stringify(footPreview)}）`,
     );
     check((await draftCount(page)) === 2, `草稿清单是一行一项（实际 ${await draftCount(page)} 行）`);
-    check(
-      (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
-      '每一项的收起方式默认是「消失」（原生 radio 的选中值）',
-    );
-    check((await rowHint(page, 1)) === '整块消失，下面的内容往上顶', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
-    const before = await shadowRect(page, tid('pm-marker-2'));
-    check(before && before.w > 0 && before.h > 0, `第 2 项号码牌可见（${JSON.stringify(before)}）`);
 
-    // ===================== 第 3 步的排版与两处「范围」不撞名（#53） =====================
-    console.log('\n--- 看效果：每行两行排版、两个选项不撞名、底部三选一 ---');
-    const rowGeom = await page.evaluate(
-      (h) => {
-        const sr = document.querySelector(h).shadowRoot;
-        const head = sr.querySelector('[data-testid="pm-draft-1-head"]').getBoundingClientRect();
-        const opts = sr.querySelector('[data-testid="pm-draft-1-opts"]').getBoundingClientRect();
-        const name = sr.querySelector('[data-testid="pm-draft-name-1"]').getBoundingClientRect();
-        const del = sr.querySelector('[data-testid="pm-draft-1-remove"]').getBoundingClientRect();
-        const method = sr.querySelector('[data-testid="pm-draft-1-strategy-remove"]').getBoundingClientRect();
-        const only = sr.querySelector('[data-testid="pm-draft-1-only"]').getBoundingClientRect();
-        const inHead = (r) => r.top >= head.top - 0.5 && r.bottom <= head.bottom + 0.5;
-        return {
-          twoLines: opts.top >= head.bottom - 0.5,
-          headHolds: inHead(name) && inHead(del),
-          optsHoldBoth: method.top >= opts.top - 0.5 && only.top >= opts.top - 0.5,
-        };
-      },
-      HOST,
+    // 默认行（审查第 8 条）：序号 / 名称 / 一句话摘要 / 调整 / 行尾 ✕；收起方式等折在「调整」里
+    const adjustText = (await shadowTexts(page, tid('pm-draft-1-adjust')))[0] ?? '';
+    check(adjustText === '调整', `行上有「调整」按钮（${adjustText}）`);
+    check((await adjustExpanded(page, 1)) === 'false', '默认收起：调整按钮 aria-expanded=false');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-body'))), '默认不展开：收起方式、范围、重选、高级都不在页面上');
+    const summary1 = (await shadowTexts(page, tid('pm-draft-1-summary')))[0] ?? '';
+    check(summary1 === '消失 · 整个网站', `摘要写成「收起方式 · 范围」（${summary1}）`);
+    const collapsedText = (await shadowTexts(page, tid('pm-draft-1'))).join(' ');
+    check(
+      !collapsedText.includes('在哪些页面') && !collapsedText.includes('范围'),
+      '收起状态的行里没有「在哪些页面」「范围」这组控件（也不重复叫法）',
     );
-    check(rowGeom.twoLines, '每行拆成两行：第二行（收起方式与同类选项）整体落在第一行下面');
-    check(rowGeom.headHolds, '第一行放的是序号、名字、删除');
-    check(rowGeom.optsHoldBoth, '第二行放的是收起方式与「只这一个 / 同类一起（N）」');
     const delBox = await page.evaluate(
       (h) => {
         const b = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-remove"]');
@@ -518,20 +517,58 @@ async function main() {
       HOST,
     );
     const row1Name = await nameValue(page, 1);
-    check(
-      delName === `取消选择第 1 项：${row1Name}`,
-      `删除按钮有完整的读屏名字（${delName}）`,
+    check(delName === `取消选择第 1 项：${row1Name}`, `删除按钮有完整的读屏名字（${delName}）`);
+
+    // 展开「调整」：收起方式、范围、重选、高级按顺序出现
+    await openAdjust(page, 1);
+    await openAdjust(page, 2);
+    check((await adjustExpanded(page, 1)) === 'true', '点「调整」后 aria-expanded=true');
+    check(await shadowExists(page, HOST, tid('pm-draft-1-body')), '点「调整」后展开出控制器');
+    const bodyGeom = await page.evaluate(
+      (h) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const head = sr.querySelector('[data-testid="pm-draft-1-head"]').getBoundingClientRect();
+        const body = sr.querySelector('[data-testid="pm-draft-1-body"]').getBoundingClientRect();
+        const q = (id) => sr.querySelector(`[data-testid="${id}"]`);
+        const inBody = (el) => {
+          const r = el.getBoundingClientRect();
+          return r.top >= body.top - 0.5 && r.bottom <= body.bottom + 0.5;
+        };
+        return {
+          below: body.top >= head.bottom - 0.5,
+          holds: [
+            q('pm-draft-1-strategy-remove'),
+            q('pm-draft-1-scope-all'),
+            q('pm-draft-1-reselect'),
+            q('pm-draft-1-advanced'),
+          ].every((el) => !!el && inBody(el)),
+        };
+      },
+      HOST,
     );
-    const choices = await onlyChoices(page, 1);
+    check(bodyGeom.below, '展开区整体落在默认行下面');
+    check(bodyGeom.holds, '展开区依次有收起方式、在哪些页面收起、重新选这一项、高级选择器');
     check(
-      choices[0] === '只这一个' && choices[1] === '同类一起（1）',
-      `行内那对写成「只这一个 / 同类一起（N）」（${choices.join(' / ')}）`,
+      (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
+      '每一项的收起方式默认是「消失」（原生 radio 的选中值）',
     );
-    const rowTexts = await shadowTexts(page, tid('pm-draft-1'));
+    check((await rowHint(page, 1)) === '整块消失，下面的内容往上顶', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
+
+    // 行内范围：三个按钮 + aria-pressed；摘要跟着变
+    const rowScopeTexts = await shadowTexts(page, `${tid('pm-draft-1-scope')} button`);
+    const rowScopePressed = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      return [...sr.querySelectorAll('[data-testid="pm-draft-1-scope"] button')].map((b) => b.getAttribute('aria-pressed'));
+    }, HOST);
     check(
-      !rowTexts.join(' ').includes('范围') && !rowTexts.join(' ').includes('在哪些页面'),
-      '行内不再出现「范围」「在哪些页面」这类叫法',
+      rowScopeTexts.join('|') === '整个网站|只在这类页面|除了这类页面' &&
+        rowScopePressed.join('|') === 'true|false|false',
+      `行内范围是三档按钮、当前档 aria-pressed=true（${rowScopeTexts.join(' / ')} / ${rowScopePressed.join(',')}）`,
     );
+    // 同类只有 1 个：这一组整个不出现（#69）
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-only-group'))), '页面上只有一处时，行内不出现「只这一个 / 同类一起」');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-only-group'))), '同类只有 1 个的行同样不出现这组控件');
+
     const scopeLegend = (await shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-scope-legend`))[0] ?? '';
     check(scopeLegend === '在哪些页面收起', `页面级那件事叫「在哪些页面收起」（${scopeLegend}）`);
     const scopes = await scopeChoices(page);
@@ -543,6 +580,8 @@ async function main() {
       !(await shadowExists(page, HOST, tid('pm-wizard-save-pop'))),
       '原来的保存对话框已经从 DOM 里删掉（点保存不再弹第二个框）',
     );
+    const before = await shadowRect(page, tid('pm-marker-2'));
+    check(before && before.w > 0 && before.h > 0, `第 2 项号码牌可见（${JSON.stringify(before)}）`);
 
     // 行内切到「留空」：页面立刻变、解释跟着换
     await clickInShadow(page, HOST, tid('pm-draft-1-strategy-blank'));
@@ -634,6 +673,7 @@ async function main() {
     await waitFor(page, '已选 3 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('3'), [HOST]);
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：卡片二被移除', C2, false);
+    await openAdjust(page, 3); // 新加的第 3 行默认收起，先展开
     check(
       (await checkedStrategy(page, 1)) === 'blank' &&
         (await checkedStrategy(page, 2)) === 'remove' &&
@@ -673,14 +713,9 @@ async function main() {
       '从第 2 步返回后草稿不变、预览样式重新应用（3 行、选项与方案都还是刚才的）',
     );
 
-    // 页面上该类只有一处：第二项不可选，并说明为什么
-    check((await onlyChoices(page, 2))[1] === '同类一起（1）', `只有一处的项显示「同类一起（1）」（${(await onlyChoices(page, 2))[1]}）`);
-    check((await sameDisabled(page, 2)) === true, '只有一处时「同类一起」不可选（radio disabled）');
-    check(
-      ((await shadowTexts(page, tid('pm-draft-2-same-note')))[0] ?? '').includes('没有第二个同类'),
-      '只有一处时旁边有一句说明为什么不可选',
-    );
-    check((await onlyChecked(page, 2)) === 'one', '只有一处时选中的是「只这一个」');
+    // 页面上该类只有一处：这一组整个不出现（#69）
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-only-group'))), '只有一处的项不再显示「只这一个 / 同类一起（1）」');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-note'))), '也不再需要「没有第二个同类」那句说明');
 
     // 行内改名：不点开任何浮层，改名后清单重绘仍保留
     await clickInShadow(page, HOST, tid('pm-draft-name-1'));

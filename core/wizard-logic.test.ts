@@ -4,6 +4,8 @@ import {
   clampToViewport,
   draftHitCounts,
   isTooBigForPick,
+  mergeEditDrafts,
+  mergeSavedRules,
   navigateLevel,
   reconcileDrafts,
   removeFromSelection,
@@ -15,13 +17,14 @@ import {
   toggleSelection,
   unsavableDraftWarning,
   wizardEscAction,
+  wizardInitialPhase,
   wizardNextPhase,
   wizardPhases,
   wizardPrevPhase,
   wizardStep,
   zeroRuleSavedNotice,
 } from './wizard-logic';
-import { createEmptyProfile, type ScopePattern } from './types';
+import { createEmptyProfile, type HideRule, type ScopePattern } from './types';
 
 describe('isTooBigForPick 防呆', () => {
   const vp = { width: 1000, height: 800 };
@@ -102,6 +105,33 @@ describe('reconcileDrafts 继续选择后回到预览（N12）', () => {
   });
 });
 
+describe('mergeEditDrafts 编辑已有规则时回到看效果（#69）', () => {
+  type D = { el: string | null; sourceRuleId?: string | null };
+  const make = (el: string): D => ({ el, sourceRuleId: null });
+
+  it('旧规则带来的草稿（含找不到元素的）全部保留；取消了的新草稿丢弃；新点选的追加在后面', () => {
+    const drafts: D[] = [
+      { el: 'A', sourceRuleId: 'r1' },
+      { el: null, sourceRuleId: 'r2' }, // 失效项也在列表里，不能丢
+      { el: 'B', sourceRuleId: null }, // 上一次新选的，这次取消了
+    ];
+    const out = mergeEditDrafts(drafts, ['C'], (d) => d.sourceRuleId, (d) => d.el, make);
+    expect(out.map((d) => d.el)).toEqual(['A', null, 'C']);
+    expect(out[1]!.sourceRuleId).toBe('r2');
+  });
+
+  it('重选过的旧草稿留在原位置，不因为元素进了选择集而重复', () => {
+    const drafts: D[] = [
+      { el: 'A', sourceRuleId: 'r1' },
+      { el: 'X', sourceRuleId: null },
+    ];
+    const out = mergeEditDrafts(drafts, ['A', 'X', 'Y'], (d) => d.sourceRuleId, (d) => d.el, make);
+    expect(out.map((d) => d.el)).toEqual(['A', 'X', 'Y']);
+    expect(out[0]).toBe(drafts[0]);
+    expect(out[1]).toBe(drafts[1]);
+  });
+});
+
 describe('wizardEscAction 向导级 Esc（N9）', () => {
   const esc = { key: 'Escape', isComposing: false, keyCode: 27 };
   it('没有浮层时 Esc = 请求退出（选择阶段、预览阶段都一样）', () => {
@@ -130,6 +160,19 @@ describe('三步骨架（#51）：步骤顺序、推进与回退', () => {
     expect(wizardPhases('addElement')).toEqual(['pick', 'preview']);
     expect(wizardStep('addElement', 'pick')).toEqual({ index: 1, total: 2 });
     expect(wizardStep('addElement', 'preview')).toEqual({ index: 2, total: 2 });
+  });
+  it('编辑已有规则（#69）：同样两步，但一打开就停在第 2 步「看效果」', () => {
+    expect(wizardPhases('editRules')).toEqual(['pick', 'preview']);
+    expect(wizardInitialPhase('editRules')).toBe('preview');
+    expect(wizardInitialPhase('addElement')).toBe('pick');
+    expect(wizardInitialPhase('newSite')).toBe('title');
+    // 步骤计数是准确的 2/2，不为了好看压成 1/1
+    expect(wizardStep('editRules', 'preview')).toEqual({ index: 2, total: 2 });
+    expect(wizardStep('editRules', 'pick')).toEqual({ index: 1, total: 2 });
+    expect(wizardPrevPhase('editRules', 'preview')).toBe('pick');
+    expect(wizardPrevPhase('editRules', 'pick')).toBeNull();
+    expect(wizardNextPhase('editRules', 'pick')).toBe('preview');
+    expect(wizardNextPhase('editRules', 'preview')).toBeNull();
   });
   it('推进：标题 → 选内容 → 看效果；看效果没有下一步', () => {
     expect(wizardNextPhase('newSite', 'title')).toBe('pick');
@@ -291,6 +334,92 @@ describe('预览这一步的「同类一起（N）」：数量实时算（#53）
     expect(draftHitCounts([{ el, onlyThis: false, candidates: ['3'] }], sameCandidates, count)[0]).toEqual({ hits: 3, sameHits: 3 });
     page.set(el, 5);
     expect(draftHitCounts([{ el, onlyThis: false, candidates: ['5'] }], sameCandidates, count)[0]).toEqual({ hits: 5, sameHits: 5 });
+  });
+
+  it('页面上找不到元素（el === null）的草稿没有同类：两个数都按它自己的候选命中数算', () => {
+    const hits = draftHitCounts(
+      [
+        { el: null, onlyThis: false, candidates: ['2'] },
+        { el: null, onlyThis: true, candidates: ['1'] },
+        { el: null, onlyThis: false, candidates: [] },
+      ],
+      () => {
+        throw new Error('失效项不该去生成「同类」候选');
+      },
+      count,
+    );
+    expect(hits).toEqual([
+      { hits: 2, sameHits: 2 },
+      { hits: 1, sameHits: 1 },
+      { hits: 0, sameHits: 0 },
+    ]);
+  });
+});
+
+describe('mergeSavedRules 保存时原地更新 / 追加 / 删除（#69）', () => {
+  const rule = (id: string, name: string, sel: string, createdAt = 100): HideRule => ({
+    id,
+    elementName: name,
+    candidates: [sel],
+    strategy: 'remove',
+    scope: { type: 'all' },
+    onlyThis: false,
+    createdAt,
+    lastHealth: 'ok',
+    lastHealthAt: 9,
+  });
+  let seq = 0;
+  const opts = (editIds: readonly string[] | null) => ({ editIds, now: 500, makeId: () => `new-${++seq}` });
+
+  beforeEach(() => {
+    seq = 0;
+  });
+
+  it('有来源的原地更新：id、位置、createdAt 与体检记录都保留', () => {
+    const existing = [rule('r1', '旧名字', '#a'), rule('r2', '中间的', '#b'), rule('r3', '要删的', '#c')];
+    const out = mergeSavedRules(
+      existing,
+      [
+        { sourceRuleId: 'r1', elementName: '新名字', candidates: ['#a2'], strategy: 'blank', scope: { type: 'all' }, onlyThis: true },
+        { sourceRuleId: null, elementName: '新加的', candidates: ['#d'], strategy: 'mask', scope: { type: 'all' }, onlyThis: false },
+      ],
+      opts(['r1', 'r3']),
+    );
+    expect(out.map((r) => r.id)).toEqual(['r1', 'r2', 'new-1']);
+    expect(out[0]).toMatchObject({
+      id: 'r1',
+      elementName: '新名字',
+      candidates: ['#a2'],
+      strategy: 'blank',
+      onlyThis: true,
+      createdAt: 100,
+      lastHealth: 'ok',
+      lastHealthAt: 9,
+    });
+    expect(out[1]).toEqual(existing[1]); // 页面上不适用、没进草稿的规则原样不动
+    expect(out[2]).toMatchObject({ elementName: '新加的', createdAt: 500 });
+  });
+
+  it('只删「本次打开时属于这个页面」的规则：不在 editIds 里的一条都不碰', () => {
+    const existing = [rule('here', '这页的', '#a'), rule('elsewhere', '别的页面的', '#b')];
+    const out = mergeSavedRules(existing, [], opts(['here']));
+    expect(out.map((r) => r.id)).toEqual(['elsewhere']);
+  });
+
+  it('没有 editIds（添加内容）时不删任何规则', () => {
+    const existing = [rule('r1', '甲', '#a'), rule('r2', '乙', '#b')];
+    const out = mergeSavedRules(existing, [], opts(null));
+    expect(out).toEqual(existing);
+  });
+
+  it('来源规则已被别处删掉：照样追加一条新规则，不会静默丢掉这次修改', () => {
+    const out = mergeSavedRules(
+      [rule('r1', '甲', '#a')],
+      [{ sourceRuleId: 'gone', elementName: '乙', candidates: ['#b'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false }],
+      opts(null),
+    );
+    expect(out.map((r) => r.id)).toEqual(['r1', 'new-1']);
+    expect(out[1]!.elementName).toBe('乙');
   });
 });
 

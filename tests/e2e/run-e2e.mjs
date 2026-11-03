@@ -259,6 +259,8 @@ async function main() {
       [WIZARD_HOST],
     );
     check(true, '点页面上的号码牌：清单滚到对应行并高亮');
+    // #69：收起方式等控件折在「调整」里，先展开第 1 行
+    await clickInShadow(page, WIZARD_HOST, tid('pm-draft-1-adjust'));
     await clickInShadow(page, WIZARD_HOST, tid('pm-draft-1-strategy-blank'));
     await waitStyle(page, '行内换「留空」', '.top-nav', 'visibility', 'hidden');
     check(true, '行内换「留空」立即生效（visibility:hidden）');
@@ -317,15 +319,15 @@ async function main() {
     check(true, '编辑面板关闭');
 
     // ===================== 悬浮按钮菜单（真实鼠标，#25） =====================
-    console.log('\n--- 悬浮按钮「⋯」菜单打开编辑面板 ---');
+    console.log('\n--- 悬浮按钮「⋯」菜单打开「编辑收起的内容」 ---');
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE_HOST, '[data-testid="pm-toggle-menu"]', { timeout: 3000 });
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-edit'));
-    await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'), { timeout: 5000 });
-    check(true, '点菜单「编辑收起的内容」打开编辑面板');
+    await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'), { timeout: 5000 });
+    check(true, '点菜单「编辑收起的内容」打开向导的看效果（#69）');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
-    await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-editor-close"]')?.click(), EDITOR_HOST);
-    await waitFor(page, '编辑面板关闭（复位）', (h) => !document.querySelector(h), [EDITOR_HOST]);
+    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
+    await waitFor(page, '向导关闭（复位）', (h) => !document.querySelector(h), [WIZARD_HOST]);
     await waitStyle(page, '复位到清爽态', '.rec-card', 'display', 'none', { not: true });
 
     // ===================== 页面样式隔离（#22） =====================
