@@ -321,13 +321,18 @@
   font-size: var(--pm-font-size-caption);
   color: var(--pm-danger);
 }
-/* 「只这一个 / 同类一起（N）」：与收起方式同一套连体分段，但自成一组 */
-.pm-wiz-only {
+/* 「页面上另外 N 个一样的也一起收起」：一行勾选框，不是一组选项 */
+.pm-wiz-same-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pm-space-1);
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+.pm-wiz-same-row input {
   flex: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-inline-size: 0;
+  margin: 2px 0 0;
 }
 .pm-wiz-draft-hint {
   margin: 0;
@@ -516,6 +521,10 @@
 /* 彻底移除的预览：只剩一个号码牌（不画框，免得盖住补位上来的内容，N8） */
 .pm-wiz-ghost {
   border: 0;
+}
+/* 同组里「会一起被收起」的其它元素：虚线框标出范围，不带号码牌（#70） */
+.pm-wiz-same {
+  border: 2px dashed var(--pm-accent);
 }
 /* 选内容阶段：页面上已经收起的元素（#69）。层在点选捕获层之下，pointer-events 也是 none，
  * 指针事件一律落到捕获层，点选行为不受影响 */

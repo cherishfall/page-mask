@@ -199,21 +199,22 @@ const adjustExpanded = (page, n) =>
 
 /** 第 n 行下面那行解释文字 */
 const rowHint = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-hint`)))[0] ?? '';
-/** 第 n 行的「只这一个 / 同类一起（N）」两个选项的文字（#53、#69 展开后才有） */
-const onlyChoices = (page, n) =>
-  shadowTexts(page, `${tid(`pm-draft-${n}-only-group`)} .pm-wiz-seg-opt span`);
-/** 第 n 行那对选项当前选中的是哪个：one / same */
-const onlyChecked = (page, n) =>
+/** 第 n 行那道勾选框的文字（「页面上另外 N 个一样的也一起收起」；不出现时返回空串，#70） */
+const sameLabel = async (page, n) =>
+  (await shadowTexts(page, `${tid(`pm-draft-${n}-same-group`)} span`)).join('');
+/** 第 n 行那道勾选框的状态：true = 连页面上一样的也一起收；没有这道勾选框返回 null */
+const sameChecked = (page, n) =>
   page.evaluate(
     (h, i) => {
-      const sr = document.querySelector(h)?.shadowRoot;
-      if (sr?.querySelector(`[data-testid="pm-draft-${i}-only"]`)?.checked) return 'one';
-      if (sr?.querySelector(`[data-testid="pm-draft-${i}-same"]`)?.checked) return 'same';
-      return null;
+      const box = document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-same-toggle"]`);
+      return box ? box.checked : null;
     },
     HOST,
     n,
   );
+/** 页面上「会一起被收起」的虚线框（不带号码牌，#70） */
+const sameBoxCount = (page) =>
+  page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid="pm-same-box"]').length ?? 0, HOST);
 const scopeChoices = (page) => shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-radio`);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
@@ -565,9 +566,9 @@ async function main() {
         rowScopePressed.join('|') === 'true|false|false',
       `行内范围是三档按钮、当前档 aria-pressed=true（${rowScopeTexts.join(' / ')} / ${rowScopePressed.join(',')}）`,
     );
-    // 同类只有 1 个：这一组整个不出现（#69）
-    check(!(await shadowExists(page, HOST, tid('pm-draft-1-only-group'))), '页面上只有一处时，行内不出现「只这一个 / 同类一起」');
-    check(!(await shadowExists(page, HOST, tid('pm-draft-2-only-group'))), '同类只有 1 个的行同样不出现这组控件');
+    // 页面上没有第二个一样的：这道勾选框完全不出现（#70）
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-same-group'))), '页面上只有一处时，行内不出现那道勾选框');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '没有第二个一样的行同样不出现');
 
     const scopeLegend = (await shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-scope-legend`))[0] ?? '';
     check(scopeLegend === '在哪些页面收起', `页面级那件事叫「在哪些页面收起」（${scopeLegend}）`);
@@ -684,22 +685,42 @@ async function main() {
       (await page.evaluate(() => getComputedStyle(document.querySelector('#promo')).visibility)) === 'hidden',
       '第 1 项的留空预览照常生效',
     );
-    check(!(await visible(page, C1)) && !(await visible(page, C3)), '默认同类一起收起：卡片一、三也被预览移除');
+    check(!(await visible(page, C1)) && !(await visible(page, C3)), '默认连一样的也一起收：卡片一、三也被预览移除');
 
-    // 「只这一个 / 同类一起（N）」：三张卡片互为同类
-    check((await onlyChoices(page, 3)).join('|') === '只这一个|同类一起（3）', `同类数量实时算（${(await onlyChoices(page, 3)).join(' / ')}）`);
-    check((await onlyChecked(page, 3)) === 'same', '默认选的是「同类一起」');
-    await clickInShadow(page, HOST, tid('pm-draft-3-only'));
-    await waitVisible(page, '只这一个：卡片一恢复可见', C1);
-    await waitVisible(page, '只这一个：卡片三恢复可见', C3);
-    check(!(await visible(page, C2)), '切到「只这一个」立即刷新预览：同类其它卡片恢复，卡片二仍被收起');
-    check((await onlyChecked(page, 3)) === 'one', '切到「只这一个」后选项跟着变');
-    // N 与当前选项无关：切到「只这一个」之后仍显示同类一共有几个
-    check((await onlyChoices(page, 3))[1] === '同类一起（3）', `切到「只这一个」后 N 仍是 3（${(await onlyChoices(page, 3))[1]}）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-same'));
-    await waitVisible(page, '切回同类：卡片一又收起', C1, false);
-    await waitVisible(page, '切回同类：卡片三又收起', C3, false);
-    check((await onlyChecked(page, 3)) === 'same', `切回「同类一起（3）」，另外两处同时收起（${(await onlyChoices(page, 3)).join(' / ')}）`);
+    // 一行勾选框回答一个是非题：页面上另外 2 个一样的要不要一起收（#70）
+    check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾选框说的是具体几个（${await sameLabel(page, 3)}）`);
+    check((await sameChecked(page, 3)) === true, '新选的项默认勾上（连同一样的）');
+    check((await sameBoxCount(page)) === 2, `另外两张卡片被虚线框标出来（${await sameBoxCount(page)} 个）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
+    await waitVisible(page, '取消勾选：卡片一恢复可见', C1);
+    await waitVisible(page, '取消勾选：卡片三恢复可见', C3);
+    check(!(await visible(page, C2)), '取消勾选立即刷新预览：其它卡片恢复，卡片二仍被收起');
+    check((await sameChecked(page, 3)) === false, '取消后勾选框跟着取消');
+    check((await sameBoxCount(page)) === 0, '取消勾选后虚线框消失');
+    check(
+      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '现在只收这一个',
+      `工具条上说一句现在只收这一个（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
+    );
+    // 数量与当前勾选无关：取消之后仍说「另外 2 个」
+    check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `取消后那个数仍是 2（${await sameLabel(page, 3)}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
+    await waitVisible(page, '重新勾上：卡片一又收起', C1, false);
+    await waitVisible(page, '重新勾上：卡片三又收起', C3, false);
+    check((await sameChecked(page, 3)) === true, `重新勾上，另外两处同时收起（${await sameLabel(page, 3)}）`);
+    check(
+      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '另外 2 个也收起了',
+      `工具条上说一句另外 2 个也收起了（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
+    );
+
+    // 「盖住」：预览必须盖住这一组全部，保存后遮的也是全部（#70，之前只盖了点中的那一个）
+    const maskBoxes = () =>
+      page.evaluate((h) => document.querySelector(h).shadowRoot.querySelectorAll('.pm-wiz-mask').length, HOST);
+    const maskBefore = await maskBoxes();
+    await clickInShadow(page, HOST, tid('pm-draft-3-strategy-mask'));
+    await waitFor(page, '盖住：遮盖板重画', (h, n) => document.querySelector(h).shadowRoot.querySelectorAll('.pm-wiz-mask').length > n, [HOST, maskBefore]);
+    check((await maskBoxes()) === maskBefore + 3, `「盖住」的预览盖住这一组全部 3 张，与保存后一致（${maskBefore} → ${await maskBoxes()}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-strategy-remove'));
+    await waitVisible(page, '切回消失：卡片一又被移除', C1, false);
 
     // 回第 2 步再回来：草稿不变（方案、选项都还在），预览样式重新应用（#53）
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
@@ -708,14 +729,13 @@ async function main() {
     await waitVisible(page, '再回到看效果：卡片一又被收起', C1, false);
     check(
       (await draftCount(page)) === 3 &&
-        (await onlyChecked(page, 3)) === 'same' &&
+        (await sameChecked(page, 3)) === true &&
         (await checkedStrategy(page, 1)) === 'blank',
       '从第 2 步返回后草稿不变、预览样式重新应用（3 行、选项与方案都还是刚才的）',
     );
 
-    // 页面上该类只有一处：这一组整个不出现（#69）
-    check(!(await shadowExists(page, HOST, tid('pm-draft-2-only-group'))), '只有一处的项不再显示「只这一个 / 同类一起（1）」');
-    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-note'))), '也不再需要「没有第二个同类」那句说明');
+    // 页面上没有第二个一样的：这道勾选框完全不出现（#70）——既不显示「一起收（1）」，也不需要多一句解释
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '只有一处的项不出现「一起收起」的勾选框');
 
     // 行内改名：不点开任何浮层，改名后清单重绘仍保留
     await clickInShadow(page, HOST, tid('pm-draft-name-1'));

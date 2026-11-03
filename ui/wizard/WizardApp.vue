@@ -266,32 +266,17 @@
                 </button>
               </details>
 
-              <!-- 收起几个：这一项自己，还是页面上同类的全部（N 实时算）；找不到元素 / 同类只有 1 个时不出现 -->
-              <fieldset v-if="d.el && d.sameHits > 1" class="pm-wiz-only" :data-testid="`pm-draft-${i + 1}-only-group`">
-                <legend class="pm-wiz-field-title">{{ t.wizard.onlyLegend(i + 1) }}</legend>
-                <div class="pm-wiz-seg">
-                  <label class="pm-wiz-seg-opt">
-                    <input
-                      type="radio"
-                      :name="`pm-only-${i + 1}`"
-                      :checked="onlyOneOf(d)"
-                      :data-testid="`pm-draft-${i + 1}-only`"
-                      @change="setOnlyOne(d, true)"
-                    />
-                    <span>{{ t.wizard.onlyThis }}</span>
-                  </label>
-                  <label class="pm-wiz-seg-opt">
-                    <input
-                      type="radio"
-                      :name="`pm-only-${i + 1}`"
-                      :checked="!onlyOneOf(d)"
-                      :data-testid="`pm-draft-${i + 1}-same`"
-                      @change="setOnlyOne(d, false)"
-                    />
-                    <span>{{ t.wizard.sameGroup(d.sameHits) }}</span>
-                  </label>
-                </div>
-              </fieldset>
+              <!-- 收起几个：一行勾选框，回答一个是非题（页面上一样的要不要一起收）。
+                   没有第二个一样的就整块不出现；勾/取消都当场改预览，工具条上说一句发生了什么 -->
+              <label v-if="d.el && d.sameHits > 1" class="pm-wiz-same-row" :data-testid="`pm-draft-${i + 1}-same-group`">
+                <input
+                  type="checkbox"
+                  :checked="!onlyOneOf(d)"
+                  :data-testid="`pm-draft-${i + 1}-same-toggle`"
+                  @change="onSameToggle(d, $event)"
+                />
+                <span>{{ t.wizard.sameGroupToggle(d.sameHits - 1) }}</span>
+              </label>
             </div>
           </li>
         </ol>
@@ -880,8 +865,11 @@ function initialDrafts(): Draft[] {
 function captureBaseRects() {
   for (const d of drafts.value) {
     if (!d.el) continue;
-    const r = d.el.getBoundingClientRect();
-    baseRects.set(d.el, { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height });
+    // 这一组里所有会被收起的元素都量一遍：彻底移除之后它们没有矩形，靠这份缓存标位置
+    for (const el of matchedElements(d)) {
+      const r = el.getBoundingClientRect();
+      baseRects.set(el, { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height });
+    }
   }
 }
 
@@ -1142,6 +1130,8 @@ const BADGE_SIZE = { width: 24, height: 24 };
 const HIDDEN_BADGE_SIZE = { width: 76, height: 24 };
 /** 选内容阶段最多标出多少个「之前收起了」的元素（多了反而看不清页面） */
 const HIDDEN_MARK_LIMIT = 40;
+/** 一条规则最多给多少个「一样的」画虚线框（页面上一两百个同类时不刷屏） */
+const SAME_MARK_LIMIT = 30;
 
 /**
  * 号码牌自己一个盒子（#52）：位置由 badgePlacement 算在元素边界外侧，不再压在元素自己的文字上。
@@ -1161,18 +1151,27 @@ function badgePlace(box: HTMLElement, size = BADGE_SIZE) {
  */
 function addMarker(opts: {
   seq: number;
-  kind: 'selected' | 'blank' | 'mask' | 'ghost';
+  kind: 'selected' | 'blank' | 'mask' | 'ghost' | 'same';
   el?: Element;
   /** 彻底移除的元素没有矩形，用它进入预览时缓存的页面坐标 */
   ghost?: MarkerRect;
   jump?: () => void;
+  /** 只有这一项自己带号码牌；同组里的其它元素只画框（同一个数字重复出现反而更乱） */
+  badge?: boolean;
+  testid?: string;
 }): HTMLElement {
   const box = makeBox(`pm-wiz-${opts.kind}`);
-  box.dataset.testid = `pm-box-${opts.seq}`;
+  box.dataset.testid = opts.testid ?? `pm-box-${opts.seq}`;
   if (opts.kind === 'mask') box.style.background = '#f4f4f4';
+  markerBoxes.push(box);
+  if (opts.badge === false) {
+    if (opts.ghost) follower.trackGhost(opts.ghost, box);
+    else if (opts.el) follower.trackLive(opts.el, box);
+    return box;
+  }
   const badgeBox = makeBox('pm-wiz-badge-box');
   addBadge(badgeBox, opts.seq, opts.jump);
-  markerBoxes.push(box, badgeBox);
+  markerBoxes.push(badgeBox);
   const place = badgePlace(badgeBox);
   if (opts.ghost) {
     follower.trackGhost(opts.ghost, box);
@@ -1182,6 +1181,52 @@ function addMarker(opts: {
     follower.trackLive(opts.el, badgeBox, place);
   }
   return box;
+}
+
+/** 一条草稿实际会在页面上收起的元素（按候选逐个查、去重，这一项自己排最前）；只用于画标记，封顶防刷屏 */
+function matchedElements(d: Draft): Element[] {
+  if (!d.el) return [];
+  const out: Element[] = [d.el];
+  const seen = new Set<Element>([d.el]);
+  for (const sel of d.candidates) {
+    let list: NodeListOf<Element>;
+    try {
+      list = document.querySelectorAll(sel);
+    } catch {
+      continue;
+    }
+    for (const el of list) {
+      if (seen.has(el) || isOwnUiNode(el)) continue;
+      seen.add(el);
+      out.push(el);
+      if (out.length > SAME_MARK_LIMIT) return out;
+    }
+  }
+  return out;
+}
+
+/** 同组里的其它元素：勾了「一起收起」时才标，虚线框说明「这些也会跟着一起没」 */
+function markSameGroup(d: Draft, seq: number) {
+  let drawn = 0;
+  for (const el of matchedElements(d)) {
+    if (el === d.el) continue;
+    if (drawn >= SAME_MARK_LIMIT) return;
+    // 彻底移除的元素在预览里已经没有矩形：用进预览前量下来的页面坐标跟着滚
+    const base = d.strategy === 'remove' ? baseRects.get(el) : null;
+    if (d.strategy === 'remove') {
+      if (!base) continue;
+      addMarker({
+        seq,
+        kind: 'same',
+        badge: false,
+        testid: 'pm-same-box',
+        ghost: { left: base.left - window.scrollX, top: base.top - window.scrollY, width: base.width, height: base.height },
+      });
+    } else {
+      addMarker({ seq, kind: 'same', badge: false, testid: 'pm-same-box', el });
+    }
+    drawn++;
+  }
 }
 
 /** 按当前阶段整体重画标记：编号每次都按最新顺序重新计算（N6）；全部同步完成，没有延时登记（N21） */
@@ -1218,9 +1263,14 @@ function renderMarkers() {
     } else if (d.strategy === 'blank') {
       addMarker({ seq: i + 1, kind: 'blank', el: d.el, jump });
     } else {
-      // 方案 C 遮罩：覆盖盒本身就是预览（不拦截指针，跳转入口在号码牌上）
-      addMarker({ seq: i + 1, kind: 'mask', el: d.el, jump });
+      // 方案 C 遮罩：覆盖盒本身就是预览。保存后遮的是这一组里的全部元素，预览也必须盖住全部，
+      // 否则用户以为只盖了一个、保存后却多出好几个（#70）
+      for (const el of matchedElements(d)) {
+        addMarker(el === d.el ? { seq: i + 1, kind: 'mask', el, jump } : { seq: i + 1, kind: 'mask', el, badge: false });
+      }
     }
+    // 勾了「页面上另外 N 个一样的也一起收起」：把同组其它元素用虚线框标出来
+    if (!onlyOneOf(d) && d.sameHits > 1) markSameGroup(d, i + 1);
   });
 }
 
@@ -1415,7 +1465,7 @@ function draftName(d: Draft): string {
  * 同类只有 1 个时第二种不可选——切过去是同一件事，按钮本身是 disabled，这里再兜一次。
  */
 function setOnlyOne(d: Draft, want: boolean) {
-  if (!d.el) return; // 页面上找不到这一项：没有「同类」可选
+  if (!d.el) return; // 页面上找不到这一项：没有「一样的」可选
   if (onlyOneOf(d) === want) return;
   if (!want && d.sameHits <= 1) return;
   const next = generateCandidates(d.el, { onlyThis: want });
@@ -1424,12 +1474,21 @@ function setOnlyOne(d: Draft, want: boolean) {
     showWarn(t.value.wizard.warnUnstable);
     return;
   }
+  // 「另外几个」要在改 sameHits 之前算：勾上时 sameHits 就是这个数，取消后按 hits 重算
+  const others = Math.max(0, (want ? d.hits : d.sameHits) - 1);
   d.onlyThis = want;
   d.candidates = next;
   d.selectorText = next.join('\n');
   d.hits = countCandidateHits(document, next);
   if (!want) d.sameHits = d.hits;
   void applyPreview();
+  // 勾/取消都当场给一句话，免得用户只看到「页面变了」却不知道变的是哪一边
+  showInfo(want ? t.value.wizard.sameGroupOff : t.value.wizard.sameGroupOn(others));
+}
+
+/** 勾选框：勾上 = 连页面上一样的也一起收（onlyThis = false） */
+function onSameToggle(d: Draft, e: Event) {
+  setOnlyOne(d, !(e.target as HTMLInputElement).checked);
 }
 
 /** 删除这一项：草稿和选择集一起移除；删到最后一项时回到点选阶段（N11） */

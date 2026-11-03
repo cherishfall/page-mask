@@ -322,7 +322,7 @@ export const zh = {
     clearAll: '全部取消选择',
     deleteOne: (seq: number, name: string) => `取消选择第 ${seq} 项：${name}`,
     /** 第 3 步：每行两行排版 */
-    previewHint: '滚动页面看看效果（「盖住」要能跟着元素一起滚）。每一行可以直接改名字；收起方式、在哪些页面收起、要不要连同类一起收，点「调整」再改。',
+    previewHint: '滚动页面看看效果（「盖住」要能跟着元素一起滚）。每一行可以直接改名字；收起方式、在哪些页面收起、页面上一样的要不要一起收，点「调整」再改。',
     draftsLabel: '这次要收起的内容',
     /** 行上的展开按钮：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
     adjust: '调整',
@@ -334,10 +334,11 @@ export const zh = {
     repicked: '这一项已经在列表里，已按你刚点的地方更新',
     nameLabel: (seq: number) => `第 ${seq} 项的名称，留空就自动起名`,
     methodLegend: '收起方式',
-    onlyLegend: (seq: number) => `第 ${seq} 项收起几个`,
-    onlyThis: '只这一个',
-    sameGroup: (n: number) => `同类一起（${n}）`,
-    sameNone: '页面上没有第二个同类的元素',
+    /** 一行勾选框回答一个是非题：页面上一样的要不要一起收（n 是「另外几个」，不含这一项本身） */
+    sameGroupToggle: (n: number) => `页面上另外 ${n} 个一样的也一起收起`,
+    /** 勾上/取消后工具条上那句「刚发生了什么」 */
+    sameGroupOn: (n: number) => `另外 ${n} 个也收起了`,
+    sameGroupOff: '现在只收这一个',
     scopeLegend: '在哪些页面收起',
     scopeAll: '整个网站（默认）',
     scopeInclude: (label: string) => `只在这类页面：${label}`,
