@@ -38,8 +38,8 @@
                 <span>{{ p.hideRules.length > 0 ? t.common.hiddenCount(p.hideRules.length) : t.common.hiddenNone }}</span>
                 <template v-if="staleCount(p) > 0">
                   <span aria-hidden="true">·</span>
-                  <span class="stale" data-testid="pm-mgmt-row-stale">
-                    <span aria-hidden="true">● </span>{{ t.common.staleCount(staleCount(p)) }}
+                  <span class="pm-mark pm-mark-danger" data-testid="pm-mgmt-row-stale">
+                    <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount(p)) }}
                   </span>
                 </template>
               </span>
@@ -48,7 +48,9 @@
           </a>
 
           <div v-if="isPending(p)" class="site-pending" data-testid="pm-mgmt-pending">
-            <span class="badge">{{ t.management.pendingBadge }}</span>
+            <span class="pm-mark pm-mark-warning">
+              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.management.pendingBadge }}
+            </span>
             <span class="hint">{{ t.management.pendingHint }}</span>
             <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([p.origin])">
               {{ t.management.authorize }}
@@ -160,10 +162,6 @@ const initialOf = (origin: string) => siteLabelOf(origin).slice(0, 1).toUpperCas
   gap: 6px;
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
-}
-
-.stale {
-  color: var(--pm-danger);
 }
 
 .chevron {

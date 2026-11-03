@@ -14,6 +14,7 @@
  */
 @import './tokens.css';
 @import './controls.css';
+@import './marks.css';
 
 :host {
   all: initial;

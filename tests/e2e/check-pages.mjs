@@ -5,7 +5,8 @@
  *
  * 覆盖：
  * - popup：开关在无障碍树里是 switch 角色、状态正确、点击 / 空格切换后状态变化并写入存储；
- *   不支持页面的说明、待授权、授权被拒、处理中（按钮禁用 + aria-busy）；h1 标题、装饰符号不进无障碍树
+ *   不支持页面的说明、待授权、授权被拒、处理中（按钮文字变进行时、不设禁用态、再点被忽略）；
+ *   h1 标题、装饰符号不进无障碍树
  * - popup 只留三件事（#54）：主按钮 + 编辑当前网站 + 遮住开关（遮住后写「恢复这一页」），
  *   底部一行「你添加的网站」「插件设置」各自落地；三种站点状态（未添加 / 已添加 / 待授权）都能遮住与恢复；
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
@@ -379,10 +380,19 @@ async function main() {
     check(sw.node?.checked === false, '空格键切换后 switch checked=false');
     await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'original', '空格键切换写入存储');
     check(true, '空格键切换后存储为清爽模式关');
-    // 体检回写失效：popup 显示可读文字（不只靠红点 / title）
+    // 体检回写失效：popup 显示可读文字（不只靠红点 / title），标记结构与「需要允许访问」是同一套
     await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] });
     await popup.waitForSelector(tid('pm-popup-stale'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-stale'), (e) => e.innerText)).includes('1 项可能失效'), 'popup 以文字显示「1 项可能失效」');
+    const staleMark = await popup.$eval(tid('pm-popup-stale'), (e) => ({
+      classes: [...e.classList],
+      first: e.firstElementChild?.className ?? '',
+      dots: e.querySelectorAll('.pm-mark-dot').length,
+    }));
+    check(
+      staleMark.classes.includes('pm-mark-danger') && staleMark.first === 'pm-mark-dot' && staleMark.dots === 1,
+      `「可能失效」用统一标记：圆点在最前、文字跟上（${staleMark.classes.join('.')}）`,
+    );
     await checkSchemes(popup, 'popup', 'bg');
     await checkPopupChrome(popup, '已添加');
     await coverAndRestore(ext, popup, site, '已添加的网站');
@@ -419,28 +429,43 @@ async function main() {
     // 权限请求现在由后台发起（payload 由 core/background-engine.test.ts 覆盖），
     // 这里替换 popup 的消息通道，验证「点击后进入处理中」与「后台回复 denied 时的界面表现」。
     await popup.evaluate(() => {
-      chrome.runtime.sendMessage = (msg) =>
-        msg && msg.t === 'enableSite'
-          ? new Promise((res) => {
-              window.__pmReply = res;
-            })
-          : Promise.resolve(undefined);
+      window.__pmCalls = 0;
+      chrome.runtime.sendMessage = (msg) => {
+        if (msg && msg.t === 'enableSite') {
+          window.__pmCalls += 1;
+          return new Promise((res) => {
+            window.__pmReply = res;
+          });
+        }
+        return Promise.resolve(undefined);
+      };
     });
     await popup.click(tid('pm-popup-setup'));
-    await waitFor(popup, '处理中状态', (s) => document.querySelector(s).disabled, [tid('pm-popup-setup')]);
+    await waitFor(popup, '处理中状态', (s) => document.querySelector(s).textContent.trim() === '正在打开…', [tid('pm-popup-setup')]);
     const busy = await popup.evaluate((s) => ({
       text: document.querySelector(s).textContent.trim(),
       ariaBusy: document.querySelector('main').getAttribute('aria-busy'),
+      disabled: document.querySelector(s).disabled,
     }), tid('pm-popup-setup'));
-    check(busy.text === '正在打开…' && busy.ariaBusy === 'true', `处理中：按钮禁用、显示「${busy.text}」、aria-busy=${busy.ariaBusy}`);
+    check(
+      busy.text === '正在打开…' && busy.ariaBusy === 'true' && busy.disabled === false,
+      `处理中：按钮文字变「${busy.text}」、aria-busy=${busy.ariaBusy}，不设禁用态（原因由文字自己说）`,
+    );
+    // 处理中再点一次：按钮仍然可点，但不会重复发请求（GOV.UK：不用禁用态挡重复提交）
+    await popup.click(tid('pm-popup-setup'));
+    check((await popup.evaluate(() => window.__pmCalls)) === 1, '处理中再点一次被忽略，没有重复发请求');
     await popup.evaluate(() => window.__pmReply({ ok: false, code: 'denied' }));
     await popup.waitForSelector(tid('pm-popup-error'), { timeout: 5000 });
     const denied = await popup.evaluate((e, b) => ({
       text: document.querySelector(e).textContent,
       role: document.querySelector(e).getAttribute('role'),
+      buttonText: document.querySelector(b).textContent.trim(),
       enabled: !document.querySelector(b).disabled,
     }), tid('pm-popup-error'), tid('pm-popup-setup'));
-    check(denied.text.includes('允许 PageMask 访问这个网站') && denied.role === 'alert' && denied.enabled, `授权被拒：role=alert「${denied.text}」，按钮恢复可点`);
+    check(
+      denied.text.includes('允许 PageMask 访问这个网站') && denied.role === 'alert' && denied.enabled && denied.buttonText === '设置这个网站',
+      `授权被拒：role=alert「${denied.text}」，按钮文字回到「${denied.buttonText}」、仍可点`,
+    );
 
     // 遮住失败：给一句人话，按钮恢复可点（页面上没有接收方、后台也注入不了）
     await popup.evaluate(() => {
@@ -455,20 +480,21 @@ async function main() {
     }), tid('pm-popup-error'), tid('pm-popup-cover'));
     check(coverErr.text.includes('没能遮住这个页面') && coverErr.enabled, `遮住失败给一句人话「${coverErr.text}」，按钮恢复可点`);
 
-    // 遮住开关在处理中同样禁用：把消息挂起，看按钮有没有拦住第二次点击
+    // 遮住开关在处理中同样不禁用：文字变「正在遮住…」，第二次点击被忽略
     await popup.evaluate(() => {
       chrome.tabs.sendMessage = () => new Promise(() => undefined);
       chrome.runtime.sendMessage = () => new Promise(() => undefined);
     });
     await popup.click(tid('pm-popup-cover'));
-    await waitFor(popup, '遮住处理中', (s) => document.querySelector(s).disabled, [tid('pm-popup-cover')]);
+    await waitFor(popup, '遮住处理中', (s) => document.querySelector(s).textContent.trim() === '正在遮住…', [tid('pm-popup-cover')]);
     const busyCover = await popup.evaluate((s) => ({
       text: document.querySelector(s).textContent.trim(),
       ariaBusy: document.querySelector('main').getAttribute('aria-busy'),
+      disabled: document.querySelector(s).disabled,
     }), tid('pm-popup-cover'));
     check(
-      busyCover.text === '正在遮住…' && busyCover.ariaBusy === 'true',
-      `遮住处理中：按钮禁用、显示「${busyCover.text}」、aria-busy=${busyCover.ariaBusy}`,
+      busyCover.text === '正在遮住…' && busyCover.ariaBusy === 'true' && busyCover.disabled === false,
+      `遮住处理中：按钮文字变「${busyCover.text}」、aria-busy=${busyCover.ariaBusy}，不设禁用态`,
     );
 
     await popup.close().catch(() => undefined);
@@ -773,8 +799,10 @@ async function main() {
     );
 
     console.log('\n--- 管理页：待授权站点 ---');
-    // 整体替换后只剩 example.com（从没授权过）；再补回原站点并收回它的授权，两个站点都待授权
-    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    // 整体替换后只剩 example.com（从没授权过）；再补回原站点并收回它的授权，两个站点都待授权。
+    // 原站点留一条可能失效的收起项：同一行里同时出现「需要允许访问」（warning）与「可能失效」（danger），
+    // 用来核对两种异常标记是不是同一套结构（#72）。
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] }));
     await removePermission(ext.control, ORIGIN);
     await m.click(tid('pm-settings-back'));
     await poll(
@@ -786,6 +814,31 @@ async function main() {
     check(pendingText.includes('2 个网站还没允许访问') && pendingText.includes('全部允许'), `两个以上待授权时出现「一次授权全部」（${pendingText.split('\n')[0]}）`);
     const pendingRows = await m.$$eval(tid('pm-mgmt-pending'), (rows) => rows.length);
     check(pendingRows === 2, `待授权站点在行里给出「授权并启用」（${pendingRows} 行）`);
+    // 两种异常标记：同一个类、同一个圆点位置，只有颜色不同（#72）
+    const marks = await m.evaluate((row) => {
+      const el = document.querySelector(row);
+      const shape = (node) => ({
+        classes: [...node.classList],
+        first: node.firstElementChild?.className ?? '',
+        dotCount: node.querySelectorAll('.pm-mark-dot').length,
+        color: getComputedStyle(node).color,
+        text: node.textContent.trim(),
+      });
+      return {
+        danger: shape(el.querySelector('[data-testid="pm-mgmt-row-stale"]')),
+        warning: shape(el.querySelector('.pm-mark-warning')),
+      };
+    }, `li[data-origin="${ORIGIN}"]`);
+    check(
+      marks.danger.classes.includes('pm-mark') && marks.warning.classes.includes('pm-mark') &&
+        marks.danger.first === 'pm-mark-dot' && marks.warning.first === 'pm-mark-dot' &&
+        marks.danger.dotCount === 1 && marks.warning.dotCount === 1,
+      `两种异常标记结构一致：都是 .pm-mark、圆点在最前（${marks.warning.text} / ${marks.danger.text}）`,
+    );
+    check(
+      marks.danger.color !== marks.warning.color && marks.danger.classes.includes('pm-mark-danger') && marks.warning.classes.includes('pm-mark-warning'),
+      `只用颜色区分「要你处理」与「已经坏了」（warning ${marks.warning.color} / danger ${marks.danger.color}）`,
+    );
     await checkSchemes(m, '管理页 · 待授权', 'bgSubtle');
 
     // 站点设置页顶部也能授权，授权成功后本页立即变为可用
@@ -795,6 +848,11 @@ async function main() {
     }, ORIGIN);
     await m.waitForSelector(tid('pm-mgmt-edit-on-page'), { timeout: 5000 });
     check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === true, '待授权时「在页面上编辑」不可点（内容脚本还没注入）');
+    const editHintPending = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
+    check(
+      editHintPending.includes('允许访问之后'),
+      `不可点的原因写在按钮下面那一行（${editHintPending}）`,
+    );
     // 权限弹窗本身无法自动化：替换 contains / request 两个替身，验证「允许」之后本页立即刷新
     await m.evaluate(() => {
       window.__pmRequests = [];
@@ -807,6 +865,8 @@ async function main() {
     await m.click(tid('pm-mgmt-authorize'));
     await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
     check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === false, '授权成功后本页立即变为可用');
+    const editHintAllowed = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
+    check(!editHintAllowed.includes('允许访问之后'), `可以点之后不再显示那句原因，回到默认说明（${editHintAllowed.slice(0, 16)}…）`);
     const authReq = await m.evaluate(() => window.__pmRequests);
     check(
       authReq.length === 1 && authReq[0].origins.includes(`${ORIGIN}/*`),
@@ -875,6 +935,17 @@ async function main() {
     popup = await openPopup(ext, site3);
     await popup.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
     check(!(await popup.$(tid('pm-popup-switch'))) && !!(await popup.$(tid('pm-popup-reauth'))), 'popup 显示「待授权」与「重新授权」，不显示开关');
+    // 「需要允许访问」与「可能失效」是同一套标记：都是 .pm-mark + 圆点在最前，只用颜色区分
+    const pendingMark = await popup.$eval(tid('pm-popup-pending-badge'), (e) => ({
+      classes: [...e.classList],
+      first: e.firstElementChild?.className ?? '',
+      dots: e.querySelectorAll('.pm-mark-dot').length,
+      color: getComputedStyle(e).color,
+    }));
+    check(
+      pendingMark.classes.includes('pm-mark-warning') && pendingMark.first === 'pm-mark-dot' && pendingMark.dots === 1,
+      `「需要允许访问」用统一标记：圆点在最前、文字跟上（${pendingMark.classes.join('.')}，${pendingMark.color}）`,
+    );
     await checkSchemes(popup, 'popup（待授权）', 'bg');
     await checkPopupChrome(popup, '待授权的网站');
     await coverAndRestore(ext, popup, site3, '待授权的网站');

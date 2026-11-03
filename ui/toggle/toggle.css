@@ -32,18 +32,20 @@
   user-select: none;
 }
 
-/* ── 拖动把手（drag 指南：专用把手、cursor、touch-action） ── */
+/* ── 拖动把手（drag 指南：专用把手、cursor、touch-action） ──
+   可点区域 24×24（WCAG 2.5.8）：图形是 6 个点的 SVG，10×16，不跟着命中区放大。
+   用 SVG 而不是字形，是因为点阵字符在各平台的字形大小不一，且会连带把字号压到 12 以下。 */
 .pm-tg-grip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 16px;
+  min-inline-size: 24px;
+  min-block-size: 24px;
   border: none;
   border-radius: var(--pm-radius-pill) 0 0 var(--pm-radius-pill);
   padding: 0;
   background: transparent;
   color: var(--pm-fg-muted);
-  font-size: 10px;
   line-height: 1;
   cursor: grab;
   touch-action: none;
@@ -54,7 +56,12 @@
   cursor: grabbing;
 }
 .pm-tg-grip:hover {
+  background: var(--pm-bg-subtle);
   color: var(--pm-fg);
+}
+.pm-tg-grip-icon {
+  inline-size: 10px;
+  block-size: 16px;
 }
 
 /* ── 主按钮：切换清爽 / 原样 ── */
@@ -87,12 +94,13 @@
   border-color: var(--pm-accent);
 }
 
-/* ── 「⋯」菜单按钮 ── */
+/* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ── */
 .pm-tg-more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 22px;
+  min-inline-size: 24px;
+  min-block-size: 24px;
   border: none;
   border-radius: 0 var(--pm-radius-pill) var(--pm-radius-pill) 0;
   padding: 0;
@@ -108,12 +116,13 @@
   color: var(--pm-fg);
 }
 
-/* ── 「遮住」按钮（图标即可，读屏文案「遮住整页」） ── */
+/* ── 「遮住」按钮（图标即可，读屏文案「遮住整页」）：可点 24×24，图标 13 ── */
 .pm-tg-cover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 22px;
+  min-inline-size: 24px;
+  min-block-size: 24px;
   border: none;
   border-radius: 0;
   padding: 0;
@@ -128,6 +137,16 @@
 .pm-tg-cover-icon {
   inline-size: 13px;
   block-size: 13px;
+}
+
+/* 触屏：三个图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
+@media (pointer: coarse) {
+  .pm-tg-grip,
+  .pm-tg-cover,
+  .pm-tg-more {
+    min-inline-size: var(--pm-control-lg);
+    min-block-size: var(--pm-control-lg);
+  }
 }
 
 /* ── 幕布上的「恢复」按钮（#50）：与胶囊同一套材质（--pm-bg 底色、--pm-border-control 控件描边、

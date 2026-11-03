@@ -101,12 +101,7 @@
   font-weight: var(--pm-font-weight-strong);
   overflow-wrap: anywhere;
 }
-/* 「可能失效」不能只靠颜色：前面有 ● 加文字（REVIEW 对比度说明） */
-.pm-ed-stale {
-  flex: none;
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-danger);
-}
+/* 「可能失效」用的是全项目统一的那套标记（styles/marks.css：圆点 + 文字，颜色区分两种问题） */
 .pm-ed-stale-msg {
   display: flex;
   align-items: center;

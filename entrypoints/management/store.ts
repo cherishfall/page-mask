@@ -203,6 +203,11 @@ export function createManagementStore() {
 
   async function toggleSite(p: SiteProfile, e: Event) {
     const input = e.target as HTMLInputElement;
+    // 上一次写入还没回来：忽略这一次拨动并拨回存储里的状态（开关不设禁用态，避免出现没有原因的禁用）
+    if (state.toggling[p.origin]) {
+      input.checked = p.switchState === 'disguised';
+      return;
+    }
     const target = input.checked ? 'disguised' : 'original';
     state.toggling[p.origin] = true;
     state.toggleError[p.origin] = '';

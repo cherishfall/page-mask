@@ -15,6 +15,7 @@
         <h2 id="pm-site-title" class="host">{{ siteLabelOf(profile.origin) }}</h2>
         <div class="switch-row">
           <label for="pm-mgmt-switch">{{ t.common.cleanMode }}</label>
+          <!-- 切换期间不禁用：再拨一次由 store 忽略并拨回实际状态，失败原因写在这一块下面那行提示里 -->
           <input
             id="pm-mgmt-switch"
             type="checkbox"
@@ -22,7 +23,6 @@
             role="switch"
             data-testid="pm-mgmt-switch"
             :checked="profile.switchState === 'disguised'"
-            :disabled="!!store.state.toggling[profile.origin]"
             @change="onToggle"
           />
         </div>
@@ -33,8 +33,8 @@
         {{ profile.hideRules.length > 0 ? t.common.hiddenCount(profile.hideRules.length) : t.common.hiddenNone }}
         <template v-if="stale.length > 0">
           ·
-          <span class="stale" data-testid="pm-mgmt-stale-count">
-            <span aria-hidden="true">● </span>{{ t.common.staleCount(stale.length) }}
+          <span class="pm-mark pm-mark-danger" data-testid="pm-mgmt-stale-count">
+            <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(stale.length) }}
           </span>
         </template>
       </p>
@@ -44,7 +44,9 @@
       </p>
 
       <div v-if="isPending" class="pending" data-testid="pm-mgmt-pending">
-        <span class="badge">{{ t.management.pendingBadge }}</span>
+        <span class="pm-mark pm-mark-warning">
+          <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.management.pendingBadge }}
+        </span>
         <span class="hint">{{ t.management.pendingHint }}</span>
         <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([profile.origin])">
           {{ t.management.authorize }}
@@ -154,7 +156,9 @@
                 <span>{{ scopeHumanLabel(r.scope) }}</span>
                 <template v-if="r.lastHealth === 'stale'">
                   <span aria-hidden="true">·</span>
-                  <span class="stale" data-testid="pm-mgmt-rule-stale"><span aria-hidden="true">● </span>{{ t.common.stale }}</span>
+                  <span class="pm-mark pm-mark-danger" data-testid="pm-mgmt-rule-stale">
+                    <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.stale }}
+                  </span>
                 </template>
               </span>
               <span v-if="r.lastHealth === 'stale'" class="rule-stale-note">
@@ -186,17 +190,18 @@
         </p>
 
         <div class="row">
+          <!-- 待授权时不可点（没有权限，页面里没有能接消息的脚本）：原因写在按钮下面那一行 -->
           <button
             type="button"
             class="primary"
             data-testid="pm-mgmt-edit-on-page"
-            :disabled="isPending || editBusy"
+            :disabled="isPending"
             @click="editOnPage"
           >
             {{ editBusy ? t.common.opening : t.management.editOnPage }}
           </button>
         </div>
-        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHint || editHintDefault }}</p>
+        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHintText }}</p>
       </section>
 
       <!-- 页脚：删除这个网站的设置（与页面右下角 ⋯ 菜单里的那一项是同一件事、同一个叫法） -->
@@ -322,6 +327,10 @@ async function clearIcon() {
 
 /** 编辑入口的结果提示（初始为空：默认显示的是 editHintDefault） */
 const editHintDefault = computed(() => t.value.management.editHint);
+/** 按钮下面那一行：待授权时说清为什么不能点，其余情况是默认说明或上一次操作的结果 */
+const editHintText = computed(() =>
+  isPending.value ? t.value.management.editNeedAccess : editHint.value || editHintDefault.value,
+);
 const EDIT_HINT_KEYS = { opened: 'editOpened', noTab: 'editNoTab', failed: 'editFailed' } as const;
 
 async function editOnPage() {
@@ -389,10 +398,6 @@ async function onResetClose() {
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
   margin: var(--pm-space-2) 0;
-}
-
-.stale {
-  color: var(--pm-danger);
 }
 
 .pending {

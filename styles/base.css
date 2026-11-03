@@ -8,6 +8,7 @@
  */
 @import './tokens.css';
 @import './controls.css';
+@import './marks.css';
 
 :root {
   /* 复选框、单选框、滑块等原生控件的强调色跟随主色 */
@@ -158,18 +159,7 @@ input[type='checkbox'][switch]:disabled {
   }
 }
 
-/* ── 徽标：「待授权」等，警告色文字 + 同色描边（warning on bg ≥4.5） ── */
-.badge {
-  display: inline-block;
-  flex: none;
-  font-size: var(--pm-font-size-caption);
-  line-height: 1.4;
-  padding: 1px 8px;
-  border-radius: var(--pm-radius-pill);
-  color: var(--pm-warning);
-  border: 1px solid var(--pm-warning);
-  background: var(--pm-bg);
-}
+/* ── 异常标记在 styles/marks.css（「需要允许访问」「可能失效」共用一套圆点 + 文字） ── */
 
 /* ── 原生模态对话框（modern-web-guidance「dialog」Rule 1） ── */
 dialog {

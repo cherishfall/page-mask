@@ -155,6 +155,7 @@ export const en: Messages = {
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
     editOnPage: 'Edit on the page',
     editHint: 'Changing the hide method or picking a new element needs the page itself, so you edit on the site — changes show up right away.',
+    editNeedAccess: 'You can edit on the page once this site is allowed.',
     editOpened: 'Opened the editor in that site’s tab.',
     editNoTab: 'This site has no open tab. Open it first, then come back and choose “Edit on the page”.',
     editFailed: 'Couldn’t open the editor. Reload that site’s page and try again.',

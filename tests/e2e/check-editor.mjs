@@ -12,6 +12,7 @@
  * - 面板打开期间在 popup 里关掉清爽模式，之后面板内改收起方案：开关仍是「原样」，不被面板写回
  * - 高级后门写两行、第 2 行不命中：保存被拒并提示「第 2 行」，存储里的候选不变
  * - 删除后出现撤销条（live region），点「撤销」规则回到原位置、原 id
+ * - 「可能失效」用全项目统一的一套标记（#72：.pm-mark + 圆点在最前），面板里最小字号 12px
  *
  * 不写截图、不留临时文件。
  */
@@ -292,6 +293,42 @@ async function main() {
       return getProfile(ext.control, ORIGIN);
     })();
     check(afterUndo.hideRules.length === 1 && afterUndo.hideRules[0].id === newId, `撤销把规则放回原位置与 id（${afterUndo.hideRules[0]?.id}）`);
+
+    // ===================== 异常标记与字号（#72） =====================
+    console.log('\n--- 面板里的「可能失效」：统一标记、字号不小于 12 ---');
+    await setProfile(ext.control, ORIGIN, {
+      ...afterUndo,
+      hideRules: [{ ...afterUndo.hideRules[0], lastHealth: 'stale' }],
+    });
+    await waitForShadow(page, EDITOR, tid('pm-ed-stale'), { timeout: 5000 });
+    const staleMark = await page.evaluate((h) => {
+      const node = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-ed-stale"]');
+      return {
+        classes: [...node.classList],
+        first: node.firstElementChild?.className ?? '',
+        dots: node.querySelectorAll('.pm-mark-dot').length,
+        text: node.textContent.trim(),
+      };
+    }, EDITOR);
+    check(
+      staleMark.classes.includes('pm-mark') && staleMark.classes.includes('pm-mark-danger') &&
+        staleMark.first === 'pm-mark-dot' && staleMark.dots === 1,
+      `「${staleMark.text}」与「需要允许访问」是同一套标记（.pm-mark + 圆点在最前）`,
+    );
+    const editorFont = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      let min = Infinity;
+      let who = '';
+      for (const el of sr.querySelectorAll('.pm-ed, .pm-ed *')) {
+        const size = parseFloat(getComputedStyle(el).fontSize);
+        if (Number.isFinite(size) && size < min) {
+          min = size;
+          who = el.className?.baseVal ?? el.className ?? el.tagName;
+        }
+      }
+      return { min, who };
+    }, EDITOR);
+    check(editorFont.min >= 12, `编辑面板里最小的字号 ${editorFont.min}px ≥ 12px（${editorFont.who || '无'}）`);
 
     // Esc 关闭面板（N31）
     await page.keyboard.press('Escape');

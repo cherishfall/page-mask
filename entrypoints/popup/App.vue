@@ -14,10 +14,13 @@
       <div class="site">
         <div class="site-head">
           <h2 class="host">{{ host }}</h2>
-          <span v-if="phase === 'pending'" class="badge" data-testid="pm-popup-pending-badge">{{ t.popup.pendingBadge }}</span>
+          <span v-if="phase === 'pending'" class="pm-mark pm-mark-warning" data-testid="pm-popup-pending-badge">
+            <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.popup.pendingBadge }}
+          </span>
         </div>
 
-        <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"（modern-web-guidance「switch」） -->
+        <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"（modern-web-guidance「switch」）。
+             处理期间不禁用：多拨一次由 toggleSwitch 忽略并拨回实际状态，状态由界面文字与 aria-busy 表达 -->
         <div v-if="phase === 'ready' && profile" class="switch-row">
           <label for="pm-popup-switch">{{ t.common.cleanMode }}</label>
           <input
@@ -27,7 +30,6 @@
             role="switch"
             data-testid="pm-popup-switch"
             :checked="profile.switchState === 'disguised'"
-            :disabled="busy !== ''"
             @change="toggleSwitch"
           />
         </div>
@@ -35,7 +37,9 @@
         <p v-if="profile" class="meta">
           {{ ruleSummary }}<template v-if="staleCount > 0">
             ·
-            <span class="stale" data-testid="pm-popup-stale"><span aria-hidden="true">● </span>{{ t.common.staleCount(staleCount) }}</span>
+            <span class="pm-mark pm-mark-danger" data-testid="pm-popup-stale">
+              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount) }}
+            </span>
           </template>
         </p>
         <p v-else class="hint">{{ t.popup.newSiteHint }}</p>
@@ -46,11 +50,12 @@
       <template v-if="phase === 'pending'">
         <!-- 有配置、没授权：配置还在，只是浏览器收回了这个网站的访问权限 -->
         <p class="hint" data-testid="pm-popup-pending">{{ t.popup.pendingHint }}</p>
-        <button class="primary" data-testid="pm-popup-reauth" :disabled="busy !== ''" @click="reauthorize">
+        <!-- 处理中的按钮不禁用：点第二下由处理函数忽略，按钮文字自己写「正在等你允许…」 -->
+        <button class="primary" data-testid="pm-popup-reauth" @click="reauthorize">
           {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
         </button>
       </template>
-      <button v-else class="primary" data-testid="pm-popup-setup" :disabled="busy !== ''" @click="setup">
+      <button v-else class="primary" data-testid="pm-popup-setup" @click="setup">
         <template v-if="busy === 'setup'">{{ t.common.opening }}</template>
         <template v-else-if="profile"><span aria-hidden="true">＋</span> {{ t.popup.setupMore }}</template>
         <template v-else>{{ t.popup.setupNew }}</template>
@@ -60,14 +65,13 @@
       <button
         v-if="phase === 'ready'"
         data-testid="pm-popup-edit"
-        :disabled="busy !== ''"
         @click="editSite"
       >
         {{ busy === 'edit' ? t.common.opening : t.popup.editSite }}
       </button>
 
       <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
-      <button data-testid="pm-popup-cover" :disabled="busy !== ''" @click="toggleCurtain">
+      <button data-testid="pm-popup-cover" @click="toggleCurtain">
         <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
         <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
       </button>
@@ -186,7 +190,12 @@ async function refreshCurtain() {
 
 async function toggleSwitch(e: Event) {
   const input = e.target as HTMLInputElement;
-  if (!profile.value || !origin.value || busy.value) return;
+  if (!profile.value || !origin.value) return;
+  // 上一个动作还没回来：忽略这一次拨动并拨回实际状态（不禁用开关，避免出现没有原因的禁用态）
+  if (busy.value) {
+    input.checked = profile.value.switchState === 'disguised';
+    return;
+  }
   // 目标态 = 用户刚拨到的位置；只改开关字段，不覆盖页面里刚写入的体检结果等
   const target = input.checked ? 'disguised' : 'original';
   busy.value = 'toggle';
@@ -408,9 +417,6 @@ function openSettings() {
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
   margin: 0;
-}
-.stale {
-  color: var(--pm-danger);
 }
 .site .hint {
   margin: 0;

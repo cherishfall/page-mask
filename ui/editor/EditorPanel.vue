@@ -29,8 +29,8 @@
       <li v-for="rule in rules" :key="rule.id" class="pm-ed-card">
         <div class="pm-ed-cardhead">
           <span class="pm-ed-name">{{ rule.elementName }}</span>
-          <span v-if="rule.lastHealth === 'stale'" class="pm-ed-stale" data-testid="pm-ed-stale">
-            <span aria-hidden="true">● </span>{{ t.common.stale }}
+          <span v-if="rule.lastHealth === 'stale'" class="pm-mark pm-mark-danger" data-testid="pm-ed-stale">
+            <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.stale }}
           </span>
         </div>
 

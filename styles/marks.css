@@ -1,0 +1,46 @@
+/*
+ * 异常标记（#72）——全项目唯一的一种「这里有问题」的样子。
+ *
+ * 结构统一为「圆点 + 文字」，圆点永远在文字前面、与文字同色：
+ *   <span class="pm-mark pm-mark-danger">
+ *     <span class="pm-mark-dot" aria-hidden="true"></span>2 项可能失效
+ *   </span>
+ * 只用颜色区分两种意思（docs/design-ui.md §二 第 4 条：颜色不能是唯一的信息载体，
+ * 两种颜色的文字本身也要说得清是哪种问题）：
+ *   - .pm-mark-warning：要你处理，事情还没坏（「需要允许访问」）
+ *   - .pm-mark-danger ：已经坏了（「可能失效」）
+ *
+ * 扩展页面经 styles/base.css 引入，页内浮层经 styles/shadow-base.css 引入，两边同一份。
+ * 圆点是装饰，不进无障碍树；文字颜色取 --pm-warning / --pm-danger，对比度见 tokens.css 的表。
+ */
+.pm-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--pm-font-size-caption);
+  line-height: 1.4;
+}
+
+.pm-mark-warning {
+  color: var(--pm-warning);
+}
+
+.pm-mark-danger {
+  color: var(--pm-danger);
+}
+
+.pm-mark-dot {
+  flex: none;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (forced-colors: active) {
+  .pm-mark-warning,
+  .pm-mark-danger {
+    color: CanvasText;
+  }
+}

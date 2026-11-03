@@ -16,6 +16,8 @@
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
  *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
+ * - 命中区与字号（#72）：把手 / 遮住 / ⋯ 的可点区域 ≥24×24（触屏 40×40，用 touch 模拟量），
+ *   图标本体不变大；胶囊里最小字号 12px
  * - 拖动：专用把手 + setPointerCapture，拖出左上角时贴边不出视口，松手后位置落库（贴边 + 纵向坐标）
  * - 对比度：白底 / 深色 / 灰底三种页面上，胶囊本体（底色 vs 页面底色）≥3:1、文字 ≥4.5:1
  * - 幕布：清爽态 / 原样态的恢复分支（进哪态回哪态）、页面内容不可见、标题与图标替换、
@@ -174,6 +176,68 @@ async function main() {
     console.log('\n--- 默认右下角：菜单完整在视口内 ---');
     const pill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(pill.right <= 1000 && pill.bottom <= 700, `胶囊默认在视口内右下角（right=${Math.round(pill.right)}, bottom=${Math.round(pill.bottom)}）`);
+
+    // ===================== 三个图标按钮的命中区（#72，WCAG 2.5.8） =====================
+    console.log('\n--- 三个图标按钮：可点区域不小于 24×24、字号不小于 12 ---');
+    const hitBoxes = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      return ['pm-toggle-grip', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
+        const b = sr.querySelector(`[data-testid="${id}"]`).getBoundingClientRect();
+        return { id, w: b.width, h: b.height };
+      });
+    }, TOGGLE);
+    for (const b of hitBoxes) {
+      check(b.w >= 24 && b.h >= 24, `${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 24×24`);
+    }
+    const pillFont = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      let min = Infinity;
+      let who = '';
+      for (const el of sr.querySelectorAll('.pm-tg, .pm-tg *')) {
+        const size = parseFloat(getComputedStyle(el).fontSize);
+        if (Number.isFinite(size) && size < min) {
+          min = size;
+          who = el.className?.baseVal ?? el.className ?? el.tagName;
+        }
+      }
+      return { min, who };
+    }, TOGGLE);
+    check(pillFont.min >= 12, `胶囊里最小的字号 ${pillFont.min}px ≥ 12px（${pillFont.who || '无'}）`);
+    // 图标本身没跟着放大：把手图形 10×16、遮住图标 13×13、⋯ 仍是 13px 的字
+    const iconBoxes = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const box = (sel) => {
+        const r = sr.querySelector(sel).getBoundingClientRect();
+        return { w: r.width, h: r.height };
+      };
+      return { grip: box('.pm-tg-grip-icon'), cover: box('.pm-tg-cover-icon'), more: box('[data-testid="pm-toggle-more"] span') };
+    }, TOGGLE);
+    check(
+      iconBoxes.grip.w <= 12 && iconBoxes.grip.h <= 18 && iconBoxes.cover.w <= 14 && iconBoxes.more.w <= 16,
+      `图标本身仍然很小（把手 ${iconBoxes.grip.w}×${iconBoxes.grip.h}、遮住 ${iconBoxes.cover.w}、⋯ ${iconBoxes.more.w}）`,
+    );
+    // 触屏（pointer: coarse）：可点区域放大到 40×40
+    const cdp = await page.createCDPSession();
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    const isCoarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+    const coarseBoxes = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      return ['pm-toggle-grip', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
+        const b = sr.querySelector(`[data-testid="${id}"]`).getBoundingClientRect();
+        return { id, w: b.width, h: b.height };
+      });
+    }, TOGGLE);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    check(isCoarse, '触屏媒体查询已生效（pointer: coarse）');
+    for (const b of coarseBoxes) {
+      check(b.w >= 40 && b.h >= 40, `触屏时 ${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 40×40`);
+    }
+    // 变大之后位置不变：胶囊总宽只多了几个像素，仍然贴右下角、不越过视口
+    const after = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(
+      Math.abs(after.right - pill.right) < 1 && Math.abs(after.bottom - pill.bottom) < 1 && after.x >= 0 && after.y >= 0,
+      `放大后位置没变（right=${Math.round(after.right)}、bottom=${Math.round(after.bottom)}，宽 ${Math.round(after.w)}）`,
+    );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitFor(page, '菜单打开', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE], { timeout: 3000 });
     check(true, '点「⋯」打开菜单');
