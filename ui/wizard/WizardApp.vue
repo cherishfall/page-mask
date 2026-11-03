@@ -76,7 +76,7 @@
             <div class="pm-wiz-group-row">
               <button
                 type="button"
-                class="pm-wiz-btn"
+                class="pm-btn small"
                 data-testid="pm-wiz-bigger"
                 :disabled="!lastSel"
                 @click="adjust('bigger')"
@@ -85,7 +85,7 @@
               </button>
               <button
                 type="button"
-                class="pm-wiz-btn"
+                class="pm-btn small"
                 data-testid="pm-wiz-smaller"
                 :disabled="!lastSel"
                 @click="adjust('smaller')"
@@ -247,7 +247,7 @@
           <button
             v-if="phase === 'title'"
             type="button"
-            class="pm-wiz-btn"
+            class="pm-btn small"
             data-testid="pm-wiz-title-done"
             :disabled="saving"
             @click="saveTitleOnly"
@@ -257,7 +257,7 @@
           <button
             v-else-if="canGoBack"
             type="button"
-            class="pm-wiz-btn"
+            class="pm-btn small"
             data-testid="pm-wiz-back"
             @click="goBack"
           >
@@ -276,7 +276,7 @@
           <button
             v-if="phase === 'title'"
             type="button"
-            class="pm-wiz-btn primary"
+            class="pm-btn small primary"
             data-testid="pm-wiz-next"
             :disabled="saving"
             @click="goNext"
@@ -286,7 +286,7 @@
           <button
             v-else-if="phase === 'pick'"
             type="button"
-            class="pm-wiz-btn primary"
+            class="pm-btn small primary"
             data-testid="pm-wiz-preview"
             :disabled="selEls.length === 0"
             @click="goNext"
@@ -296,7 +296,7 @@
           <button
             v-else
             type="button"
-            class="pm-wiz-btn primary"
+            class="pm-btn small primary"
             data-testid="pm-wiz-save"
             :disabled="saving"
             @click="doSave"
@@ -324,8 +324,8 @@
         <h2 id="pm-exit-title">{{ t.wizard.exitTitle }}</h2>
         <p>{{ exitBody }}</p>
         <div class="pm-wiz-actions">
-          <button value="cancel" class="pm-wiz-btn" autofocus data-testid="pm-wiz-exit-no">{{ t.wizard.exitStay }}</button>
-          <button value="exit" class="pm-wiz-btn primary danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
+          <button value="cancel" class="pm-btn" autofocus data-testid="pm-wiz-exit-no">{{ t.wizard.exitStay }}</button>
+          <button value="exit" class="pm-btn primary danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
         </div>
       </form>
     </dialog>
@@ -342,7 +342,7 @@
         <h2 id="pm-notice-title">{{ t.wizard.notSavedTitle }}</h2>
         <p>{{ noticeText }}</p>
         <div class="pm-wiz-actions">
-          <button value="ok" class="pm-wiz-btn primary" autofocus data-testid="pm-wiz-notice-ok">{{ t.wizard.noticeOk }}</button>
+          <button value="ok" class="pm-btn primary" autofocus data-testid="pm-wiz-notice-ok">{{ t.wizard.noticeOk }}</button>
         </div>
       </form>
     </dialog>

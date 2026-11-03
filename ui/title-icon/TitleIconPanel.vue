@@ -25,8 +25,8 @@
         {{ t.toggle.panelOriginalNote }}
       </p>
       <div class="pm-tp-actions">
-        <button type="button" class="pm-tif-btn" data-testid="pm-tp-done" @click="close">{{ t.common.gotIt }}</button>
-        <button type="button" class="pm-tif-btn primary" data-testid="pm-tp-switch-clean" @click="emit('switchClean')">
+        <button type="button" class="pm-btn" data-testid="pm-tp-done" @click="close">{{ t.common.gotIt }}</button>
+        <button type="button" class="pm-btn primary" data-testid="pm-tp-switch-clean" @click="emit('switchClean')">
           {{ t.toggle.panelSwitchClean }}
         </button>
       </div>
@@ -42,8 +42,8 @@
         :icon-hint="hasDefaultIcon ? t.toggle.panelIconHintWithDefault : t.toggle.panelIconHintNoDefault"
       />
       <div class="pm-tp-actions">
-        <button type="button" class="pm-tif-btn" data-testid="pm-tp-cancel" @click="close">{{ t.common.cancel }}</button>
-        <button type="button" class="pm-tif-btn primary" data-testid="pm-tp-save" @click="onSave">{{ t.common.save }}</button>
+        <button type="button" class="pm-btn" data-testid="pm-tp-cancel" @click="close">{{ t.common.cancel }}</button>
+        <button type="button" class="pm-btn primary" data-testid="pm-tp-save" @click="onSave">{{ t.common.save }}</button>
       </div>
     </template>
   </div>

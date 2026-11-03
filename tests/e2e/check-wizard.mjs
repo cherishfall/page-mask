@@ -366,7 +366,7 @@ async function main() {
     const focusedAfterDelete = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
     check(focusedAfterDelete === 'pm-sel-2-remove', `删除后焦点落在下一行的删除按钮上（${focusedAfterDelete}）`);
     const delLabel = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-2-remove"]').getAttribute('aria-label'), HOST);
-    check(/删掉第 2 项/.test(delLabel) && delLabel.includes('卡片三'), `删除按钮有读屏可读的名字（${delLabel}）`);
+    check(/取消选择第 2 项/.test(delLabel) && delLabel.includes('卡片三'), `删除按钮有读屏可读的名字（${delLabel}）`);
 
     // 「全部删掉」：文字链接，一按全清，回到 0 项状态
     await clickInShadow(page, HOST, tid('pm-wiz-clear-all'));
@@ -452,7 +452,7 @@ async function main() {
     );
     const row1Name = await nameValue(page, 1);
     check(
-      delName === `删掉第 1 项：${row1Name}`,
+      delName === `取消选择第 1 项：${row1Name}`,
       `删除按钮有完整的读屏名字（${delName}）`,
     );
     const choices = await onlyChoices(page, 1);
@@ -926,7 +926,7 @@ async function main() {
     await mgmt.waitForSelector(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, { timeout: 8000 });
     const onlyRow = await mgmt.$eval(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, (e) => e.innerText);
     check(
-      onlyRow.includes('按你的设置显示') && onlyRow.includes('还没有收起设置'),
+      onlyRow.includes('按设置') && onlyRow.includes('还没有收起设置'),
       `列表里能看到这个只改标题的网站（${onlyRow.split('\n').join(' / ')}）`,
     );
     await mgmt.close();

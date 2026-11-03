@@ -20,7 +20,7 @@
     <!-- 没有规则：说清楚这是正常的「只改标题」形态，并给出开始点选的入口（#51） -->
     <div v-if="rules.length === 0" class="pm-ed-empty-box" data-testid="pm-ed-empty">
       <p class="pm-ed-empty">{{ emptyText }}</p>
-      <button type="button" class="pm-ed-btn primary" data-testid="pm-editor-start" @click="emit('addElement')">
+      <button type="button" class="pm-btn primary" data-testid="pm-editor-start" @click="emit('addElement')">
         {{ t.editor.start }}
       </button>
     </div>
@@ -37,7 +37,7 @@
         <!-- 失效说明用可见文字（不是 title），并给出「去处理」入口（N39、design.md） -->
         <p v-if="rule.lastHealth === 'stale'" class="pm-ed-stale-msg">
           <span>{{ healthMsg(rule) }}</span>
-          <button type="button" class="pm-ed-btn" :data-testid="`pm-ed-fix-${rule.id}`" @click="emit('reselect', rule.id)">
+          <button type="button" class="pm-btn" :data-testid="`pm-ed-fix-${rule.id}`" @click="emit('reselect', rule.id)">
             {{ t.editor.fix }}
           </button>
         </p>
@@ -63,13 +63,13 @@
         <fieldset class="pm-ed-field">
           <legend>{{ t.editor.scopeLegend }}</legend>
           <div class="pm-ed-seg">
-            <button type="button" class="pm-ed-btn" :aria-pressed="rule.scope.type === 'all'" @click="setScope(rule, 'all')">
+            <button type="button" class="pm-btn" :aria-pressed="rule.scope.type === 'all'" @click="setScope(rule, 'all')">
               {{ t.editor.scopeAll }}
             </button>
             <template v-if="pattern">
               <button
                 type="button"
-                class="pm-ed-btn"
+                class="pm-btn"
                 :aria-pressed="rule.scope.type === 'include'"
                 @click="setScope(rule, 'include')"
               >
@@ -77,7 +77,7 @@
               </button>
               <button
                 type="button"
-                class="pm-ed-btn"
+                class="pm-btn"
                 :aria-pressed="rule.scope.type === 'exclude'"
                 @click="setScope(rule, 'exclude')"
               >
@@ -92,10 +92,10 @@
         </fieldset>
 
         <div class="pm-ed-actions">
-          <button type="button" class="pm-ed-btn" :data-testid="`pm-ed-reselect-${rule.id}`" @click="emit('reselect', rule.id)">
+          <button type="button" class="pm-btn" :data-testid="`pm-ed-reselect-${rule.id}`" @click="emit('reselect', rule.id)">
             {{ t.editor.reselect }}
           </button>
-          <button type="button" class="pm-ed-btn danger" :data-testid="`pm-ed-delete-${rule.id}`" @click="removeRule(rule)">
+          <button type="button" class="pm-btn danger" :data-testid="`pm-ed-delete-${rule.id}`" @click="removeRule(rule)">
             {{ t.common.delete }}
           </button>
         </div>
@@ -114,7 +114,7 @@
           <p v-if="advError[rule.id]" class="pm-ed-error" role="alert" :data-testid="`pm-ed-selector-error-${rule.id}`">
             {{ advError[rule.id] }}
           </p>
-          <button type="button" class="pm-ed-btn" style="margin-top: 4px" @click="saveAdvanced(rule)">{{ t.editor.saveSelectors }}</button>
+          <button type="button" class="pm-btn" style="margin-top: 4px" @click="saveAdvanced(rule)">{{ t.editor.saveSelectors }}</button>
         </details>
       </li>
     </ul>
@@ -133,7 +133,7 @@
     <div class="pm-ed-undo" role="status" data-testid="pm-editor-undo">
       <template v-if="undo">
         <span>{{ t.common.deleted(undo.name) }}</span>
-        <button type="button" class="pm-ed-btn" data-testid="pm-editor-undo-btn" @click="undoDelete">{{ t.common.undo }}</button>
+        <button type="button" class="pm-btn" data-testid="pm-editor-undo-btn" @click="undoDelete">{{ t.common.undo }}</button>
       </template>
     </div>
   </dialog>

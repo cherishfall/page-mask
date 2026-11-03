@@ -45,7 +45,7 @@
   align-items: center;
   justify-content: center;
   min-inline-size: 28px;
-  min-block-size: 28px;
+  min-block-size: var(--pm-control-sm);
   border: 1px solid transparent;
   border-radius: var(--pm-radius-control);
   background: transparent;
@@ -76,11 +76,6 @@
 }
 .pm-ed-empty-box .pm-ed-empty {
   padding-block: var(--pm-space-2);
-}
-.pm-ed-empty-box .pm-ed-btn {
-  min-block-size: 32px;
-  padding: 4px 12px;
-  font-size: var(--pm-font-size-body);
 }
 
 /* ── 规则卡片 ── */
@@ -161,7 +156,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-block-size: 28px;
+  min-block-size: var(--pm-control-sm);
   border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-control);
   padding: 2px 10px;
@@ -182,47 +177,7 @@
   outline-offset: var(--pm-focus-ring-offset);
 }
 
-/* ── 按钮（与向导、扩展页面同一套视觉） ── */
-.pm-ed-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-block-size: 28px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  padding: 2px 10px;
-  font-size: var(--pm-font-size-caption);
-  line-height: var(--pm-line-height);
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pm-ed-btn:hover:not(:disabled) {
-  background: var(--pm-bg-subtle);
-}
-.pm-ed-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.pm-ed-btn[aria-pressed='true'] {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-.pm-ed-btn.danger {
-  color: var(--pm-danger);
-  border-color: var(--pm-danger);
-}
-.pm-ed-btn.primary {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-.pm-ed-btn.primary:hover:not(:disabled) {
-  background: var(--pm-accent-hover);
-  border-color: var(--pm-accent-hover);
-}
+/* ── 按钮外观在 styles/controls.css（与向导、扩展页面同一份） ── */
 .pm-ed-actions {
   display: flex;
   gap: var(--pm-space-1);
@@ -259,7 +214,7 @@
 
 .pm-ed-add {
   inline-size: 100%;
-  min-block-size: 32px;
+  min-block-size: var(--pm-control-md);
   border: 1px dashed var(--pm-border-control);
   border-radius: var(--pm-radius-card);
   background: var(--pm-bg-subtle);

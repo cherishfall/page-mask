@@ -312,39 +312,12 @@
   font-size: var(--pm-font-size-body);
   line-height: var(--pm-line-height);
 }
+/* 按钮外观在 styles/controls.css（确认框里两个按钮带 .pm-btn） */
 .pm-tg-del-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--pm-space-2);
   margin-top: var(--pm-space-4);
-}
-.pm-tg-del-actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-block-size: 32px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  padding: 4px 12px;
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  font-size: var(--pm-font-size-body);
-  line-height: var(--pm-line-height);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pm-tg-del-actions button:hover {
-  background: var(--pm-bg-subtle);
-}
-/* 危险动作：实底红，与扩展页面的 .danger / .primary.danger 同一套 */
-.pm-tg-del-actions button.primary.danger {
-  background: var(--pm-danger);
-  border-color: var(--pm-danger);
-  color: var(--pm-on-danger);
-}
-.pm-tg-del-actions button.primary.danger:hover {
-  background: var(--pm-danger);
-  border-color: var(--pm-danger);
 }
 
 :focus-visible {

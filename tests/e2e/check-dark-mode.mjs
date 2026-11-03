@@ -91,7 +91,7 @@ async function main() {
       });
       console.log('  shadow:', JSON.stringify(shadow));
       check(shadow.pageBodyBg !== 'rgb(255, 0, 0)', '对照：页面自身的内联 <style> 被 CSP 拦截（CSP 确实生效）');
-      check(shadow.adopted === 1 && shadow.styleEls === 0, 'shadow 样式经 adoptedStyleSheets 注入');
+      check(shadow.adopted > 0 && shadow.styleEls === 0, 'shadow 样式经 adoptedStyleSheets 注入');
       check(shadow.color === EXPECT[scheme].fg, `shadow 内前景色 = --pm-fg（${shadow.color}）`);
 
       const pop = await popup.evaluate(() => {

@@ -40,7 +40,7 @@
         :data-testid="`${idPrefix}-icon-preview`"
       />
       <span v-else class="pm-tif-icon-empty" aria-hidden="true" :data-testid="`${idPrefix}-icon-empty`"></span>
-      <label class="pm-tif-btn pm-tif-file">
+      <label class="pm-btn pm-tif-file">
         {{ busy ? t.common.processing : icon ? t.common.replaceIcon : t.common.uploadIcon }}
         <input
           type="file"
@@ -53,7 +53,7 @@
       <button
         v-if="icon"
         type="button"
-        class="pm-tif-btn"
+        class="pm-btn"
         :data-testid="`${idPrefix}-icon-clear`"
         @click="emit('update:icon', null)"
       >

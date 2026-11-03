@@ -1,0 +1,206 @@
+/*
+ * PageMask 控件样式 —— 全项目按钮外观的唯一来源（#65，docs/design-ui.md §四）
+ *
+ * 扩展页面（popup / 管理页 / 插件设置 / 引导页）与所有页内浮层（悬浮胶囊的菜单与面板、
+ * 向导、编辑面板）共用这一份：高度、圆角、内边距、字号、四档、五种状态都只写在这里。
+ *
+ * 谁能用上这套外观：
+ *   - 扩展页面的原生 <button> 与 <a class="button"> / <label class="button">（它们在 body 里）；
+ *   - 任何界面里显式标了 .pm-btn 的按钮。
+ * 页内浮层里还有一批自绘的小图标按钮（拖拽把手、✕、序号牌、胶囊分段），它们的尺寸是各自布局的
+ * 一部分，不写 .pm-btn 就不会被这套规则套上。
+ *
+ * 选择器一律用 :where() 包住元素与类名（零特异性），各界面要补尺寸、补布局时直接写自己的
+ * 类就能覆盖，不需要 !important，也不会和这份文件抢优先级。
+ *
+ * 四档：默认（次操作）/ .primary（主操作）/ .danger（危险）/ .ghost（轻操作）；
+ * 五种状态：默认 / :hover / :active / :focus-visible / :disabled。
+ * 颜色只用 styles/tokens.css 里对比度验证过的值。
+ */
+
+/* ── 基础：次操作 = 浅灰底 + 控件色边框 + 深色字 ── */
+:where(body) :where(button, .button),
+:where(.pm-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pm-space-1);
+  box-sizing: border-box;
+  min-block-size: var(--pm-control-md);
+  margin: 0;
+  padding: 0 var(--pm-control-padding-inline);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-font-size-body);
+  font-weight: var(--pm-font-weight-medium);
+  line-height: var(--pm-line-height);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 悬停：底色加深一档；按下：再深一档。两档都保证文字与危险红 ≥4.5 */
+:where(body) :where(button, .button):hover:not(:disabled),
+:where(.pm-btn):hover:not(:disabled) {
+  background: var(--pm-bg-control-hover);
+}
+:where(body) :where(button, .button):active:not(:disabled),
+:where(.pm-btn):active:not(:disabled) {
+  background: var(--pm-bg-control-active);
+}
+
+/* 键盘焦点：2px 强调色描边 + 2px 间距；鼠标点击不出现焦点环 */
+:where(body) :where(button, .button):focus-visible,
+:where(.pm-btn):focus-visible {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+}
+
+/* 不可用：降透明度 + 禁止光标（为什么不能点写在按钮旁边或按钮文字里） */
+:where(body) :where(button, .button):disabled,
+:where(.pm-btn):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── 尺寸：.small 用于浮层工具条（28 高、左右 12）；触屏一律放大到 40 ── */
+:where(body) :where(button, .button).small,
+:where(.pm-btn).small {
+  min-block-size: var(--pm-control-sm);
+  padding-inline: var(--pm-control-padding-inline-sm);
+}
+
+/* ── 主操作：实心强调色，一屏最多一个，永远在最右 ── */
+:where(body) :where(button, .button).primary,
+:where(.pm-btn).primary {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+:where(body) :where(button, .button).primary:hover:not(:disabled),
+:where(.pm-btn).primary:hover:not(:disabled) {
+  border-color: var(--pm-accent-hover);
+  background: var(--pm-accent-hover);
+}
+:where(body) :where(button, .button).primary:active:not(:disabled),
+:where(.pm-btn).primary:active:not(:disabled) {
+  border-color: var(--pm-accent-active);
+  background: var(--pm-accent-active);
+}
+
+/* ── 危险：红字红边；只有最终确认那一步才用实心红（.primary.danger） ── */
+:where(body) :where(button, .button).danger,
+:where(.pm-btn).danger {
+  border-color: var(--pm-danger);
+  color: var(--pm-danger);
+}
+:where(body) :where(button, .button).primary.danger,
+:where(.pm-btn).primary.danger {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+  color: var(--pm-on-danger);
+}
+:where(body) :where(button, .button).primary.danger:hover:not(:disabled),
+:where(.pm-btn).primary.danger:hover:not(:disabled) {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+}
+:where(body) :where(button, .button).primary.danger:active:not(:disabled),
+:where(.pm-btn).primary.danger:active:not(:disabled) {
+  border-color: var(--pm-danger-active);
+  background: var(--pm-danger-active);
+}
+
+/* ── 轻操作：无底无边，只在内容里的小动作上用；悬停才出浅灰底并加深文字 ── */
+:where(body) :where(button, .button).ghost,
+:where(.pm-btn).ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--pm-fg-muted);
+}
+:where(body) :where(button, .button).ghost:hover:not(:disabled),
+:where(.pm-btn).ghost:hover:not(:disabled) {
+  background: var(--pm-bg-control-hover);
+  color: var(--pm-fg);
+}
+:where(body) :where(button, .button).ghost:active:not(:disabled),
+:where(.pm-btn).ghost:active:not(:disabled) {
+  background: var(--pm-bg-control-active);
+  color: var(--pm-fg);
+}
+/* 轻操作里的危险动作（去掉某一条）：红字，仍然无底无边 */
+:where(body) :where(button, .button).ghost.danger,
+:where(.pm-btn).ghost.danger {
+  border-color: transparent;
+  background: transparent;
+  color: var(--pm-danger);
+}
+:where(body) :where(button, .button).ghost.danger:hover:not(:disabled),
+:where(.pm-btn).ghost.danger:hover:not(:disabled) {
+  background: var(--pm-bg-control-hover);
+  color: var(--pm-danger);
+}
+
+/* ── 选中态：分段里的某一项当前生效（aria-pressed 是语义，不只是颜色） ── */
+:where(body) :where(button, .button)[aria-pressed='true'],
+:where(.pm-btn)[aria-pressed='true'] {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+:where(body) :where(button, .button)[aria-pressed='true']:hover:not(:disabled),
+:where(.pm-btn)[aria-pressed='true']:hover:not(:disabled) {
+  border-color: var(--pm-accent-hover);
+  background: var(--pm-accent-hover);
+}
+:where(body) :where(button, .button)[aria-pressed='true']:active:not(:disabled),
+:where(.pm-btn)[aria-pressed='true']:active:not(:disabled) {
+  border-color: var(--pm-accent-active);
+  background: var(--pm-accent-active);
+}
+
+/* ── 胶囊：不是按钮档位，是「快捷标题」这类内容里的可点标签，保持原来的一行小字外观 ── */
+:where(body) :where(button, .button).chip,
+:where(.pm-btn).chip {
+  min-block-size: 0;
+  padding: 2px 10px;
+  border-radius: var(--pm-radius-pill);
+  background: var(--pm-bg);
+  font-size: var(--pm-font-size-caption);
+  font-weight: normal;
+}
+
+/* ── 文件选择：原生 input 只对视觉隐藏（仍可 Tab 聚焦、空格/回车打开选择框），外层 label 画成按钮 ── */
+:where(body) :where(.button).file-button,
+:where(.pm-btn).file-button {
+  position: relative;
+  overflow: hidden;
+}
+/* 透明的原生文件框铺满按钮：点击、拖放、键盘（Tab 聚焦后空格/回车）都直接作用在原生控件上 */
+:where(.file-button) input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+:where(.file-button):has(input:focus-visible) {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+}
+
+/* 触屏：控件最小高度按 WCAG 目标尺寸放大到 40（含 .small） */
+@media (pointer: coarse) {
+  :where(body) :where(button, .button),
+  :where(.pm-btn),
+  :where(body) :where(button, .button).small,
+  :where(.pm-btn).small {
+    min-block-size: var(--pm-control-lg);
+  }
+}

@@ -79,38 +79,7 @@
     var(--pm-bg-subtle);
 }
 
-/* 表单里的小按钮（上传 / 换一张 / 清除）；小面板的动作按钮也复用它，全站只有这一套 */
-.pm-tif-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-block-size: 32px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  padding: 4px 12px;
-  font-size: var(--pm-font-size-body);
-  line-height: var(--pm-line-height);
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pm-tif-btn:hover:not(:disabled) {
-  background: var(--pm-bg-subtle);
-}
-.pm-tif-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.pm-tif-btn.primary {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-.pm-tif-btn.primary:hover:not(:disabled) {
-  background: var(--pm-accent-hover);
-  border-color: var(--pm-accent-hover);
-}
+/* 表单里的按钮用 .pm-btn（styles/controls.css），这里只保留文件选择框的铺满布局 */
 
 /* 文件选择框铺满整个按钮：点击落在原生 input 上，键盘也能触发 */
 .pm-tif-file {

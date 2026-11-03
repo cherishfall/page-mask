@@ -163,7 +163,7 @@
             </span>
             <button
               type="button"
-              class="ghost danger rule-del"
+              class="ghost danger rule-del small"
               :data-testid="`pm-mgmt-rule-delete-${r.id}`"
               :aria-label="t.common.deleteNamed(r.elementName)"
               @click="removeRule(r)"
@@ -497,10 +497,9 @@ async function onResetClose() {
   color: var(--pm-fg);
 }
 
+/* 清单里的「删除」是文字按钮（.ghost.danger.small），这里只保证它不被挤扁 */
 .rule-del {
   flex: none;
-  font-size: var(--pm-font-size-caption);
-  padding: 2px 10px;
 }
 
 /* 撤销条：常驻的 live region，只有内容出现时才播报（空的时候高度为 0，不占位） */

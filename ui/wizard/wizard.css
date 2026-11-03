@@ -4,48 +4,8 @@
  * 叠放（都在向导宿主内部比较）：捕获层 1 < 页内标记 2 < 工具条、提示 3；确认框在顶层（top layer）。
  */
 
-/* ── 按钮（与扩展页面 styles/base.css 同一套视觉） ── */
-.pm-wiz-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-block-size: 32px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  padding: 4px 12px;
-  font-size: var(--pm-font-size-body);
-  line-height: var(--pm-line-height);
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pm-wiz-btn:hover:not(:disabled) {
-  background: var(--pm-bg-subtle);
-}
-.pm-wiz-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.pm-wiz-btn.primary {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-.pm-wiz-btn.primary:hover:not(:disabled) {
-  background: var(--pm-accent-hover);
-  border-color: var(--pm-accent-hover);
-}
-/* 危险动作：确认框里的主危险 = 实底红（与扩展页面的 .danger / .primary.danger 同一套） */
-.pm-wiz-btn.primary.danger {
-  background: var(--pm-danger);
-  border-color: var(--pm-danger);
-  color: var(--pm-on-danger);
-}
-.pm-wiz-btn.primary.danger:hover:not(:disabled) {
-  background: var(--pm-danger);
-  border-color: var(--pm-danger);
-}
+/* 按钮外观在 styles/controls.css（与扩展页面共用同一份）：这里只补布局 */
+
 :focus-visible {
   outline: var(--pm-focus-ring);
   outline-offset: var(--pm-focus-ring-offset);
@@ -196,7 +156,7 @@
   gap: var(--pm-space-2);
   margin-top: 6px;
 }
-.pm-wiz-group-row .pm-wiz-btn {
+.pm-wiz-group-row .pm-btn {
   flex: 1 1 0;
 }
 .pm-wiz-group-head {
@@ -629,9 +589,6 @@ button.pm-wiz-badge {
 }
 
 @media (pointer: coarse) {
-  .pm-wiz-btn {
-    min-block-size: 40px;
-  }
   .pm-wiz-handle {
     inline-size: 40px;
     block-size: 40px;

@@ -415,18 +415,20 @@ function openSettings() {
 .site .hint {
   margin: 0;
 }
+/* 主按钮是这一屏唯一的提交按钮：按「主要提交」的尺寸放大到 40 */
 .popup > button.primary {
-  padding: 8px 12px;
+  min-block-size: var(--pm-control-lg);
+  padding-inline: var(--pm-space-3);
 }
-/* 底部一行两个入口：视觉上明显弱于主按钮，但仍要够点（高度不小于 24px） */
+/* 底部一行两个入口：视觉上明显弱于主按钮，但仍要够点（不小于 28，见 docs/design-ui.md §四） */
 .links {
   display: flex;
   gap: var(--pm-space-2);
 }
 .links > .link {
   flex: 1;
-  min-height: 24px;
-  padding: 2px 6px;
+  min-block-size: var(--pm-control-sm);
+  padding-inline: var(--pm-space-1);
   color: var(--pm-fg-muted);
   font-size: var(--pm-font-size-caption);
 }

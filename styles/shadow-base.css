@@ -13,6 +13,7 @@
  * 重置为 normal，因此根容器上必须重新声明 color-scheme。
  */
 @import './tokens.css';
+@import './controls.css';
 
 :host {
   all: initial;
@@ -34,8 +35,9 @@
   color: var(--pm-fg);
 }
 
-/* 原生表单控件默认不继承字体与文字颜色（modern-web-guidance「styling-web-components」） */
-button,
+/* 原生表单控件默认不继承字体与文字颜色（modern-web-guidance「styling-web-components」）。
+ * 标了 .pm-btn 的按钮除外：外观与字重全归 styles/controls.css，这条 `font` 简写会把它冲掉。 */
+:where(button):not(.pm-btn),
 input,
 select,
 textarea {

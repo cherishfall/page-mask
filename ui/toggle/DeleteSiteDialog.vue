@@ -6,8 +6,8 @@
     <h2 id="pm-tg-del-title" class="pm-tg-del-title" data-testid="pm-tg-delete-title">{{ deleteSiteTitle(label) }}</h2>
     <p class="pm-tg-del-text" data-testid="pm-tg-delete-impact">{{ deleteSiteImpact() }}</p>
     <form method="dialog" class="pm-tg-del-actions">
-      <button type="submit" value="cancel" autofocus data-testid="pm-tg-delete-cancel">{{ t.common.cancel }}</button>
-      <button type="submit" value="confirm" class="primary danger" data-testid="pm-tg-delete-confirm">
+      <button type="submit" value="cancel" class="pm-btn" autofocus data-testid="pm-tg-delete-cancel">{{ t.common.cancel }}</button>
+      <button type="submit" value="confirm" class="pm-btn primary danger" data-testid="pm-tg-delete-confirm">
         {{ deleteSiteAction() }}
       </button>
     </form>

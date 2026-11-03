@@ -121,8 +121,10 @@ h1 {
   justify-content: space-between;
   margin-top: var(--pm-space-6);
 }
+/* 底栏两个按钮是这一步的主要提交：用 40 高（docs/design-ui.md §四） */
 .nav button {
-  padding: 8px 18px;
+  min-block-size: var(--pm-control-lg);
+  padding-inline: var(--pm-space-4);
 }
 .dots {
   display: flex;
