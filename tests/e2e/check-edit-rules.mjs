@@ -316,8 +316,9 @@ async function main() {
     check(!(await shadowExists(page, HOST, tid('pm-draft-1-body'))), '默认收起调整区');
     await openAdjust(page, 1);
     check((await checkedStrategy(page, 1)) === 'remove', '第 1 行的收起方式原样带过来（消失）');
-    check(await shadowExists(page, HOST, tid('pm-draft-1-reselect')), '展开区有「重新选」');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-reselect'))), '展开区不再有「重新选」（换位置走上一步，#76）');
     check(await shadowExists(page, HOST, tid('pm-draft-1-advanced')), '展开区有「高级：选择器原文」');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-summary'))), '展开时摘要藏起来（控件本身就是信息，#76）');
     const rowScope = await shadowTexts(page, `${tid('pm-draft-1-scope')} button`);
     check(rowScope.join('|') === '整个网站|只在这类页面|除了这类页面', `展开区有行内范围三档（${rowScope.join(' / ')}）`);
     await clickInShadow(page, HOST, tid('pm-draft-1-strategy-mask'));
@@ -325,16 +326,19 @@ async function main() {
       const sr = document.querySelector(h)?.shadowRoot;
       return !!sr?.querySelector('.pm-wiz-mask') && getComputedStyle(document.querySelector('#ad')).display !== 'none';
     }, [HOST]);
-    check((await shadowTexts(page, tid('pm-draft-1-summary')))[0] === '盖住 · 整个网站', '摘要跟着换成「盖住 · 整个网站」');
-
-    // 行内范围：三个按钮切换，摘要跟着变；再换回整个网站（不改这次要保存的范围）
+    // 行内范围：展开状态下改，摘要跟着记住；收起后摘要回来并反映两处改动（#76）
     await clickInShadow(page, HOST, tid('pm-draft-1-scope-include'));
+    await clickInShadow(page, HOST, tid('pm-draft-1-adjust')); // openAdjust 只会展开，这里要收起
+    check(await shadowExists(page, HOST, tid('pm-draft-1-summary')), '收起后摘要回来');
     check(
       ((await shadowTexts(page, tid('pm-draft-1-summary')))[0] ?? '').startsWith('盖住 · 只在这类页面：'),
-      `行内换成「只在这类页面」后摘要跟着变（${(await shadowTexts(page, tid('pm-draft-1-summary')))[0]}）`,
+      `摘要反映收起方式与行内范围两处改动（${(await shadowTexts(page, tid('pm-draft-1-summary')))[0]}）`,
     );
+    await openAdjust(page, 1); // 重新展开，换回整个网站（不改这次要保存的范围）
     await clickInShadow(page, HOST, tid('pm-draft-1-scope-all'));
+    await clickInShadow(page, HOST, tid('pm-draft-1-adjust'));
     check((await shadowTexts(page, tid('pm-draft-1-summary')))[0] === '盖住 · 整个网站', '换回「整个网站」');
+    await openAdjust(page, 1); // 重新展开，后面的高级选择器用例继续在这行上做
 
     // 高级：选择器原文逐行校验（第 2 行不命中 → 指出第 2 行）
     await clickInShadow(page, HOST, `${tid('pm-draft-1-advanced')} summary`);
@@ -357,7 +361,7 @@ async function main() {
     console.log('\n--- 失效行的「重新选」：换成页面上新的位置 ---');
     await openAdjust(page, 3);
     check(await shadowExists(page, HOST, tid('pm-draft-3-stale')), '失效行仍然有可见说明');
-    await clickInShadow(page, HOST, tid('pm-draft-3-reselect'));
+    await clickInShadow(page, HOST, tid('pm-draft-3-stale-fix'));
     await waitForShadow(page, HOST, tid('pm-wiz-preview'));
     await waitPickReady(page, '重选：拾取层接管指针');
     await clickEl(page, '#promo');
@@ -366,6 +370,11 @@ async function main() {
     await waitVisible(page, '重选后活动栏被收起', '#promo', false);
     check((await draftCount(page)) === 3, '重选不新增行（仍是 3 行）');
     check(!(await shadowExists(page, HOST, tid('pm-draft-3-stale'))), '失效说明消失');
+    // 这行之前被展开过：展开时摘要隐藏（#76），收起后再断言
+    await page.evaluate((h) => {
+      const btn = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-draft-3-adjust"]');
+      if (btn?.getAttribute('aria-expanded') === 'true') btn.click();
+    }, HOST);
     check((await shadowTexts(page, tid('pm-draft-3-summary')))[0] === '消失 · 整个网站', '摘要恢复正常');
     const fixedName = await nameValue(page, 3);
     check(fixedName === '侧栏', `自动名字跟着新元素换（${fixedName}）`);

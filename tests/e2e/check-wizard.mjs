@@ -214,7 +214,6 @@ const sameChecked = (page, n) =>
 /** 页面上「会一起被收起」的虚线框（不带号码牌，#70） */
 const sameBoxCount = (page) =>
   page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid="pm-same-box"]').length ?? 0, HOST);
-const scopeChoices = (page) => shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-radio`);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
 const inputValue = (page, id) =>
@@ -539,7 +538,6 @@ async function main() {
           holds: [
             q('pm-draft-1-strategy-remove'),
             q('pm-draft-1-scope-all'),
-            q('pm-draft-1-reselect'),
             q('pm-draft-1-advanced'),
           ].every((el) => !!el && inBody(el)),
         };
@@ -547,7 +545,7 @@ async function main() {
       HOST,
     );
     check(bodyGeom.below, '展开区整体落在默认行下面');
-    check(bodyGeom.holds, '展开区依次有收起方式、在哪些页面收起、重新选这一项、高级选择器');
+    check(bodyGeom.holds, '展开区依次有收起方式、在哪些页面收起、高级选择器');
     check(
       (await checkedStrategy(page, 1)) === 'remove' && (await checkedStrategy(page, 2)) === 'remove',
       '每一项的收起方式默认是「消失」（原生 radio 的选中值）',
@@ -569,13 +567,8 @@ async function main() {
     check(!(await shadowExists(page, HOST, tid('pm-draft-1-same-group'))), '页面上只有一处时，行内不出现那道勾选框');
     check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '没有第二个一样的行同样不出现');
 
-    const scopeLegend = (await shadowTexts(page, `${tid('pm-wiz-scope')} .pm-wiz-scope-legend`))[0] ?? '';
-    check(scopeLegend === '在哪些页面收起', `页面级那件事叫「在哪些页面收起」（${scopeLegend}）`);
-    const scopes = await scopeChoices(page);
-    check(
-      scopes.length === 3 && scopes[0].includes('整个网站') && scopes[1].startsWith('只在这类页面') && scopes[2].startsWith('除了这类页面'),
-      `这一步底部是三选一：整个网站 / 只在这类页面 / 除了这类页面（${scopes.join(' / ')}）`,
-    );
+    // 底部的整批「在哪些页面收起」已删（#76）：范围只在每行「调整」里，两个控件管同一件事只会打架
+    check(!(await shadowExists(page, HOST, tid('pm-wiz-scope'))), '这一步底部不再有整批的范围控件');
     check(
       !(await shadowExists(page, HOST, tid('pm-wizard-save-pop'))),
       '原来的保存对话框已经从 DOM 里删掉（点保存不再弹第二个框）',
@@ -684,32 +677,35 @@ async function main() {
       (await page.evaluate(() => getComputedStyle(document.querySelector('#promo')).visibility)) === 'hidden',
       '第 1 项的留空预览照常生效',
     );
-    check(!(await visible(page, C1)) && !(await visible(page, C3)), '默认连一样的也一起收：卡片一、三也被预览移除');
+    check(await visible(page, C1) && await visible(page, C3), '默认只收这一个：卡片一、三还看得见（预览=保存结果，#76）');
 
-    // 一行勾选框回答一个是非题：页面上另外 2 个一样的要不要一起收（#70）
+    // 一行勾选框回答一个是非题：页面上另外 2 个一样的要不要一起收（#70 / #76）
     check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾选框说的是具体几个（${await sameLabel(page, 3)}）`);
-    check((await sameChecked(page, 3)) === true, '新选的项默认勾上（连同一样的）');
+    check((await sameChecked(page, 3)) === false, '默认不勾（只收这一个）');
+    check((await sameBoxCount(page)) === 0, '默认没有虚线框（没有要一起收的）');
+    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
+    await waitVisible(page, '勾上：卡片一也被收起', C1, false);
+    await waitVisible(page, '勾上：卡片三也被收起', C3, false);
+    check(!(await visible(page, C2)), '勾上后卡片二仍被收起');
+    check((await sameChecked(page, 3)) === true, '勾上后勾选框跟着勾上');
     check((await sameBoxCount(page)) === 2, `另外两张卡片被虚线框标出来（${await sameBoxCount(page)} 个）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
-    await waitVisible(page, '取消勾选：卡片一恢复可见', C1);
-    await waitVisible(page, '取消勾选：卡片三恢复可见', C3);
-    check(!(await visible(page, C2)), '取消勾选立即刷新预览：其它卡片恢复，卡片二仍被收起');
-    check((await sameChecked(page, 3)) === false, '取消后勾选框跟着取消');
-    check((await sameBoxCount(page)) === 0, '取消勾选后虚线框消失');
-    check(
-      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '现在只收这一个',
-      `工具条上说一句现在只收这一个（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
-    );
-    // 数量与当前勾选无关：取消之后仍说「另外 2 个」
-    check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `取消后那个数仍是 2（${await sameLabel(page, 3)}）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
-    await waitVisible(page, '重新勾上：卡片一又收起', C1, false);
-    await waitVisible(page, '重新勾上：卡片三又收起', C3, false);
-    check((await sameChecked(page, 3)) === true, `重新勾上，另外两处同时收起（${await sameLabel(page, 3)}）`);
     check(
       (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '另外 2 个也收起了',
       `工具条上说一句另外 2 个也收起了（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
     );
+    // 数量与当前勾选无关：勾上之后仍说「另外 2 个」
+    check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾上后那个数仍是 2（${await sameLabel(page, 3)}）`);
+    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
+    await waitVisible(page, '取消勾选：卡片一恢复可见', C1);
+    await waitVisible(page, '取消勾选：卡片三恢复可见', C3);
+    check((await sameChecked(page, 3)) === false, `取消后回到只收这一个（${await sameLabel(page, 3)}）`);
+    check(
+      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '现在只收这一个',
+      `工具条上说一句现在只收这一个（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
+    );
+    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle')); // 重新勾上，后面的盖住用例要整组
+    await waitVisible(page, '重新勾上：卡片一又收起', C1, false);
+    check((await sameChecked(page, 3)) === true, '重新勾上');
 
     // 「盖住」：预览必须盖住这一组全部，保存后遮的也是全部（#70，之前只盖了点中的那一个）
     const maskBoxes = () =>
@@ -866,19 +862,20 @@ async function main() {
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
     check(true, '确认后退出向导');
 
-    // ===================== 保存即完成：底部三选一落库、没有第二个确认框（#53） =====================
-    console.log('\n--- 保存：范围在底部选，点保存直接落库并关掉向导 ---');
+    // ===================== 保存即完成：行内范围落库、没有第二个确认框（#53 / #76） =====================
+    console.log('\n--- 保存：范围在行内改，点保存直接落库并关掉向导 ---');
     await openWizard();
     await clickEl(page, C1);
     await clickEl(page, C2);
     await waitFor(page, '已选 2 个', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').textContent.includes('2'), [HOST]);
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：卡片一被移除', C1, false);
+    await openAdjust(page, 1);
     check(
-      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-scope-all"]').checked, HOST)) === true,
-      '「在哪些页面收起」默认选整个网站',
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-scope-all"]')?.getAttribute('aria-pressed'), HOST)) === 'true',
+      '新选的项「在哪些页面收起」默认整个网站（#76）',
     );
-    await clickInShadow(page, HOST, tid('pm-wiz-scope-include'));
+    await clickInShadow(page, HOST, tid('pm-draft-1-scope-include'));
     await clickInShadow(page, HOST, tid('pm-wiz-save'));
     await waitFor(page, '点保存后向导直接关闭', (h) => !document.querySelector(h), [HOST]);
     check(true, '点「保存」直接结束向导，没有第二个确认框');
@@ -887,10 +884,11 @@ async function main() {
     const patternPrefix = `${ORIGIN}/wizard.html`;
     check(
       added.length === 2 &&
-        added.every(
-          (r) => r.scope.type === 'include' && r.scope.patterns.length === 1 && r.scope.patterns[0].prefix === patternPrefix,
-        ),
-      `选「只在这类页面」后落库的规则范围是 include + 当前这类页面（${JSON.stringify(added.map((r) => r.scope))}）`,
+        added[0].scope.type === 'include' &&
+        added[0].scope.patterns.length === 1 &&
+        added[0].scope.patterns[0].prefix === patternPrefix &&
+        added[1].scope.type === 'all',
+      `行内改的那条落库 include + 当前这类页面，没改的那条保持整个网站（${JSON.stringify(added.map((r) => r.scope))}）`,
     );
 
     // ===================== 新站点：三步骨架、第 1 步实时预览、退出还原（#51） =====================

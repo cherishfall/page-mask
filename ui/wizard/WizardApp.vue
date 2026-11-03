@@ -170,8 +170,9 @@
                 <span aria-hidden="true">✕</span>
               </button>
             </div>
-            <!-- 一句话摘要：收起方式 · 范围；失效项换成「可能失效 · 在页面上找不到了」 -->
-            <p class="pm-wiz-draft-summary" :data-testid="`pm-draft-${i + 1}-summary`">{{ draftSummary(d) }}</p>
+            <!-- 一句话摘要：收起方式 · 范围；失效项换成「可能失效 · 在页面上找不到了」。
+                 展开时藏掉——展开后收起方式与范围就在眼前，摘要再说一遍就是重复（#76） -->
+            <p v-if="!d.expanded" class="pm-wiz-draft-summary" :data-testid="`pm-draft-${i + 1}-summary`">{{ draftSummary(d) }}</p>
 
             <!-- 失效项：摘要下面给一句看得见的说明 + 修复入口（不能只靠角标） -->
             <p v-if="!d.el" class="pm-wiz-draft-stale" :data-testid="`pm-draft-${i + 1}-stale`">
@@ -241,12 +242,6 @@
                 </p>
               </fieldset>
 
-              <div class="pm-wiz-draft-actions">
-                <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-reselect`" @click="reselectDraft(d)">
-                  {{ t.wizard.reselect }}
-                </button>
-              </div>
-
               <details class="pm-wiz-advanced" :data-testid="`pm-draft-${i + 1}-advanced`">
                 <summary>{{ t.wizard.advancedSummary }}</summary>
                 <p class="pm-wiz-hint">{{ t.wizard.advancedHint }}</p>
@@ -282,26 +277,6 @@
         </ol>
         <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-drafts-empty">{{ t.wizard.draftsEmpty }}</p>
 
-        <!-- 在哪些页面收起：新加的这几项整批设置一次（取代原来点保存才弹出的框）。
-             编辑已有规则时不出现——每一行在自己的「调整」里各有范围，两个控件管同一件事只会互相打架 -->
-        <fieldset v-if="props.mode !== 'editRules'" class="pm-wiz-scope" data-testid="pm-wiz-scope">
-          <legend class="pm-wiz-scope-legend">{{ t.wizard.scopeLegend }}</legend>
-          <label class="pm-wiz-radio">
-            <input v-model="scopeChoice" type="radio" value="all" data-testid="pm-wiz-scope-all" />
-            {{ t.wizard.scopeAll }}
-          </label>
-          <template v-if="sitePattern">
-            <label class="pm-wiz-radio">
-              <input v-model="scopeChoice" type="radio" value="include" data-testid="pm-wiz-scope-include" />
-              {{ t.wizard.scopeInclude(sitePattern.label) }}
-            </label>
-            <label class="pm-wiz-radio">
-              <input v-model="scopeChoice" type="radio" value="exclude" data-testid="pm-wiz-scope-exclude" />
-              {{ t.wizard.scopeExclude(sitePattern.label) }}
-            </label>
-          </template>
-          <span v-else-if="scopeHint" class="pm-wiz-hint" data-testid="pm-wiz-scope-hint">{{ scopeHint }}</span>
-        </fieldset>
       </template>
 
       <!-- 底栏：只放按钮（一行一件事，说明文字不塞进操作栏）。
@@ -424,7 +399,6 @@ import {
   mergeEditDrafts,
   mergeSavedRules,
   reconcileDrafts,
-  scopeFromChoice,
   selectionRows as buildSelectionRows,
   titleFromInput,
   titleOnlyPatch,
@@ -522,7 +496,6 @@ const infoText = ref('');
 const noticeText = ref('');
 const drafts = ref<Draft[]>([]);
 /** 这一步底部「在哪些页面收起」的选择；整批规则共用一份范围（默认整个网站） */
-const scopeChoice = ref<ScopeChoice>('all');
 const tbPos = ref<{ left: number; top: number } | null>(null);
 const dragging = ref(false);
 
@@ -876,8 +849,22 @@ function initialDrafts(): Draft[] {
 function captureBaseRects() {
   for (const d of drafts.value) {
     if (!d.el) continue;
-    // 这一组里所有会被收起的元素都量一遍：彻底移除之后它们没有矩形，靠这份缓存标位置
-    for (const el of matchedElements(d)) {
+    // 这一组里所有会被收起的元素都量一遍：彻底移除之后它们没有矩形，靠这份缓存标位置。
+    // 「一起收」会带上的那些也要量——默认只收这一个（#76）时它们不在候选里，等勾选框一勾、
+    // 预览把元素移除，就再也量不到了，虚线框会失去定位依据
+    const els = new Set<Element>(matchedElements(d));
+    for (const sel of generateCandidates(d.el, { onlyThis: false })) {
+      let list: NodeListOf<Element>;
+      try {
+        list = document.querySelectorAll(sel);
+      } catch {
+        continue;
+      }
+      for (const el of list) {
+        if (!isOwnUiNode(el)) els.add(el);
+      }
+    }
+    for (const el of els) {
       const r = el.getBoundingClientRect();
       baseRects.set(el, { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height });
     }
@@ -969,7 +956,8 @@ function reselectDraft(d: Draft) {
 
 /** 这一条要用的范围：旧规则带来的原样保留，没有才用底部三选一（#69） */
 function draftScope(d: Draft): Scope {
-  return d.scope ?? scopeFromChoice(scopeChoice.value, sitePattern.value);
+  // 底部整批的范围控件已删（#76）：新选的没有自带范围时就是整个网站，要改在行内「调整」里改
+  return d.scope ?? { type: 'all' };
 }
 
 function draftScopeType(d: Draft): ScopeChoice {
@@ -1376,7 +1364,9 @@ function flashRow(index: number) {
 // ---------- 预览 ----------
 
 function newDraft(el: Element): Draft {
-  const candidates = generateCandidates(el, { onlyThis: false });
+  // 默认只收这一个（#76）：预览必须等于保存结果——默认连页面上一样的都收，
+  // 用户看到的只是眼前这一个消失，保存后却多没了几个屏幕外的。要一起收就去勾那道框。
+  const candidates = generateCandidates(el, { onlyThis: true });
   const hits = countCandidateHits(document, candidates);
   const autoName = describeElement(el);
   return {
@@ -1385,7 +1375,7 @@ function newDraft(el: Element): Draft {
     name: autoName,
     autoName,
     strategy: 'remove',
-    onlyThis: false,
+    onlyThis: true,
     candidates,
     hits,
     sameHits: hits,
@@ -1498,7 +1488,7 @@ function draftName(d: Draft): string {
  * 在「只这一个」与「同类一起（N）」之间换：换候选并立即刷新预览（N10）。
  * 同类只有 1 个时第二种不可选——切过去是同一件事，按钮本身是 disabled，这里再兜一次。
  */
-function setOnlyOne(d: Draft, want: boolean) {
+async function setOnlyOne(d: Draft, want: boolean) {
   if (!d.el) return; // 页面上找不到这一项：没有「一样的」可选
   if (onlyOneOf(d) === want) return;
   if (!want && d.sameHits <= 1) return;
@@ -1515,9 +1505,22 @@ function setOnlyOne(d: Draft, want: boolean) {
   d.selectorText = next.join('\n');
   d.hits = countCandidateHits(document, next);
   if (!want) d.sameHits = d.hits;
-  void applyPreview();
+  await applyPreview();
   // 勾/取消都当场给一句话，免得用户只看到「页面变了」却不知道变的是哪一边
   showInfo(want ? t.value.wizard.sameGroupOff : t.value.wizard.sameGroupOn(others));
+  // 后果要看得见（#76）：另外那几个多半在屏幕外。勾上滚到第一个「跟着一起没」的，
+  // 取消滚回这一项自己的标记——滚动的是覆盖层里的盒子（元素本身可能已被预览移除）
+  await nextTick();
+  const seq = drafts.value.indexOf(d) + 1;
+  const target = want
+    ? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]')
+    : overlayLayer.value?.querySelector('[data-testid="pm-same-box"]');
+  target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
+
+/** 用户要求减少动态时不做平滑滚动（与 flashRow 同一口径） */
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 /** 勾选框：勾上 = 连页面上一样的也一起收（onlyThis = false） */
@@ -1585,15 +1588,14 @@ async function doSave() {
   }
   saving.value = true;
   try {
-    // 范围：从旧规则带进来的按它自己的；新选的用这一步底部整批选的那一个（#69）
-    const fallbackScope = scopeFromChoice(scopeChoice.value, sitePattern.value);
+    // 范围：从旧规则带进来的按它自己的；新选的默认整个网站（#76 起行内改）
     const now = Date.now();
     const incoming: DraftRuleInput[] = drafts.value.map((d) => ({
       sourceRuleId: d.sourceRuleId ?? null,
       elementName: draftName(d),
       candidates: [...d.candidates],
       strategy: d.strategy,
-      scope: d.scope ?? fallbackScope,
+      scope: d.scope ?? { type: 'all' },
       onlyThis: d.onlyThis,
     }));
 

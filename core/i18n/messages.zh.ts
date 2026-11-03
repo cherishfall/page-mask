@@ -354,10 +354,6 @@ export const zh = {
     /** 勾上/取消后工具条上那句「刚发生了什么」 */
     sameGroupOn: (n: number) => `另外 ${n} 个也收起了`,
     sameGroupOff: '现在只收这一个',
-    scopeLegend: '在哪些页面收起',
-    scopeAll: '整个网站（默认）',
-    scopeInclude: (label: string) => `只在这类页面：${label}`,
-    scopeExclude: (label: string) => `除了这类页面：${label}`,
     /** 用 # 区分页面的网站推不出「这类页面」时的一句说明 */
     scopeHintHash: '这个网站用 # 后面的内容区分页面，暂时只能整个网站一起收起',
     /** 「上一步」写清退回去做什么：第 2 步退回去改标题，第 3 步退回去重新选内容 */

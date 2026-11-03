@@ -427,23 +427,6 @@
   outline-offset: -2px;
 }
 
-/* 底部：在哪些页面收起（整批设置一次，取代原来点保存才弹出的框，#53） */
-.pm-wiz-scope {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: var(--pm-space-2) 0 0;
-  padding: 6px 8px;
-  border: 1px solid var(--pm-border);
-  border-radius: var(--pm-radius-control);
-}
-.pm-wiz-scope-legend {
-  padding: 0;
-  font-size: var(--pm-font-size-caption);
-  font-weight: var(--pm-font-weight-strong);
-  color: var(--pm-fg);
-}
-
 /* 点页面上的号码牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除） */
 .pm-wiz-drafts li.flash {
   animation: pm-wiz-flash 1.2s ease-out;
@@ -600,13 +583,6 @@ button.pm-wiz-badge {
 }
 .pm-wiz-dialog p {
   margin: 0 0 var(--pm-space-3);
-}
-.pm-wiz-radio {
-  display: flex;
-  gap: var(--pm-space-2);
-  align-items: center;
-  font-size: var(--pm-font-size-body);
-  cursor: pointer;
 }
 .pm-wiz-hint {
   font-size: var(--pm-font-size-caption);
