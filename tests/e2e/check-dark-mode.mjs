@@ -46,7 +46,7 @@ async function main() {
       switchState: 'original',
       disguisedTitle: null,
       faviconDataUrl: null,
-      // 至少 1 条规则才会挂胶囊（#51）：这条不命中任何元素，只为让悬浮按钮出现
+      // 有设置就挂胶囊（#67）：这条规则不命中任何元素，只为让悬浮按钮出现
       hideRules: [
         {
           id: 'r_dark_mode',

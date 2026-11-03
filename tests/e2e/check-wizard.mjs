@@ -9,8 +9,8 @@
  *   退出确认的两个按钮同一次级（继续设置 = 次按钮，退出 = 红字红边的次按钮）
  * - 第 1 步：默认标题已填、快捷标题、上传图标后标签页标题 / 图标实时跟着变；回第 1 步再回来已选内容不丢
  * - 第 1 步退出：确认框说明已选内容不保存、标签页会变回原来的名字；退出后标题与图标完全还原、授权收回
- * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上没有小胶囊，列表里能看到它；
- *   关掉向导后有一句轻提示说明标签页名字已经换了（#53）
+ * - 「只改标题，完成」：保存 0 条规则的清爽态配置、向导关闭、页面上仍然显示小胶囊（有设置就显示，#67），
+ *   列表里能看到它；关掉向导后有一句轻提示说明标签页名字已经换了（#53）
  * - 0 条规则的页内编辑面板：空状态说明 +「开始选要收起的内容」入口
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
  * - 预览：每行两行排版（第一行序号 / 名字 / 删除，第二行收起方式与同类选项）、删除按钮有底有边（#53）；
@@ -270,7 +270,7 @@ async function main() {
       switchState: 'original',
       disguisedTitle: null,
       faviconDataUrl: null,
-      // 老站点：已有 1 条规则（不命中任何元素），胶囊才会挂上；向导里只认本次点选的内容
+      // 老站点：已有 1 条规则（不命中任何元素），胶囊照常挂上；向导里只认本次点选的内容
       hideRules: [
         {
           id: 'r_e2e_existing',
@@ -964,8 +964,8 @@ async function main() {
     check(true, '新站点取消后收回授权、标题与图标完全还原');
     await pageNew.close();
 
-    // ===================== 「只改标题，完成」：0 条规则、没有小胶囊、面板空状态（#51） =====================
-    console.log('\n--- 只改标题：保存 0 条规则、进入清爽态、页面上不挂胶囊 ---');
+    // ===================== 「只改标题，完成」：0 条规则仍有胶囊、面板空状态（#51 / #67） =====================
+    console.log('\n--- 只改标题：保存 0 条规则、进入清爽态、页面上仍有胶囊 ---');
     const pageOnly = await ext.browser.newPage();
     pageOnly.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
     await pageOnly.goto(`${TITLE_ONLY_ORIGIN}/title-only.html`, { waitUntil: 'load' });
@@ -1000,10 +1000,9 @@ async function main() {
       `保存 0 条规则 + 标题，站点进入清爽态（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState })}）`,
     );
     await waitFor(pageOnly, '标签页保持保存后的标题', () => document.title === '只看标题');
-    check(
-      await pageOnly.evaluate((h) => !document.querySelector(h), TOGGLE),
-      '0 条规则的网站页面上不出现小胶囊',
-    );
+    // 有设置就显示（#67）：只改过标题的网站页面上也要有小胶囊，否则用户下次想改只能靠记住工具栏图标
+    await pageOnly.waitForSelector(TOGGLE, { timeout: 5000 });
+    check(true, '0 条规则、只改过标题的网站也显示小胶囊');
     check(
       await pageOnly.evaluate(() => !document.querySelector('pagemask-editor')),
       '页面上也没有别的常驻界面',
@@ -1020,7 +1019,7 @@ async function main() {
     );
     await mgmt.close();
 
-    // 面板空状态 +「开始选要收起的内容」入口（没有胶囊时的第二条路）
+    // 面板空状态 +「开始选要收起的内容」入口（也可以从胶囊的「⋯」→「收起更多内容」进）
     await sendToTab(ext.control, onlyTabId, { t: 'openEditor' });
     await waitForShadow(pageOnly, EDITOR, tid('pm-editor-panel'));
     const emptyText = await shadowText(pageOnly, EDITOR, tid('pm-ed-empty'));

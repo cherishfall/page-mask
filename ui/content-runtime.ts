@@ -146,6 +146,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     /** 站点没有自己的标题时实际会用的那个（小面板的占位与说明） */
     fallbackTitle: string;
     hasDefaultIcon: boolean;
+    /** 有没有收起项：「编辑收起的内容」只在有东西可编辑时出现（#67） */
+    hasRules: boolean;
   }>({
     state: 'original',
     position: null,
@@ -153,6 +155,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     icon: null,
     fallbackTitle: '',
     hasDefaultIcon: false,
+    hasRules: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -200,13 +203,22 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.icon = profile?.faviconDataUrl ?? null;
     toggleState.fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
     toggleState.hasDefaultIcon = !!settings.defaultIconDataUrl;
+    toggleState.hasRules = (profile?.hideRules.length ?? 0) > 0;
+  }
+
+  /**
+   * 这个网站有没有任何设置（#67）：标签页标题、图标、收起项任一非空。
+   * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
+   */
+  function hasSiteSettings(p: SiteProfile): boolean {
+    return !!p.disguisedTitle || !!p.faviconDataUrl || p.hideRules.length > 0;
   }
 
   function mountToggle(): void {
     // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
     if (curtain.active) return;
-    // 0 条收起规则的网站不挂胶囊（#51）：页面上没有可切换的内容，开关留在 popup / 管理页
-    if (!profile || profile.hideRules.length === 0) {
+    // 按「有没有设置」决定出不出（#67）：三样全空才不挂
+    if (!profile || !hasSiteSettings(profile)) {
       unmountToggle();
       return;
     }
@@ -224,10 +236,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           icon: toggleState.icon,
           fallbackTitle: toggleState.fallbackTitle,
           hasDefaultIcon: toggleState.hasDefaultIcon,
+          hasRules: toggleState.hasRules,
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
           onEdit: handleEdit,
+          onMoreItems: handleMoreItems,
           onResetPos: handleResetPos,
           onCover: handleCover,
           onSaveTitle: handleTitleSave,
@@ -285,6 +299,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   function handleEdit() {
     if (ctx.isValid) openEditorPanel();
+  }
+
+  /** 菜单「收起更多内容」（#67）：直接进向导点选新元素，保存后按新配置挂回胶囊 */
+  function handleMoreItems() {
+    if (ctx.isValid) void openWizard('addElement');
   }
 
   /**

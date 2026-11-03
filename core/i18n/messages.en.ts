@@ -385,6 +385,7 @@ export const en: Messages = {
     coverAria: 'Cover the whole page',
     moreAria: 'More actions',
     menuTitle: 'Tab title and icon',
+    menuMoreItems: 'Hide more items',
     menuEdit: 'Edit hidden items',
     menuResetPos: 'Move button back to the corner',
     menuDelete: 'Delete this site’s settings',

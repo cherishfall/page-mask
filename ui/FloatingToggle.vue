@@ -69,13 +69,17 @@
     </button>
 
     <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住。
-         四项与两条分隔线（#56）：日常两件事 / 按钮位置 / 删除这个网站的设置——最后一项与上面用
-         分隔线隔开、写成红字，免得顺手点错 -->
+         按用途分三组（#67）：改内容的 / 按钮位置 / 删除这个网站的设置——最后一项与上面用
+         分隔线隔开、写成红字，免得顺手点错。没有收起项时不出现「编辑收起的内容」：
+         点进去只会看到空列表，留「收起更多内容」就够了 -->
     <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="openTitlePanel">
         {{ t.toggle.menuTitle }}
       </button>
-      <button type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-more-items" @click="onMenu('moreItems')">
+        {{ t.toggle.menuMoreItems }}
+      </button>
+      <button v-if="hasRules" type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">
         {{ t.toggle.menuEdit }}
       </button>
       <hr class="pm-tg-sep" />
@@ -138,6 +142,8 @@ const props = defineProps<{
   /** 站点没有自己的标题时实际会用的那个（小面板里作占位与说明） */
   fallbackTitle: string;
   hasDefaultIcon: boolean;
+  /** 有没有收起项（0 条时菜单里不出现「编辑收起的内容」） */
+  hasRules: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
 }>();
@@ -145,6 +151,8 @@ const emit = defineEmits<{
   toggle: [];
   moved: [pos: { x: number; y: number }];
   edit: [];
+  /** 菜单里的「收起更多内容」：进向导点选新元素（#67） */
+  moreItems: [];
   resetPos: [];
   cover: [];
   saveTitle: [value: { title: string; icon: string | null }];
@@ -311,9 +319,10 @@ function onMenuToggle() {
 }
 
 /** 点菜单项：先关菜单再执行，焦点回到「⋯」 */
-function onMenu(action: 'edit' | 'reset') {
+function onMenu(action: 'edit' | 'moreItems' | 'reset') {
   menuEl.value?.hidePopover();
   if (action === 'edit') emit('edit');
+  else if (action === 'moreItems') emit('moreItems');
   else {
     dragPos.value = null;
     viewPos.value = null;

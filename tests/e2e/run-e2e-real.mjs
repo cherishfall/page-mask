@@ -69,7 +69,7 @@ async function main() {
         const tabId = await tabIdOf(control, `${origin}/*`);
         const res = await sendToBackground(control, { t: 'enableSite', origin, tabId });
         assert(res?.ok, `${site.name}：enableSite 成功`);
-        // 0 条规则不挂胶囊（#51）：不再等悬浮按钮，内容脚本在 enableSite 注入完成时已就绪
+        // 三样全空（#67）：不挂胶囊，不再等悬浮按钮，内容脚本在 enableSite 注入完成时已就绪
 
         // 打开向导（新站点）：第 1 步是标题与图标，标题已按默认填好；直接进选内容
         await sendToTab(control, tabId, { t: 'openWizard', mode: 'newSite' });

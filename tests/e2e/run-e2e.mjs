@@ -210,7 +210,7 @@ async function main() {
     console.log('\n--- 向导全流程 ---');
     await patchProfile(ext.control, ORIGIN, { hideRules: [], switchState: 'original' });
     await page.reload({ waitUntil: 'load' });
-    // 0 条规则不再挂胶囊（#51）：等隔离环境里的内容脚本就绪，而不是等页面上某个界面
+    // 标题、图标、收起项全空才不挂胶囊（#67）：等隔离环境里的内容脚本就绪，而不是等页面上某个界面
     await poll(async () => evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false), '内容脚本就绪');
     await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'newSite' });
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));

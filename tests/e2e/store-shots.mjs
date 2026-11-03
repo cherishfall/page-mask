@@ -12,7 +12,7 @@
  * - screenshot-3-tabbar：标签栏里的两个标签页（原样 / 清爽），展示标题与图标
  * - screenshot-4-popup：面板正常状态（开关、编辑当前网站、遮住本页、底部两个入口）
  * - screenshot-5-management：「你添加的网站」与「插件设置」两个独立页面并排
- * - screenshot-6-curtain：小胶囊「⋯」菜单四项 + 遮住整页后的睁眼恢复按钮
+ * - screenshot-6-curtain：小胶囊「⋯」菜单五项 + 遮住整页后的睁眼恢复按钮
  * - promo-tile-440x280：新图标 + 一句话定位，无 emoji
  */
 import fs from 'node:fs';
@@ -404,7 +404,7 @@ try {
      </div>`,
   );
 
-  // 6. 小胶囊「⋯」菜单四项 + 幕布恢复按钮
+  // 6. 小胶囊「⋯」菜单五项 + 幕布恢复按钮
   // 重新种回 ORIGIN 的配置（上面为管理页素材清过库），再开一个页面
   await setProfile(control, ORIGIN, demoProfile());
   const cp = await browser.newPage();
@@ -418,7 +418,7 @@ try {
     { timeout: 8000 },
   );
   await cp.waitForSelector('pagemask-toggle', { timeout: 8000 });
-  // 左：⋯ 菜单展开（四项），截页面右下角
+  // 左：⋯ 菜单展开（五项），截页面右下角
   await clickInShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-more"]');
   await waitForShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-menu"]');
   await new Promise((r) => setTimeout(r, 400));

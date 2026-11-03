@@ -410,6 +410,7 @@ export const zh = {
     coverAria: '遮住整个页面',
     moreAria: '更多操作',
     menuTitle: '标签页标题和图标',
+    menuMoreItems: '收起更多内容',
     menuEdit: '编辑收起的内容',
     menuResetPos: '按钮放回右下角',
     menuDelete: '删除这个网站的设置',

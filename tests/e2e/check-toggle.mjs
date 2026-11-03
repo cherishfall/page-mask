@@ -7,8 +7,10 @@
  * 覆盖：
  * - 菜单：默认右下角时菜单完整在视口内（右侧与底部都不出屏）；Esc 关闭；点页面关闭；
  *   右键胶囊不再弹出菜单（「永不做」清单：不新增右键菜单入口）
- * - 菜单四项与两条分隔线（#56）：标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 /
- *   删除这个网站的设置（红字，与上面用分隔线隔开）
+ * - 菜单按用途分组（#56 / #67）：标签页标题和图标 / 收起更多内容 / 编辑收起的内容 ｜ 按钮放回右下角 ｜
+ *   删除这个网站的设置（红字，与上面用分隔线隔开）；「收起更多内容」直接进向导点选新元素
+ * - 显示条件（#67）：站点有任何设置（标题 / 图标 / 收起项）就显示胶囊，三样全空才不显示；
+ *   0 条收起项时菜单里没有「编辑收起的内容」
  * - 点菜单「编辑收起的内容」打开编辑面板，且开关状态不变（N1 的实测故障）
  * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完说明「现在是网站原样」并给切换入口
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
@@ -199,8 +201,8 @@ async function main() {
     await new Promise((res) => setTimeout(res, 300));
     check(!(await menuOpen(page)), '右键胶囊不会打开菜单（没有右键菜单入口）');
 
-    // ===================== 菜单四项与两条分隔线（#56） =====================
-    console.log('\n--- 菜单：四项、两条分隔线、删除项红字 ---');
+    // ===================== 菜单五项、两条分隔线（#67） =====================
+    console.log('\n--- 菜单：五项、两条分隔线、删除项红字 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     const menuShape = await page.evaluate((h) => {
@@ -222,14 +224,15 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '标签页标题和图标 / 编辑收起的内容 / 按钮放回右下角 / 删除这个网站的设置',
-      `菜单是四项、叫法一致（${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') ===
+        '标签页标题和图标 / 收起更多内容 / 编辑收起的内容 / 按钮放回右下角 / 删除这个网站的设置',
+      `菜单是五项、叫法一致（${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 2, `四项之间有两条分隔线（实际 ${menuShape.seps} 条）`);
+    check(menuShape.seps === 2, `菜单里有两条分隔线（实际 ${menuShape.seps} 条）`);
     check(
       menuShape.order.join(' | ') ===
-        '标签页标题和图标 | 编辑收起的内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
-      `分组顺序：日常两项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
+        '标签页标题和图标 | 收起更多内容 | 编辑收起的内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
+      `分组顺序：改内容三项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -237,6 +240,18 @@ async function main() {
     );
     await page.keyboard.press('Escape');
     await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
+
+    // ===================== 菜单「收起更多内容」：直接进向导（#67） =====================
+    console.log('\n--- 点菜单「收起更多内容」：打开向导 ---');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more-items'));
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
+    check(!(await page.$(TOGGLE)), '打开向导时胶囊让位，页面上只有一套界面');
+    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').click(), WIZARD);
+    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    check(true, '退出向导后胶囊挂回来');
 
     // ===================== 菜单「编辑收起的内容」不切开关（N1） =====================
     console.log('\n--- 点菜单「编辑收起的内容」：打开面板、开关不变 ---');
@@ -369,6 +384,21 @@ async function main() {
     focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid ?? null, TOGGLE);
     check(focused === 'pm-toggle-main', `再 Tab 到主按钮（${focused}）`);
     await page.keyboard.press('Enter');
+    // 当场变：文字与悬停提示都不等存储回来（Nielsen 1「状态可见」）
+    const instant = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const main = sr.querySelector('[data-testid="pm-toggle-main"]');
+      return {
+        text: main.querySelector('.pm-tg-label').textContent.trim(),
+        tip: main.getAttribute('title'),
+        pressed: main.getAttribute('aria-pressed'),
+      };
+    }, TOGGLE);
+    check(
+      instant.text === '原样' && instant.pressed === 'false',
+      `切换后按钮文字当场变（「${instant.text}」，aria-pressed=${instant.pressed}）`,
+    );
+    check(instant.tip === '点一下按你的设置显示', `悬停提示跟着换（${instant.tip}）`);
     const switched = await (async () => {
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {
@@ -436,6 +466,63 @@ async function main() {
     check(reset.floatingBtnPos === null, '「按钮放回右下角」清掉保存的坐标');
     const home = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(home.right <= 1000 && home.bottom <= 700, `归位后回到右下角（right=${Math.round(home.right)}, bottom=${Math.round(home.bottom)}）`);
+
+    // ===================== 显示条件：有设置就显示（#67） =====================
+    console.log('\n--- 显示条件：有设置就显示，三样全空才不显示 ---');
+    const RULES = profileOf(ORIGIN).hideRules;
+    // 只改过标题、一条收起项都没有：胶囊仍然要在（否则页面上一点痕迹都没有，下次想改只能靠记住工具栏图标）
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised', hideRules: [] });
+    await waitFor(
+      page,
+      '0 条规则已生效（广告位重新可见）',
+      () => getComputedStyle(document.querySelector('#ad')).display !== 'none',
+      [],
+      { timeout: 5000 },
+    );
+    check(!!(await page.$(TOGGLE)), '只改过标题、0 条收起项的网站也显示胶囊');
+
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
+    const noRulesMenu = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
+      return {
+        items: [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim()),
+        hasEdit: !!sr.querySelector('[data-testid="pm-toggle-edit"]'),
+      };
+    }, TOGGLE);
+    check(!noRulesMenu.hasEdit, '0 条收起项时菜单里没有「编辑收起的内容」');
+    check(
+      noRulesMenu.items.join(' / ') === '标签页标题和图标 / 收起更多内容 / 按钮放回右下角 / 删除这个网站的设置',
+      `0 条收起项时只留四项（${noRulesMenu.items.join(' / ')}）`,
+    );
+    await page.keyboard.press('Escape');
+
+    // 原样态、0 条规则：切换入口本身有用，同样要挂着
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitFor(
+      page,
+      '原样态、0 条规则时胶囊仍在且写「原样」',
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent.trim() === '原样',
+      [TOGGLE],
+      { timeout: 5000 },
+    );
+    check(true, '原样态下 0 条收起项也显示胶囊，文字是「原样」');
+
+    // 三样全空才不挂
+    await patchProfile(ext.control, ORIGIN, { disguisedTitle: null, faviconDataUrl: null, hideRules: [] });
+    await waitFor(page, '三样全空时不显示胶囊', (h) => !document.querySelector(h), [TOGGLE], { timeout: 5000 });
+    check(true, '标题、图标、收起项全空时不显示胶囊');
+
+    // 恢复：后面的幕布用例要 1 条规则与固定标题
+    await patchProfile(ext.control, ORIGIN, {
+      switchState: 'disguised',
+      disguisedTitle: '低调阅读',
+      hideRules: RULES,
+    });
+    await waitFor(page, '恢复设置后胶囊挂回来', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    check(true, '重新有设置后胶囊挂回来');
 
     // ===================== 对比度：白底 / 深色 / 灰底 =====================
     console.log('\n--- 三种底色页面的对比度 ---');
