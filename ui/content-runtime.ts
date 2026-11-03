@@ -424,10 +424,13 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       mode: effectiveMode,
       url: pageUrl,
       replaceRuleId: replaceRuleId ?? null,
-      // 编辑已有规则（#69）：草稿来自「这个页面上用得上的规则」，按打开这一刻的地址算。
-      // 这个页面一条都没有（只改过标题的网站、或者规则都在别的页面）：没有可编辑的东西，
+      // 这个页面上用得上的旧规则，按打开这一刻的地址算。两个模式都带上：
+      // - 编辑已有规则（#69）：铺成草稿，逐行改；
+      // - 收起更多内容：不铺草稿，只用来把页面上「已经收起过」的东西标出来（#74）。
+      //   不标的话，向导一打开就临时还原全部规则，用户看到的是整页原样，根本分不清哪些收过了。
+      // 编辑模式遇到这一页一条都没有（只改过标题的网站、规则都在别的页面）：没有可编辑的东西，
       // 退回「收起更多内容」，从点选开始，不把一个空清单摆给用户看
-      initialRules: effectiveMode === 'editRules' ? initialRulesFor(pageUrl) : [],
+      initialRules: initialRulesFor(pageUrl),
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,

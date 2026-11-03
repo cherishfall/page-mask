@@ -327,6 +327,8 @@ export const zh = {
     badgeHidden: '之前收起了',
     /** 点到一条已经收起的项：说明它是原地更新，不是又加了一条（#69） */
     repicked: '这一项已经在列表里，已按你刚点的地方更新',
+    /** 「收起更多内容」时点到已经收起过的东西：不重复添加，说一句为什么（#74） */
+    alreadyHidden: '这一项已经收起了，不用再选一次；要改它就用「编辑收起的内容」',
     /** 每行「调整」里那几件事（原来在独立编辑面板里，#71 搬进来） */
     rowScopeLegend: '在哪些页面收起',
     rowScopeAll: '整个网站',
@@ -413,7 +415,6 @@ export const zh = {
     menuDelete: '删除这个网站的设置',
     /** 就地改标题的小面板 */
     panelTitle: '标签页标题和图标',
-    panelClose: '关闭',
     panelOriginalNote: '改好了。现在是原样，还看不到效果。',
     panelSwitchClean: '按设置',
     panelTitleHint: (placeholder: string) =>

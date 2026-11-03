@@ -21,15 +21,18 @@
       </li>
     </ol>
 
+    <!-- 这句讲的是弹窗里那两个入口在哪，属于内容说明，放在按钮行上面，不塞进操作栏 -->
+    <p class="tip">{{ t.onboarding.tip }}</p>
+
     <div class="nav">
-      <button v-if="step > 1" type="button" class="ghost" @click="step--">{{ t.onboarding.prev }}</button>
+      <!-- 上一步和向导里同一档：有框的次按钮，不是最轻的无框文字（导航也要看得出能点） -->
+      <button v-if="step > 1" type="button" @click="step--">{{ t.onboarding.prev }}</button>
       <span v-else></span>
       <!-- 圆点只是装饰，步骤状态已由列表里的 aria-current 表达 -->
       <span class="dots" aria-hidden="true"><i v-for="i in t.onboarding.steps.length" :key="i" :class="{ on: i === step }"></i></span>
       <button v-if="step < t.onboarding.steps.length" type="button" class="primary" @click="step++">{{ t.onboarding.next }}</button>
       <button v-else type="button" class="primary" @click="finish">{{ t.onboarding.start }}</button>
     </div>
-    <p class="tip">{{ t.onboarding.tip }}</p>
   </main>
 </template>
 
@@ -140,9 +143,8 @@ h1 {
   background: var(--pm-accent);
 }
 .tip {
-  margin-top: 26px;
+  margin: var(--pm-space-4) 0 0;
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
-  text-align: center;
 }
 </style>

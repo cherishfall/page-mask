@@ -15,6 +15,7 @@ Under each version, the Chinese and English sections correspond item by item.
 
 - **改收起的内容只剩一条路**：页面内那个独立的编辑面板删掉了。点「编辑收起的内容」直接进设置向导的「看效果」——页面按你的设置显示着，逐行改名、换收起方式、换范围、重新选这一项；「上一步」回到点选，可以再加新的。已经收起的项在页面上用虚线框加「之前收起了」标出来
 - **「只这一个 / 同类一起（N）」换成一道勾选框**：「页面上另外 2 个一样的也一起收起」，回答一个是非题，不用先学会「同类」这个词。页面上没有第二个一样的，这道勾选框根本不出现；勾上或取消，页面当场变，工具条上说一句「另外 2 个也收起了」/「现在只收这一个」
+- **「收起更多内容」也标出已收起的**：从这个入口进去，页面上已经收着的项同样画虚线框加「之前收起了」；再点其中一个是重复添加，会提示「这一项已经收起了」而不会新增一条
 - **「看效果」每行只放一件事**：序号、名称、一句摘要（例如「消失 · 整个网站」）、「调整」、✕。收起方式、在哪些页面收起、重新选、高级（选择器原文）都折进「调整」
 - **页面右下角的小按钮**：这个网站只要有设置就出现（只改过标题也算，以前不出现）；「⋯」菜单补上「收起更多内容」，按用途分三组——标题和图标 / 收起更多 / 编辑收起 ｜ 按钮放回右下角 ｜ 删除这个网站的设置（永远排在最后）
 - **「你添加的网站」改名「网站设置」**：和「插件设置」配成一对。这个页面上那个「在页面上编辑」删掉了——它不知道该去哪个页面；改成一句说明：想到页面上改，就点工具栏图标再点「编辑收起的内容」
@@ -30,6 +31,8 @@ Under each version, the Chinese and English sections correspond item by item.
 - 保存中的按钮不显示「正在保存…」（状态没跟着变）
 - 页面右下角三个小图标按钮的可点区域太小（16 / 22 像素），提到 24×24，触屏 40×40
 - 界面里最后一处 10 像素的字没有了
+- 弹窗底部「网站设置」「插件设置」原来是无框小字，看着像不能点；改成了普通按钮
+- 标题小面板右上角的裸 ✕ 改成文字「关闭」（✕ 只留给「从清单里去掉一项」）
 
 ### English
 
@@ -39,6 +42,7 @@ Under each version, the Chinese and English sections correspond item by item.
 - **“Just this one / All N alike” is now a checkbox**: “Also hide the other 2 like this one” — a yes-or-no question instead of a word to learn. When there's no second one on the page, the checkbox doesn't appear at all. Tick or untick and the page changes right away, with a line in the toolbar: “The other 2 are hidden too” / “Only this one is hidden now”
 - **One decision per row in the result step**: number, name, a one-line summary (e.g. “Disappear · The whole site”), “Adjust”, ✕. Hide method, where it applies, pick again, and the advanced selector all live inside “Adjust”
 - **The small button in the corner**: now appears whenever the site has any setting (a changed tab title counts; it used to stay hidden). Its “⋯” menu gained “Hide more” and is grouped by purpose — title and icon / hide more / edit hidden | put the button back | delete this site's settings (always last)
+- **“Hide more” also marks what's already hidden**: entering from that path, items already hidden get the same dashed outline and “Hidden before” tag; clicking one again is a duplicate, and you're told “This one is already hidden” instead of creating a second rule
 - **“Your sites” renamed “Site settings”**, pairing with “Settings”. The “Edit on the page” button there is gone — it couldn't know which page to open; a sentence now says: use the toolbar icon, then “Edit hidden items”
 - **One set of buttons everywhere**: primary (solid) / secondary (filled, bordered) / quiet (no fill, no border) / danger (red text and border), with all five states. At most one solid primary button per screen; avoid disabling buttons where possible
 - **Only two kinds of removal**: taking one item off a list is always a ✕ at the end of its row; deleting a whole site's settings is a red button plus a confirmation
@@ -52,6 +56,8 @@ Under each version, the Chinese and English sections correspond item by item.
 - Buttons didn't show “Saving…” while saving (the state wasn't reactive)
 - The three small icon buttons in the corner were too small to hit (16 / 22 px); they're 24×24 now, 40×40 on touch screens
 - The last 10 px text in the interface is gone
+- The two footer entries in the popup (“Site settings” / “Settings”) were borderless small text that didn't look clickable; they're regular buttons now
+- The bare ✕ atop the title panel became a text “Close” button (✕ is reserved for taking an item off a list)
 
 ## [0.4.1] - 2026-11-02
 

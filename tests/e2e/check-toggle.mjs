@@ -881,12 +881,13 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'));
-    // 先选一个元素，退出时才需要确认框（没有选择会直接退出）
-    const ad = await page.evaluate(() => {
-      const r = document.querySelector('#ad').getBoundingClientRect();
+    // 先选一个元素，退出时才需要确认框（没有选择会直接退出）。
+    // 不能点 #ad：这个网站的规则本来就收着它（.ad），点它会被「这一项已经收起了」挡下而不是入选（#74）
+    const body = await page.evaluate(() => {
+      const r = document.querySelector('#content h1').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
-    await page.mouse.click(ad.x, ad.y);
+    await page.mouse.click(body.x, body.y);
     await waitForShadow(page, WIZARD, '[data-testid^="pm-badge-"]');
     await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').click(), WIZARD);
     await waitForShadow(page, WIZARD, tid('pm-wizard-exit-confirm'));

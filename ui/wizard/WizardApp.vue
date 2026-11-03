@@ -620,14 +620,22 @@ onMounted(() => {
     onHoverChange: updateHoverBox,
     // 编辑已有规则时点到一条已经收起的项：原地替换那条，不再新增一条重复规则（#69）
     onPickBefore: (el) => {
-      if (props.mode !== 'editRules') return false;
-      const target = pendingReplace ?? draftHitBy(el);
-      if (!target) return false;
-      pendingReplace = null;
-      replaceDraftElement(target, el);
-      pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
-      showInfo(t.value.wizard.repicked);
-      return true;
+      if (props.mode === 'editRules') {
+        const target = pendingReplace ?? draftHitBy(el);
+        if (!target) return false;
+        pendingReplace = null;
+        replaceDraftElement(target, el);
+        pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
+        showInfo(t.value.wizard.repicked);
+        return true;
+      }
+      // 「收起更多内容」时点到已经收起过的东西：页面上已经标着「之前收起了」，
+      // 再点就是重复添加——说一句、不新增，要改它得走「编辑收起的内容」（#74）
+      if (props.mode === 'addElement' && existingRuleFor(el)) {
+        showInfo(t.value.wizard.alreadyHidden);
+        return true;
+      }
+      return false;
     },
     onSelectionChange: (els) => {
       selEls.value = els;
@@ -644,6 +652,9 @@ onMounted(() => {
     document.documentElement.style.cursor = '';
   } else {
     document.documentElement.style.cursor = 'crosshair';
+    // 一打开就在点选阶段（收起更多内容）：先把页面上「已经收起过」的标出来，
+    // 否则整页原样摆在面前，用户分不清哪些收过了（#74）
+    renderMarkers();
   }
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('resize', reclampToolbar);
@@ -883,8 +894,7 @@ async function initEditRules() {
 }
 
 /** 这个元素是不是已经被某条「从旧规则带进来」的草稿命中（点它就是重选那一条，不新增） */
-function draftHitBy(el: Element): Draft | null {
-  for (const d of drafts.value) {
+function draftHitBy(el: Element): Draft | null {  for (const d of drafts.value) {
     if (!d.sourceRuleId) continue;
     if (d.el === el) return d;
     const hit = d.candidates.some((sel) => {
@@ -895,6 +905,20 @@ function draftHitBy(el: Element): Draft | null {
       }
     });
     if (hit) return d;
+  }
+  return null;
+}
+
+/** 这个元素是不是已经被这个网站上某条已有规则命中（「收起更多内容」时用来防重复添加，#74） */
+function existingRuleFor(el: Element): HideRule | null {
+  for (const rule of props.initialRules ?? []) {
+    for (const sel of rule.candidates) {
+      try {
+        if (el.matches(sel)) return rule;
+      } catch {
+        // 坏选择器不参与判断（规则本身还在，只是这条写法失效了）
+      }
+    }
   }
   return null;
 }
@@ -1238,8 +1262,9 @@ function renderMarkers() {
       const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
-    // 编辑已有规则：把页面上之前收起过的元素标出来（虚线框 +「之前收起了」，不吃指针）
-    if (props.mode === 'editRules') renderHiddenMarkers();
+    // 把页面上之前收起过的元素标出来（虚线框 +「之前收起了」，不吃指针）。
+    // 两个入口都要标：编辑时是「这些是你正在改的」，添加时是「这些已经收过了，别重复选」
+    renderHiddenMarkers();
     return;
   }
   drafts.value.forEach((d, i) => {
@@ -1275,17 +1300,26 @@ function renderMarkers() {
 }
 
 /**
- * 选内容阶段标出「这些已经收起了」（#69）：每条旧规则命中的元素（含同类）画虚线框 + 角标，
+ * 选内容阶段标出「这些之前收起了」（#69 / #74）：每条已有规则命中的元素（含同类）画虚线框 + 角标，
  * 总量封顶 HIDDEN_MARK_LIMIT。已经进入本次选择集的元素不重复标（它有自己的号码牌）。
+ *
+ * 来源分两种：
+ * - 编辑已有规则：看当前草稿——把某一行 ✕ 掉，它的标记也跟着消失（保存时这条规则会被删）；
+ * - 收起更多内容：草稿是空的，直接看打开时带进来的旧规则。
  */
+function hiddenRulesForMarks(): { candidates: string[] }[] {
+  if (props.mode === 'editRules') {
+    return drafts.value.filter((d) => d.sourceRuleId).map((d) => ({ candidates: d.candidates }));
+  }
+  return (props.initialRules ?? []).map((r) => ({ candidates: r.candidates }));
+}
+
 function renderHiddenMarkers() {
   const selected = new Set(selEls.value);
   const seen = new Set<Element>();
   let count = 0;
-  for (const d of drafts.value) {
-    // 只标「从旧规则带进来」的草稿：本次新选的还没保存，不算「之前收起了」
-    if (!d.sourceRuleId || !d.el || selected.has(d.el)) continue;
-    for (const sel of d.candidates) {
+  for (const rule of hiddenRulesForMarks()) {
+    for (const sel of rule.candidates) {
       let found: NodeListOf<Element>;
       try {
         found = document.querySelectorAll(sel);

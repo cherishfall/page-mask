@@ -14,8 +14,9 @@
   >
     <div class="pm-tp-head">
       <h2 id="pm-tp-heading" class="pm-tp-heading">{{ t.toggle.panelTitle }}</h2>
-      <button type="button" class="pm-tp-close" :aria-label="t.toggle.panelClose" data-testid="pm-tp-close" @click="close">
-        <span aria-hidden="true">✕</span>
+      <!-- 关闭整个面板一律用文字，不用 ✕（✕ 只表示「把这一项从列表里去掉」） -->
+      <button type="button" class="pm-btn small" data-testid="pm-tp-close" @click="close">
+        {{ t.common.close }}
       </button>
     </div>
 

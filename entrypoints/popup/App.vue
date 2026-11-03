@@ -61,7 +61,7 @@
         <template v-else>{{ t.popup.setupNew }}</template>
       </button>
 
-      <!-- 页面内编辑面板的第二个入口（普通按钮，不是右键菜单） -->
+      <!-- 「编辑收起的内容」入口（#69 起由向导接管，直接停在看效果） -->
       <button
         v-if="phase === 'ready'"
         data-testid="pm-popup-edit"
@@ -77,9 +77,10 @@
       </button>
     </template>
 
+    <!-- 底部两个入口：进「网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
     <div class="links">
-      <button class="ghost link" data-testid="pm-popup-manage" @click="manage">{{ t.popup.manageAll }}</button>
-      <button class="ghost link" data-testid="pm-popup-settings" @click="openSettings">{{ t.popup.settings }}</button>
+      <button class="small link" data-testid="pm-popup-manage" @click="manage">{{ t.popup.manageAll }}</button>
+      <button class="small link" data-testid="pm-popup-settings" @click="openSettings">{{ t.popup.settings }}</button>
     </div>
   </main>
 </template>
@@ -426,19 +427,14 @@ function openSettings() {
   min-block-size: var(--pm-control-lg);
   padding-inline: var(--pm-space-3);
 }
-/* 底部一行两个入口：视觉上明显弱于主按钮，但仍要够点（不小于 28，见 docs/design-ui.md §四） */
+/* 底部一行两个入口：它们不是「内容里的小动作」，是两个页面唯一的入口，所以用次按钮
+   （有底有边、比主按钮浅一档），不用无框小字——无框小字看着像不能点（#74） */
 .links {
   display: flex;
   gap: var(--pm-space-2);
 }
 .links > .link {
   flex: 1;
-  min-block-size: var(--pm-control-sm);
   padding-inline: var(--pm-space-1);
-  color: var(--pm-fg-muted);
-  font-size: var(--pm-font-size-caption);
-}
-.links > .link:hover:not(:disabled) {
-  color: var(--pm-fg);
 }
 </style>

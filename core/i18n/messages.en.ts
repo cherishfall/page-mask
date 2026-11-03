@@ -303,6 +303,7 @@ export const en: Messages = {
     staleSummary: 'May be broken · can’t be found on this page',
     badgeHidden: 'Hidden before',
     repicked: 'This item is already in the list — updated to where you just clicked',
+    alreadyHidden: 'This one is already hidden — no need to pick it again. To change it, use “Edit hidden items”.',
     rowScopeLegend: 'Where it applies',
     rowScopeAll: 'The whole site',
     rowScopeInclude: 'Only these pages',
@@ -376,7 +377,6 @@ export const en: Messages = {
     menuResetPos: 'Move button back to the corner',
     menuDelete: 'Delete this site’s settings',
     panelTitle: 'Tab title and icon',
-    panelClose: 'Close',
     panelOriginalNote: 'Saved. The site is shown as-is, so you can’t see the change yet.',
     panelSwitchClean: 'Use your settings',
     panelTitleHint: (placeholder: string) =>

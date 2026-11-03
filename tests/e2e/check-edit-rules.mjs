@@ -23,6 +23,7 @@ import {
   launchExtension,
   openPopup,
   sendToBackground,
+  sendToTab,
   tabIdOf,
   setProfile,
 } from './lib/extension.mjs';
@@ -430,6 +431,46 @@ async function main() {
       added[0]?.candidates ?? [],
     );
     check(hitsCard, `新规则指向卡片一（${JSON.stringify(added[0]?.candidates)}）`);
+
+    // ===================== 「收起更多内容」也标出已收起的（#74） =====================
+    console.log('\n--- 「收起更多内容」：页面上已经收起的也标出来，再点它不会重复添加 ---');
+    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'addElement' });
+    await waitForShadow(page, HOST, tid('pm-wizard-toolbar'));
+    check((await progressOf(page)) === '第 1 步 / 共 2 步', `从点选开始（${await progressOf(page)}）`);
+    await waitPickReady(page, '拾取层接管指针');
+    await waitFor(
+      page,
+      '已收起的元素被标出来',
+      (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-hidden-mark"]').length >= 3,
+      [HOST],
+    );
+    // 三条规则在这个页面上命中：广告位、活动栏，以及「卡片」那条规则命中的每一张卡片
+    const addMarks = await hiddenMarks(page);
+    const adNow = await page.evaluate(() => {
+      const b = document.querySelector('#ad').getBoundingClientRect();
+      return { x: b.x, y: b.y, w: b.width, h: b.height };
+    });
+    check(
+      addMarks.some((m) => Math.abs(m.x - adNow.x) < 1.5 && Math.abs(m.y - adNow.y) < 1.5 && Math.abs(m.w - adNow.w) < 1.5),
+      `已收起的广告位上带标记（共 ${addMarks.length} 处）——不是一片空白让人重选`,
+    );
+    const addBadges = await shadowTexts(page, tid('pm-hidden-badge'));
+    check(
+      addBadges.length === addMarks.length && addBadges.every((x) => x === '之前收起了'),
+      `每处标记各一个角标，文案与编辑入口一致（${addMarks.length} 处 / ${addBadges.length} 个角标）`,
+    );
+    await clickEl(page, '#ad');
+    await waitForShadow(page, HOST, tid('pm-wizard-info'), { timeout: 3000 });
+    const dupInfo = (await shadowTexts(page, tid('pm-wizard-info')))[0] ?? '';
+    check(dupInfo.includes('这一项已经收起了'), `点已收起的项：说清不用再选（${dupInfo}）`);
+    check(
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length, HOST)) === 0,
+      '没有把它加进这次的选择清单（不产生重复规则）',
+    );
+    const addNext = (await shadowTexts(page, tid('pm-wiz-preview')))[0] ?? '';
+    check(addNext === '下一步：看效果（0）', `计数仍是 0（${addNext}）`);
+    await clickInShadow(page, HOST, tid('pm-wiz-exit'));
+    await waitFor(page, '退出向导', (h) => !document.querySelector(h), [HOST]);
 
     // 保存后的页面效果：盖住 / 删除 / 重选 / 新增都生效
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
