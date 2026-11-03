@@ -46,9 +46,8 @@ const TOGGLE_HOST = 'pagemask-toggle';
 // 用 data-testid 而不是悬停提示来定位：提示文案会随界面用词调整（0.4.1 就不以 PageMask 开头了）
 const TOGGLE_BTN = '[data-testid="pm-toggle-main"]';
 const WIZARD_HOST = 'pagemask-wizard';
-const EDITOR_HOST = 'pagemask-editor';
 const MASK_HOST = 'pagemask-mask';
-const ALL_HOSTS = [TOGGLE_HOST, WIZARD_HOST, EDITOR_HOST, MASK_HOST].join(', ');
+const ALL_HOSTS = [TOGGLE_HOST, WIZARD_HOST, MASK_HOST].join(', ');
 const tid = (id) => `[data-testid="${id}"]`;
 
 const r = createReporter();
@@ -290,34 +289,6 @@ async function main() {
     check(stored.switchState === 'disguised', '站点开关为清爽态');
     await shot(page, 'wizard-saved');
 
-    // ===================== 编辑面板 + 方案C遮罩 =====================
-    console.log('\n--- 编辑面板与方案C遮罩 ---');
-    await sendToTab(ext.control, tabId, { t: 'openEditor' });
-    await waitForShadow(page, EDITOR_HOST, tid('pm-editor-panel'));
-    check(true, '编辑面板打开');
-    const shownName = (await shadowText(page, EDITOR_HOST, '.pm-ed-name')).trim();
-    check(shownName === RENAMED_CARD, `编辑面板显示行内改的名字（${shownName}）`);
-    const ruleId = stored.hideRules[0].id;
-    await clickInShadow(page, EDITOR_HOST, tid(`pm-ed-strategy-${ruleId}-mask`));
-    await waitFor(
-      page,
-      '遮罩覆盖层出现',
-      (h) => (document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-pm-mask]').length ?? 0) >= 1,
-      [MASK_HOST],
-    );
-    await waitStyle(page, '方案C不移除元素', '.rec-card', 'display', 'none', { not: true });
-    const maskState = await page.evaluate((h) => {
-      const first = document.querySelector('.rec-card').getBoundingClientRect();
-      const box = document.querySelector(h).shadowRoot.querySelector('[data-pm-mask]').getBoundingClientRect();
-      return box.top <= first.top + 2 && box.bottom >= first.bottom - 2 && box.width > 10;
-    }, MASK_HOST);
-    check(maskState, '方案C：遮罩出现且覆盖元素，元素本身不再被移除');
-    check((await getProfile(ext.control, ORIGIN)).hideRules[0].strategy === 'mask', '方案C 写入存储');
-    await shot(page, 'mask');
-    await clickInShadow(page, EDITOR_HOST, tid('pm-editor-close'));
-    await waitFor(page, '编辑面板关闭', (h) => !document.querySelector(h), [EDITOR_HOST]);
-    check(true, '编辑面板关闭');
-
     // ===================== 悬浮按钮菜单（真实鼠标，#25） =====================
     console.log('\n--- 悬浮按钮「⋯」菜单打开「编辑收起的内容」 ---');
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-more'));
@@ -328,7 +299,8 @@ async function main() {
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
     await waitFor(page, '向导关闭（复位）', (h) => !document.querySelector(h), [WIZARD_HOST]);
-    await waitStyle(page, '复位到清爽态', '.rec-card', 'display', 'none', { not: true });
+    // 退出向导（没改动）＝正式规则重新生效：这张推荐卡继续被收起（#71 起菜单打开的是向导，会临时还原再恢复）
+    await waitStyle(page, '退出向导后正式规则重新生效', '.rec-card', 'display', 'none');
 
     // ===================== 页面样式隔离（#22） =====================
     console.log('\n--- 敌意页面样式：插件界面可见、外观不变 ---');
@@ -349,39 +321,45 @@ async function main() {
       hostileUi.toggleVisible && hostileUi.toggleHit,
       `敌意页面：悬浮按钮可见且点得到（宿主未被 html>*、body~* 规则藏掉；可见=${hostileUi.toggleVisible} 命中=${hostileUi.toggleHit}）`,
     );
-    check(hostileUi.editorVisible, '敌意页面：编辑面板可见');
+    check(hostileUi.panelVisible, '敌意页面：向导面板可见');
     check(hostileUi.lang === 'zh-CN', `shadow 内根容器 lang=zh-CN（${hostileUi.lang}）`);
-    for (const part of ['toggle', 'editorClose', 'editorTitle']) {
+    for (const part of ['toggle', 'panelAction', 'panelTitle']) {
       check(
         JSON.stringify(hostileUi[part]) === JSON.stringify(normalUi[part]),
         `敌意页面：${part} 的 line-height / direction / color / 字体与普通页面一致（${JSON.stringify(hostileUi[part])}）`,
       );
     }
-    check(normalUi.editorClose.direction === 'ltr' && normalUi.editorClose.color !== 'rgb(255, 0, 0)', '界面文字 ltr、不是页面的红色');
+    check(normalUi.panelAction.direction === 'ltr' && normalUi.panelAction.color !== 'rgb(255, 0, 0)', '界面文字 ltr、不是页面的红色');
 
     console.log('\n--- 输入框按键不冒泡到页面（不触发站点快捷键） ---');
-    await sendToTab(ext.control, hostileTab, { t: 'openEditor' });
-    await waitForShadow(hostile, EDITOR_HOST, '[data-testid^="pm-ed-selector-"]');
+    // 重新打开「编辑收起的内容」（snapshotUi 采完样式就关掉了），展开第 1 行的「调整」与「高级」，
+    // 用选择器输入框试按键
+    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'editRules' });
+    await waitForShadow(hostile, WIZARD_HOST, tid('pm-wiz-heading'));
+    await clickInShadow(hostile, WIZARD_HOST, tid('pm-draft-1-adjust'));
     await hostile.evaluate((h) => {
       window.__pmKeys = [];
       document.addEventListener('keydown', (e) => window.__pmKeys.push(e.key));
-      const ta = document.querySelector(h).shadowRoot.querySelector('[data-testid^="pm-ed-selector-"]');
-      ta.closest('details').open = true;
+      const sr = document.querySelector(h).shadowRoot;
+      sr.querySelector('[data-testid="pm-draft-1-advanced"]').open = true;
+      const ta = sr.querySelector('[data-testid="pm-draft-1-selector"]');
       ta.value = '';
       ta.focus();
-    }, EDITOR_HOST);
+    }, WIZARD_HOST);
     await hostile.keyboard.type('jk ');
     const typed = await hostile.evaluate(
-      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid^="pm-ed-selector-"]').value,
-      EDITOR_HOST,
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-selector"]').value,
+      WIZARD_HOST,
     );
     check(typed === 'jk ', `输入框照常收到按键（${JSON.stringify(typed)}）`);
     check((await hostile.evaluate(() => window.__pmKeys.length)) === 0, '页面 document 上的 keydown 监听一次都没触发');
     await hostile.evaluate(() => document.activeElement?.blur?.());
-    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.blur(), EDITOR_HOST);
+    await hostile.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.blur(), WIZARD_HOST);
     await hostile.keyboard.press('j');
     check((await hostile.evaluate(() => window.__pmKeys)).includes('j'), '对照：焦点不在插件界面时页面照常收到按键');
-    await clickInShadow(hostile, EDITOR_HOST, tid('pm-editor-close'));
+    await clickInShadow(hostile, WIZARD_HOST, tid('pm-wiz-exit'));
+    // 等上一个向导真正拆完再开下一个：openWizard 在 wizardActive 时会直接返回
+    await waitFor(hostile, '向导关闭（准备开下一个）', (h) => !document.querySelector(h), [WIZARD_HOST], { timeout: 5000 });
 
     console.log('\n--- 敌意页面上的向导工具条与 Esc ---');
     await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'addElement' });
@@ -836,7 +814,7 @@ async function main() {
       // 先采悬浮按钮（编辑面板是右侧抽屉，打开后会盖住右下角的按钮），再打开编辑面板采面板
       const collect = (part) =>
         p.evaluate(
-          (which, th, tb, eh) => {
+          (which, th, tb, wh) => {
             const pick = (el) => {
               if (!el) return null;
               const cs = getComputedStyle(el);
@@ -861,25 +839,26 @@ async function main() {
                 toggle: pick(btn),
               };
             }
-            const editorRoot = document.querySelector(eh)?.shadowRoot;
-            const panel = editorRoot?.querySelector('[data-testid="pm-editor-panel"]');
+            const wizardRoot = document.querySelector(wh)?.shadowRoot;
+            const heading = wizardRoot?.querySelector('[data-testid="pm-wiz-heading"]');
             return {
-              editorVisible: visible(panel),
-              editorClose: pick(editorRoot?.querySelector('[data-testid="pm-editor-close"]')),
-              editorTitle: pick(panel?.querySelector('span')),
+              panelVisible: visible(heading),
+              panelAction: pick(wizardRoot?.querySelector('[data-testid="pm-wiz-exit"]')),
+              panelTitle: pick(heading),
             };
           },
           part,
           TOGGLE_HOST,
           TOGGLE_BTN,
-          EDITOR_HOST,
+          WIZARD_HOST,
         );
       const toggle = await collect('toggle');
-      await sendToTab(ext.control, tab, { t: 'openEditor' });
-      await waitForShadow(p, EDITOR_HOST, tid('pm-editor-panel'));
-      const editor = await collect('editor');
-      await clickInShadow(p, EDITOR_HOST, tid('pm-editor-close'));
-      await waitFor(p, '编辑面板关闭', (h) => !document.querySelector(h), [EDITOR_HOST]);
+      // 向导打开时胶囊会让位，所以先采胶囊、再开向导采面板（#71：独立编辑面板已删）
+      await sendToTab(ext.control, tab, { t: 'openWizard', mode: 'editRules' });
+      await waitForShadow(p, WIZARD_HOST, tid('pm-wiz-heading'));
+      const editor = await collect('panel');
+      await clickInShadow(p, WIZARD_HOST, tid('pm-wiz-exit'));
+      await waitFor(p, '向导关闭（没改动，不弹确认）', (h) => !document.querySelector(h), [WIZARD_HOST]);
       return { ...toggle, ...editor };
     }
 

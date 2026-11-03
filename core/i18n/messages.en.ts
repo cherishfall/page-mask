@@ -150,15 +150,11 @@ export const en: Messages = {
     iconHint: 'PNG, JPG, GIF, WebP or ICO, up to 5MB. It’s scaled down to 32×32.',
 
     rulesHeading: 'Hidden items',
-    rulesEmpty: 'Nothing is hidden yet. Use “Edit on the page” below to pick what to hide on the site.',
+    rulesEmpty: 'Nothing is hidden yet.',
     ruleStaleNote: (name: string) =>
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
-    editOnPage: 'Edit on the page',
-    editHint: 'Changing the hide method or picking a new element needs the page itself, so you edit on the site — changes show up right away.',
-    editNeedAccess: 'You can edit on the page once this site is allowed.',
-    editOpened: 'Opened the editor in that site’s tab.',
-    editNoTab: 'This site has no open tab. Open it first, then come back and choose “Edit on the page”.',
-    editFailed: 'Couldn’t open the editor. Reload that site’s page and try again.',
+    rulesEditHint:
+      'To change how something is hidden or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Edit hidden items”.',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -307,6 +303,21 @@ export const en: Messages = {
     staleSummary: 'May be broken · can’t be found on this page',
     badgeHidden: 'Hidden before',
     repicked: 'This item is already in the list — updated to where you just clicked',
+    rowScopeLegend: 'Where it applies',
+    rowScopeAll: 'The whole site',
+    rowScopeInclude: 'Only these pages',
+    rowScopeExclude: 'All but these pages',
+    reselect: 'Pick again',
+    advancedSummary: 'Advanced: the selector itself',
+    advancedHint: 'One per line; each line is checked against this page before saving',
+    selectorAria: (name: string) => `Selectors for “${name}”, one per line`,
+    saveSelectors: 'Save selectors',
+    errorEmpty: 'A selector can’t be empty',
+    errorInvalid: (line: number) => `Line ${line} isn’t a valid selector: one per line, no { } ; @ or commas`,
+    errorNoHit: (line: number) => `Line ${line} matches nothing on this page, so it can’t be saved`,
+    staleWhy: (name: string, scope: string) =>
+      `“${name}” can’t be found any more — the site may have changed. Where it applies: ${scope}`,
+    draftsEmpty: 'Nothing to hide on this page right now. Go back a step to pick some.',
     nameLabel: (seq: number) => `Name of item ${seq}; leave empty to name it automatically`,
     methodLegend: 'Hide method',
     sameGroupToggle: (n: number) => `Also hide the other ${n} like this one`,
@@ -351,35 +362,6 @@ export const en: Messages = {
     badgeJump: (seq: number) => `Jump to item ${seq} in the list`,
   },
 
-  editor: {
-    title: 'Edit hidden items',
-    close: 'Close the editor',
-    hint: (n: number) =>
-      `Only the hidden items that apply to this page (${n}). Changes show up right away`,
-    emptyAll: 'This site hides nothing yet. Start by picking what you want to hide on the page.',
-    emptyPage: 'No hidden items apply to this page yet. Pick a few more on the page.',
-    start: 'Start picking what to hide',
-    health: (name: string, scope: string) =>
-      `“${name}” can’t be found any more — the site may have changed. Where it applies: ${scope}`,
-    fix: 'Pick again',
-    methodLegend: 'Hide method',
-    scopeLegend: 'Where it applies',
-    scopeAll: 'The whole site',
-    scopeInclude: 'Only these pages',
-    scopeExclude: 'Except these pages',
-    scopeValueInclude: (label: string) => `Only these pages: ${label}`,
-    scopeValueExclude: (label: string) => `Except these pages: ${label}`,
-    reselect: 'Pick again',
-    advancedSummary: 'Advanced: raw selectors',
-    advancedHint: 'One per line; each is checked against this page before saving',
-    selectorAria: (name: string) => `Selectors for “${name}”, one per line`,
-    saveSelectors: 'Save selectors',
-    addMore: 'Hide more',
-    errorEmpty: 'A selector can’t be empty',
-    errorInvalid: (line: number) =>
-      `Line ${line} isn’t a valid selector: one per line, and no { } ; @ or commas`,
-    errorNoHit: (line: number) => `Line ${line} matches nothing on this page, so it can’t be saved`,
-  },
 
   toggle: {
     gripAria: 'Move the button (arrow keys work too)',

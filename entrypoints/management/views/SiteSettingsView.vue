@@ -191,18 +191,8 @@
           {{ store.state.ruleError[profile.origin] }}
         </p>
 
-        <div class="row">
-          <!-- 待授权时不可点（没有权限，页面里没有能接消息的脚本）：原因写在按钮下面那一行 -->
-          <button
-            type="button"
-            data-testid="pm-mgmt-edit-on-page"
-            :disabled="isPending"
-            @click="editOnPage"
-          >
-            {{ editBusy ? t.common.opening : t.management.editOnPage }}
-          </button>
-        </div>
-        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ editHintText }}</p>
+        <!-- 这一页只读清单：换成怎么收、重选元素都要页面上下文，所以指回页面（#71） -->
+        <p class="hint" data-testid="pm-mgmt-edit-hint">{{ t.management.rulesEditHint }}</p>
       </section>
 
       <!-- 页脚：删除这个网站的设置（与页面右下角 ⋯ 菜单里的那一项是同一件事、同一个叫法） -->
@@ -277,10 +267,7 @@ const titlePlaceholder = computed(() => (store.state.drafts[DEFAULT_KEY] ?? '').
 const resetDialog = ref<HTMLDialogElement | null>(null);
 const iconBusy = ref(false);
 const iconError = ref('');
-const editBusy = ref(false);
-const editHint = ref('');
-
-// 删除 / 撤销：与页面内编辑面板共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
+// 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
 const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
   const p = profile.value;
   if (p) void store.updateRules(p.origin, update);
@@ -323,27 +310,6 @@ async function clearIcon() {
     await store.setIcon(profile.value.origin, null);
   } catch {
     iconError.value = t.value.errors.iconClear;
-  }
-}
-
-/** 编辑入口的结果提示（初始为空：默认显示的是 editHintDefault） */
-const editHintDefault = computed(() => t.value.management.editHint);
-/** 按钮下面那一行：待授权时说清为什么不能点，其余情况是默认说明或上一次操作的结果 */
-const editHintText = computed(() =>
-  isPending.value ? t.value.management.editNeedAccess : editHint.value || editHintDefault.value,
-);
-const EDIT_HINT_KEYS = { opened: 'editOpened', noTab: 'editNoTab', failed: 'editFailed' } as const;
-
-async function editOnPage() {
-  const p = profile.value;
-  if (!p || editBusy.value) return;
-  editBusy.value = true;
-  editHint.value = '';
-  try {
-    const key = EDIT_HINT_KEYS[await store.openPageEditor(p.origin)];
-    editHint.value = t.value.management[key];
-  } finally {
-    editBusy.value = false;
   }
 }
 

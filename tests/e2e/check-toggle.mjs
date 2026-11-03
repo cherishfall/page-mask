@@ -38,7 +38,6 @@ const r = createReporter();
 const { check } = r;
 const TOGGLE = 'pagemask-toggle';
 const WIZARD = 'pagemask-wizard';
-const EDITOR = 'pagemask-editor';
 /** 幕布宿主：遮住后「恢复」按钮住在这里（#50 起不再由胶囊渲染） */
 const CURTAIN = 'pagemask-curtain';
 const tid = (id) => `[data-testid="${id}"]`;
@@ -352,7 +351,7 @@ async function main() {
       return !!el && el.matches(':popover-open');
     }, [TOGGLE], { timeout: 3000 });
     check(page.url() === urlBefore, `就地打开，没有跳到别的标签页（地址仍是 ${new URL(page.url()).pathname}）`);
-    check(!(await page.$(WIZARD)) && !(await page.$(EDITOR)), '没有借道向导或编辑面板');
+    check(!(await page.$(WIZARD)), '没有借道向导');
     const panelShape = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
@@ -1113,7 +1112,7 @@ async function main() {
         hosts: document.querySelectorAll(sel).length,
         hit: document.elementFromPoint(500, 300)?.tagName?.toLowerCase() ?? null,
       }),
-      'pagemask-toggle, pagemask-wizard, pagemask-editor, pagemask-mask, pagemask-curtain, pagemask-notice',
+      'pagemask-toggle, pagemask-wizard, pagemask-mask, pagemask-curtain, pagemask-notice',
     );
     check(afterDelete.hosts === 0, `页面上没有任何 PageMask 界面（${afterDelete.hosts} 个宿主）`);
     check(afterDelete.hit !== 'pagemask-toggle', `页面内容恢复正常（视口中心命中 ${afterDelete.hit}）`);

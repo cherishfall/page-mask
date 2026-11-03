@@ -15,7 +15,7 @@ import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } 
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile } from '@/core/types';
 import { originPattern } from '@/core/registration';
-import type { Ack, EnableSiteResponse, OpenWizardMsg, ReconcileResponse } from '@/core/messages';
+import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
 import { exportFileName } from '@/core/export-file';
@@ -259,41 +259,6 @@ export function createManagementStore() {
     await storage.putSettings({ uiLanguage: pref });
   }
 
-  /**
-   * 「在页面上编辑」：找到该站已打开的标签页，让页面里的内容脚本打开设置向导的「编辑收起的内容」模式
-   * （#69，直接停在「看效果」），并把那个标签页切到前台。
-   * 换收起方式、重选元素都要页面上下文，只能这样跳过去。
-   * - noTab：没有打开这个网站的页面（列表为空时也是它——未授权的站点读不到网址，会一并落到这里）
-   * - failed：页面里的内容脚本喊不起来（页面在安装 / 授权前就打开了，或后台拒绝注入）
-   */
-  async function openPageEditor(origin: string): Promise<'opened' | 'noTab' | 'failed'> {
-    // 按 origin 自己比对（不用 tabs.query 的 url 过滤：match pattern 对端口不友好）。
-    // 没有这个站点权限的标签页读不到 url，自然会被排除，正好只挑出能注入的那些。
-    const tabs = await browser.tabs.query({}).catch(() => []);
-    const mine = tabs.filter((t) => t.id !== undefined && sameOrigin(t.url, origin));
-    const tab = mine.find((t) => t.active) ?? mine[0];
-    const tabId = tab?.id;
-    if (tabId === undefined) return 'noTab';
-    const open = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editRules' } satisfies OpenWizardMsg);
-    try {
-      await open();
-    } catch {
-      // 内容脚本可能还没注入（页面开着才授权、或扩展刚更新）：让后台对账注入一次再发
-      const res: EnableSiteResponse | undefined = await browser.runtime
-        .sendMessage({ t: 'enableSite', origin, tabId })
-        .catch(() => undefined);
-      if (!res?.ok) return 'failed';
-      try {
-        await open();
-      } catch {
-        return 'failed';
-      }
-    }
-    await browser.tabs.update(tabId, { active: true }).catch(() => undefined);
-    if (tab?.windowId !== undefined) await browser.windows.update(tab.windowId, { focused: true }).catch(() => undefined);
-    return 'opened';
-  }
-
   /** 请求删除这个网站的设置：只记下目标，确认框由视图打开 */
   function askReset(p: SiteProfile) {
     state.resetError[p.origin] = '';
@@ -402,23 +367,12 @@ export function createManagementStore() {
     setIcon,
     setDefaultIcon,
     setUiLanguage,
-    openPageEditor,
     askReset,
     confirmReset,
     doExport,
     importFile,
     confirmReplace,
   };
-}
-
-/** 标签页地址是否属于这个站点（读不到 url 的标签页一律算不是） */
-function sameOrigin(url: string | undefined, origin: string): boolean {
-  if (!url) return false;
-  try {
-    return new URL(url).origin === origin;
-  } catch {
-    return false;
-  }
 }
 
 export type ManagementStore = ReturnType<typeof createManagementStore>;

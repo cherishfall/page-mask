@@ -23,7 +23,6 @@ const r = createReporter();
 const { check } = r;
 const TOGGLE = 'pagemask-toggle';
 const WIZARD = 'pagemask-wizard';
-const EDITOR = 'pagemask-editor';
 const tid = (id) => `[data-testid="${id}"]`;
 
 const srv = await startServer(fixtureHandler);
@@ -137,15 +136,13 @@ try {
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
-  // 页内编辑面板
-  await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openEditor' });
-  await waitForShadow(page, EDITOR, tid('pm-editor-panel'));
-  check((await shadowText(page, EDITOR, '#pm-ed-title')) === 'Edit hidden items', '编辑面板标题是英文');
-  check(
-    (await shadowText(page, EDITOR, tid('pm-editor-add'))).includes('Hide more'),
-    '编辑面板「收起更多内容」是英文',
-  );
-  await page.keyboard.press('Escape');
+  // 「编辑收起的内容」：由向导接管，直接停在看效果（#71）
+  await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editRules' });
+  await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
+  check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Check the result', '编辑收起的内容变英文');
+  check((await shadowText(page, WIZARD, tid('pm-draft-1-adjust'))) === 'Adjust', '行上的「调整」是英文');
+  await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
+  await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
   popup = await openPopup(ext, page);
   check(!hasCJK(await popup.evaluate(() => document.body.textContent)), '弹窗变英文');

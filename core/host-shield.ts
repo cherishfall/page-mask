@@ -23,7 +23,6 @@
 export const HOST_TAGS = {
   notice: 'pagemask-notice',
   toggle: 'pagemask-toggle',
-  editor: 'pagemask-editor',
   wizard: 'pagemask-wizard',
   curtain: 'pagemask-curtain',
   mask: 'pagemask-mask',
@@ -35,7 +34,6 @@ export type HostKind = keyof typeof HOST_TAGS;
 export const HOST_Z_INDEX: Record<HostKind, number> = {
   wizard: 2147483647,
   notice: 2147483646,
-  editor: 2147483645,
   toggle: 2147483644,
   curtain: 2147483643,
   mask: 2147483642,

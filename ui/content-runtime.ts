@@ -44,7 +44,6 @@ import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/me
 import type { GlobalSettings, SiteProfile } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
-import EditorPanel from './editor/EditorPanel.vue';
 // 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
 import { siteLabelOf } from '@/entrypoints/management/site';
 import { t } from '@/core/i18n';
@@ -169,8 +168,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let curtainButton: CurtainRestoreButton | null = null;
   let wizardHost: PageHost | null = null;
   let wizardApp: App | null = null;
-  let editorHost: PageHost | null = null;
-  let editorApp: App | null = null;
   let wizardActive = false;
   /** 入口核对通过（本页有站点配置或正在进行新站点向导），已挂上监听 */
   let active = false;
@@ -379,37 +376,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   // ---------- 编辑面板 / 向导 ----------
 
-  function closeEditorPanel(): void {
-    editorApp?.unmount();
-    editorApp = null;
-    editorHost?.remove();
-    editorHost = null;
-  }
-
-  /** 悬浮按钮菜单 → 编辑规则。改动直接写库，storage 变化即时重应用＝即时预览 */
-  function openEditorPanel(): void {
-    if (!profile || wizardActive || editorHost || disposed) return;
-    hideCurtain(); // 幕布期间进编辑界面前先撤幕布（#45）
-    ensureHostShield();
-    pageState.url = location.href;
-    editorHost = createPageHost(ctx, 'editor');
-    editorApp = createApp(EditorPanel, {
-      origin,
-      page: pageState,
-      onClose: closeEditorPanel,
-      onAddElement: () => {
-        closeEditorPanel();
-        void openWizard('addElement');
-      },
-      onReselect: (ruleId: string) => {
-        // 重选元素：旧规则留到向导保存成功时再替换，取消向导不影响它（N5）
-        closeEditorPanel();
-        void openWizard('addElement', ruleId);
-      },
-    });
-    editorApp.mount(editorHost.root);
-  }
-
   function closeWizard(): void {
     wizardApp?.unmount();
     wizardApp = null;
@@ -423,6 +389,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    * 新站点（还没有配置）只能以 newSite 打开：保存时才写入配置；取消则通知后台收回授权。
    * replaceRuleId：重选元素时要在保存时替换掉的旧规则 id。
    */
+  const initialRulesFor = (url: string) => rulesApplicableAt(profile?.hideRules ?? [], url);
+
   async function openWizard(mode: OpenIntent, replaceRuleId?: string) {
     if (wizardActive || disposed) return;
     // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
@@ -431,7 +399,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     wizardActive = true;
     healthGen++;
     hideCurtain(); // 进向导前先撤幕布（#45）
-    closeEditorPanel();
     // 向导按打开这一刻的地址工作（页面地址在 SPA 换页后跟着变，先对齐，打开后不再改）
     const pageUrl = location.href;
     pageState.url = pageUrl;
@@ -451,12 +418,16 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 第 1 步（#51）：默认标题按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
     const fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
     const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
+    // 编辑已有规则但这一页没有可编辑的：退回添加元素（#71）
+    const effectiveMode = mode === 'editRules' && initialRulesFor(pageUrl).length === 0 ? 'addElement' : mode;
     wizardApp = createApp(WizardApp, {
-      mode,
+      mode: effectiveMode,
       url: pageUrl,
       replaceRuleId: replaceRuleId ?? null,
-      // 编辑已有规则（#69）：草稿来自「这个页面上用得上的规则」，按打开这一刻的地址算
-      initialRules: mode === 'editRules' ? rulesApplicableAt(profile?.hideRules ?? [], pageUrl) : [],
+      // 编辑已有规则（#69）：草稿来自「这个页面上用得上的规则」，按打开这一刻的地址算。
+      // 这个页面一条都没有（只改过标题的网站、或者规则都在别的页面）：没有可编辑的东西，
+      // 退回「收起更多内容」，从点选开始，不把一个空清单摆给用户看
+      initialRules: effectiveMode === 'editRules' ? initialRulesFor(pageUrl) : [],
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,
@@ -656,7 +627,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     healthGen++;
     shield.release();
     unmountToggle();
-    closeEditorPanel();
     guard.restore();
     clearMasks();
     appliedKey = null;
@@ -744,7 +714,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     }
     // popup / 后台触发的入口消息
     if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'addElement');
-    else if (msg?.t === 'openEditor') openEditorPanel();
     else if (msg?.t === 'siteReset') {
       void handleSiteReset().then(sendResponse, () => sendResponse({ ok: false }));
       return true; // 异步回复：后台等本页还原完再收回授权

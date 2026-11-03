@@ -177,14 +177,14 @@
             <p v-if="!d.el" class="pm-wiz-draft-stale" :data-testid="`pm-draft-${i + 1}-stale`">
               <span>{{ staleText(d) }}</span>
               <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-stale-fix`" @click="reselectDraft(d)">
-                {{ t.editor.fix }}
+                {{ t.wizard.reselect }}
               </button>
             </p>
 
             <!-- 展开「调整」之后才出现的控件：收起方式、范围、重新选、高级选择器、同类 -->
             <div v-if="d.expanded" class="pm-wiz-draft-body" :data-testid="`pm-draft-${i + 1}-body`">
               <fieldset class="pm-wiz-field">
-                <legend class="pm-wiz-field-title">{{ t.editor.methodLegend }}</legend>
+                <legend class="pm-wiz-field-title">{{ t.wizard.methodLegend }}</legend>
                 <!-- 三个收起方式：底层是原生单选组（同一 name = 一组，方向键可切换，读屏报「3 选 1」），视觉上做成连体分段 -->
                 <div class="pm-wiz-seg">
                   <label v-for="s in STRATEGY_ORDER" :key="s" class="pm-wiz-seg-opt">
@@ -203,7 +203,7 @@
               </fieldset>
 
               <fieldset class="pm-wiz-field" :data-testid="`pm-draft-${i + 1}-scope`">
-                <legend class="pm-wiz-field-title">{{ t.editor.scopeLegend }}</legend>
+                <legend class="pm-wiz-field-title">{{ t.wizard.rowScopeLegend }}</legend>
                 <div class="pm-wiz-scope-row">
                   <button
                     type="button"
@@ -212,7 +212,7 @@
                     :data-testid="`pm-draft-${i + 1}-scope-all`"
                     @click="setDraftScope(d, 'all')"
                   >
-                    {{ t.editor.scopeAll }}
+                    {{ t.wizard.rowScopeAll }}
                   </button>
                   <template v-if="sitePattern">
                     <button
@@ -222,7 +222,7 @@
                       :data-testid="`pm-draft-${i + 1}-scope-include`"
                       @click="setDraftScope(d, 'include')"
                     >
-                      {{ t.editor.scopeInclude }}
+                      {{ t.wizard.rowScopeInclude }}
                     </button>
                     <button
                       type="button"
@@ -231,7 +231,7 @@
                       :data-testid="`pm-draft-${i + 1}-scope-exclude`"
                       @click="setDraftScope(d, 'exclude')"
                     >
-                      {{ t.editor.scopeExclude }}
+                      {{ t.wizard.rowScopeExclude }}
                     </button>
                   </template>
                 </div>
@@ -243,26 +243,26 @@
 
               <div class="pm-wiz-draft-actions">
                 <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-reselect`" @click="reselectDraft(d)">
-                  {{ t.editor.reselect }}
+                  {{ t.wizard.reselect }}
                 </button>
               </div>
 
               <details class="pm-wiz-advanced" :data-testid="`pm-draft-${i + 1}-advanced`">
-                <summary>{{ t.editor.advancedSummary }}</summary>
-                <p class="pm-wiz-hint">{{ t.editor.advancedHint }}</p>
+                <summary>{{ t.wizard.advancedSummary }}</summary>
+                <p class="pm-wiz-hint">{{ t.wizard.advancedHint }}</p>
                 <textarea
                   v-model="d.selectorText"
                   class="pm-wiz-textarea"
                   rows="2"
                   spellcheck="false"
-                  :aria-label="t.editor.selectorAria(draftName(d))"
+                  :aria-label="t.wizard.selectorAria(draftName(d))"
                   :data-testid="`pm-draft-${i + 1}-selector`"
                 ></textarea>
                 <p v-if="d.selectorError" class="pm-wiz-error" role="alert" :data-testid="`pm-draft-${i + 1}-selector-error`">
                   {{ d.selectorError }}
                 </p>
                 <button type="button" class="pm-btn small" :data-testid="`pm-draft-${i + 1}-selector-save`" @click="saveSelectors(d)">
-                  {{ t.editor.saveSelectors }}
+                  {{ t.wizard.saveSelectors }}
                 </button>
               </details>
 
@@ -280,7 +280,7 @@
             </div>
           </li>
         </ol>
-        <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-drafts-empty">{{ t.editor.emptyPage }}</p>
+        <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-drafts-empty">{{ t.wizard.draftsEmpty }}</p>
 
         <!-- 在哪些页面收起：新加的这几项整批设置一次（取代原来点保存才弹出的框）。
              编辑已有规则时不出现——每一行在自己的「调整」里各有范围，两个控件管同一件事只会互相打架 -->
@@ -958,9 +958,9 @@ function draftSummary(d: Draft): string {
   return `${t.value.common.strategy[d.strategy]} · ${scopeHumanLabel(draftScope(d))}`;
 }
 
-/** 失效说明：为什么这条可能没用了 + 它在哪些页面收起（复用编辑器里同一句） */
+/** 失效说明：为什么这条可能没用了 + 它在哪些页面收起 */
 function staleText(d: Draft): string {
-  return t.value.editor.health(draftName(d), scopeHumanLabel(draftScope(d)));
+  return t.value.wizard.staleWhy(draftName(d), scopeHumanLabel(draftScope(d)));
 }
 
 function setDraftScope(d: Draft, type: ScopeChoice) {
@@ -976,7 +976,7 @@ function setDraftScope(d: Draft, type: ScopeChoice) {
 function saveSelectors(d: Draft) {
   const text = (d.selectorText ?? '').trim();
   if (!text) {
-    d.selectorError = t.value.editor.errorEmpty;
+    d.selectorError = t.value.wizard.errorEmpty;
     return;
   }
   const lines = text
@@ -985,11 +985,11 @@ function saveSelectors(d: Draft) {
     .filter(Boolean);
   for (const [i, line] of lines.entries()) {
     if (!isSafeSelector(line)) {
-      d.selectorError = t.value.editor.errorInvalid(i + 1);
+      d.selectorError = t.value.wizard.errorInvalid(i + 1);
       return;
     }
     if (selectorHitsElement(line) < 1) {
-      d.selectorError = t.value.editor.errorNoHit(i + 1);
+      d.selectorError = t.value.wizard.errorNoHit(i + 1);
       return;
     }
   }

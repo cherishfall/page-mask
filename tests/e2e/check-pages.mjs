@@ -610,36 +610,13 @@ async function main() {
       `撤销按原下标插回、id 不变（${restored.hideRules.map((x) => x.id).join('、')}）`,
     );
 
-    // 「在页面上编辑」：没有打开这个网站的页面时给出可理解的提示
-    await m.click(tid('pm-mgmt-edit-on-page'));
-    await waitFor(
-      m,
-      '没有打开的页面时给出提示',
-      (s) => (document.querySelector(s)?.innerText ?? '').includes('没有打开的标签页'),
-      [tid('pm-mgmt-edit-hint')],
+    // 这一页只读清单：不再有「在页面上编辑」，改成一句指回页面的话（#71）
+    check(!(await m.$(tid('pm-mgmt-edit-on-page'))), '「在页面上编辑」已经拿掉（它不知道该去哪个页面）');
+    const editHint = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
+    check(
+      editHint.includes('工具栏上的 PageMask 图标') && editHint.includes('编辑收起的内容'),
+      `改成一句指回页面的话（${editHint}）`,
     );
-    check(true, '该站没有打开的标签页时，「在页面上编辑」给出可理解的提示');
-
-    // 有打开的页面时打开「编辑收起的内容」（#69 起由向导接管，直接停在看效果）
-    const editorTab = await browser.newPage();
-    await editorTab.goto(`${ORIGIN}/index.html`, { waitUntil: 'load' });
-    await editorTab.waitForSelector('pagemask-toggle', { timeout: 8000 });
-    await m.bringToFront();
-    await m.click(tid('pm-mgmt-edit-on-page'));
-    await waitForShadow(editorTab, 'pagemask-wizard', tid('pm-wizard-toolbar'), { timeout: 8000 });
-    check(true, '「在页面上编辑」在该站的标签页里打开了向导');
-    const editProgress = await editorTab.evaluate(
-      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-progress"]')?.textContent?.trim() ?? '',
-      'pagemask-wizard',
-    );
-    check(editProgress === '第 2 步 / 共 2 步', `打开即停在「看效果」（${editProgress}）`);
-    await editorTab.evaluate(
-      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-exit"]')?.click(),
-      'pagemask-wizard',
-    );
-    await waitFor(editorTab, '向导关闭', (h) => !document.querySelector(h), ['pagemask-wizard'], { timeout: 5000 });
-    await editorTab.close();
-    await m.bringToFront();
 
     // 开关
     await m.click(tid('pm-mgmt-switch'));
@@ -856,13 +833,7 @@ async function main() {
     await m.evaluate((o) => {
       location.hash = `#/sites/${new URL(o).host}`;
     }, ORIGIN);
-    await m.waitForSelector(tid('pm-mgmt-edit-on-page'), { timeout: 5000 });
-    check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === true, '待授权时「在页面上编辑」不可点（内容脚本还没注入）');
-    const editHintPending = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
-    check(
-      editHintPending.includes('允许访问之后'),
-      `不可点的原因写在按钮下面那一行（${editHintPending}）`,
-    );
+    await m.waitForSelector(tid('pm-mgmt-pending'), { timeout: 5000 });
     // 权限弹窗本身无法自动化：替换 contains / request 两个替身，验证「允许」之后本页立即刷新
     await m.evaluate(() => {
       window.__pmRequests = [];
@@ -874,9 +845,6 @@ async function main() {
     });
     await m.click(tid('pm-mgmt-authorize'));
     await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
-    check((await m.$eval(tid('pm-mgmt-edit-on-page'), (b) => b.disabled)) === false, '授权成功后本页立即变为可用');
-    const editHintAllowed = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
-    check(!editHintAllowed.includes('允许访问之后'), `可以点之后不再显示那句原因，回到默认说明（${editHintAllowed.slice(0, 16)}…）`);
     const authReq = await m.evaluate(() => window.__pmRequests);
     check(
       authReq.length === 1 && authReq[0].origins.includes(`${ORIGIN}/*`),

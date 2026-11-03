@@ -43,7 +43,6 @@ import { clickInShadow, shadowExists, shadowText, waitForShadow } from './lib/sh
 const r = createReporter();
 const { check } = r;
 const HOST = 'pagemask-wizard';
-const EDITOR = 'pagemask-editor';
 const TOGGLE = 'pagemask-toggle';
 const NOTICE = 'pagemask-notice';
 const SITE_TITLE = 'Acme 书房 · 向导测试';
@@ -1066,7 +1065,7 @@ async function main() {
     await pageOnly.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '0 条规则、只改过标题的网站也显示小胶囊');
     check(
-      await pageOnly.evaluate(() => !document.querySelector('pagemask-editor')),
+      await pageOnly.evaluate(() => !document.querySelector('pagemask-wizard')),
       '页面上也没有别的常驻界面',
     );
 
@@ -1081,22 +1080,14 @@ async function main() {
     );
     await mgmt.close();
 
-    // 面板空状态 +「开始选要收起的内容」入口（也可以从胶囊的「⋯」→「收起更多内容」进）
-    await sendToTab(ext.control, onlyTabId, { t: 'openEditor' });
-    await waitForShadow(pageOnly, EDITOR, tid('pm-editor-panel'));
-    const emptyText = await shadowText(pageOnly, EDITOR, tid('pm-ed-empty'));
-    check(emptyText.includes('还没有收起任何内容'), `面板空状态说清楚没有可收起的项（${emptyText.trim()}）`);
-    check(await shadowExists(pageOnly, EDITOR, tid('pm-editor-start')), '空状态里有「开始选要收起的内容」入口');
-    check(
-      !(await shadowExists(pageOnly, EDITOR, tid('pm-editor-add'))),
-      '空状态不再重复显示底部的「＋ 收起更多内容」',
-    );
-    await clickInShadow(pageOnly, EDITOR, tid('pm-editor-start'));
+    // 这一页没有可编辑的收起项：点「编辑收起的内容」不能把一个空清单摆给用户看，直接从点选开始（#71）
+    await sendToTab(ext.control, onlyTabId, { t: 'openWizard', mode: 'editRules' });
     await waitForShadow(pageOnly, HOST, tid('pm-wizard-toolbar'));
-    check((await progressOf(pageOnly)) === '第 1 步 / 共 2 步', `从面板开始选内容：直接进选内容，共 2 步（${await progressOf(pageOnly)}）`);
+    check((await progressOf(pageOnly)) === '第 1 步 / 共 2 步', `没有可编辑的项时直接进点选（${await progressOf(pageOnly)}）`);
+    check(!(await shadowExists(pageOnly, HOST, tid('pm-wiz-drafts-empty'))), '不把空清单摆给用户看');
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit'));
     await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);
-    check(true, '面板入口打开的向导可以正常退出');
+    check(true, '这个入口打开的向导可以正常退出');
     await pageOnly.close();
   } catch (e) {
     r.fail(e);

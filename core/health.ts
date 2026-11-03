@@ -101,7 +101,7 @@ export async function runHealthCheck(
   if (final.length) await deps.report(final);
 }
 
-/** 人话体检提醒（design.md：表达用大白话 + 「去处理」跳编辑由 UI 承担） */
+/** 人话体检提醒（design.md：表达用大白话 + 「重新选」的入口由界面承担） */
 export function healthMessage(rule: HideRule, scopeText: string): string {
-  return t().editor.health(rule.elementName, scopeText);
+  return t().wizard.staleWhy(rule.elementName, scopeText);
 }

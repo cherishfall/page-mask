@@ -170,15 +170,10 @@ export const zh = {
     iconHint: '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。',
 
     rulesHeading: '收起的内容',
-    rulesEmpty: '还没有收起任何内容。点下面的「在页面上编辑」，到网站上挑要收起的东西。',
+    rulesEmpty: '还没有收起任何内容。',
     ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了。打开这个网站重新选一次。`,
-    editOnPage: '在页面上编辑',
-    editHint: '换收起方式、重新选元素都要看着页面来，所以到网站上去改，改完马上能看到。',
-    /** 「在页面上编辑」不可点时，按钮下面那一行写的理由（#72） */
-    editNeedAccess: '允许访问之后，才能到页面上编辑收起的内容。',
-    editOpened: '已经在那个网站的标签页里打开编辑面板了。',
-    editNoTab: '这个网站现在没有打开的标签页。先打开它，再回来点「在页面上编辑」。',
-    editFailed: '没能打开编辑面板。刷新那个网站的页面后再试一次。',
+    /** 这一页只读清单；换成怎么收、重选元素都要页面上下文，所以指回页面（#71） */
+    rulesEditHint: '换收起方式或重新选，要在那个网站的页面上做：点工具栏上的 PageMask 图标，再点「编辑收起的内容」。',
 
     /** 站点设置页页脚与 ⋯ 菜单里的同一件事（改一处两处一起改） */
     deleteSite: {
@@ -332,6 +327,24 @@ export const zh = {
     badgeHidden: '之前收起了',
     /** 点到一条已经收起的项：说明它是原地更新，不是又加了一条（#69） */
     repicked: '这一项已经在列表里，已按你刚点的地方更新',
+    /** 每行「调整」里那几件事（原来在独立编辑面板里，#71 搬进来） */
+    rowScopeLegend: '在哪些页面收起',
+    rowScopeAll: '整个网站',
+    rowScopeInclude: '只在这类页面',
+    rowScopeExclude: '除了这类页面',
+    reselect: '重新选',
+    advancedSummary: '高级：选择器原文',
+    advancedHint: '每行写一个，保存前会在这个页面上检查能不能找到',
+    selectorAria: (name: string) => `「${name}」的选择器，每行一个`,
+    saveSelectors: '保存选择器',
+    /** 高级后门的逐行校验 */
+    errorEmpty: '选择器不能为空',
+    errorInvalid: (line: number) => `第 ${line} 行不是有效的选择器：每行只能写一个，不能包含 { } ; @ 或逗号`,
+    errorNoHit: (line: number) => `第 ${line} 行在这个页面上找不到目标，不能保存`,
+    /** 失效那一行为什么可能没用了 */
+    staleWhy: (name: string, scope: string) => `「${name}」最近找不到目标了，可能网站改版了。在哪些页面收起：${scope}`,
+    /** 看效果一条都没有时（只剩失效项被删光） */
+    draftsEmpty: '这个页面上没有用得上的收起项。可以回到上一步再选一些内容。',
     nameLabel: (seq: number) => `第 ${seq} 项的名称，留空就自动起名`,
     methodLegend: '收起方式',
     /** 一行勾选框回答一个是非题：页面上一样的要不要一起收（n 是「另外几个」，不含这一项本身） */
@@ -384,33 +397,6 @@ export const zh = {
   },
 
   /** 页面内编辑面板（ui/editor） */
-  editor: {
-    title: '编辑收起的内容',
-    close: '关闭编辑面板',
-    hint: (n: number) => `这里只列在这个页面上用得上的收起项（${n} 项），改完马上能看到效果`,
-    emptyAll: '这个网站还没有收起任何内容。先到页面上点选你想收起来的东西。',
-    emptyPage: '这个页面上没有用得上的收起项。可以在页面上再选一些内容。',
-    start: '开始选要收起的内容',
-    health: (name: string, scope: string) => `「${name}」最近找不到目标了，可能网站改版了。在哪些页面收起：${scope}`,
-    fix: '重新选',
-    methodLegend: '收起方式',
-    scopeLegend: '在哪些页面收起',
-    scopeAll: '整个网站',
-    scopeInclude: '只在这类页面',
-    scopeExclude: '除了这类页面',
-    scopeValueInclude: (label: string) => `只在这类页面：${label}`,
-    scopeValueExclude: (label: string) => `除了这类页面：${label}`,
-    reselect: '重新选',
-    advancedSummary: '高级：选择器原文',
-    advancedHint: '每行写一个，保存前会在这个页面上检查能不能找到',
-    selectorAria: (name: string) => `「${name}」的选择器，每行一个`,
-    saveSelectors: '保存选择器',
-    addMore: '收起更多内容',
-    /** 高级后门的逐行校验 */
-    errorEmpty: '选择器不能为空',
-    errorInvalid: (line: number) => `第 ${line} 行不是有效的选择器：每行只能写一个，不能包含 { } ; @ 或逗号`,
-    errorNoHit: (line: number) => `第 ${line} 行在这个页面上找不到目标，不能保存`,
-  },
 
   /** 页面右下角的小按钮（ui/FloatingToggle） */
   toggle: {

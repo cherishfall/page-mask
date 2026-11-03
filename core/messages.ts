@@ -150,11 +150,6 @@ export interface OpenWizardMsg {
   mode: OpenIntent;
 }
 
-/** popup → 内容脚本：打开页面内编辑面板 */
-export interface OpenEditorMsg {
-  t: 'openEditor';
-}
-
 /** 后台 → 内容脚本：本站即将被一键清空，立即移除隐藏样式、标题图标与所有界面，完成后回复 Ack */
 export interface SiteResetMsg {
   t: 'siteReset';
@@ -226,7 +221,6 @@ export type BgRequest =
   | ReleaseOrphanCssRequest;
 export type ContentMsg =
   | OpenWizardMsg
-  | OpenEditorMsg
   | SiteResetMsg
   | CurtainStateMsg
   | CurtainCoverMsg
