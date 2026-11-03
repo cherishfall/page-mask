@@ -290,12 +290,12 @@ async function main() {
     await shot(page, 'wizard-saved');
 
     // ===================== 悬浮按钮菜单（真实鼠标，#25） =====================
-    console.log('\n--- 悬浮按钮「⋯」菜单打开「编辑收起的内容」 ---');
+    console.log('\n--- 悬浮按钮「⋯」菜单打开「标题和图标」 ---');
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE_HOST, '[data-testid="pm-toggle-menu"]', { timeout: 3000 });
-    await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-edit'));
+    await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'), { timeout: 5000 });
-    check(true, '点菜单「编辑收起的内容」打开向导的看效果（#69）');
+    check(true, '点菜单「标题和图标」进向导第 1 步（#77）');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
     await waitFor(page, '向导关闭（复位）', (h) => !document.querySelector(h), [WIZARD_HOST]);
@@ -332,10 +332,12 @@ async function main() {
     check(normalUi.panelAction.direction === 'ltr' && normalUi.panelAction.color !== 'rgb(255, 0, 0)', '界面文字 ltr、不是页面的红色');
 
     console.log('\n--- 输入框按键不冒泡到页面（不触发站点快捷键） ---');
-    // 重新打开「编辑收起的内容」（snapshotUi 采完样式就关掉了），展开第 1 行的「调整」与「高级」，
-    // 用选择器输入框试按键
-    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'editRules' });
+    // 重新打开「收起内容」（snapshotUi 采完样式就关掉了）：停在选内容，先进看效果，
+    // 展开第 1 行的「调整」与「高级」，用选择器输入框试按键（#77）
+    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(hostile, WIZARD_HOST, tid('pm-wiz-heading'));
+    await clickInShadow(hostile, WIZARD_HOST, tid('pm-wiz-preview'));
+    await waitForShadow(hostile, WIZARD_HOST, tid('pm-draft-1-adjust'));
     await clickInShadow(hostile, WIZARD_HOST, tid('pm-draft-1-adjust'));
     await hostile.evaluate((h) => {
       window.__pmKeys = [];
@@ -362,7 +364,7 @@ async function main() {
     await waitFor(hostile, '向导关闭（准备开下一个）', (h) => !document.querySelector(h), [WIZARD_HOST], { timeout: 5000 });
 
     console.log('\n--- 敌意页面上的向导工具条与 Esc ---');
-    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'addElement' });
+    await sendToTab(ext.control, hostileTab, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(hostile, WIZARD_HOST, tid('pm-wizard-toolbar'));
     const wiz = await hostile.evaluate((h) => {
       const tb = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-toolbar"]');
@@ -467,21 +469,33 @@ async function main() {
 
     console.log('\n--- 向导预览停留到 SW 被停止后点「放弃」 ---');
     await prepareDisguised();
-    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'addElement' });
+    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));
     await waitStyle(page, '进向导临时还原：页头可见', '#site-header', 'display', 'none', { not: true });
+    // 「收起内容」停在选内容（#77）：本页适用的旧规则已铺成草稿，直接进看效果就带着预览
+    // 点一张没被已有规则覆盖的推荐卡（旧规则只收了页头/页脚）：新选 +1，进看效果后它被预览移除
     const cardPt2 = await page.evaluate(() => {
       const rc = document.querySelector('.rec-card').getBoundingClientRect();
-      return { x: rc.x + 40, y: rc.y + rc.height / 2 };
+      return { x: rc.x + rc.width / 2, y: rc.y + rc.height / 2 };
     });
+    const countBefore = Number(
+      (await page.evaluate(
+        (h, sel) => (document.querySelector(h)?.shadowRoot?.querySelector(sel)?.textContent ?? '').match(/（(\d+)）$/)?.[1] ?? '0',
+        WIZARD_HOST,
+        tid('pm-wiz-preview'),
+      )) ?? 0,
+    );
     await page.mouse.click(cardPt2.x, cardPt2.y);
     await waitFor(
       page,
-      '已选 1 个',
-      (h, sel) => (document.querySelector(h)?.shadowRoot?.querySelector(sel)?.textContent ?? '').includes('1'),
-      [WIZARD_HOST, tid('pm-wiz-preview')],
+      '已选数量 +1',
+      (h, sel, n) => (document.querySelector(h)?.shadowRoot?.querySelector(sel)?.textContent ?? '').includes(`（${n + 1}）`),
+      [WIZARD_HOST, tid('pm-wiz-preview'), countBefore],
     );
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-preview'));
+    console.log('  [debug] url=', page.url(), 'draftRows=', await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-drafts"] > li').length, WIZARD_HOST),
+      'names=', await page.evaluate((h) => [...document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-drafts"] input')].map((i) => i.value).join('|'), WIZARD_HOST),
+      'recDisplay=', await page.evaluate(() => getComputedStyle(document.querySelector('.rec-card')).display));
     await waitStyle(page, '预览：推荐卡被移除', '.rec-card', 'display', 'none');
     await stopServiceWorker(ext);
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
@@ -854,7 +868,7 @@ async function main() {
         );
       const toggle = await collect('toggle');
       // 向导打开时胶囊会让位，所以先采胶囊、再开向导采面板（#71：独立编辑面板已删）
-      await sendToTab(ext.control, tab, { t: 'openWizard', mode: 'editRules' });
+      await sendToTab(ext.control, tab, { t: 'openWizard', mode: 'editContent' });
       await waitForShadow(p, WIZARD_HOST, tid('pm-wiz-heading'));
       const editor = await collect('panel');
       await clickInShadow(p, WIZARD_HOST, tid('pm-wiz-exit'));

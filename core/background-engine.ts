@@ -166,7 +166,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
   async function enableSite(msg: EnableSiteRequest): Promise<EnableSiteResponse> {
     const { origin, tabId } = msg;
     const open: OpenIntent | undefined =
-      msg.open === 'newSite' || msg.open === 'addElement' || msg.open === 'editRules' ? msg.open : undefined;
+      msg.open === 'newSite' || msg.open === 'editTitle' || msg.open === 'editContent' ? msg.open : undefined;
     // 核对标签页当前确实停在这个站点：popup 打开后页面可能已跳走，授权不能落到别的站点（REVIEW B27）
     let tabOrigin: string | null = null;
     try {

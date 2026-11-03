@@ -93,9 +93,9 @@ export const en: Messages = {
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
     reauthorize: 'Allow access',
     reauthorizing: 'Waiting for you to allow…',
-    setupMore: 'Hide more',
+    setupMore: 'Hide items',
     setupNew: 'Set up this site',
-    editSite: 'Edit hidden items',
+    editTitle: 'Title & icon',
     coverPage: 'Cover this page',
     restorePage: 'Restore this page',
     covering: 'Covering…',
@@ -154,7 +154,7 @@ export const en: Messages = {
     ruleStaleNote: (name: string) =>
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
     rulesEditHint:
-      'To change how something is hidden or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Edit hidden items”.',
+      'To change how something is hidden or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Hide items”.',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -303,7 +303,6 @@ export const en: Messages = {
     staleSummary: 'May be broken · can’t be found on this page',
     badgeHidden: 'Hidden before',
     repicked: 'This item is already in the list — updated to where you just clicked',
-    alreadyHidden: 'This one is already hidden — no need to pick it again. To change it, use “Edit hidden items”.',
     rowScopeLegend: 'Where it applies',
     rowScopeAll: 'The whole site',
     rowScopeInclude: 'Only these pages',
@@ -367,18 +366,10 @@ export const en: Messages = {
     tipOff: 'Click to use your settings',
     coverAria: 'Cover the whole page',
     moreAria: 'More actions',
-    menuTitle: 'Tab title and icon',
-    menuMoreItems: 'Hide more items',
-    menuEdit: 'Edit hidden items',
+    menuTitle: 'Title & icon',
+    menuContent: 'Hide items',
     menuResetPos: 'Move button back to the corner',
     menuDelete: 'Delete this site’s settings',
-    panelTitle: 'Tab title and icon',
-    panelOriginalNote: 'Saved. The site is shown as-is, so you can’t see the change yet.',
-    panelSwitchClean: 'Use your settings',
-    panelTitleHint: (placeholder: string) =>
-      `Changes when you save. Leave it empty to use “${placeholder}” — a title can’t be blank, or Chrome would show the address instead.`,
-    panelIconHintWithDefault: 'Without an icon, the default icon from Settings is used.',
-    panelIconHintNoDefault: 'Without an icon, the tab shows no icon.',
     iconAlt: 'Icon that will show in the tab',
   },
 

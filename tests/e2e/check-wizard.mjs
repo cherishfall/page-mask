@@ -286,14 +286,15 @@ async function main() {
       switchState: 'original',
       disguisedTitle: null,
       faviconDataUrl: null,
-      // 老站点：已有 1 条规则（不命中任何元素），胶囊照常挂上；向导里只认本次点选的内容
+      // 老站点：已有 1 条规则，但范围只含一个不存在的页面——
+      // #77 起向导会把「本页适用的旧规则」铺成草稿，这条不该被铺进来；保存时验证它原样不动
       hideRules: [
         {
           id: 'r_e2e_existing',
           elementName: '以前收起的项',
           candidates: ['#pm-not-in-this-page'],
           strategy: 'remove',
-          scope: { type: 'all' },
+          scope: { type: 'include', patterns: [{ label: '只在不存在页面', prefix: `${ORIGIN}/never.html` }] },
           onlyThis: false,
           createdAt: now,
         },
@@ -307,19 +308,17 @@ async function main() {
     check(enabled?.ok === true, '测试站点已启用');
     await page.waitForSelector('pagemask-toggle', { timeout: 8000 });
     const openWizard = async () => {
-      await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'addElement' });
+      await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'editContent' });
       await waitForShadow(page, HOST, tid('pm-wizard-toolbar'));
     };
 
     // ===================== 序号重新编号（N6）、调整对象（N13） =====================
     console.log('\n--- 选择阶段：序号随选择变化重新编号 ---');
     await openWizard();
-    check((await progressOf(page)) === '第 1 步 / 共 2 步', `老站点直接进入第 1 步（选内容），共 2 步（${await progressOf(page)}）`);
+    check((await progressOf(page)) === '第 2 步 / 共 3 步', `「收起内容」停在选内容，第 2 步 / 共 3 步（${await progressOf(page)}）`);
     check((await headingOf(page)) === '点选要收起的内容', `标题说明这一步做什么（${await headingOf(page)}）`);
-    check(
-      !(await shadowExists(page, HOST, tid('pm-wiz-back'))),
-      '左下角没有「上一步」（已经添加过的网站只有两步）',
-    );
+    const backAtPick = (await shadowTexts(page, tid('pm-wiz-back')))[0] ?? '';
+    check(backAtPick === '上一步：改标题', `左下角「上一步」带目的地：改标题（${backAtPick}）`);
     // 右上角退出：文字按钮，不再是 28px 的裸 ✕
     const exitBtn = await buttonLook(page, 'pm-wiz-exit');
     check(
@@ -376,8 +375,11 @@ async function main() {
     );
     const footEmpty = await footerChildren(page);
     check(
-      footEmpty?.length === 1 && footEmpty.every((n) => n.tag === 'BUTTON'),
-      `底栏的直接子元素只有按钮（${JSON.stringify(footEmpty)}）`,
+      footEmpty?.length === 2 &&
+        footEmpty.every((n) => n.tag === 'BUTTON') &&
+        footEmpty[0].testid === 'pm-wiz-back' &&
+        footEmpty[1].testid === 'pm-wiz-preview',
+      `底栏只有按钮：左边退路「上一步：改标题」，右边前进（${JSON.stringify(footEmpty)}）`,
     );
     check((await shadowTexts(page, tid('pm-wiz-list-empty')))[0]?.includes('还没有选任何东西'), '0 项时清单是空状态');
     check(!(await shadowExists(page, HOST, tid('pm-wiz-clear-all'))), '清单为空时不显示「全部删掉」');
@@ -469,7 +471,7 @@ async function main() {
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '预览：活动栏被移除', '#promo', false);
     await waitVisible(page, '预览：横幅被移除', '#banner', false);
-    check((await progressOf(page)) === '第 2 步 / 共 2 步', `看效果是第 2 步（${await progressOf(page)}）`);
+    check((await progressOf(page)) === '第 3 步 / 共 3 步', `看效果是第 3 步（${await progressOf(page)}）`);
     check((await shadowExists(page, HOST, tid('pm-wiz-back'))), '看效果这一步左下角有「上一步」');
     const backToPick = (await shadowTexts(page, tid('pm-wiz-back')))[0] ?? '';
     check(backToPick === '上一步：重新选内容', `「上一步」写清退回去重新选内容（${backToPick}）`);
@@ -1079,9 +1081,9 @@ async function main() {
     await mgmt.close();
 
     // 这一页没有可编辑的收起项：点「编辑收起的内容」不能把一个空清单摆给用户看，直接从点选开始（#71）
-    await sendToTab(ext.control, onlyTabId, { t: 'openWizard', mode: 'editRules' });
+    await sendToTab(ext.control, onlyTabId, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(pageOnly, HOST, tid('pm-wizard-toolbar'));
-    check((await progressOf(pageOnly)) === '第 1 步 / 共 2 步', `没有可编辑的项时直接进点选（${await progressOf(pageOnly)}）`);
+    check((await progressOf(pageOnly)) === '第 2 步 / 共 3 步', `「收起内容」从点选开始（${await progressOf(pageOnly)}）`);
     check(!(await shadowExists(pageOnly, HOST, tid('pm-wiz-drafts-empty'))), '不把空清单摆给用户看');
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit'));
     await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);

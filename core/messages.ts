@@ -9,7 +9,7 @@
  */
 
 /** 启用站点后要在页面里打开的界面 */
-export type OpenIntent = 'newSite' | 'addElement' | 'editRules';
+export type OpenIntent = 'newSite' | 'editTitle' | 'editContent';
 
 /** 扩展页面 → 后台：为当前标签页的站点对账注册并立即注入内容脚本（可选随即打开向导） */
 export interface EnableSiteRequest {

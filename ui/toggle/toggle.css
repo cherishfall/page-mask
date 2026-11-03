@@ -242,49 +242,6 @@
 /* ── 「标签页标题和图标」小面板（#56，ui/title-icon/TitleIconPanel.vue） ──
    popover：进 top layer，不会被页面浮层压住；位置由脚本按「⋯」的位置算（贴在上方、右对齐）。
    表单本身的样式在 ui/title-icon/fields.css，与向导第 1 步共用。 */
-.pm-tp {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  box-sizing: border-box;
-  inline-size: 300px;
-  max-inline-size: calc(100vw - 2 * var(--pm-space-3));
-  max-block-size: calc(100vh - 2 * var(--pm-space-3));
-  overflow: auto;
-  padding: var(--pm-space-3);
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-card);
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  box-shadow: var(--pm-shadow-overlay);
-  /* 胶囊整体不参与文字选择，但面板里有输入框，必须能选中、能拖选 */
-  -webkit-user-select: text;
-  user-select: text;
-}
-.pm-tp-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--pm-space-2);
-  margin-bottom: var(--pm-space-2);
-}
-.pm-tp-heading {
-  margin: 0;
-  font-size: var(--pm-font-size-body);
-  font-weight: var(--pm-font-weight-strong);
-}
-.pm-tp-note {
-  margin: 0;
-  font-size: var(--pm-font-size-caption);
-  line-height: var(--pm-line-height);
-  color: var(--pm-fg);
-}
-.pm-tp-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--pm-space-2);
-  margin-top: var(--pm-space-3);
-}
 
 /* ── 删除确认框（#56，ui/toggle/DeleteSiteDialog.vue） ──
    原生模态 <dialog>：进 top layer，压得住页面里 z-index 再高的浮层；安全按钮「取消」默认聚焦，

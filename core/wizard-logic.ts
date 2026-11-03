@@ -51,21 +51,25 @@ export function unsavableDraftWarning(drafts: readonly { candidates: readonly st
 // 新网站第一次设置：标题与图标 → 选内容 → 看效果；已经添加过的网站只有后两步。
 // 第 1 步只在这里出现，第 2 / 3 步的内容重排在 #52、#53。
 
-export type WizardMode = 'newSite' | 'addElement' | 'editRules';
+/**
+ * 向导的三个入口（#77 三口归一）：
+ * - newSite：第一次给网站开启，从第 1 步开始；
+ * - editTitle：「标题和图标」入口，停在第一步，改完可点「只改标题，完成」提前走；
+ * - editContent：「收起内容」入口（原来的「收起更多内容」+「编辑收起的内容」合并），
+ *   停在选内容——页面上已收起的项标着「之前收起了」，加新的直接点，改旧的下一步。
+ * 三个入口走同一个三步向导：标题 → 选内容 → 看效果。
+ */
+export type WizardMode = 'newSite' | 'editTitle' | 'editContent';
 export type WizardPhase = 'title' | 'pick' | 'preview';
 
-/** 这个入口的步骤顺序 */
-export function wizardPhases(mode: WizardMode): readonly WizardPhase[] {
-  return mode === 'newSite' ? ['title', 'pick', 'preview'] : ['pick', 'preview'];
+/** 这个入口的步骤顺序：所有入口都是同一个三步向导，只是停的步不同 */
+export function wizardPhases(_mode: WizardMode): readonly WizardPhase[] {
+  return ['title', 'pick', 'preview'];
 }
 
-/**
- * 打开时停在哪一步（#69）：编辑已有规则一进来就在「看效果」——规则本来就在页面上生效着，
- * 第 2 步 / 共 2 步是准确的，不为了好看压成 1/1。
- */
+/** 打开时停在哪一步 */
 export function wizardInitialPhase(mode: WizardMode): WizardPhase {
-  if (mode === 'newSite') return 'title';
-  return mode === 'editRules' ? 'preview' : 'pick';
+  return mode === 'editContent' ? 'pick' : 'title';
 }
 
 /** 「第 N 步 / 共 M 步」里的两个数（1 起） */
@@ -75,7 +79,7 @@ export function wizardStep(mode: WizardMode, phase: WizardPhase): { index: numbe
   return { index: (i < 0 ? 0 : i) + 1, total: phases.length };
 }
 
-/** 上一步；第 1 步没有（老站点进入就是选内容，左下角不出现「上一步」） */
+/** 上一步；第 1 步没有（第 1 步的退路是退出设置） */
 export function wizardPrevPhase(mode: WizardMode, phase: WizardPhase): WizardPhase | null {
   const phases = wizardPhases(mode);
   const i = phases.indexOf(phase);
@@ -105,7 +109,7 @@ export function titleFromInput(value: unknown, fallback: unknown): string {
 export interface TitleOnlyPatch {
   disguisedTitle: string;
   faviconDataUrl: string | null;
-  switchState: 'disguised';
+  switchState: 'disguised' | 'original';
 }
 
 /**
@@ -116,11 +120,13 @@ export function titleOnlyPatch(input: {
   title: unknown;
   icon: string | null;
   fallbackTitle: unknown;
+  /** 已添加网站保持它现在的开关状态（editTitle 不顺手打开清爽，#77）；新站点不给 = 清爽 */
+  keepState?: 'disguised' | 'original';
 }): TitleOnlyPatch {
   return {
     disguisedTitle: titleFromInput(input.title, input.fallbackTitle),
     faviconDataUrl: input.icon || null,
-    switchState: 'disguised',
+    switchState: input.keepState ?? 'disguised',
   };
 }
 

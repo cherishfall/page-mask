@@ -419,7 +419,7 @@ async function main() {
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '设置这个网站', '新站点主按钮写「设置这个网站」');
-    check(!(await popup.$(tid('pm-popup-edit'))), '未配置站点不显示「编辑收起的内容」（那个按钮只在已配置时才有意义）');
+    check(!(await popup.$(tid('pm-popup-title'))), '未配置站点不显示「标题和图标」（那个按钮只在已配置时才有意义）');
     await checkPopupChrome(popup, '未添加的网站');
     await coverAndRestore(ext, popup, site2, '未添加的网站');
 
@@ -614,7 +614,7 @@ async function main() {
     check(!(await m.$(tid('pm-mgmt-edit-on-page'))), '「在页面上编辑」已经拿掉（它不知道该去哪个页面）');
     const editHint = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());
     check(
-      editHint.includes('工具栏上的 PageMask 图标') && editHint.includes('编辑收起的内容'),
+      editHint.includes('工具栏上的 PageMask 图标') && editHint.includes('收起内容'),
       `改成一句指回页面的话（${editHint}）`,
     );
 

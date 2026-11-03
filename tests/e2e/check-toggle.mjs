@@ -7,12 +7,11 @@
  * 覆盖：
  * - 菜单：默认右下角时菜单完整在视口内（右侧与底部都不出屏）；Esc 关闭；点页面关闭；
  *   右键胶囊不再弹出菜单（「永不做」清单：不新增右键菜单入口）
- * - 菜单按用途分组（#56 / #67）：标签页标题和图标 / 收起更多内容 / 编辑收起的内容 ｜ 按钮放回右下角 ｜
- *   删除这个网站的设置（红字，与上面用分隔线隔开）；「收起更多内容」直接进向导点选新元素
- * - 显示条件（#67）：站点有任何设置（标题 / 图标 / 收起项）就显示胶囊，三样全空才不显示；
- *   0 条收起项时菜单里没有「编辑收起的内容」
- * - 点菜单「编辑收起的内容」打开向导的「看效果」，且开关状态不变（N1 的实测故障、#69）
- * - 就地改标题与图标（#56）：不跳标签页，保存即生效；原样态下保存完说明「现在是网站原样」并给切换入口
+ * - 菜单按用途分组（#56 / #77）：标题和图标 / 收起内容 ｜ 按钮放回右下角 ｜ 删除这个网站的设置
+ *   （红字，与上面用分隔线隔开）；两项都进同一个三步向导，只是停的步不同
+ * - 显示条件（#67）：站点有任何设置（标题 / 图标 / 收起项）就显示胶囊，三样全空才不显示
+ * - 点菜单「标题和图标」停在向导第 1 步，「收起内容」停在选内容；开关状态都不变（N1 的实测故障）
+ * - 「标题和图标」在向导第 1 步就地实时预览，「只改标题，完成」保存走人；原样态下不顺手打开清爽
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
  *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
@@ -287,15 +286,13 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') ===
-        '标签页标题和图标 / 收起更多内容 / 编辑收起的内容 / 按钮放回右下角 / 删除这个网站的设置',
-      `菜单是五项、叫法一致（${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === '标题和图标 / 收起内容 / 按钮放回右下角 / 删除这个网站的设置',
+      `菜单是四项、与弹窗同名（${menuShape.items.join(' / ')}）`,
     );
     check(menuShape.seps === 2, `菜单里有两条分隔线（实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') ===
-        '标签页标题和图标 | 收起更多内容 | 编辑收起的内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
-      `分组顺序：改内容三项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.order.join(' | ') === '标题和图标 | 收起内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
+      `分组顺序：改内容两项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -304,8 +301,8 @@ async function main() {
     await page.keyboard.press('Escape');
     await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
 
-    // ===================== 菜单「收起更多内容」：直接进向导（#67） =====================
-    console.log('\n--- 点菜单「收起更多内容」：打开向导 ---');
+    // ===================== 菜单「收起内容」：直接进向导（#67 / #77） =====================
+    console.log('\n--- 点菜单「收起内容」：打开向导 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more-items'));
@@ -316,17 +313,17 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '退出向导后胶囊挂回来');
 
-    // ===================== 菜单「编辑收起的内容」不切开关（N1、#69） =====================
-    console.log('\n--- 点菜单「编辑收起的内容」：打开向导的看效果、开关不变 ---');
+    // ===================== 菜单「标题和图标」不切开关（N1、#77） =====================
+    console.log('\n--- 点菜单「标题和图标」：停在向导第 1 步、开关不变 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-edit'));
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(
-      (await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 2 步 / 共 2 步',
-      '菜单「编辑收起的内容」打开向导，直接停在「看效果」（#69）',
+      (await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 1 步 / 共 3 步',
+      '菜单「标题和图标」停在向导第 1 步（#77）',
     );
-    check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '看效果', '向导标题是「看效果」');
+    check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '标签页标题和图标', '向导标题是「标签页标题和图标」');
     const afterMenu = await getProfile(ext.control, ORIGIN);
     check(afterMenu.switchState === 'disguised', `开关没有被菜单点击切掉（${afterMenu.switchState}）`);
     // 没有改动时退出不弹确认框（编辑已有规则按草稿快照判断）
@@ -335,94 +332,60 @@ async function main() {
     // 进向导时胶囊让位；退出后运行时重新挂回来，再继续点菜单
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
 
-    // ===================== 就地改标题与图标（#56） =====================
-    console.log('\n--- 菜单「标签页标题和图标」：就地弹出小面板、保存即生效 ---');
+    // ===================== 「标题和图标」进向导第 1 步（#77） =====================
+    console.log('\n--- 菜单「标题和图标」：向导第 1 步就地实时预览，「只改标题，完成」保存走人 ---');
     const urlBefore = page.url();
-    const panelOpen = () =>
-      page.evaluate(
-        (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]')?.matches(':popover-open'),
-        TOGGLE,
-      );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
-    await waitFor(page, '小面板打开', (h) => {
-      const el = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]');
-      return !!el && el.matches(':popover-open');
-    }, [TOGGLE], { timeout: 3000 });
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(page.url() === urlBefore, `就地打开，没有跳到别的标签页（地址仍是 ${new URL(page.url()).pathname}）`);
-    check(!(await page.$(WIZARD)), '没有借道向导');
-    const panelShape = await page.evaluate((h) => {
-      const sr = document.querySelector(h).shadowRoot;
-      const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
-      return {
-        menuClosed: !menu.matches(':popover-open'),
-        titleInput: !!sr.querySelector('[data-testid="pm-tp-title-input"]'),
-        quick: sr.querySelectorAll('[data-testid^="pm-tp-quick-"]').length,
-        iconInput: !!sr.querySelector('[data-testid="pm-tp-icon-input"]'),
-        iconEmpty: !!sr.querySelector('[data-testid="pm-tp-icon-empty"]'),
-        save: sr.querySelector('[data-testid="pm-tp-save"]')?.textContent.trim() ?? '',
-        cancel: sr.querySelector('[data-testid="pm-tp-cancel"]')?.textContent.trim() ?? '',
-      };
-    }, TOGGLE);
-    check(panelShape.menuClosed, '打开小面板时菜单先关掉');
-    check(
-      panelShape.titleInput && panelShape.quick === 4 && panelShape.iconInput && panelShape.iconEmpty,
-      `表单与向导第 1 步同一套：标题、4 个快捷标题、图标上传与预览位（${JSON.stringify(panelShape)}）`,
-    );
-    check(panelShape.save === '保存' && panelShape.cancel === '取消', '面板底部是「取消」「保存」');
-    const box = await rectIn(page, TOGGLE, tid('pm-tp-panel'));
-    check(
-      box.x >= 0 && box.y >= 0 && box.right <= 1000 && box.bottom <= 700,
-      `小面板完整在视口内（${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.w)}×${Math.round(box.h)}）`,
-    );
-
-    // 清爽态：改标题 → 保存 → 标签页当场改名
+    check((await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 1 步 / 共 3 步', '停在向导第 1 步');
+    // 实时预览：改标题 → 标签页当场改名（不等保存）
     const NEW_TITLE = '安静的标题';
     await page.evaluate(
       (h, v) => {
-        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-tp-title-input"]');
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
         input.focus();
         input.value = v;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       },
-      TOGGLE,
+      WIZARD,
       NEW_TITLE,
     );
-    await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
-    await waitFor(page, '保存后标签页当场改名', (t) => document.title === t, [NEW_TITLE], { timeout: 3000 });
-    check(!(await panelOpen()), '清爽态下保存后面板收起');
+    await waitFor(page, '改标题实时预览', (t) => document.title === t, [NEW_TITLE], { timeout: 3000 });
+    await clickInShadow(page, WIZARD, tid('pm-wiz-title-done'));
+    await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     check((await getProfile(ext.control, ORIGIN)).disguisedTitle === NEW_TITLE, '标题写进存储');
+    await page.waitForSelector(TOGGLE, { timeout: 5000 });
+    check(true, '保存后胶囊挂回来');
 
-    // 原样态：保存后要说明「现在是原样态」，并给一个切换入口
+    // 原样态：只改标题不顺手打开清爽（面板时代的「切到清爽」入口随三口归一退场，#77）
     await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
     await waitFor(page, '切到原样', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
     const ORIGINAL_TITLE = '原样下改的标题';
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
-    await waitFor(page, '小面板再次打开', (h) => {
-      const el = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tp-panel"]');
-      return !!el && el.matches(':popover-open');
-    }, [TOGGLE], { timeout: 3000 });
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     await page.evaluate(
       (h, v) => {
-        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-tp-title-input"]');
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
         input.focus();
         input.value = v;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       },
-      TOGGLE,
+      WIZARD,
       ORIGINAL_TITLE,
     );
-    await clickInShadow(page, TOGGLE, tid('pm-tp-save'));
-    await waitForShadow(page, TOGGLE, tid('pm-tp-original-note'), { timeout: 3000 });
-    const noteText = await shadowText(page, TOGGLE, tid('pm-tp-original-note'));
-    check(noteText.includes('现在是原样') && noteText.includes('看不到效果'), `原样态下保存给出说明（${noteText.trim()}）`);
+    await clickInShadow(page, WIZARD, tid('pm-wiz-title-done'));
+    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    const afterOriginal = await getProfile(ext.control, ORIGIN);
+    check(
+      afterOriginal.disguisedTitle === ORIGINAL_TITLE && afterOriginal.switchState === 'original',
+      `原样态下只改标题，开关不被顺手打开（${afterOriginal.disguisedTitle} / ${afterOriginal.switchState}）`,
+    );
     check((await page.title()) === 'Acme 阅读', '原样态下标签页仍是真名（保存不硬改）');
-    await clickInShadow(page, TOGGLE, tid('pm-tp-switch-clean'));
-    await waitFor(page, '面板里的「按设置」当场生效', (t) => document.title === t, [ORIGINAL_TITLE], { timeout: 5000 });
-    check(!(await panelOpen()), '切换后面板收起');
     // 复位：后面的幕布用例断言固定的清爽标题
     await patchProfile(ext.control, ORIGIN, { disguisedTitle: '低调阅读', switchState: 'disguised' });
     await waitFor(page, '复位到固定标题', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });
@@ -558,13 +521,11 @@ async function main() {
       const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
       return {
         items: [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim()),
-        hasEdit: !!sr.querySelector('[data-testid="pm-toggle-edit"]'),
       };
     }, TOGGLE);
-    check(!noRulesMenu.hasEdit, '0 条收起项时菜单里没有「编辑收起的内容」');
     check(
-      noRulesMenu.items.join(' / ') === '标签页标题和图标 / 收起更多内容 / 按钮放回右下角 / 删除这个网站的设置',
-      `0 条收起项时只留四项（${noRulesMenu.items.join(' / ')}）`,
+      noRulesMenu.items.join(' / ') === '标题和图标 / 收起内容 / 按钮放回右下角 / 删除这个网站的设置',
+      `0 条收起项时菜单不变：收起内容这时就是纯添加（${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 
@@ -835,7 +796,7 @@ async function main() {
     // ---- 进向导前先撤幕布 ----
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
     await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
-    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
+    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     const wizardState = await page.evaluate(() => ({
       curtain: !!document.querySelector('pagemask-curtain'),
@@ -879,10 +840,10 @@ async function main() {
     console.log('\n--- 页面浮层 z-index:2147483647 时，向导对话框仍在最上层 ---');
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
-    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'addElement' });
+    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'));
-    // 先选一个元素，退出时才需要确认框（没有选择会直接退出）。
-    // 不能点 #ad：这个网站的规则本来就收着它（.ad），点它会被「这一项已经收起了」挡下而不是入选（#74）
+    // 先选一个元素，退出时才需要确认框（没有选择会直接退出）。不能点 #ad：
+    // 这个网站的规则本来就收着它（.ad），点它属于原地替换那一条而不是新选（#77）
     const body = await page.evaluate(() => {
       const r = document.querySelector('#content h1').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };

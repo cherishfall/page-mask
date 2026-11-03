@@ -1,6 +1,6 @@
 /**
- * 向导接管「编辑收起的内容」验收（#69）：popup 入口 → 直接停在「看效果」、草稿来自这个页面上适用的旧规则；
- * 上一步回选内容、之前收起过的元素带「之前收起了」标记、点它原地替换、保存不翻倍、删掉的规则随保存移除。
+ * 「收起内容」验收（#77 三口归一）：popup 主按钮 → 停在选内容、已收起的项带「之前收起了」标记；
+ * 点已收起的元素原地替换、下一步逐行改、保存不翻倍、删掉的规则随保存移除。
  *
  * 运行：npm run build && node tests/e2e/check-edit-rules.mjs     （约 20 秒；HEADFUL=1 有界面运行）
  *
@@ -159,12 +159,12 @@ async function clickEl(page, sel) {
   await page.mouse.click(rc.x + rc.w / 2, rc.y + rc.h / 2);
 }
 
-/** 打开「编辑收起的内容」：走真实的 popup 入口 */
+/** 打开「收起内容」：走真实的 popup 主按钮入口（#77） */
 async function openEditRules(ext, page) {
   const popup = await openPopup(ext, page);
-  await popup.waitForSelector(tid('pm-popup-edit'), { timeout: 5000 });
+  await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
   await popup.bringToFront();
-  await popup.click(tid('pm-popup-edit'));
+  await popup.click(tid('pm-popup-setup'));
   await waitForShadow(page, HOST, tid('pm-wizard-toolbar'), { timeout: 8000 });
 }
 
@@ -220,11 +220,40 @@ async function main() {
     await waitVisible(page, '规则生效：广告位被收起', '#ad', false);
     check((await page.evaluate(() => getComputedStyle(document.querySelector('#banner')).visibility)) === 'hidden', '规则生效：横幅留空');
 
-    // ===================== 入口与草稿 =====================
-    console.log('\n--- popup「编辑收起的内容」→ 直接停在看效果，草稿来自旧规则 ---');
+    // ===================== 入口：停在选内容，已收起的直接标出来（#77） =====================
+    console.log('\n--- popup「收起内容」→ 停在选内容，旧规则铺成草稿并标在页面上 ---');
     await openEditRules(ext, page);
-    check((await progressOf(page)) === '第 2 步 / 共 2 步', `一进来就在看效果，步骤是 2/2（${await progressOf(page)}）`);
-    check((await headingOf(page)) === '看效果', `标题是「看效果」（${await headingOf(page)}）`);
+    check((await progressOf(page)) === '第 2 步 / 共 3 步', `停在选内容，第 2 步 / 共 3 步（${await progressOf(page)}）`);
+    check((await headingOf(page)) === '点选要收起的内容', `标题说明这一步做什么（${await headingOf(page)}）`);
+    const backAtOpen = (await shadowTexts(page, tid('pm-wiz-back')))[0] ?? '';
+    check(backAtOpen === '上一步：改标题', `左下角「上一步」带目的地：改标题（${backAtOpen}）`);
+    await waitPickReady(page, '拾取层接管指针');
+    await waitFor(page, '出现两个「之前收起了」标记', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-hidden-mark"]').length === 2, [HOST]);
+    const marks = await hiddenMarks(page);
+    check(marks.length === 2, `两条能命中的旧规则各标出一处（${marks.length}）`);
+    const adRect = await page.evaluate(() => {
+      const b = document.querySelector('#ad').getBoundingClientRect();
+      return { x: b.x, y: b.y, w: b.width, h: b.height };
+    });
+    check(
+      marks.some((m) => Math.abs(m.x - adRect.x) < 1.5 && Math.abs(m.y - adRect.y) < 1.5 && Math.abs(m.w - adRect.w) < 1.5),
+      '广告位上的标记与元素严丝合缝',
+    );
+    const badgeTexts = await shadowTexts(page, tid('pm-hidden-badge'));
+    check(
+      badgeTexts.length === 2 && badgeTexts.every((x) => x === '之前收起了'),
+      `角标写的是「之前收起了」（${badgeTexts.join(' / ')}）`,
+    );
+    const pickZ = await page.evaluate((h) => getComputedStyle(document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-pick-layer"]')).zIndex, HOST);
+    check(
+      marks.every((m) => m.pointer === 'none' && Number(m.z) < Number(pickZ)),
+      `标记在点选捕获层之下且不吃指针（z=${marks[0]?.z} < ${pickZ}，pointer-events=${marks[0]?.pointer}）`,
+    );
+
+    // 下一步：三条旧规则都进了看效果
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitVisible(page, '看效果：页面按现有设置显示（广告位收起）', '#ad', false);
+    check((await progressOf(page)) === '第 3 步 / 共 3 步', `看效果是第 3 步（${await progressOf(page)}）`);
     check((await draftCount(page)) === 3, `三条旧规则都铺成了草稿（实际 ${await draftCount(page)} 行）`);
     const names = await draftNames(page);
     check(
@@ -243,7 +272,6 @@ async function main() {
       (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-save"]').disabled, HOST)) === false,
       '失效但有候选的规则可以保存（不是新错误）',
     );
-    check((await visible(page, '#ad')) === false, '一进来页面就按现有设置显示（广告位仍然收起）');
     check(
       (await page.evaluate(() => getComputedStyle(document.querySelector('#banner')).visibility)) === 'hidden',
       '横幅仍然留空',
@@ -267,33 +295,15 @@ async function main() {
     );
     await waitVisible(page, '保存后广告位仍收起', '#ad', false);
 
-    // ===================== 上一步：之前收起过的元素被标出来 =====================
-    console.log('\n--- 上一步回选内容：之前收起过的元素带虚线框和「之前收起了」角标 ---');
+    // ===================== 选内容阶段：看效果的上一步回来，标记还在、选择不丢 =====================
+    console.log('\n--- 看效果「上一步」回选内容：页面还原、标记还在 ---');
     await openEditRules(ext, page);
+    await clickInShadow(page, HOST, tid('pm-wiz-preview')); // 先到看效果，再走「上一步」回来
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitVisible(page, '回到选内容：页面先还原', '#ad');
     await waitPickReady(page, '拾取层接管指针');
-    await waitFor(page, '出现两个「之前收起了」标记', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-hidden-mark"]').length === 2, [HOST]);
-    const marks = await hiddenMarks(page);
-    check(marks.length === 2, `两条能命中的旧规则各标出一处（${marks.length}）`);
-    const adRect = await page.evaluate(() => {
-      const b = document.querySelector('#ad').getBoundingClientRect();
-      return { x: b.x, y: b.y, w: b.width, h: b.height };
-    });
-    check(
-      marks.some((m) => Math.abs(m.x - adRect.x) < 1.5 && Math.abs(m.y - adRect.y) < 1.5 && Math.abs(m.w - adRect.w) < 1.5),
-      '广告位上的标记与元素严丝合缝',
-    );
-    const badgeTexts = await shadowTexts(page, tid('pm-hidden-badge'));
-    check(
-      badgeTexts.length === 2 && badgeTexts.every((x) => x === '之前收起了'),
-      `角标写的是「之前收起了」（${badgeTexts.join(' / ')}）`,
-    );
-    const pickZ = await page.evaluate((h) => getComputedStyle(document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-pick-layer"]')).zIndex, HOST);
-    check(
-      marks.every((m) => m.pointer === 'none' && Number(m.z) < Number(pickZ)),
-      `标记在点选捕获层之下且不吃指针（z=${marks[0]?.z} < ${pickZ}，pointer-events=${marks[0]?.pointer}）`,
-    );
+    await waitFor(page, '上一步回来标记还在', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-hidden-mark"]').length === 2, [HOST]);
+    check(true, '上一步回来：两条「之前收起了」标记照旧');
 
     // ===================== 点之前收起过的元素：原地替换 =====================
     console.log('\n--- 点已经收起的元素：原地更新那一条，不新增重复规则 ---');
@@ -440,46 +450,6 @@ async function main() {
       added[0]?.candidates ?? [],
     );
     check(hitsCard, `新规则指向卡片一（${JSON.stringify(added[0]?.candidates)}）`);
-
-    // ===================== 「收起更多内容」也标出已收起的（#74） =====================
-    console.log('\n--- 「收起更多内容」：页面上已经收起的也标出来，再点它不会重复添加 ---');
-    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'addElement' });
-    await waitForShadow(page, HOST, tid('pm-wizard-toolbar'));
-    check((await progressOf(page)) === '第 1 步 / 共 2 步', `从点选开始（${await progressOf(page)}）`);
-    await waitPickReady(page, '拾取层接管指针');
-    await waitFor(
-      page,
-      '已收起的元素被标出来',
-      (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-hidden-mark"]').length >= 3,
-      [HOST],
-    );
-    // 三条规则在这个页面上命中：广告位、活动栏，以及「卡片」那条规则命中的每一张卡片
-    const addMarks = await hiddenMarks(page);
-    const adNow = await page.evaluate(() => {
-      const b = document.querySelector('#ad').getBoundingClientRect();
-      return { x: b.x, y: b.y, w: b.width, h: b.height };
-    });
-    check(
-      addMarks.some((m) => Math.abs(m.x - adNow.x) < 1.5 && Math.abs(m.y - adNow.y) < 1.5 && Math.abs(m.w - adNow.w) < 1.5),
-      `已收起的广告位上带标记（共 ${addMarks.length} 处）——不是一片空白让人重选`,
-    );
-    const addBadges = await shadowTexts(page, tid('pm-hidden-badge'));
-    check(
-      addBadges.length === addMarks.length && addBadges.every((x) => x === '之前收起了'),
-      `每处标记各一个角标，文案与编辑入口一致（${addMarks.length} 处 / ${addBadges.length} 个角标）`,
-    );
-    await clickEl(page, '#ad');
-    await waitForShadow(page, HOST, tid('pm-wizard-info'), { timeout: 3000 });
-    const dupInfo = (await shadowTexts(page, tid('pm-wizard-info')))[0] ?? '';
-    check(dupInfo.includes('这一项已经收起了'), `点已收起的项：说清不用再选（${dupInfo}）`);
-    check(
-      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length, HOST)) === 0,
-      '没有把它加进这次的选择清单（不产生重复规则）',
-    );
-    const addNext = (await shadowTexts(page, tid('pm-wiz-preview')))[0] ?? '';
-    check(addNext === '下一步：看效果（0）', `计数仍是 0（${addNext}）`);
-    await clickInShadow(page, HOST, tid('pm-wiz-exit'));
-    await waitFor(page, '退出向导', (h) => !document.querySelector(h), [HOST]);
 
     // 保存后的页面效果：盖住 / 删除 / 重选 / 新增都生效
     await page.waitForSelector(TOGGLE, { timeout: 8000 });

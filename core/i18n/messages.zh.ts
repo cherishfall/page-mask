@@ -114,9 +114,10 @@ export const zh = {
     pendingHint: '浏览器收回了这个网站的访问权限。你的设置都还在，重新允许访问就回来了。',
     reauthorize: '允许访问',
     reauthorizing: '正在等你允许…',
-    setupMore: '收起更多内容',
+    setupMore: '收起内容',
     setupNew: '设置这个网站',
-    editSite: '编辑收起的内容',
+    /** 「标题和图标」入口：完整说法进悬停提示（按钮上四个字，#77） */
+    editTitle: '标题和图标',
     coverPage: '遮住这一页',
     restorePage: '恢复这一页',
     covering: '正在遮住…',
@@ -173,7 +174,7 @@ export const zh = {
     rulesEmpty: '还没有收起任何内容。',
     ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了。打开这个网站重新选一次。`,
     /** 这一页只读清单；换成怎么收、重选元素都要页面上下文，所以指回页面（#71） */
-    rulesEditHint: '换收起方式或重新选，要在那个网站的页面上做：点工具栏上的 PageMask 图标，再点「编辑收起的内容」。',
+    rulesEditHint: '换收起方式或重新选，要在那个网站的页面上做：点工具栏上的 PageMask 图标，再点「收起内容」。',
 
     /** 站点设置页页脚与 ⋯ 菜单里的同一件事（改一处两处一起改） */
     deleteSite: {
@@ -327,8 +328,6 @@ export const zh = {
     badgeHidden: '之前收起了',
     /** 点到一条已经收起的项：说明它是原地更新，不是又加了一条（#69） */
     repicked: '这一项已经在列表里，已按你刚点的地方更新',
-    /** 「收起更多内容」时点到已经收起过的东西：不重复添加，说一句为什么（#74） */
-    alreadyHidden: '这一项已经收起了，不用再选一次；要改它就用「编辑收起的内容」',
     /** 每行「调整」里那几件事（原来在独立编辑面板里，#71 搬进来） */
     rowScopeLegend: '在哪些页面收起',
     rowScopeAll: '整个网站',
@@ -404,19 +403,10 @@ export const zh = {
     tipOff: '点一下按你的设置显示',
     coverAria: '遮住整个页面',
     moreAria: '更多操作',
-    menuTitle: '标签页标题和图标',
-    menuMoreItems: '收起更多内容',
-    menuEdit: '编辑收起的内容',
+    menuTitle: '标题和图标',
+    menuContent: '收起内容',
     menuResetPos: '按钮放回右下角',
     menuDelete: '删除这个网站的设置',
-    /** 就地改标题的小面板 */
-    panelTitle: '标签页标题和图标',
-    panelOriginalNote: '改好了。现在是原样，还看不到效果。',
-    panelSwitchClean: '按设置',
-    panelTitleHint: (placeholder: string) =>
-      `点保存才改。留空就用「${placeholder}」——标题不能留成空白，空白时 Chrome 会改成显示网址。`,
-    panelIconHintWithDefault: '不传图标的话，用插件设置里的默认图标。',
-    panelIconHintNoDefault: '不传图标的话，标签页上不显示图标。',
     iconAlt: '将要显示在标签页上的图标',
   },
 

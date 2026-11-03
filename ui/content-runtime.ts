@@ -140,22 +140,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const toggleState = reactive<{
     state: SiteProfile['switchState'];
     position: SiteProfile['floatingBtnPos'];
-    /** 站点自己的标签页标题（⋯ 菜单里的小面板编辑它） */
-    title: string | null;
-    icon: string | null;
-    /** 站点没有自己的标题时实际会用的那个（小面板的占位与说明） */
-    fallbackTitle: string;
-    hasDefaultIcon: boolean;
-    /** 有没有收起项：「编辑收起的内容」只在有东西可编辑时出现（#67） */
-    hasRules: boolean;
   }>({
     state: 'original',
     position: null,
-    title: null,
-    icon: null,
-    fallbackTitle: '',
-    hasDefaultIcon: false,
-    hasRules: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -197,11 +184,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
-    toggleState.title = profile?.disguisedTitle ?? null;
-    toggleState.icon = profile?.faviconDataUrl ?? null;
-    toggleState.fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
-    toggleState.hasDefaultIcon = !!settings.defaultIconDataUrl;
-    toggleState.hasRules = (profile?.hideRules.length ?? 0) > 0;
   }
 
   /**
@@ -230,11 +212,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
-          title: toggleState.title ?? '',
-          icon: toggleState.icon,
-          fallbackTitle: toggleState.fallbackTitle,
-          hasDefaultIcon: toggleState.hasDefaultIcon,
-          hasRules: toggleState.hasRules,
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
@@ -242,8 +219,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           onMoreItems: handleMoreItems,
           onResetPos: handleResetPos,
           onCover: handleCover,
-          onSaveTitle: handleTitleSave,
-          onSwitchClean: handleSwitchClean,
           onDelete: handleDeleteRequest,
           onDeleteSite: handleDeleteSite,
         }),
@@ -295,48 +270,14 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     );
   }
 
+  /** 菜单「标题和图标」（#77）：进向导第 1 步，改完可「只改标题，完成」提前走 */
   function handleEdit() {
-    if (ctx.isValid) void openWizard('editRules');
+    if (ctx.isValid) void openWizard('editTitle');
   }
 
-  /** 菜单「收起更多内容」（#67）：直接进向导点选新元素，保存后按新配置挂回胶囊 */
+  /** 菜单「收起内容」（#77）：进向导选内容，添加与编辑同一扇门 */
   function handleMoreItems() {
-    if (ctx.isValid) void openWizard('addElement');
-  }
-
-  /**
-   * ⋯ 菜单小面板「保存」：标题与图标一起写库。
-   * 清爽态当场改标签页（不等 onChanged 绕一圈），原样态什么都不显示——面板会自己提示
-   * 「现在是原样态」，并给一个「切到清爽」的入口。
-   */
-  async function handleTitleSave(value: { title: string; icon: string | null }): Promise<void> {
-    if (!profile || !ctx.isValid) return;
-    const title = value.title.trim() ? value.title : null; // 留空 = 跟随全局默认（与站点设置页一致）
-    const icon = value.icon;
-    profile.disguisedTitle = title;
-    profile.faviconDataUrl = icon;
-    syncToggleState();
-    if (profile.switchState === 'disguised') {
-      guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
-    }
-    try {
-      await storage.updateProfile(origin, (p) => {
-        p.disguisedTitle = title;
-        p.faviconDataUrl = icon;
-      });
-    } catch {
-      showPageNotice(ctx, t().notice.saveFailed);
-    }
-  }
-
-  /** 小面板里的「切到清爽」：原地切过去，让刚保存的标题与图标立刻可见 */
-  async function handleSwitchClean(): Promise<void> {
-    if (!profile || !ctx.isValid || profile.switchState === 'disguised') return;
-    profile.switchState = 'disguised';
-    syncToggleState();
-    await storage.updateProfile(origin, (p) => {
-      p.switchState = 'disguised';
-    });
+    if (ctx.isValid) void openWizard('editContent');
   }
 
   /** 点了「删除这个网站的设置」：弹确认框之前先把幕布撤掉，删完页面上不留旧覆盖层 */
@@ -387,11 +328,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /**
    * 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程）。
    * 新站点（还没有配置）只能以 newSite 打开：保存时才写入配置；取消则通知后台收回授权。
-   * replaceRuleId：重选元素时要在保存时替换掉的旧规则 id。
    */
   const initialRulesFor = (url: string) => rulesApplicableAt(profile?.hideRules ?? [], url);
 
-  async function openWizard(mode: OpenIntent, replaceRuleId?: string) {
+  async function openWizard(mode: OpenIntent) {
     if (wizardActive || disposed) return;
     // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
     await exclusive(async () => undefined);
@@ -418,22 +358,16 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 第 1 步（#51）：默认标题按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
     const fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
     const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
-    // 编辑已有规则但这一页没有可编辑的：退回添加元素（#71）
-    const effectiveMode = mode === 'editRules' && initialRulesFor(pageUrl).length === 0 ? 'addElement' : mode;
     wizardApp = createApp(WizardApp, {
-      mode: effectiveMode,
+      mode,
       url: pageUrl,
-      replaceRuleId: replaceRuleId ?? null,
-      // 这个页面上用得上的旧规则，按打开这一刻的地址算。两个模式都带上：
-      // - 编辑已有规则（#69）：铺成草稿，逐行改；
-      // - 收起更多内容：不铺草稿，只用来把页面上「已经收起过」的东西标出来（#74）。
-      //   不标的话，向导一打开就临时还原全部规则，用户看到的是整页原样，根本分不清哪些收过了。
-      // 编辑模式遇到这一页一条都没有（只改过标题的网站、规则都在别的页面）：没有可编辑的东西，
-      // 退回「收起更多内容」，从点选开始，不把一个空清单摆给用户看
+      // 这个页面上用得上的旧规则，按打开这一刻的地址算。编辑入口（editTitle / editContent）
+      // 靠它铺草稿（#69）与标出「之前收起了」（#74）；newSite 没有旧规则，传空
       initialRules: initialRulesFor(pageUrl),
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,
+      initialState: profile?.switchState ?? 'disguised',
       hasDefaultIcon: !!settings.defaultIconDataUrl,
       // 实时预览标题 / 图标：直接压到当前标签页（guard 在第 1 步第一次调用时快照真实标题），
       // 退出向导后由 refreshState → applyAll / restoreAll / clearPageUi 还原
@@ -716,7 +650,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       return false;
     }
     // popup / 后台触发的入口消息
-    if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'addElement');
+    if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'editContent');
     else if (msg?.t === 'siteReset') {
       void handleSiteReset().then(sendResponse, () => sendResponse({ ok: false }));
       return true; // 异步回复：后台等本页还原完再收回授权

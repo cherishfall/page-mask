@@ -83,18 +83,14 @@
     </button>
 
     <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住。
-         按用途分三组（#67）：改内容的 / 按钮位置 / 删除这个网站的设置——最后一项与上面用
-         分隔线隔开、写成红字，免得顺手点错。没有收起项时不出现「编辑收起的内容」：
-         点进去只会看到空列表，留「收起更多内容」就够了 -->
+         按用途分三组（#77）：改内容的 / 按钮位置 / 删除这个网站的设置——最后一项与上面用
+         分隔线隔开、写成红字，免得顺手点错。两项都进同一个三步向导，只是停的步不同 -->
     <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
-      <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="openTitlePanel">
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
       </button>
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-more-items" @click="onMenu('moreItems')">
-        {{ t.toggle.menuMoreItems }}
-      </button>
-      <button v-if="hasRules" type="button" class="pm-tg-item" data-testid="pm-toggle-edit" @click="onMenu('edit')">
-        {{ t.toggle.menuEdit }}
+        {{ t.toggle.menuContent }}
       </button>
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
@@ -105,20 +101,6 @@
         {{ t.toggle.menuDelete }}
       </button>
     </div>
-
-    <!-- 就地改标签页标题与图标：与向导第 1 步同一份表单，不跳走 -->
-    <TitleIconPanel
-      v-if="panelOpen"
-      :title="title"
-      :icon="icon"
-      :placeholder="fallbackTitle"
-      :has-default-icon="hasDefaultIcon"
-      :state="state"
-      :anchor="panelAnchor"
-      @save="(v) => emit('saveTitle', v)"
-      @close="panelOpen = false"
-      @switch-clean="onSwitchClean"
-    />
 
     <!-- 删除前的确认（标题带域名：同一个菜单可能同时开在几个标签页上） -->
     <DeleteSiteDialog
@@ -135,7 +117,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { SiteProfile } from '@/core/types';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
-import TitleIconPanel from './title-icon/TitleIconPanel.vue';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
@@ -144,33 +125,22 @@ const POPOVER = { popover: 'auto' } as Record<string, string>;
 const EDGE = 8;
 /** 方向键每次移动的距离 */
 const KEY_STEP = 15;
-/** 小面板与「⋯」之间留一点缝 */
-const PANEL_GAP = 6;
 
 const props = defineProps<{
   state: SiteProfile['switchState'];
   position: { x: number; y: number } | null;
-  /** 站点自己的标签页标题（没设置过为空串，输入框用占位显示实际会用的默认值） */
-  title: string;
-  icon: string | null;
-  /** 站点没有自己的标题时实际会用的那个（小面板里作占位与说明） */
-  fallbackTitle: string;
-  hasDefaultIcon: boolean;
-  /** 有没有收起项（0 条时菜单里不出现「编辑收起的内容」） */
-  hasRules: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
 }>();
 const emit = defineEmits<{
   toggle: [];
   moved: [pos: { x: number; y: number }];
+  /** 菜单里的「标题和图标」：进向导第 1 步（#77） */
   edit: [];
-  /** 菜单里的「收起更多内容」：进向导点选新元素（#67） */
+  /** 菜单里的「收起内容」：进向导选内容（添加与编辑同一扇门，#77） */
   moreItems: [];
   resetPos: [];
   cover: [];
-  saveTitle: [value: { title: string; icon: string | null }];
-  switchClean: [];
   /** 菜单里的「删除这个网站的设置」被点下：运行时先撤幕布，确认框随后弹出 */
   delete: [];
   deleteSite: [];
@@ -181,12 +151,8 @@ const moreEl = ref<HTMLElement | null>(null);
 const menuEl = ref<HTMLElement | null>(null);
 const menuOpen = ref(false);
 const dragging = ref(false);
-/** 「标签页标题和图标」小面板开着（就地改，不跳走） */
-const panelOpen = ref(false);
 /** 删除确认框开着 */
 const deleteOpen = ref(false);
-/** 小面板贴着「⋯」上方弹出：到视口右边 / 下边的距离，打开时按按钮位置算一次 */
-const panelAnchor = ref({ right: EDGE + 8, bottom: EDGE + 40 });
 /** 拖动中的实时位置（松手后交给存储） */
 const dragPos = ref<{ x: number; y: number } | null>(null);
 /** 窗口尺寸变化后重新夹紧的显示位置（不回写存储，只保证够得着） */
@@ -228,7 +194,6 @@ function reclamp() {
 function onResize() {
   reclamp();
   if (menuOpen.value) positionMenu();
-  if (panelOpen.value) anchorPanel();
 }
 
 /** 页面滚动时胶囊是 position:fixed 不用动，只有菜单需要重新贴住「⋯」 */
@@ -342,30 +307,6 @@ function onMenu(action: 'edit' | 'moreItems' | 'reset') {
     viewPos.value = null;
     emit('resetPos');
   }
-}
-
-/** 小面板贴着「⋯」上方、右对齐；写的是到视口右 / 下的距离，面板长高也不会跑出屏幕 */
-function anchorPanel() {
-  const more = moreEl.value;
-  if (!more) return;
-  const r = more.getBoundingClientRect();
-  panelAnchor.value = {
-    right: Math.max(EDGE, Math.round(window.innerWidth - r.right)),
-    bottom: Math.max(EDGE, Math.round(window.innerHeight - r.top + PANEL_GAP)),
-  };
-}
-
-/** 「标签页标题和图标」：就地弹出小面板 */
-function openTitlePanel() {
-  menuEl.value?.hidePopover();
-  anchorPanel();
-  panelOpen.value = true;
-}
-
-/** 原样态下保存完，面板里点「切到清爽」：收起面板、交给运行时切换开关 */
-function onSwitchClean() {
-  panelOpen.value = false;
-  emit('switchClean');
 }
 
 /**

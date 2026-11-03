@@ -57,17 +57,17 @@
       </template>
       <button v-else class="primary" data-testid="pm-popup-setup" @click="setup">
         <template v-if="busy === 'setup'">{{ t.common.opening }}</template>
-        <template v-else-if="profile"><span aria-hidden="true">＋</span> {{ t.popup.setupMore }}</template>
+        <template v-else-if="profile">{{ t.popup.setupMore }}</template>
         <template v-else>{{ t.popup.setupNew }}</template>
       </button>
 
-      <!-- 「编辑收起的内容」入口（#69 起由向导接管，直接停在看效果） -->
+      <!-- 「标题和图标」入口（#77 三口归一）：进向导第 1 步，改完可「只改标题，完成」提前走 -->
       <button
-        v-if="phase === 'ready'"
-        data-testid="pm-popup-edit"
-        @click="editSite"
+        v-if="phase === 'ready' && profile"
+        data-testid="pm-popup-title"
+        @click="editTitle"
       >
-        {{ busy === 'edit' ? t.common.opening : t.popup.editSite }}
+        {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
       </button>
 
       <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
@@ -241,7 +241,7 @@ function setup() {
       const res = await enableSite(
         tabId,
         o,
-        profile.value ? { open: 'addElement' } : { open: 'newSite', requestPermission: true },
+        profile.value ? { open: 'editContent' } : { open: 'newSite', requestPermission: true },
       );
       if (res?.ok) {
         window.close();
@@ -277,17 +277,17 @@ function reauthorize() {
 }
 
 /**
- * 打开页面上的「编辑收起的内容」（#69：由向导接管，直接停在「看效果」）。
+ * 打开「标题和图标」（#77 三口归一）：进向导第 1 步。
  * 内容脚本可能还没注入（页面是刚打开、或扩展刚更新）：发送失败时先让后台对账注入，再发一次
  */
-async function editSite() {
+async function editTitle() {
   const o = origin.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
   errorCode.value = '';
   busy.value = 'edit';
   try {
-    const send = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editRules' } satisfies OpenWizardMsg);
+    const send = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editTitle' } satisfies OpenWizardMsg);
     try {
       await send();
     } catch {

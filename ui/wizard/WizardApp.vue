@@ -386,7 +386,7 @@ import { generateCandidates, selectorHitsElement } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { scopeHumanLabel } from '@/core/scope';
 import { isSafeSelector } from '@/core/validate';
-import { newRuleId, type HideRule, type Scope, type StrategyId } from '@/core/types';
+import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
@@ -460,8 +460,6 @@ const ARROW_DIRS: Record<string, readonly [number, number]> = {
 const props = defineProps<{
   mode: WizardMode;
   url: string;
-  /** 重选元素：保存时用新规则替换这条旧规则（取消则旧规则原样保留，N5） */
-  replaceRuleId?: string | null;
   /** 编辑收起的内容（#69）：这个页面上用得上的旧规则，按原顺序铺成草稿 */
   initialRules?: HideRule[];
   /** 第 1 步标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
@@ -472,6 +470,8 @@ const props = defineProps<{
   fallbackIcon: string;
   /** 插件设置里是否有默认图标，只影响第 1 步的说明文字 */
   hasDefaultIcon: boolean;
+  /** 站点现在的开关状态：「只改标题，完成」用它保持原状（新站点不传 = 保存后开启清爽） */
+  initialState: SiteProfile['switchState'];
   /** 把标题 / 图标实时压到当前标签页上（退出时由内容脚本运行时还原） */
   previewDisguise: (title: string, icon: string | null) => void;
   /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
@@ -550,9 +550,13 @@ const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== nu
 /** 「上一步」写清退回去做什么：从选内容退回第 1 步是改标题，从看效果退回是重新选内容 */
 const backLabel = computed(() => (phase.value === 'pick' ? t.value.wizard.backToTitle : t.value.wizard.backToPick));
 const exitBody = computed(() => {
-  // 编辑已有规则时，草稿本身就是「这次要改的 N 项」；不管是看效果还是回到选内容，都按它计数
+  // 编辑入口（#77）草稿里已有旧规则，选内容阶段新点的也马上算进去；新网站按选择集数
   const selected =
-    props.mode === 'editRules' ? drafts.value.length : phase.value === 'preview' ? drafts.value.length : selEls.value.length;
+    props.mode === 'newSite'
+      ? phase.value === 'preview'
+        ? drafts.value.length
+        : selEls.value.length
+      : drafts.value.length;
   return selected > 0 ? t.value.wizard.exitBodySelected(selected) : t.value.wizard.exitBodyPlain;
 });
 
@@ -561,7 +565,7 @@ const exitBody = computed(() => {
  * 不能只数本次新点选的元素（否则一进来是 0，按钮还会被禁用）。
  */
 const previewCount = computed(() => {
-  if (props.mode !== 'editRules') return selEls.value.length;
+  if (props.mode === 'newSite') return selEls.value.length;
   const picked = new Set(selEls.value);
   const covered = new Set<Element>();
   let n = 0;
@@ -591,24 +595,16 @@ onMounted(() => {
     // 插件自己的界面（向导宿主、以及别的宿主）都不算页面元素
     isOwnNode: (n) => isOwnUiNode(n),
     onHoverChange: updateHoverBox,
-    // 编辑已有规则时点到一条已经收起的项：原地替换那条，不再新增一条重复规则（#69）
+    // 点到一条已经收起的项（页面上标着「之前收起了」）：原地替换那条，不再新增重复规则（#69 / #77）
     onPickBefore: (el) => {
-      if (props.mode === 'editRules') {
-        const target = pendingReplace ?? draftHitBy(el);
-        if (!target) return false;
-        pendingReplace = null;
-        replaceDraftElement(target, el);
-        pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
-        showInfo(t.value.wizard.repicked);
-        return true;
-      }
-      // 「收起更多内容」时点到已经收起过的东西：页面上已经标着「之前收起了」，
-      // 再点就是重复添加——说一句、不新增，要改它得走「编辑收起的内容」（#74）
-      if (props.mode === 'addElement' && existingRuleFor(el)) {
-        showInfo(t.value.wizard.alreadyHidden);
-        return true;
-      }
-      return false;
+      if (props.mode === 'newSite') return false;
+      const target = pendingReplace ?? draftHitBy(el);
+      if (!target) return false;
+      pendingReplace = null;
+      replaceDraftElement(target, el);
+      pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
+      showInfo(t.value.wizard.repicked);
+      return true;
     },
     onSelectionChange: (els) => {
       selEls.value = els;
@@ -634,7 +630,7 @@ onMounted(() => {
   // 第 1 步：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
   if (phase.value === 'title') pushTitlePreview();
   // 编辑已有规则（#69）：一打开就在「看效果」，用这个页面上用得上的规则铺草稿
-  else if (props.mode === 'editRules') void initEditRules();
+  else if ((props.initialRules?.length ?? 0) > 0) void initEditDrafts();
 });
 
 onBeforeUnmount(() => {
@@ -712,7 +708,7 @@ function isDirty(): boolean {
   if (phase.value === 'title') {
     return titleInput.value.trim() !== props.initialTitle.trim() || iconDataUrl.value !== props.initialIcon;
   }
-  if (props.mode === 'editRules') {
+  if (props.mode !== 'newSite') {
     return selEls.value.length > 0 || (baselineDrafts !== null && draftSignature() !== baselineDrafts);
   }
   return phase.value === 'pick' ? selEls.value.length > 0 : drafts.value.length > 0;
@@ -871,13 +867,16 @@ function captureBaseRects() {
   }
 }
 
-/** 一打开就在看效果：先把旧规则铺成草稿，再按同一套预览实现画出效果 */
-async function initEditRules() {
+/**
+ * 编辑入口（#77）一打开就用旧规则铺草稿：落点不同（editTitle 在第 1 步、editContent 在选内容），
+ * 所以这里只铺数据、量位置，不应用预览——预览由各阶段自己画（看效果进 enterPreview，标题步不画）。
+ * 页面此刻是原始状态（打开向导时已临时还原），位置量得到；选内容阶段的「之前收起了」标记也在这之后画。
+ */
+async function initEditDrafts() {
   drafts.value = initialDrafts();
   baselineDrafts = draftSignature();
-  await props.setDraft(null);
   captureBaseRects();
-  await applyPreview();
+  if (phase.value === 'pick') renderMarkers();
 }
 
 /** 这个元素是不是已经被某条「从旧规则带进来」的草稿命中（点它就是重选那一条，不新增） */
@@ -892,20 +891,6 @@ function draftHitBy(el: Element): Draft | null {  for (const d of drafts.value) 
       }
     });
     if (hit) return d;
-  }
-  return null;
-}
-
-/** 这个元素是不是已经被这个网站上某条已有规则命中（「收起更多内容」时用来防重复添加，#74） */
-function existingRuleFor(el: Element): HideRule | null {
-  for (const rule of props.initialRules ?? []) {
-    for (const sel of rule.candidates) {
-      try {
-        if (el.matches(sel)) return rule;
-      } catch {
-        // 坏选择器不参与判断（规则本身还在，只是这条写法失效了）
-      }
-    }
   }
   return null;
 }
@@ -1035,6 +1020,8 @@ async function saveTitleOnly() {
       title: titleInput.value,
       icon: iconDataUrl.value,
       fallbackTitle: props.initialTitle,
+      // 已添加的网站保持它现在的开关状态：只改标题不该顺手打开清爽（#77）
+      keepState: props.mode === 'newSite' ? undefined : props.initialState,
     });
     let saved;
     try {
@@ -1296,10 +1283,8 @@ function renderMarkers() {
  * - 收起更多内容：草稿是空的，直接看打开时带进来的旧规则。
  */
 function hiddenRulesForMarks(): { candidates: string[] }[] {
-  if (props.mode === 'editRules') {
-    return drafts.value.filter((d) => d.sourceRuleId).map((d) => ({ candidates: d.candidates }));
-  }
-  return (props.initialRules ?? []).map((r) => ({ candidates: r.candidates }));
+  // 编辑入口（#77）：旧规则铺成了草稿——把某一行 ✕ 掉，标记跟着消失；新选的还没保存，不算
+  return drafts.value.filter((d) => d.sourceRuleId).map((d) => ({ candidates: d.candidates }));
 }
 
 function renderHiddenMarkers() {
@@ -1393,8 +1378,8 @@ async function enterPreview() {
   updateHoverBox(null);
   pendingReplace = null;
 
-  if (props.mode === 'editRules') {
-    // 编辑已有规则：旧规则带来的草稿全部保留，本次新点选的追加在后面（#69）
+  if (props.mode !== 'newSite') {
+    // 编辑入口：旧规则带来的草稿全部保留，本次新点选的追加在后面（#69 / #77）
     drafts.value = mergeEditDrafts(
       drafts.value,
       selEls.value,
@@ -1615,16 +1600,12 @@ async function doSave() {
       saved = await storage.updateProfile(
         origin,
         (p) => {
-          if (props.mode === 'editRules') {
+          if (props.mode !== 'newSite') {
             // 编辑已有规则（#69）：有来源的原地更新（保留 id 与体检记录），没有的追加；
             // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动
             p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: initialIds, now, makeId: newRuleId });
           } else {
-            // 添加内容：纯追加。重选元素：同一次写入里用新规则换掉旧规则（旧规则不在就只追加）
-            if (props.replaceRuleId) {
-              const i = p.hideRules.findIndex((r) => r.id === props.replaceRuleId);
-              if (i >= 0) p.hideRules.splice(i, 1);
-            }
+            // 新网站：只有这次新选的，纯追加
             p.hideRules.push(
               ...incoming.map((d) => ({
                 id: newRuleId(),
