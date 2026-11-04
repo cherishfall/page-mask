@@ -170,13 +170,14 @@
   margin: var(--pm-space-1) 0 0;
   padding: 0;
   list-style: none;
-  max-block-size: 120px;
+  max-block-size: 180px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .pm-wiz-rows li {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--pm-space-2);
   padding: 1px 0;
   border-top: 1px solid var(--pm-border);
@@ -184,6 +185,11 @@
 }
 .pm-wiz-rows li:first-child {
   border-top: 0;
+}
+/* 行内那道「页面上另外 N 个一样的也一起收起」（#82）：占满第二行，与名称对齐 */
+.pm-wiz-rows .pm-wiz-same-row {
+  flex: 1 1 100%;
+  padding-inline-start: 28px;
 }
 .pm-wiz-row-name {
   flex: 1 1 auto;
@@ -427,8 +433,10 @@
   outline-offset: -2px;
 }
 
-/* 点页面上的号码牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除） */
-.pm-wiz-drafts li.flash {
+/* 点页面上的号码牌 / 子号牌后，清单里对应的行闪一下（代码加 .flash，animationend 后移除）。
+   选内容清单与草稿清单同一套高亮：同一个东西只有一个样子 */
+.pm-wiz-drafts li.flash,
+.pm-wiz-rows li.flash {
   animation: pm-wiz-flash 1.2s ease-out;
 }
 @keyframes pm-wiz-flash {
@@ -442,7 +450,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pm-wiz-drafts li.flash {
+  .pm-wiz-drafts li.flash,
+  .pm-wiz-rows li.flash {
     animation: none;
     background: var(--pm-bg-subtle);
     box-shadow: inset 3px 0 0 var(--pm-accent);
@@ -504,10 +513,6 @@
 /* 彻底移除的预览：只剩一个号码牌（不画框，免得盖住补位上来的内容，N8） */
 .pm-wiz-ghost {
   border: 0;
-}
-/* 同组里「会一起被收起」的其它元素：虚线框标出范围，不带号码牌（#70） */
-.pm-wiz-same {
-  border: 2px dashed var(--pm-accent);
 }
 /* 号码牌自己一个盒子（#52）：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧，
  * 所以牌子不会压住元素自己的文字；盒子里只有牌子本身，不画框。 */

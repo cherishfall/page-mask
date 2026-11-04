@@ -118,7 +118,12 @@
               </button>
             </div>
             <ol v-if="selectionRows.length > 0" class="pm-wiz-rows" data-testid="pm-wiz-selected">
-              <li v-for="row in selectionRows" :key="rowKey(row.el)" :data-testid="`pm-sel-${row.seq}`">
+              <li
+                v-for="row in pickRows"
+                :key="rowKey(row.el)"
+                :data-testid="`pm-sel-${row.seq}`"
+                @click="onPickRowClick(row, $event)"
+              >
                 <span class="pm-wiz-num" aria-hidden="true">{{ row.seq }}</span>
                 <span class="pm-wiz-row-name" :data-testid="`pm-sel-name-${row.seq}`">{{ row.name }}</span>
                 <button
@@ -130,6 +135,23 @@
                 >
                   <span aria-hidden="true">✕</span>
                 </button>
+                <!-- 「页面上另外 N 个一样的也一起收起」住在这一项自己的行内（#82）：
+                     勾上当场把这一组亮出来（一次一组），点行回到这一组的标记。
+                     没有第二个一样的就整块不出现，与原来在「调整」里的条件一致 -->
+                <label
+                  v-if="row.sameHits > 1"
+                  class="pm-wiz-same-row"
+                  :data-testid="`pm-sel-${row.seq}-same-group`"
+                  @click.stop
+                >
+                  <input
+                    type="checkbox"
+                    :checked="sameGroupOn(row)"
+                    :data-testid="`pm-sel-${row.seq}-same-toggle`"
+                    @change="onPickSameToggle(row, $event)"
+                  />
+                  <span>{{ t.wizard.sameGroupToggle(row.sameHits - 1) }}</span>
+                </label>
               </li>
             </ol>
             <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ t.wizard.listEmpty }}</p>
@@ -262,17 +284,8 @@
                 </button>
               </details>
 
-              <!-- 收起几个：一行勾选框，回答一个是非题（页面上一样的要不要一起收）。
-                   没有第二个一样的就整块不出现；勾/取消都当场改预览，工具条上说一句发生了什么 -->
-              <label v-if="d.el && d.sameHits > 1" class="pm-wiz-same-row" :data-testid="`pm-draft-${i + 1}-same-group`">
-                <input
-                  type="checkbox"
-                  :checked="!onlyOneOf(d)"
-                  :data-testid="`pm-draft-${i + 1}-same-toggle`"
-                  @change="onSameToggle(d, $event)"
-                />
-                <span>{{ t.wizard.sameGroupToggle(d.sameHits - 1) }}</span>
-              </label>
+              <!-- 勾选框不再住在「调整」里（#82）：搬进了选内容清单的行内，
+                   看效果的行摘要上直接写「连一样的共 N 个」 -->
             </div>
           </li>
         </ol>
@@ -379,7 +392,7 @@ import { scopeHumanLabel } from '@/core/scope';
 import { isSafeSelector } from '@/core/validate';
 import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
-import { buildPreviewCss, STRATEGY_ORDER } from '@/core/css-builder';
+import { buildPreviewCss, buildSameGroupOutlineCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
 import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
@@ -521,6 +534,34 @@ const lastSelIndex = computed(() => (lastSel.value ? selEls.value.indexOf(lastSe
 const lastSelName = computed(() => (lastSel.value ? describeElement(lastSel.value) : ''));
 /** 第 2 步的已选清单：序号与页面上的号码牌同源（core/wizard-logic.ts selectionRows） */
 const selectionRows = computed<SelectionRow<Element>[]>(() => buildSelectionRows(selEls.value, describeElement));
+
+/** 选内容清单的一行：序号行 + 它对应的草稿（旧项才有）+「同类一起」那组的命中数（勾选框出现与否的依据） */
+interface PickRow extends SelectionRow<Element> {
+  draft: Draft | null;
+  sameHits: number;
+}
+
+const pickRows = computed<PickRow[]>(() =>
+  selectionRows.value.map((row) => {
+    const draft = drafts.value.find((d) => d.el === row.el) ?? null;
+    // 新选的还没有草稿：当场量一遍「同类一起」会命中几个（行内的 N）
+    const sameHits = draft
+      ? draft.sameHits
+      : countCandidateHits(document, generateCandidates(row.el, { onlyThis: false }));
+    return { ...row, draft, sameHits };
+  }),
+);
+
+/**
+ * 「勾谁看谁」的焦点（#82）：页面上一次只亮这一行的组。勾选即聚焦，点已勾选的行把焦点挪过去；
+ * 焦点只是看哪个组的标记，不改任何设置。空 = 现在没有亮着的组
+ */
+const sameFocusEl = shallowRef<Element | null>(null);
+/**
+ * 本次点选里、还没有草稿的元素勾没勾「一起收起」：进看效果建草稿时用（newDraft）。
+ * 元素被取消选择时清掉——再点回来按默认值当新的一项，不记住上一次的勾
+ */
+const sameWanted = new Map<Element, boolean>();
 
 /** 清单行的稳定 key：跟着元素走，删掉中间一行时不会把 DOM 内容挪到别的元素名下 */
 const rowKeys = new WeakMap<Element, number>();
@@ -830,12 +871,22 @@ function initEditDrafts() {
 
 /**
  * 选择集变化（toggle、调整层级、删行、初始铺底都汇到这里）：
+ * - 点击**带标记的组员**（勾了同类的行亮出来的那组）= 取消那条规则：整行从清单去掉、整组解标记，
+ *   等同行上的 ✕（#82 交接铁律：点击语义永远跟着看得见的标记走）；
  * - 取消一项 = 从这次的清单里去掉，它的草稿一并去掉（#81：点已收起的项等同清单里点它的 ✕）；
  *   再点回来时按默认值当新的一项（默认收起方式、同类默认只收一个）。
  * - 失效行的「重新选」：下一次加进来的元素替换那条草稿——一个手势只许一个意思。
  */
 function onSelectionChange(els: Element[]) {
   const prev = selEls.value;
+  if (els.length > prev.length) {
+    const added = els.find((e) => !prev.includes(e));
+    if (added && isMarkedGroupMember(added)) {
+      cancelFocusedRow(els, added);
+      void pushPageCss(); // 整组解标记：大组的描边样式一并撤掉
+      return;
+    }
+  }
   if (pendingReplace) {
     const added = els.length > prev.length ? els.find((e) => !prev.includes(e)) : null;
     if (added) {
@@ -846,12 +897,27 @@ function onSelectionChange(els: Element[]) {
       selEls.value = els;
       lastSel.value = pick.last;
       renderMarkers();
+      void pushPageCss(); // 重选可能换了这一项的候选：亮着的组跟着换
       return;
     }
   }
   if (els.length < prev.length) {
     const gone = new Set(prev.filter((e) => !els.includes(e)));
     drafts.value = drafts.value.filter((d) => !(d.el && gone.has(d.el)));
+    let focusCleared = false;
+    for (const el of gone) {
+      // 被取消的项不再记住「勾了同类」；亮着的组跟着收回
+      sameWanted.delete(el);
+      if (sameFocusEl.value === el) {
+        sameFocusEl.value = null;
+        focusCleared = true;
+      }
+    }
+    selEls.value = els;
+    lastSel.value = pick.last;
+    renderMarkers();
+    if (focusCleared) void pushPageCss();
+    return;
   }
   selEls.value = els;
   lastSel.value = pick.last;
@@ -912,10 +978,11 @@ function draftScopeType(d: Draft): ScopeChoice {
   return draftScope(d).type;
 }
 
-/** 默认行上的一句话摘要：收起方式 · 范围；失效项换一句（#69、审查第 8 条） */
+/** 默认行上的一句话摘要：收起方式 · 范围；勾了同类的行再报一次具体的个数（#82）；失效项换一句（#69、审查第 8 条） */
 function draftSummary(d: Draft): string {
   if (!d.el) return t.value.wizard.staleSummary;
-  return `${t.value.common.strategy[d.strategy]} · ${scopeHumanLabel(draftScope(d))}`;
+  const base = `${t.value.common.strategy[d.strategy]} · ${scopeHumanLabel(draftScope(d))}`;
+  return onlyOneOf(d) ? base : `${base} · ${t.value.wizard.sameGroupSummary(d.hits)}`;
 }
 
 /** 失效说明：为什么这条可能没用了 + 它在哪些页面收起 */
@@ -1101,8 +1168,13 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
 
 /** 号码牌的固定尺寸：定位要先知道尺寸，才能算在元素外面放不放得下 */
 const BADGE_SIZE = { width: 24, height: 24 };
-/** 一条规则最多给多少个「一样的」画虚线框（页面上一两百个同类时不刷屏） */
-const SAME_MARK_LIMIT = 30;
+/**
+ * 勾了「一起收起」时逐个挂子号牌的档位上限（#82，可调）：整组不超过这个数才逐个挂牌，
+ * 超过就整片一条描边样式规则（buildSameGroupOutlineCss），不为成员逐个建 DOM——信息流页面滚多少都不怕。
+ */
+const SAME_SUB_BADGE_LIMIT = 20;
+/** 「盖住」预览 / 量位置时，一条规则的同类组最多数到多少个成员（防刷屏封顶，超出部分不画） */
+const MATCHED_LIMIT = 30;
 
 /**
  * 号码牌自己一个盒子（#52）：位置由 badgePlacement 算在元素边界外侧，不再压在元素自己的文字上。
@@ -1122,7 +1194,7 @@ function badgePlace(box: HTMLElement, size = BADGE_SIZE) {
  */
 function addMarker(opts: {
   seq: number;
-  kind: 'selected' | 'blank' | 'mask' | 'ghost' | 'same';
+  kind: 'selected' | 'blank' | 'mask' | 'ghost';
   el?: Element;
   /** 彻底移除的元素没有矩形，用它进入预览时缓存的页面坐标 */
   ghost?: MarkerRect;
@@ -1170,34 +1242,73 @@ function matchedElements(d: Draft): Element[] {
       if (seen.has(el) || isOwnUiNode(el)) continue;
       seen.add(el);
       out.push(el);
-      if (out.length > SAME_MARK_LIMIT) return out;
+      if (out.length > MATCHED_LIMIT) return out;
     }
   }
   return out;
 }
 
-/** 同组里的其它元素：勾了「一起收起」时才标，虚线框说明「这些也会跟着一起没」 */
-function markSameGroup(d: Draft, seq: number) {
-  let drawn = 0;
-  for (const el of matchedElements(d)) {
-    if (el === d.el) continue;
-    if (drawn >= SAME_MARK_LIMIT) return;
-    // 彻底移除的元素在预览里已经没有矩形：用进预览前量下来的页面坐标跟着滚
-    const base = d.strategy === 'remove' ? baseRects.get(el) : null;
-    if (d.strategy === 'remove') {
-      if (!base) continue;
-      addMarker({
-        seq,
-        kind: 'same',
-        badge: false,
-        testid: 'pm-same-box',
-        ghost: { left: base.left - window.scrollX, top: base.top - window.scrollY, width: base.width, height: base.height },
-      });
-    } else {
-      addMarker({ seq, kind: 'same', badge: false, testid: 'pm-same-box', el });
+/**
+ * 勾了「一起收起」的那一组里、这一项之外的成员（按候选逐个查、去重）。
+ * 超过子号牌档位时提前收手：大组整片描边，不逐个建 DOM（#82 防爆红线）
+ */
+function sameGroupMembers(el: Element, candidates: readonly string[]): Element[] {
+  const out: Element[] = [];
+  const seen = new Set<Element>([el]);
+  for (const sel of candidates) {
+    let list: NodeListOf<Element>;
+    try {
+      list = document.querySelectorAll(sel);
+    } catch {
+      continue;
     }
-    drawn++;
+    for (const member of list) {
+      if (seen.has(member) || isOwnUiNode(member)) continue;
+      seen.add(member);
+      out.push(member);
+      if (out.length > SAME_SUB_BADGE_LIMIT) return out;
+    }
   }
+  return out;
+}
+
+/** 子号牌 2.1、2.2……：挂在这一组的成员上，点一下跳到清单里这一项的行（与号码牌同一机制） */
+function addSubBadge(el: Element, seq: number, k: number, onClick: () => void) {
+  const badgeBox = makeBox('pm-wiz-badge-box');
+  const tag = document.createElement('button');
+  tag.className = 'pm-wiz-badge';
+  tag.textContent = `${seq}.${k}`;
+  tag.type = 'button';
+  tag.tabIndex = -1; // 鼠标捷径：跳转到清单里对应的行；键盘入口是清单本身，不在这里
+  tag.setAttribute('aria-label', t.value.wizard.badgeJump(seq));
+  tag.dataset.testid = `pm-sub-badge-${seq}-${k}`;
+  tag.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  badgeBox.appendChild(tag);
+  markerBoxes.push(badgeBox);
+  follower.trackLive(el, badgeBox, badgePlace(badgeBox));
+}
+
+/**
+ * 勾了同类的行亮出自己的组（一次只亮这一组，#82）：≤ 20 个逐个挂子号牌，
+ * 超过就整片一条描边样式规则（pushPageCss 注入，这里什么都不画）。
+ * 主元素的号码牌常驻当锚点，不在这里重复
+ */
+function markFocusedSameGroup() {
+  const focus = sameFocusEl.value;
+  if (!focus) return;
+  const row = pickRows.value.find((r) => r.el === focus);
+  if (!row || !sameGroupOn(row)) {
+    sameFocusEl.value = null; // 行没了或勾被取消：焦点一并收回
+    return;
+  }
+  if (row.sameHits > SAME_SUB_BADGE_LIMIT) return; // 大组走描边
+  const cands = row.draft ? row.draft.candidates : generateCandidates(focus, { onlyThis: false });
+  sameGroupMembers(focus, cands).forEach((el, i) => {
+    addSubBadge(el, row.seq, i + 1, () => flashRowByTestid(`pm-sel-${row.seq}`));
+  });
 }
 
 /** 按当前阶段整体重画标记：编号每次都按最新顺序重新计算（N6）；全部同步完成，没有延时登记（N21） */
@@ -1206,15 +1317,17 @@ function renderMarkers() {
   if (phase.value === 'pick') {
     // 序号与清单同源：selectionRows 的第几行就是号码牌上的数字（删掉一项后一起重排）。
     // 已收起的项也在选择集里（#81）：与新选的统一编号，点它就是取消
-    for (const row of selectionRows.value) {
+    for (const row of pickRows.value) {
       const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
+    // 勾了同类的行：整组亮出来（子号牌 / 大组描边）。看效果阶段不亮组——整组已真实收起，所见即答案（#82）
+    markFocusedSameGroup();
     return;
   }
   drafts.value.forEach((d, i) => {
     if (!d.el) return; // 失效项不画标记：页面上没有它，行里另有说明与「重新选」
-    const jump = () => flashRow(i);
+    const jump = () => flashRow(i + 1);
     if (d.strategy === 'remove') {
       // 彻底移除：元素已没有矩形，用进入预览时缓存的页面坐标 + 滚动差值跟随，只显示号码牌（N7、N8）
       const base = baseRects.get(d.el);
@@ -1239,8 +1352,7 @@ function renderMarkers() {
         addMarker(el === d.el ? { seq: i + 1, kind: 'mask', el, jump } : { seq: i + 1, kind: 'mask', el, badge: false });
       }
     }
-    // 勾了「页面上另外 N 个一样的也一起收起」：把同组其它元素用虚线框标出来
-    if (!onlyOneOf(d) && d.sameHits > 1) markSameGroup(d, i + 1);
+    // 勾了同类也不再加组标记（#82）：整组已经真实收起，「盖住」也盖整组，「消失」成员走上面的幽灵标记
   });
 }
 
@@ -1248,8 +1360,8 @@ function renderMarkers() {
  * 点页面上的号码牌 = 滚到清单里对应的行并高亮一下（原来打开弹片，弹片已删）。
  * 动效只在用户没有要求减少动态时加；高亮由 animationend 撤掉，定时器兜底。
  */
-function flashRow(index: number) {
-  const row = toolbarEl.value?.querySelector<HTMLElement>(`[data-testid="pm-draft-${index + 1}"]`);
+function flashRowByTestid(testid: string) {
+  const row = toolbarEl.value?.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
   if (!row) return;
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   row.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
@@ -1264,12 +1376,20 @@ function flashRow(index: number) {
   timer = setTimeout(clear, reduced ? 1500 : 2000);
 }
 
+/** 看效果阶段的号码牌：跳到草稿清单里对应的行 */
+function flashRow(index: number) {
+  flashRowByTestid(`pm-draft-${index}`);
+}
+
 // ---------- 预览 ----------
 
 function newDraft(el: Element): Draft {
   // 默认只收这一个（#76）：预览必须等于保存结果——默认连页面上一样的都收，
   // 用户看到的只是眼前这一个消失，保存后却多没了几个屏幕外的。要一起收就去勾那道框。
-  const candidates = generateCandidates(el, { onlyThis: true });
+  // 勾过「一起收起」的新选项按勾选时的选择建草稿；记录用掉即清（再点回来时按默认值，不记住上一次）
+  const onlyThis = sameWanted.get(el) !== true;
+  sameWanted.delete(el);
+  const candidates = generateCandidates(el, { onlyThis });
   const hits = countCandidateHits(document, candidates);
   const autoName = describeElement(el);
   return {
@@ -1278,7 +1398,7 @@ function newDraft(el: Element): Draft {
     name: autoName,
     autoName,
     strategy: 'remove',
-    onlyThis: true,
+    onlyThis,
     candidates,
     hits,
     sameHits: hits,
@@ -1334,16 +1454,31 @@ async function enterPreview() {
 async function backToPick() {
   phase.value = 'pick';
   clearMarkers();
-  // 草稿不清空：回到预览时沿用（N12）
-  await setDraftCss(null);
+  // 草稿不清空：回到预览时沿用（N12）。勾了同类的组在选内容阶段要重新亮出来，走 pushPageCss
+  await pushPageCss();
   if (phase.value !== 'pick') return;
   enterPickUI();
+}
+
+/**
+ * 当前该注入页面的整份样式（走同一条预览通道，#82）：
+ * - 看效果阶段：预览样式（预览所见 = 保存所得）；
+ * - 选内容阶段：勾了同类的行若是小组就什么都不用注（子号牌是页内标记），
+ *   大组（> 20 个）整片描边——一条样式规则，滚动新加载的元素自动带上。
+ * 两个阶段互斥，任何时刻都只注其中一份。
+ */
+async function pushPageCss() {
+  const outline =
+    phase.value === 'pick' ? buildSameGroupOutlineCss([...focusedGroupCandidates()]) : null;
+  const preview = phase.value === 'preview' ? buildPreviewCss(drafts.value) : null;
+  const css = outline || preview ? [preview, outline].filter((s): s is string => !!s).join('\n') : null;
+  await setDraftCss(css);
 }
 
 /** 重画标记并应用预览样式（与正式样式同一个生成函数 core/css-builder，预览所见 = 保存所得） */
 async function applyPreview() {
   renderMarkers();
-  await setDraftCss(buildPreviewCss(drafts.value));
+  await pushPageCss();
 }
 
 /** 改了选择器之后元素可能换了：先撤预览、重新量一遍位置，再应用预览（否则移除项没有矩形可跟） */
@@ -1381,37 +1516,55 @@ function draftName(d: Draft): string {
 }
 
 /**
- * 在「只这一个」与「同类一起（N）」之间换：换候选并立即刷新预览（N10）。
- * 同类只有 1 个时第二种不可选——切过去是同一件事，按钮本身是 disabled，这里再兜一次。
+ * 选内容行内那道「页面上另外 N 个一样的也一起收起」（#82）：勾上 = 连页面上一样的也一起收，
+ * 当场把这一组亮出来（勾谁看谁，一次一组）；取消 = 只收这一个，亮着的组跟着收回。
+ * 旧项（已有草稿）换候选；新选的还没有草稿，把选择记到 sameWanted，进看效果建草稿时用
  */
-async function setOnlyOne(d: Draft, want: boolean) {
-  if (!d.el) return; // 页面上找不到这一项：没有「一样的」可选
-  if (onlyOneOf(d) === want) return;
-  if (!want && d.sameHits <= 1) return;
-  const next = generateCandidates(d.el, { onlyThis: want });
-  if (next.length === 0) {
-    // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
-    showWarn(t.value.wizard.warnUnstable);
-    return;
+async function onPickSameToggle(row: PickRow, e: Event) {
+  const want = (e.target as HTMLInputElement).checked;
+  const el = row.el;
+  const d = row.draft;
+  if (d) {
+    const next = generateCandidates(el, { onlyThis: !want });
+    if (next.length === 0) {
+      // 切换后找不到可靠写法：保持原设置，不让这条变成保存不了的空规则
+      (e.target as HTMLInputElement).checked = !want;
+      showWarn(t.value.wizard.warnUnstable);
+      return;
+    }
+    d.onlyThis = !want;
+    d.candidates = next;
+    d.selectorText = next.join('\n');
+    d.hits = countCandidateHits(document, next);
+  } else {
+    sameWanted.set(el, want);
   }
-  // 「另外几个」要在改 sameHits 之前算：勾上时 sameHits 就是这个数，取消后按 hits 重算
-  const others = Math.max(0, (want ? d.hits : d.sameHits) - 1);
-  d.onlyThis = want;
-  d.candidates = next;
-  d.selectorText = next.join('\n');
-  d.hits = countCandidateHits(document, next);
-  if (!want) d.sameHits = d.hits;
-  await applyPreview();
-  // 勾/取消都当场给一句话，免得用户只看到「页面变了」却不知道变的是哪一边
-  showInfo(want ? t.value.wizard.sameGroupOff : t.value.wizard.sameGroupOn(others));
-  // 后果要看得见（#76）：另外那几个多半在屏幕外。勾上滚到第一个「跟着一起没」的，
-  // 取消滚回这一项自己的标记——滚动的是覆盖层里的盒子（元素本身可能已被预览移除）
-  await nextTick();
-  const seq = drafts.value.indexOf(d) + 1;
-  const target = want
-    ? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]')
-    : overlayLayer.value?.querySelector('[data-testid="pm-same-box"]');
-  target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  // 勾上即聚焦这一组；取消勾选时如果亮着的是这一组，一并收回
+  sameFocusEl.value = want ? el : sameFocusEl.value === el ? null : sameFocusEl.value;
+  renderMarkers();
+  await pushPageCss();
+  // 后果要看得见：另外那几个多半在屏幕外，滚到这一组第一个亮出来的标记上
+  if (want) {
+    await nextTick();
+    const seq = pickRows.value.find((r) => r.el === el)?.seq ?? 0;
+    const target =
+      overlayLayer.value?.querySelector('[data-testid^="pm-sub-badge-' + seq + '-"]') ??
+      overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+    target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
+}
+
+/**
+ * 点已勾选的行 = 把页面上亮着的组换成这一行的（焦点切换，上一组收回，#82）。
+ * 行内的勾选框和 ✕ 有自己的意思，不掺和；没勾同类的行点了没有可亮的东西，不动
+ */
+async function onPickRowClick(row: PickRow, e: MouseEvent) {
+  const t2 = e.target as HTMLElement;
+  if (t2.closest('input, button, label')) return;
+  if (!sameGroupOn(row) || sameFocusEl.value === row.el) return;
+  sameFocusEl.value = row.el;
+  renderMarkers();
+  await pushPageCss();
 }
 
 /** 用户要求减少动态时不做平滑滚动（与 flashRow 同一口径） */
@@ -1419,9 +1572,46 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-/** 勾选框：勾上 = 连页面上一样的也一起收（onlyThis = false） */
-function onSameToggle(d: Draft, e: Event) {
-  setOnlyOne(d, !(e.target as HTMLInputElement).checked);
+/** 这一行有没有勾「一起收起」：旧项看草稿（同类只有 1 个时两边是同一件事），新选的看勾选时的选择 */
+function sameGroupOn(row: PickRow): boolean {
+  if (row.sameHits <= 1) return false;
+  return row.draft ? !onlyOneOf(row.draft) : sameWanted.get(row.el) === true;
+}
+
+/** 亮着的这一组的候选：旧项用它自己的（勾上时就是同类那组），新选的按「同类一起」现算 */
+function focusedGroupCandidates(): readonly string[] {
+  const focus = sameFocusEl.value;
+  if (!focus) return [];
+  const row = pickRows.value.find((r) => r.el === focus);
+  if (!row || !sameGroupOn(row)) return [];
+  return row.draft ? row.draft.candidates : generateCandidates(focus, { onlyThis: false });
+}
+
+/** 点的这个元素在不在亮着的组里（看得见标记的成员）：点击语义跟着标记走（#82 交接铁律） */
+function isMarkedGroupMember(el: Element): boolean {
+  const focus = sameFocusEl.value;
+  if (!focus || el === focus) return false; // 主元素自己本来就在选择集里，点了就是取消那一项
+  const cands = focusedGroupCandidates();
+  return cands.some((sel) => {
+    try {
+      return el.matches(sel);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** 点带标记的组员 = 取消这一行（等同行上的 ✕）：整行从清单去掉、整组解标记，不把组员当新的一项 */
+function cancelFocusedRow(els: Element[], added: Element) {
+  const focus = sameFocusEl.value;
+  sameFocusEl.value = null;
+  if (focus) {
+    sameWanted.delete(focus);
+    drafts.value = drafts.value.filter((d) => d.el !== focus);
+  }
+  const rest = els.filter((e) => e !== focus && e !== added);
+  selEls.value = rest; // replaceAll 的回调把这次当作无变化，只落一遍序号与标记
+  pick.replaceAll(rest);
 }
 
 /** 删除这一项：草稿和选择集一起移除；删到最后一项时回到点选阶段（N11） */

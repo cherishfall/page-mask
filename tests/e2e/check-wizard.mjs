@@ -18,7 +18,10 @@
  *   删除按钮无框、悬停才出底色（#53）；
  *   行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
  *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
- * - 「只这一个 / 同类一起（N）」：N 实时算、切换后预览立即更新；同类只有一处时整组不出现（#53、#69）
+ * - 「页面上另外 N 个一样的也一起收起」勾选框住在选内容清单的行内（#82）：勾谁看谁、一次一组整组展开——
+ *   小组（≤ 20 个）逐个挂子号牌 3.1、3.2……点子号牌跳清单行；大组（> 20 个）整片一条描边样式规则
+ *   （不逐个建 DOM，滚动新出现的同类自动带上）；点已勾选的行切换亮着的组；
+ *   点带标记的组员 = 取消那条规则，再点 = 按默认值加回；看效果不再有这道勾选框，勾了同类的行摘要报数
  * - 底部「在哪些页面收起」三选一；点保存直接落库并关掉向导，没有第二个确认框（#53）
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
  * - Esc：没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
@@ -56,11 +59,12 @@ const C1 = '.card:nth-child(1)';
 const C2 = '.card:nth-child(2)';
 const C3 = '.card:nth-child(3)';
 
-/** 虚构长页面：顶部导航、三张同类卡片、活动栏、横幅，以及 40 行可滚动的内容 */
+/** 虚构长页面：顶部导航、三张同类卡片、25 条同类帖子（大组描边档）、活动栏、横幅，以及 40 行可滚动的内容 */
 const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Acme 书房 · 向导测试</title>
 <style>body{margin:0;font:14px system-ui,sans-serif}nav{height:48px;background:#eef;padding:0 16px;line-height:48px}
 .cards{display:flex;gap:12px;padding:12px 16px;margin:0;list-style:none}.card{flex:1;height:80px;background:#ffe}
 #promo{height:60px;background:#fee;margin:12px 16px}#banner{height:60px;background:#efe;margin:12px 16px}
+#feed .post{height:40px;background:#f6f6ff;border-bottom:1px solid #dde;padding:0 16px;line-height:40px;margin:0}
 .row{height:60px;border-bottom:1px solid #ddd;padding:0 16px;line-height:60px}.row .txt{display:inline-block;width:120px}</style>
 </head><body>
 <nav id="top-nav">首页 书架 发现</nav>
@@ -68,6 +72,7 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><tit
 <aside id="promo">活动栏（示例）</aside>
 <section id="banner">横幅（示例）</section>
 ${Array.from({ length: 40 }, (_, i) => `<div class="row" id="r${i}"><span class="txt" id="t${i}">第 ${i} 行</span></div>`).join('\n')}
+<div id="feed">${Array.from({ length: 25 }, (_, i) => `<p class="post">帖子 ${i + 1}</p>`).join('\n')}</div>
 </body></html>`;
 
 function handler(req, res) {
@@ -198,22 +203,27 @@ const adjustExpanded = (page, n) =>
 
 /** 第 n 行下面那行解释文字 */
 const rowHint = async (page, n) => (await shadowTexts(page, tid(`pm-draft-${n}-hint`)))[0] ?? '';
-/** 第 n 行那道勾选框的文字（「页面上另外 N 个一样的也一起收起」；不出现时返回空串，#70） */
+/** 选内容清单第 n 行那道勾选框的文字（「页面上另外 N 个一样的也一起收起」；不出现时返回空串，#82） */
 const sameLabel = async (page, n) =>
-  (await shadowTexts(page, `${tid(`pm-draft-${n}-same-group`)} span`)).join('');
-/** 第 n 行那道勾选框的状态：true = 连页面上一样的也一起收；没有这道勾选框返回 null */
+  (await shadowTexts(page, `${tid(`pm-sel-${n}-same-group`)} span`)).join('');
+/** 第 n 行勾选框的状态：true = 连页面上一样的也一起收；没有这道勾选框返回 null（#82 起在选内容行内） */
 const sameChecked = (page, n) =>
   page.evaluate(
     (h, i) => {
-      const box = document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-same-toggle"]`);
+      const box = document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-sel-${i}-same-toggle"]`);
       return box ? box.checked : null;
     },
     HOST,
     n,
   );
-/** 页面上「会一起被收起」的虚线框（不带号码牌，#70） */
-const sameBoxCount = (page) =>
-  page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid="pm-same-box"]').length ?? 0, HOST);
+/** 页面上亮出来的子号牌（3.1、3.2……勾了同类的行整组挂牌，一次一组，#82） */
+const subBadgeTexts = (page) =>
+  page.evaluate(
+    (h) => [...(document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid^="pm-sub-badge-"]') ?? [])].map((e) => e.textContent.trim()),
+    HOST,
+  );
+/** 页面元素的描边样式（大组 > 20 个时整片一条描边样式规则，#82） */
+const outlineStyleOf = (page, sel) => page.evaluate((s) => getComputedStyle(document.querySelector(s)).outlineStyle, sel);
 const nameValue = (page, n) =>
   page.evaluate((h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-name-${i}"]`)?.value ?? null, HOST, n);
 const inputValue = (page, id) =>
@@ -566,9 +576,9 @@ async function main() {
         rowScopePressed.join('|') === 'true|false|false',
       `行内范围是三档按钮、当前档 aria-pressed=true（${rowScopeTexts.join(' / ')} / ${rowScopePressed.join(',')}）`,
     );
-    // 页面上没有第二个一样的：这道勾选框完全不出现（#70）
-    check(!(await shadowExists(page, HOST, tid('pm-draft-1-same-group'))), '页面上只有一处时，行内不出现那道勾选框');
-    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '没有第二个一样的行同样不出现');
+    // 勾选框已搬进选内容清单的行内（#82）：看效果的「调整」里不再有它
+    check(!(await shadowExists(page, HOST, tid('pm-draft-1-same-group'))), '看效果的「调整」里不再有同类勾选框（#82 移进选内容行内）');
+    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '任何行在看效果里都不再有这道勾选框');
 
     // 底部的整批「在哪些页面收起」已删（#76）：范围只在每行「调整」里，两个控件管同一件事只会打架
     check(!(await shadowExists(page, HOST, tid('pm-wiz-scope'))), '这一步底部不再有整批的范围控件');
@@ -661,8 +671,8 @@ async function main() {
     await waitFor(page, '确认框上 Esc 关掉确认框', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     check((await wizardOpen(page)) && !(await visible(page, '#banner')), '退出确认框上按 Esc = 继续设置：向导还在，预览照常');
 
-    // ===================== 上一步保留已改方式（N12）、「只这一个 / 同类一起」（#53） =====================
-    console.log('\n--- 从看效果回到选内容：已改的方式保留；「只这一个 / 同类一起（N）」实时切换 ---');
+    // ===================== 上一步保留已改方式（N12）、「同类一起」住进选内容行内（#82） =====================
+    console.log('\n--- 从看效果回到选内容：已改的方式保留；勾选框在选内容行内，勾谁看谁一次一组 ---');
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitVisible(page, '回到选择阶段：预览撤掉', '#banner');
     await clickEl(page, C2);
@@ -682,35 +692,81 @@ async function main() {
     );
     check(await visible(page, C1) && await visible(page, C3), '默认只收这一个：卡片一、三还看得见（预览=保存结果，#76）');
 
-    // 一行勾选框回答一个是非题：页面上另外 2 个一样的要不要一起收（#70 / #76）
+    // 回到选内容：勾选框现在住在选内容清单的行内（#82）
+    await clickInShadow(page, HOST, tid('pm-wiz-back'));
+    await waitVisible(page, '回选内容：预览撤掉，卡片一回来了', '#banner');
+
+    // 勾选框出现在第 3 行（卡片二）行内；只有一处的行不出现
+    check(!(await shadowExists(page, HOST, tid('pm-sel-1-same-group'))), '只有一处的项不出现勾选框（#82 行内，条件与原来一致）');
     check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾选框说的是具体几个（${await sameLabel(page, 3)}）`);
     check((await sameChecked(page, 3)) === false, '默认不勾（只收这一个）');
-    check((await sameBoxCount(page)) === 0, '默认没有虚线框（没有要一起收的）');
-    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
-    await waitVisible(page, '勾上：卡片一也被收起', C1, false);
-    await waitVisible(page, '勾上：卡片三也被收起', C3, false);
-    check(!(await visible(page, C2)), '勾上后卡片二仍被收起');
+    check((await subBadgeTexts(page)).length === 0, '默认没有组标记（常驻虚线框已退场，#82）');
+
+    // 勾上 → 整组亮出：子号牌 3.1、3.2 挂在另外两张卡片上；选内容阶段页面保持原样
+    await clickInShadow(page, HOST, tid('pm-sel-3-same-toggle'));
+    await waitFor(page, '勾上后另外两张卡片挂上子号牌', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
+    check(await visible(page, C1) && await visible(page, C3), '选内容阶段勾选只是亮出这一组，页面保持原样（不是收起）');
+    check(JSON.stringify(await subBadgeTexts(page)) === '["3.1","3.2"]', `子号牌按 3.1、3.2 编号（${JSON.stringify(await subBadgeTexts(page))}）`);
     check((await sameChecked(page, 3)) === true, '勾上后勾选框跟着勾上');
-    check((await sameBoxCount(page)) === 2, `另外两张卡片被虚线框标出来（${await sameBoxCount(page)} 个）`);
-    check(
-      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '另外 2 个也收起了',
-      `工具条上说一句另外 2 个也收起了（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
+
+    // 点子号牌跳清单行（与号码牌同一机制）
+    await clickInShadow(page, HOST, tid('pm-sub-badge-3-1'));
+    await waitFor(
+      page,
+      '点子号牌后选内容清单第 3 行高亮',
+      (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-3"]')?.classList.contains('flash'),
+      [HOST],
+      { timeout: 3000 },
     );
-    // 数量与当前勾选无关：勾上之后仍说「另外 2 个」
-    check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾上后那个数仍是 2（${await sameLabel(page, 3)}）`);
-    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle'));
-    await waitVisible(page, '取消勾选：卡片一恢复可见', C1);
-    await waitVisible(page, '取消勾选：卡片三恢复可见', C3);
-    check((await sameChecked(page, 3)) === false, `取消后回到只收这一个（${await sameLabel(page, 3)}）`);
+    check(true, '点子号牌 3.1：清单第 3 行高亮');
+
+    // 焦点切换：选一条大组（25 条帖子 > 20）勾上 → 上一组收回，整片一条描边样式规则。
+    // 滚到视口顶部再点：底部居中的工具条加了行内勾选框后更高，视口中央会被它盖住
+    await page.evaluate(() => document.querySelector('#feed .post:first-child').scrollIntoView());
+    await clickEl(page, '#feed .post:first-child');
+    await waitFor(page, '第 4 行进入清单', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 4, [HOST]);
+    check((await sameLabel(page, 4)) === '页面上另外 24 个一样的也一起收起', `大组勾选框报具体个数（${await sameLabel(page, 4)}）`);
+    await clickInShadow(page, HOST, tid('pm-sel-4-same-toggle'));
+    await waitFor(page, '大组整片描边', () => getComputedStyle(document.querySelector('#feed .post:nth-child(20)')).outlineStyle === 'dashed');
+    check((await subBadgeTexts(page)).length === 0, '焦点切走上一组收回；大组不逐个建标记（子号牌为 0，> 20 走描边档）');
     check(
-      (await shadowTexts(page, tid('pm-wizard-info'))).join('') === '现在只收这一个',
-      `工具条上说一句现在只收这一个（${(await shadowTexts(page, tid('pm-wizard-info'))).join('')}）`,
+      (await page.evaluate(() => {
+        const el = document.createElement('p');
+        el.className = 'post';
+        document.querySelector('#feed').appendChild(el);
+        return getComputedStyle(el).outlineStyle;
+      })) === 'dashed',
+      '新出现的同类元素自动带上描边（一条样式规则，滚动加载自动覆盖，不是逐元素 DOM）',
     );
-    await clickInShadow(page, HOST, tid('pm-draft-3-same-toggle')); // 重新勾上，后面的盖住用例要整组
-    await waitVisible(page, '重新勾上：卡片一又收起', C1, false);
-    check((await sameChecked(page, 3)) === true, '重新勾上');
+
+    // 点已勾选的行 = 把亮着的组换成这一行的（上一组收回）。点在名称区，避开勾选框与 ✕
+    await clickInShadow(page, HOST, tid('pm-sel-3'), { offset: { x: 100, y: 8 } });
+    await waitFor(page, '焦点切回卡片组：子号牌回来', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
+    check((await outlineStyleOf(page, '#feed .post:nth-child(20)')) !== 'dashed', '大组的描边同时收回（一次只亮一组）');
+    await clickInShadow(page, HOST, tid('pm-sel-4'), { offset: { x: 100, y: 8 } });
+    await waitFor(page, '焦点切回大组：描边回来', () => getComputedStyle(document.querySelector('#feed .post:nth-child(20)')).outlineStyle === 'dashed');
+    check((await subBadgeTexts(page)).length === 0, '卡片组的子号牌同时收回');
+
+    // 点带标记的组员 = 取消那条规则：整行从清单去掉、整组解标记（等同行上的 ✕，#82 交接铁律）
+    await clickEl(page, '#feed .post:nth-child(3)');
+    await waitFor(page, '点组员后清单少一行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 3, [HOST]);
+    check((await outlineStyleOf(page, '#feed .post:nth-child(20)')) !== 'dashed', '整组解标记：描边撤掉');
+    check(!(await shadowExists(page, HOST, tid('pm-sel-4-same-group'))), '被取消的那一行整个从清单去掉（第 4 行不再存在）');
+    check((await sameChecked(page, 3)) === true, '卡片二那一行的勾选不受影响（取消的是被点的这一组）');
+    check((await subBadgeTexts(page)).length === 0, '亮着的组随取消一并收回');
+
+    // 再点刚才的组员位置 = 按默认值当新的一项加回（同类默认只收一个）
+    await clickEl(page, '#feed .post:first-child');
+    await waitFor(page, '加回后清单又 4 行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 4, [HOST]);
+    check((await sameChecked(page, 4)) === false, '加回的一项默认只收这一个（勾选框回到不勾）');
+    // 收掉这一行，后面用例回到 3 行
+    await clickInShadow(page, HOST, tid('pm-sel-4-remove'));
+    await waitFor(page, '收掉帖子行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 3, [HOST]);
+    check(!(await shadowExists(page, HOST, tid('pm-sel-2-same-group'))), '只有一处的行（横幅）不出现勾选框');
 
     // 「盖住」：预览必须盖住这一组全部，保存后遮的也是全部（#70，之前只盖了点中的那一个）
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitVisible(page, '预览：卡片二被移除', C2, false);
     const maskBoxes = () =>
       page.evaluate((h) => document.querySelector(h).shadowRoot.querySelectorAll('.pm-wiz-mask').length, HOST);
     const maskBefore = await maskBoxes();
@@ -720,20 +776,34 @@ async function main() {
     await clickInShadow(page, HOST, tid('pm-draft-3-strategy-remove'));
     await waitVisible(page, '切回消失：卡片一又被移除', C1, false);
 
-    // 回第 2 步再回来：草稿不变（方案、选项都还在），预览样式重新应用（#53）
+    // 回第 2 步再回来：草稿不变（方案、勾选都还在），预览样式重新应用（#53）
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitVisible(page, '回第 2 步：预览撤掉，卡片一回来了', C1);
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '再回到看效果：卡片一又被收起', C1, false);
+    const strategy1 = await checkedStrategy(page, 1);
+    const summary3 = (await shadowTexts(page, tid('pm-draft-3-summary')))[0] ?? '';
+    const summary1b = (await shadowTexts(page, tid('pm-draft-1-summary')))[0] ?? '';
+    if (!summary3 || !summary1b) {
+      // 展开状态下摘要是隐藏的：先收起这两行的「调整」再读（前面用例把它们展开了）
+      for (const n of [1, 3]) {
+        const open = await page.evaluate(
+          (h, i) => document.querySelector(h)?.shadowRoot?.querySelector(`[data-testid="pm-draft-${i}-adjust"]`)?.getAttribute('aria-expanded') === 'true',
+          HOST,
+          n,
+        );
+        if (open) await clickInShadow(page, HOST, tid(`pm-draft-${n}-adjust`));
+      }
+    }
+    const summary3c = (await shadowTexts(page, tid('pm-draft-3-summary')))[0] ?? '';
+    const summary1c = (await shadowTexts(page, tid('pm-draft-1-summary')))[0] ?? '';
     check(
       (await draftCount(page)) === 3 &&
-        (await sameChecked(page, 3)) === true &&
-        (await checkedStrategy(page, 1)) === 'blank',
-      '从第 2 步返回后草稿不变、预览样式重新应用（3 行、选项与方案都还是刚才的）',
+        summary3c === '消失 · 整个网站 · 连一样的共 3 个' &&
+        summary1c === '留空 · 整个网站' &&
+        strategy1 === 'blank',
+      `从第 2 步返回后草稿不变、勾了同类的行摘要报数（${summary3c} / ${summary1c} / 第 1 项 ${strategy1}）`,
     );
-
-    // 页面上没有第二个一样的：这道勾选框完全不出现（#70）——既不显示「一起收（1）」，也不需要多一句解释
-    check(!(await shadowExists(page, HOST, tid('pm-draft-2-same-group'))), '只有一处的项不出现「一起收起」的勾选框');
 
     // 行内改名：不点开任何浮层，改名后清单重绘仍保留
     await clickInShadow(page, HOST, tid('pm-draft-name-1'));
@@ -776,6 +846,8 @@ async function main() {
 
     // ===================== 滚动后按指针位置命中（N14）、选大一点（N13） =====================
     console.log('\n--- 选择阶段：滚动后点击选中的是指针下的元素 ---');
+    // 前面的「同类一起」用例把页面滚到了信息流那里：回到页顶，第 2 行才在视口里
+    await page.evaluate(() => window.scrollTo(0, 0));
     await openWizard();
     // 坐标取第 2 行的中心：既不要用固定坐标（可能落在元素之间的空隙上），
     // 也不要取靠底部的行（默认底部居中的工具条会盖住那里，指针落不到拾取层——#52 起面板更高）

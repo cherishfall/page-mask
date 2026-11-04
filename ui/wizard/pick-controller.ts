@@ -98,6 +98,18 @@ export class PickController {
     this.cb.onSelectionChange(this.selected);
   }
 
+  /**
+   * 整体替换选择集（#82：点带标记的组员取消整条规则时用）：一次换好，只发一次选择变化。
+   * 由调用方先把界面状态对齐，这里的回调按「无变化」落一遍序号与标记。
+   */
+  replaceAll(els: Element[]): void {
+    this.selection = [...els];
+    if (this.lastEl && !this.selection.includes(this.lastEl)) {
+      this.lastEl = this.selection[this.selection.length - 1] ?? null;
+    }
+    this.cb.onSelectionChange(this.selected);
+  }
+
   /** 工具条「选大一点 / 选小一点」：作用于最后选中的元素，原位替换（N13、N6） */
   adjust(dir: 'bigger' | 'smaller'): void {
     const el = this.last;

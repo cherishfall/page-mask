@@ -298,7 +298,7 @@ export const en: Messages = {
     clearAll: 'Deselect all',
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
-      'Scroll the page to check the result (Cover should stay glued to its element). Rename any row right here; open Adjust to change how it hides, where it applies, or whether the others like it go too.',
+      'Scroll the page to check the result (Cover should stay glued to its element). Rename any row right here; open Adjust to change how it hides or where it applies.',
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     staleSummary: 'May be broken · can’t be found on this page',
@@ -321,9 +321,10 @@ export const en: Messages = {
     draftsEmpty: 'Nothing to hide on this page right now. Go back a step to pick some.',
     nameLabel: (seq: number) => `Name of item ${seq}; leave empty to name it automatically`,
     methodLegend: 'Hide method',
+    /** Lives inline in the picked-items list since #82; checking lights up that one group at a time */
     sameGroupToggle: (n: number) => `Also hide the other ${n} like this one`,
-    sameGroupOn: (n: number) => `The other ${n} are hidden too`,
-    sameGroupOff: 'Only this one is hidden now',
+    /** Checked rows repeat the exact count in their summary (n = the whole group, this one included) */
+    sameGroupSummary: (n: number) => `${n} in total with the others like it`,
     scopeHintHash: 'This site tells pages apart by what follows #, so for now the whole site is the only choice',
     backToPick: 'Back: pick again',
     nextToPreview: (n: number) => `Next: check result (${n})`,
@@ -345,7 +346,7 @@ export const en: Messages = {
     warnUnstable: 'This element can’t be found reliably once switched back, so the previous setting was kept',
     warnUnsavable: (index: number) =>
       `Item ${index} can’t be found reliably. Click the ✕ next to it to skip it, then use “Bigger” to pick again`,
-    warnPreviewFailed: 'The preview didn’t apply. Try the preview again',
+    warnPreviewFailed: 'The effect didn’t show up. Try again',
     warnPreviewClearFailed: 'The preview couldn’t be removed. Reload the page to get back to normal',
     warnNotCleared: 'The preview couldn’t be removed, so nothing was saved. Reload the page and try again',
     warnSaveFailed: (reason: string) => `Saving failed (${reason}). You can click save again`,

@@ -36,6 +36,20 @@ export function buildPreviewCss(items: CssSource[]): string | null {
   return parts.length ? parts.join('\n') : null;
 }
 
+/** 大组（超过子号牌档位）整片浅色描边的样子：与向导标记同一族（虚线、accent 蓝的浅色版） */
+const OUTLINE_DECL = 'outline: 2px dashed rgb(37 99 235 / 0.4) !important; outline-offset: -2px !important;';
+
+/**
+ * 勾了「一起收起」的大组（超过逐个挂牌的档位）整片浅色描边：全部候选合成**一条**样式规则
+ * （选择器列表一个块）。走用户样式表通道注入，滚动新加载的元素自动带上——不为成员逐个建 DOM（#82 防爆红线）。
+ * 没有可用候选时返回 null（不注入空规则）。
+ */
+export function buildSameGroupOutlineCss(candidates: readonly string[]): string | null {
+  const sels = candidates.filter((c) => isSafeSelector(c)).map((c) => c.trim());
+  if (!sels.length) return null;
+  return `${sels.join(', ')} { ${OUTLINE_DECL} }`;
+}
+
 /** 汇总某 URL 上应注入的 CSS 文本（仅 A/B 方案规则）；无则返回 null */
 export function buildDisguiseCss(rules: HideRule[], url: string): string | null {
   return buildPreviewCss(rulesApplicableAt(rules, url));
