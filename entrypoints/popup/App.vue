@@ -42,7 +42,7 @@
             </span>
           </template>
         </p>
-        <p v-else class="hint">{{ t.popup.newSiteHint }}</p>
+        <p v-else class="hint" data-testid="pm-popup-hint-new">{{ t.popup.newSiteHint }}</p>
       </div>
 
       <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
@@ -55,20 +55,16 @@
           {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
         </button>
       </template>
-      <button v-else class="primary" data-testid="pm-popup-setup" @click="setup">
-        <template v-if="busy === 'setup'">{{ t.common.opening }}</template>
-        <template v-else-if="profile">{{ t.popup.setupMore }}</template>
-        <template v-else>{{ t.popup.setupNew }}</template>
-      </button>
-
-      <!-- 「标题和图标」入口（#77 三口归一）：进向导第 1 步，改完可「只改标题，完成」提前走 -->
-      <button
-        v-if="phase === 'ready' && profile"
-        data-testid="pm-popup-title"
-        @click="editTitle"
-      >
-        {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
-      </button>
+      <template v-else>
+        <!-- 两个入口（#81）：新旧网站同构，都有这两颗。「收起内容」是主按钮（进点选），
+             「标题和图标」是次按钮（单步小表单，填完点保存） -->
+        <button class="primary" data-testid="pm-popup-setup" @click="setup">
+          {{ busy === 'setup' ? t.common.opening : t.popup.setupMore }}
+        </button>
+        <button data-testid="pm-popup-title" @click="editTitle">
+          {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
+        </button>
+      </template>
 
       <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
       <button data-testid="pm-popup-cover" @click="toggleCurtain">
@@ -229,7 +225,10 @@ async function enableSite(
     .catch(() => undefined);
 }
 
-/** 主按钮：新站点授权并打开设置向导；已配置站点打开「添加元素」向导 */
+/**
+ * 主按钮「收起内容」（#81）：进点选流程。站点还没有配置时先请权限——权限框弹出会销毁 popup，
+ * 请求由后台在用户手势的同一个回合里发起（见 core/background-engine.ts）
+ */
 function setup() {
   const o = origin.value;
   const tabId = tab.value?.id;
@@ -238,11 +237,10 @@ function setup() {
   busy.value = 'setup';
   void (async () => {
     try {
-      const res = await enableSite(
-        tabId,
-        o,
-        profile.value ? { open: 'editContent' } : { open: 'newSite', requestPermission: true },
-      );
+      const res = await enableSite(tabId, o, {
+        open: 'editContent',
+        requestPermission: !profile.value,
+      });
       if (res?.ok) {
         window.close();
         return;
@@ -277,8 +275,8 @@ function reauthorize() {
 }
 
 /**
- * 打开「标题和图标」（#77 三口归一）：进向导第 1 步。
- * 内容脚本可能还没注入（页面是刚打开、或扩展刚更新）：发送失败时先让后台对账注入，再发一次
+ * 「标题和图标」入口（#81）：进单步小表单。站点还没有配置时先请权限再注入（同「收起内容」）；
+ * 已配置的站点内容脚本可能还没在（页面刚打开、扩展刚更新）：发送失败时先让后台对账注入，再发一次
  */
 async function editTitle() {
   const o = origin.value;
@@ -287,12 +285,20 @@ async function editTitle() {
   errorCode.value = '';
   busy.value = 'edit';
   try {
-    const send = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editTitle' } satisfies OpenWizardMsg);
-    try {
-      await send();
-    } catch {
-      if (!(await enableSite(tabId, o))?.ok) return;
-      await send();
+    if (!profile.value) {
+      const res = await enableSite(tabId, o, { open: 'editTitle', requestPermission: true });
+      if (!res?.ok) {
+        errorCode.value = res?.code ?? 'injectFailed';
+        return;
+      }
+    } else {
+      const send = () => browser.tabs.sendMessage(tabId, { t: 'openWizard', mode: 'editTitle' } satisfies OpenWizardMsg);
+      try {
+        await send();
+      } catch {
+        if (!(await enableSite(tabId, o))?.ok) return;
+        await send();
+      }
     }
     window.close();
   } catch {

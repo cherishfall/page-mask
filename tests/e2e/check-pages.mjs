@@ -418,8 +418,13 @@ async function main() {
     check(!(await site2.$('pagemask-toggle')), '未添加的网站页面上没有悬浮按钮');
     popup = await openPopup(ext, site2);
     await popup.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
-    check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '设置这个网站', '新站点主按钮写「设置这个网站」');
-    check(!(await popup.$(tid('pm-popup-title'))), '未配置站点不显示「标题和图标」（那个按钮只在已配置时才有意义）');
+    check((await popup.$eval(tid('pm-popup-setup'), (b) => b.textContent.trim())) === '收起内容', '新站点主按钮写「收起内容」');
+    check(
+      (await popup.$eval(tid('pm-popup-title'), (b) => b.textContent.trim())) === '标题和图标',
+      '新站点也有「标题和图标」次按钮（#81 弹窗同构）',
+    );
+    const newSiteHint = await popup.$eval(tid('pm-popup-hint-new'), (e) => e.textContent.trim()).catch(() => null);
+    check(!!newSiteHint && newSiteHint.includes('还没设置过'), `未配置站点有一句说明（${newSiteHint}）`);
     await checkPopupChrome(popup, '未添加的网站');
     await coverAndRestore(ext, popup, site2, '未添加的网站');
 
@@ -463,7 +468,7 @@ async function main() {
       enabled: !document.querySelector(b).disabled,
     }), tid('pm-popup-error'), tid('pm-popup-setup'));
     check(
-      denied.text.includes('允许 PageMask 访问这个网站') && denied.role === 'alert' && denied.enabled && denied.buttonText === '设置这个网站',
+      denied.text.includes('允许 PageMask 访问这个网站') && denied.role === 'alert' && denied.enabled && denied.buttonText === '收起内容',
       `授权被拒：role=alert「${denied.text}」，按钮文字回到「${denied.buttonText}」、仍可点`,
     );
 

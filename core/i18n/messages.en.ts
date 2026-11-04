@@ -89,12 +89,12 @@ export const en: Messages = {
     },
     pendingBadge: 'Needs access',
     newSiteHint:
-      'You haven’t set up this site yet. Setting it up lets you change its tab title and icon, and hide parts of the page you don’t want.',
+      'This site isn’t set up yet. Both buttons start you off: “Hide items” picks the parts of the page you don’t want, “Title & icon” changes the tab’s name and picture.',
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
     reauthorize: 'Allow access',
     reauthorizing: 'Waiting for you to allow…',
     setupMore: 'Hide items',
-    setupNew: 'Set up this site',
+    /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
     coverPage: 'Cover this page',
     restorePage: 'Restore this page',
@@ -257,22 +257,23 @@ export const en: Messages = {
       },
       {
         title: 'Click the icon to open a small window',
-        text: 'Click the PageMask toolbar icon and a small window opens. The main button says “Set up this site”: it lets you change this site’s tab title and icon and hide the parts you don’t want. Two entries sit side by side at the bottom — “Site settings” and “Settings”. “Cover this page” covers the whole page along with the tab title; click “Restore this page” to come back.',
+        text: 'Click the PageMask toolbar icon and a small window opens. It has two buttons: “Hide items” picks the parts of the page you don’t want and hides them, and “Title & icon” changes this site’s tab name and picture. Below them, “Cover this page” covers the whole page along with the tab title when someone walks over — click “Restore this page” to come back. Two entries sit side by side at the bottom — “Site settings” and “Settings”.',
       },
       {
-        title: 'Setting up takes three steps',
-        text: 'Step 1 is the tab title and icon — title only is fine, finish right there; step 2 is picking what to hide on the page, everything you pick is listed and can be removed one by one; step 3 is checking the result: confirm it, decide which pages these items apply to, and save.',
+        title: 'Hiding takes two steps',
+        text: 'Click “Hide items” and pick on the page: click to pick, click again to unpick, and everything you pick is listed. Then check the result — scroll the page, rename rows, change how each one hides and where it applies, and save. Sites you already set up follow the same path: what you hid before is already in the list; click it to take it out, and edit any row you like.',
       },
       {
         title: 'Every day after that',
-        text: 'The small button at the bottom-right of the page is the daily switch: one click flips between “Shown your way” and “As the site is”. Its “⋯” menu changes the tab title and icon in place, or edits what’s hidden. When someone walks over, use “Cover” in the window or on the small button — a small open-eye button stays on the page; click it to restore.',
+        text: 'The small button at the bottom-right of the page is the daily switch: one click flips between “Shown your way” and “As the site is”. Its “⋯” menu holds the same two entries (Hide items, Title & icon). When someone walks over, use “Cover” in the window or on the small button — a small open-eye button stays on the page; click it to restore.',
       },
     ],
   },
 
+  /** Two independent flows (ui/wizard, #81): "Title & icon" is a one-step form, "Hide items" is pick → check */
   wizard: {
     heading: {
-      title: 'Tab title and icon',
+      title: 'Title & icon',
       pick: 'Pick what to hide',
       preview: 'Check the result',
     },
@@ -301,8 +302,8 @@ export const en: Messages = {
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     staleSummary: 'May be broken · can’t be found on this page',
-    badgeHidden: 'Hidden before',
-    repicked: 'This item is already in the list — updated to where you just clicked',
+    /** Shown after tapping "Pick again" on a broken row: names the next action */
+    reselectHint: 'Click where this item sits on the page now',
     rowScopeLegend: 'Where it applies',
     rowScopeAll: 'The whole site',
     rowScopeInclude: 'Only these pages',
@@ -324,17 +325,16 @@ export const en: Messages = {
     sameGroupOn: (n: number) => `The other ${n} are hidden too`,
     sameGroupOff: 'Only this one is hidden now',
     scopeHintHash: 'This site tells pages apart by what follows #, so for now the whole site is the only choice',
-    backToTitle: 'Back: edit title',
     backToPick: 'Back: pick again',
-    nextToPick: 'Next: pick items',
     nextToPreview: (n: number) => `Next: check result (${n})`,
     save: 'Save',
     saving: 'Saving…',
-    titleDone: 'Title only — done',
     exit: 'Exit setup',
     exitTitle: 'Exit setup?',
     exitBodySelected: (n: number) =>
       `The ${n} picked items won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.`,
+    exitBodyRemoved:
+      'The items you removed are still in your settings. After you exit, the tab goes back to its real name and the page to its original look.',
     exitBodyPlain:
       'The title and icon you changed won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.',
     exitStay: 'Keep setting up',

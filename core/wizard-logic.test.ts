@@ -149,37 +149,24 @@ describe('wizardEscAction 向导级 Esc（N9）', () => {
   });
 });
 
-describe('三步骨架（#51）：步骤顺序、推进与回退', () => {
-  it('新站点三步：标题与图标 → 选内容 → 看效果', () => {
-    expect(wizardPhases('newSite')).toEqual(['title', 'pick', 'preview']);
-    expect(wizardStep('newSite', 'title')).toEqual({ index: 1, total: 3 });
-    expect(wizardStep('newSite', 'pick')).toEqual({ index: 2, total: 3 });
-    expect(wizardStep('newSite', 'preview')).toEqual({ index: 3, total: 3 });
-  });
-  it('三个入口（#77）都是同一个三步向导，只是停的步不同', () => {
-    expect(wizardPhases('newSite')).toEqual(['title', 'pick', 'preview']);
-    expect(wizardPhases('editTitle')).toEqual(['title', 'pick', 'preview']);
-    expect(wizardPhases('editContent')).toEqual(['title', 'pick', 'preview']);
-    expect(wizardInitialPhase('newSite')).toBe('title');
+describe('两条流程的骨架（#81）：步骤顺序、推进与回退', () => {
+  it('「标题和图标」是单步小表单，没有下一步也没有上一步', () => {
+    expect(wizardPhases('editTitle')).toEqual(['title']);
     expect(wizardInitialPhase('editTitle')).toBe('title');
-    // 「收起内容」停在选内容：页面上已收起的标着「之前收起了」，加新的直接点，改旧的下一步
-    expect(wizardInitialPhase('editContent')).toBe('pick');
-    expect(wizardStep('editContent', 'pick')).toEqual({ index: 2, total: 3 });
-    expect(wizardStep('editContent', 'preview')).toEqual({ index: 3, total: 3 });
+    expect(wizardStep('editTitle', 'title')).toEqual({ index: 1, total: 1 });
+    expect(wizardNextPhase('editTitle', 'title')).toBeNull();
+    expect(wizardPrevPhase('editTitle', 'title')).toBeNull();
   });
-  it('推进：标题 → 选内容 → 看效果；看效果没有下一步', () => {
-    expect(wizardNextPhase('newSite', 'title')).toBe('pick');
-    expect(wizardNextPhase('newSite', 'pick')).toBe('preview');
-    expect(wizardNextPhase('newSite', 'preview')).toBeNull();
+  it('「收起内容」是两步：选内容 → 看效果，从选内容开始', () => {
+    expect(wizardPhases('editContent')).toEqual(['pick', 'preview']);
+    expect(wizardInitialPhase('editContent')).toBe('pick');
+    expect(wizardStep('editContent', 'pick')).toEqual({ index: 1, total: 2 });
+    expect(wizardStep('editContent', 'preview')).toEqual({ index: 2, total: 2 });
+  });
+  it('推进与回退：选内容 → 看效果；看效果没有下一步', () => {
     expect(wizardNextPhase('editContent', 'pick')).toBe('preview');
     expect(wizardNextPhase('editContent', 'preview')).toBeNull();
-  });
-  it('回退：第 1 步没有上一步；选内容退回改标题，看效果退回选内容', () => {
-    expect(wizardPrevPhase('newSite', 'title')).toBeNull();
-    expect(wizardPrevPhase('newSite', 'pick')).toBe('title');
-    expect(wizardPrevPhase('newSite', 'preview')).toBe('pick');
-    // 「收起内容」停在选内容：左下角「上一步：改标题」，想动标题不用退出去
-    expect(wizardPrevPhase('editContent', 'pick')).toBe('title');
+    expect(wizardPrevPhase('editContent', 'pick')).toBeNull();
     expect(wizardPrevPhase('editContent', 'preview')).toBe('pick');
   });
 });
@@ -199,12 +186,13 @@ describe('标题空值兜底（design.md：标题永不为空白）', () => {
   });
 });
 
-describe('「只改标题，完成」保存 0 条规则（#51）', () => {
-  it('写入标题、图标与清爽态，不产生任何收起规则', () => {
+describe('「标题和图标」保存 0 条规则（#81）', () => {
+  it('写入标题、图标与开关状态，不产生任何收起规则', () => {
     const profile = createEmptyProfile('https://example.test');
     Object.assign(profile, titleOnlyPatch({ title: '工作笔记', icon: null, fallbackTitle: '阅读' }));
-    // 已添加的网站：只改标题不切换开关状态（#77）
+    // 已添加的网站：改标题不切换开关状态（#77）
     expect(titleOnlyPatch({ title: 'x', icon: null, fallbackTitle: '阅读', keepState: 'original' }).switchState).toBe('original');
+    // 站点还没有配置：保存即建站，进入清爽态（#81）
     expect(titleOnlyPatch({ title: 'x', icon: null, fallbackTitle: '阅读' }).switchState).toBe('disguised');
     expect(profile.hideRules).toEqual([]);
     expect(profile.disguisedTitle).toBe('工作笔记');

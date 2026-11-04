@@ -321,17 +321,17 @@ describe('后台引擎（fakeBrowser）', () => {
       });
     });
 
-    it('新站点（还没有配置）：只注入当前标签页并打开向导，不注册、不写配置', async () => {
+    it('站点还没有配置：只注入当前标签页并打开向导，不注册、不写配置（#81 无首次模式）', async () => {
       stubs.granted.add(pattern(ORIGIN));
 
-      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite' });
+      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent' });
 
       expect(res).toEqual({ ok: true });
       expect(stubs.registered.size).toBe(0);
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
       const calls = stubs.scripting.executeScript.mock.calls.map(([inj]) => inj);
       expect(calls[0]).toEqual({ target: { tabId: siteTabId }, files: ['content-scripts/content.js'] });
-      expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['newSite'] }));
+      expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['editContent'] }));
     });
 
     it('标签页已不在该站点（跳走了 / 传错了）：拒绝，不注入', async () => {
@@ -381,19 +381,19 @@ describe('后台引擎（fakeBrowser）', () => {
 
   describe('enableSite 带权限请求', () => {
     it('用户允许：先请求权限，再注入并打开向导', async () => {
-      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true });
+      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent', requestPermission: true });
 
       expect(res).toEqual({ ok: true });
       expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
       const calls = stubs.scripting.executeScript.mock.calls.map(([inj]) => inj);
       expect(calls[0]).toEqual({ target: { tabId: siteTabId }, files: ['content-scripts/content.js'] });
-      expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['newSite'] }));
+      expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['editContent'] }));
     });
 
     it('用户拒绝：回复 denied，什么都不注入', async () => {
       stubs.permissions.request.mockResolvedValueOnce(false);
 
-      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true })) as {
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent', requestPermission: true })) as {
         ok: boolean;
         code?: string;
       };
@@ -405,7 +405,7 @@ describe('后台引擎（fakeBrowser）', () => {
     it('后台已失去用户手势：回复 gestureLost，让 popup 提示再点一次', async () => {
       stubs.permissions.request.mockRejectedValueOnce(new Error('This function must be called during a user gesture'));
 
-      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true })) as {
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent', requestPermission: true })) as {
         ok: boolean;
         code?: string;
       };
@@ -416,7 +416,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
     it('网页里的内容脚本发来的请求：不碰权限请求，回复 forbidden', async () => {
       const res = (await send(
-        { t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'newSite', requestPermission: true },
+        { t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent', requestPermission: true },
         DOC_SENDER,
       )) as { ok: boolean; code?: string };
 

@@ -63,9 +63,9 @@
 
 ### 使用方法
 
-1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「设置这个网站」，在 Chrome 的提示里选「允许」
-2. 设置分三步：先填标签页标题和图标（只改标题也可以，填完直接完成），再点选要收起的内容，最后「看效果」确认——保存就完成了
-3. 想临时看网站原样，点页面右下角的小按钮；想改收起的内容，点它旁边的「⋯」→「编辑收起的内容」，或从弹窗点「编辑收起的内容」；想换标签页标题和图标，点「⋯」→「标签页标题和图标」就地改
+1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（第一次会问这一次）
+2. 「收起内容」分两步：在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
+3. 想临时看网站原样，点页面右下角的小按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或小按钮旁边的「⋯」菜单
 4. 弹窗底部两个入口：「网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题与图标、导出 / 导入、界面语言）
 5. 想临时挡住整页，用弹窗或小按钮上的「遮住」；恢复时点页面上的睁眼小按钮
 
@@ -84,7 +84,7 @@
   - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态）
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
   - `activeTab`：打开弹窗时读取当前标签页的网址，用来判断是哪个网站、是否支持
-  - 可选主机权限：只在你点「设置这个网站」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
+  - 可选主机权限：只在你点「收起内容」或「标题和图标」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
 - 收回访问权限：在「网站设置」里打开该网站的设置页点「删除这个网站的设置」，或点页面右下角小按钮菜单里的同名项（会同时删掉该网站的设置），或在 Chrome 扩展详情页的「网站访问权限」里移除
 - 本仓库不作为任何配置分发通道，不提供预置规则
 
@@ -157,9 +157,9 @@ If you had 0.1.0 loaded, just hit reload on the same folder — existing setting
 
 ### How to use
 
-1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「设置这个网站」 (Set up this site) and choose Allow in Chrome's prompt
-2. Setting up takes three steps: first the tab title and icon (title only is fine — finish right there), then pick what to hide, then check the result — saving completes it
-3. To see the site as it is, click the small button at the bottom-right; to edit what's hidden, click 「⋯」→「编辑收起的内容」 (Edit hidden items) next to it, or 「编辑收起的内容」 in the popup; to change the tab title and icon, click 「⋯」→「标签页标题和图标」 (Tab title and icon) and edit in place
+1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
+2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
+3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button
 4. Two entries at the bottom of the popup: 「网站设置」 (Site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title and icon, export / import, interface language)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
@@ -178,7 +178,7 @@ If you had 0.1.0 loaded, just hit reload on the same folder — existing setting
   - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state) on this device
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
   - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
-  - Optional host permissions: requested for a single origin only when you click 「设置这个网站」, used to run the content script and apply your hiding styles and tab title/icon on that site
+  - Optional host permissions: requested for a single origin only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), used to run the content script and apply your hiding styles and tab title/icon on that site
 - Revoking access: open that site's settings page from 「网站设置」 (Site settings) and use 「删除这个网站的设置」 (Delete this site's settings), or click the same item in the ⋯ menu of the small button at the bottom-right (this also deletes its settings), or remove it under "Site access" in Chrome's extension details page
 - This repository distributes no site presets or configurations
 

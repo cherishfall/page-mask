@@ -1,5 +1,5 @@
 /**
- * 向导纯逻辑：防呆阈值、层级导航（design.md 核心流程「选择」步）与三步骨架（#51）。
+ * 向导纯逻辑：防呆阈值、层级导航（design.md 核心流程「选择」步）与两条流程的骨架（#81）。
  * 面向不懂 CSS 的用户：选大/选小解决点选中内层文字的痛点。
  */
 import { DEFAULT_TITLE_EN } from './titles';
@@ -47,24 +47,22 @@ export function unsavableDraftWarning(drafts: readonly { candidates: readonly st
   return t().wizard.warnUnsavable(idx + 1);
 }
 
-// ---------- 三步骨架（#51） ----------
-// 新网站第一次设置：标题与图标 → 选内容 → 看效果；已经添加过的网站只有后两步。
-// 第 1 步只在这里出现，第 2 / 3 步的内容重排在 #52、#53。
+// ---------- 两条流程的骨架（#81） ----------
+// 两条独立流程，没有「第一次设置」的特殊模式（#81）：有配置就以配置为起点，没有就当空清单。
+// - editTitle：「标题和图标」——单步小表单，主按钮「保存」，没有下一步；
+// - editContent：「收起内容」——选内容 → 看效果，两步；进入点选时现有规则已铺成草稿起点。
 
 /**
- * 向导的三个入口（#77 三口归一）：
- * - newSite：第一次给网站开启，从第 1 步开始；
- * - editTitle：「标题和图标」入口，停在第一步，改完可点「只改标题，完成」提前走；
- * - editContent：「收起内容」入口（原来的「收起更多内容」+「编辑收起的内容」合并），
- *   停在选内容——页面上已收起的项标着「之前收起了」，加新的直接点，改旧的下一步。
- * 三个入口走同一个三步向导：标题 → 选内容 → 看效果。
+ * 向导的两个入口：
+ * - editTitle：「标题和图标」入口，单步表单，填完点「保存」；
+ * - editContent：「收起内容」入口，停在选内容——已收起的项已进选择集（统一编号），加新的直接点。
  */
-export type WizardMode = 'newSite' | 'editTitle' | 'editContent';
+export type WizardMode = 'editTitle' | 'editContent';
 export type WizardPhase = 'title' | 'pick' | 'preview';
 
-/** 这个入口的步骤顺序：所有入口都是同一个三步向导，只是停的步不同 */
-export function wizardPhases(_mode: WizardMode): readonly WizardPhase[] {
-  return ['title', 'pick', 'preview'];
+/** 这个入口的步骤顺序：标题和图标是单步，收起内容是选内容 → 看效果 */
+export function wizardPhases(mode: WizardMode): readonly WizardPhase[] {
+  return mode === 'editTitle' ? ['title'] : ['pick', 'preview'];
 }
 
 /** 打开时停在哪一步 */
@@ -105,7 +103,7 @@ export function titleFromInput(value: unknown, fallback: unknown): string {
   return fb || DEFAULT_TITLE_EN;
 }
 
-/** 「只改标题，完成」写进站点配置的字段：0 条收起规则、清爽态 */
+/** 「标题和图标」保存时写进站点配置的字段：0 条收起规则，开关按 keepState（不传 = 清爽） */
 export interface TitleOnlyPatch {
   disguisedTitle: string;
   faviconDataUrl: string | null;
@@ -113,14 +111,14 @@ export interface TitleOnlyPatch {
 }
 
 /**
- * 「只改标题，完成」：只写标题 / 图标 / 开关，不碰已有的收起规则（新站点本来就没有规则，
+ * 「标题和图标」的保存：只写标题 / 图标 / 开关，不碰已有的收起规则（新站点本来就没有规则，
  * 保存后就是合法的「0 条规则」站点配置）。图标没上传就写 null（回到透明 / 全局默认图标）。
  */
 export function titleOnlyPatch(input: {
   title: unknown;
   icon: string | null;
   fallbackTitle: unknown;
-  /** 已添加网站保持它现在的开关状态（editTitle 不顺手打开清爽，#77）；新站点不给 = 清爽 */
+  /** 已添加网站保持它现在的开关状态（不顺手打开清爽）；新站点不给 = 清爽 */
   keepState?: 'disguised' | 'original';
 }): TitleOnlyPatch {
   return {

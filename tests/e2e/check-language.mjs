@@ -136,10 +136,10 @@ try {
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
-  // 「标题和图标」入口（#77）：进向导第 1 步
+  // 「标题和图标」入口（#81）：单步小表单
   await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editTitle' });
   await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
-  check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Tab title and icon', '标题和图标入口变英文');
+  check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Title & icon', '标题和图标入口变英文');
   await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);

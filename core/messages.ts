@@ -9,7 +9,7 @@
  */
 
 /** 启用站点后要在页面里打开的界面 */
-export type OpenIntent = 'newSite' | 'editTitle' | 'editContent';
+export type OpenIntent = 'editTitle' | 'editContent';
 
 /** 扩展页面 → 后台：为当前标签页的站点对账注册并立即注入内容脚本（可选随即打开向导） */
 export interface EnableSiteRequest {
@@ -75,7 +75,7 @@ export interface ReconcileResponse {
   pending?: string[];
 }
 
-/** 内容脚本 → 后台：新站点首次向导被取消（还没保存过配置），撤销本站授权与注册 */
+/** 内容脚本 → 后台：站点还没有保存过配置时取消了向导，撤销本站授权与注册 */
 export interface CancelNewSiteRequest {
   t: 'cancelNewSite';
 }
@@ -144,7 +144,7 @@ export interface CssAck extends Ack {
   css: string | null;
 }
 
-/** popup / E2E → 内容脚本：打开设置向导（新站点或添加元素） */
+/** popup / E2E → 内容脚本：打开设置向导（标题和图标 / 收起内容） */
 export interface OpenWizardMsg {
   t: 'openWizard';
   mode: OpenIntent;

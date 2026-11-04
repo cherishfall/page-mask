@@ -72,7 +72,7 @@
   font-size: var(--pm-font-size-title);
   font-weight: var(--pm-font-weight-strong);
 }
-/* 进度：第 N 步 / 共 M 步（每一步都显示，总数随入口变化） */
+/* 进度：第 N 步 / 共 M 步（两步的「收起内容」显示；单步的「标题和图标」不显示） */
 .pm-wiz-progress {
   margin: 0;
   font-size: var(--pm-font-size-caption);
@@ -192,7 +192,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 底栏：只有按钮。左边是退路（第 1 步是「只改标题，完成」），右边是前进；
+/* 底栏：只有按钮。左边是退路（看效果这一步的「上一步」），右边是前进；
    最后一个按钮吃掉剩余空间，所以只有一个按钮时它靠右，说明文字没有位置也不许进这里 */
 .pm-wiz-footer {
   display: flex;
@@ -204,9 +204,9 @@
   margin-inline-start: auto;
 }
 
-/* ── 第 1 步：标签页标题和图标 ──
+/* ── 标题和图标：单步小表单（#81） ──
    表单本身（标题、快捷标题、图标上传 / 预览 / 清除）与页面 ⋯ 菜单的小面板共用同一个组件，
-   样式在 ui/title-icon/fields.css；这里只剩这一步的容器间距。 */
+   样式在 ui/title-icon/fields.css；这里只有这个表单的容器间距。 */
 .pm-wiz-step1 {
   display: flex;
   flex-direction: column;
@@ -509,20 +509,7 @@
 .pm-wiz-same {
   border: 2px dashed var(--pm-accent);
 }
-/* 选内容阶段：页面上已经收起的元素（#69）。层在点选捕获层之下，pointer-events 也是 none，
- * 指针事件一律落到捕获层，点选行为不受影响 */
-.pm-wiz-hidden {
-  z-index: 0;
-  border: 2px dashed var(--pm-accent);
-}
-/* 「之前收起了」角标：与号码牌同一套定位，只换中性外观（不抢号码牌的主次） */
-.pm-wiz-badge.pm-wiz-hidden-tag {
-  background: var(--pm-bg-subtle);
-  color: var(--pm-fg);
-  border-color: var(--pm-border-control);
-  font-weight: var(--pm-font-weight-medium);
-}
-/* 号码牌自己一个盒子：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧（#52），
+/* 号码牌自己一个盒子（#52）：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧，
  * 所以牌子不会压住元素自己的文字；盒子里只有牌子本身，不画框。 */
 /* 号码牌：选择阶段不可点（点选落到捕获层上）；预览阶段可点，点了滚到清单里对应的行并高亮 */
 .pm-wiz-badge {

@@ -29,7 +29,8 @@
         </button>
         <div class="pm-wiz-headtext">
           <h2 id="pm-wiz-title" class="pm-wiz-title" data-testid="pm-wiz-heading">{{ t.wizard.heading[phase] }}</h2>
-          <p class="pm-wiz-progress" data-testid="pm-wiz-progress">{{ progressText }}</p>
+          <!-- 进度只在两步的「收起内容」里显示；「标题和图标」是单步小表单，没有步数可言 -->
+          <p v-if="progressTotal > 1" class="pm-wiz-progress" data-testid="pm-wiz-progress">{{ progressText }}</p>
         </div>
         <button
           type="button"
@@ -42,8 +43,8 @@
         </button>
       </div>
 
-      <!-- 第 1 步：标签页标题和图标（只在第一次给一个网站开启清爽时出现）。
-           表单与页面 ⋯ 菜单里的小面板是同一个组件（ui/title-icon/TitleIconFields.vue），不写第二份 -->
+      <!-- 标题和图标：单步小表单（#81）。
+           表单与页面 ⋯ 菜单的小面板是同一个组件（ui/title-icon/TitleIconFields.vue），不写第二份 -->
       <template v-if="phase === 'title'">
         <div class="pm-wiz-step1">
           <TitleIconFields
@@ -280,39 +281,19 @@
       </template>
 
       <!-- 底栏：只放按钮（一行一件事，说明文字不塞进操作栏）。
-           左边是退路（第 1 步换成「只改标题，完成」），右边是前进；只有一个按钮时靠右 -->
+           左边是退路（看效果这一步的「上一步」），右边是前进；只有一个按钮时靠右 -->
       <div class="pm-wiz-footer">
         <button
-          v-if="phase === 'title'"
-          type="button"
-          class="pm-btn small"
-          data-testid="pm-wiz-title-done"
-          :disabled="saving"
-          @click="saveTitleOnly"
-        >
-          {{ saving ? t.wizard.saving : t.wizard.titleDone }}
-        </button>
-        <button
-          v-else-if="canGoBack"
+          v-if="phase === 'preview'"
           type="button"
           class="pm-btn small"
           data-testid="pm-wiz-back"
           @click="goBack"
         >
-          {{ backLabel }}
+          {{ t.wizard.backToPick }}
         </button>
         <button
-          v-if="phase === 'title'"
-          type="button"
-          class="pm-btn small primary"
-          data-testid="pm-wiz-next"
-          :disabled="saving"
-          @click="goNext"
-        >
-          {{ t.wizard.nextToPick }}
-        </button>
-        <button
-          v-else-if="phase === 'pick'"
+          v-if="phase === 'pick'"
           type="button"
           class="pm-btn small primary"
           data-testid="pm-wiz-preview"
@@ -320,6 +301,16 @@
           @click="goNext"
         >
           {{ t.wizard.nextToPreview(previewCount) }}
+        </button>
+        <button
+          v-else-if="phase === 'title'"
+          type="button"
+          class="pm-btn small primary"
+          data-testid="pm-wiz-save"
+          :disabled="saving"
+          @click="saveTitleOnly"
+        >
+          {{ saving ? t.wizard.saving : t.wizard.save }}
         </button>
         <button
           v-else
@@ -398,7 +389,6 @@ import {
   draftHitCounts,
   mergeEditDrafts,
   mergeSavedRules,
-  reconcileDrafts,
   selectionRows as buildSelectionRows,
   titleFromInput,
   titleOnlyPatch,
@@ -408,7 +398,6 @@ import {
   wizardNextPhase,
   wizardPrevPhase,
   wizardStep,
-  zeroRuleSavedNotice,
   type DraftItem,
   type DraftRuleInput,
   type MarkerRect,
@@ -460,17 +449,19 @@ const ARROW_DIRS: Record<string, readonly [number, number]> = {
 const props = defineProps<{
   mode: WizardMode;
   url: string;
-  /** 编辑收起的内容（#69）：这个页面上用得上的旧规则，按原顺序铺成草稿 */
+  /** 这个页面上用得上的旧规则（#69）：进入点选时按原顺序铺成草稿起点；站点还没有配置时为空 */
   initialRules?: HideRule[];
-  /** 第 1 步标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
+  /** 这个网站是否已有配置：没有时保存即建站（0 条规则 + 清爽态） */
+  hasProfile: boolean;
+  /** 标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
   initialTitle: string;
   /** 站点现有的图标（新站点为 null） */
   initialIcon: string | null;
   /** 站点没有自己的图标时实际会用的那张（插件默认图标或透明图标） */
   fallbackIcon: string;
-  /** 插件设置里是否有默认图标，只影响第 1 步的说明文字 */
+  /** 插件设置里是否有默认图标，只影响标题表单的说明文字 */
   hasDefaultIcon: boolean;
-  /** 站点现在的开关状态：「只改标题，完成」用它保持原状（新站点不传 = 保存后开启清爽） */
+  /** 站点现在的开关状态：「标题和图标」保存时保持原状（新站点不传语义由 hasProfile 决定） */
   initialState: SiteProfile['switchState'];
   /** 把标题 / 图标实时压到当前标签页上（退出时由内容脚本运行时还原） */
   previewDisguise: (title: string, icon: string | null) => void;
@@ -479,7 +470,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ done: [saved: boolean, notice?: string] }>();
 
-/** 打开时停在哪一步：新站点从标题开始，编辑已有规则直接停在「看效果」（#69） */
+/** 打开时停在哪一步：「标题和图标」是单步表单，「收起内容」从选内容开始（#81） */
 const phase = ref<WizardPhase>(wizardInitialPhase(props.mode));
 /** 打开这一刻属于这个页面的规则 id：保存时只有这些可以被删除（#69） */
 const initialIds = (props.initialRules ?? []).map((r) => r.id);
@@ -540,32 +531,22 @@ function rowKey(el: Element): number {
   return key;
 }
 
-/** 「第 N 步 / 共 M 步」：新站 3 步、老站 2 步 */
+/** 「第 N 步 / 共 M 步」里的两个数（1 起）；「标题和图标」是单步，界面不显示进度 */
+const progressTotal = computed(() => wizardStep(props.mode, phase.value).total);
 const progressText = computed(() => {
   const { index, total } = wizardStep(props.mode, phase.value);
   return t.value.wizard.progress(index, total);
 });
-/** 第 1 步没有上一步（老站点进入就是选内容，左下角同样不出现「上一步」） */
-const canGoBack = computed(() => wizardPrevPhase(props.mode, phase.value) !== null);
-/** 「上一步」写清退回去做什么：从选内容退回第 1 步是改标题，从看效果退回是重新选内容 */
-const backLabel = computed(() => (phase.value === 'pick' ? t.value.wizard.backToTitle : t.value.wizard.backToPick));
 const exitBody = computed(() => {
-  // 编辑入口（#77）草稿里已有旧规则，选内容阶段新点的也马上算进去；新网站按选择集数
-  const selected =
-    props.mode === 'newSite'
-      ? phase.value === 'preview'
-        ? drafts.value.length
-        : selEls.value.length
-      : drafts.value.length;
-  return selected > 0 ? t.value.wizard.exitBodySelected(selected) : t.value.wizard.exitBodyPlain;
+  // 「收起内容」草稿里有多少项就提示多少；「标题和图标」没有清单，只说标题与图标不保存
+  return previewCount.value > 0 ? t.value.wizard.exitBodySelected(previewCount.value) : t.value.wizard.exitBodyPlain;
 });
 
 /**
- * 「下一步：看效果（N）」里的 N：编辑已有规则时，旧规则带来的草稿本来就要进看效果，
+ * 「下一步：看效果（N）」里的 N：旧规则带来的草稿本来就要进看效果，
  * 不能只数本次新点选的元素（否则一进来是 0，按钮还会被禁用）。
  */
 const previewCount = computed(() => {
-  if (props.mode === 'newSite') return selEls.value.length;
   const picked = new Set(selEls.value);
   const covered = new Set<Element>();
   let n = 0;
@@ -595,42 +576,24 @@ onMounted(() => {
     // 插件自己的界面（向导宿主、以及别的宿主）都不算页面元素
     isOwnNode: (n) => isOwnUiNode(n),
     onHoverChange: updateHoverBox,
-    // 点到一条已经收起的项（页面上标着「之前收起了」）：原地替换那条，不再新增重复规则（#69 / #77）
-    onPickBefore: (el) => {
-      if (props.mode === 'newSite') return false;
-      const target = pendingReplace ?? draftHitBy(el);
-      if (!target) return false;
-      pendingReplace = null;
-      replaceDraftElement(target, el);
-      pick.add(el); // 选择集变化会经 onSelectionChange 同步号码牌与清单
-      showInfo(t.value.wizard.repicked);
-      return true;
-    },
-    onSelectionChange: (els) => {
-      selEls.value = els;
-      lastSel.value = pick.last;
-      renderMarkers();
-    },
+    onSelectionChange: onSelectionChange,
     onWarnTooBig: () => showWarn(t.value.wizard.warnTooBig),
   });
   pick.attach(pickLayer);
-  // 打开时不是点选阶段（新站点先看标题与图标）：捕获层不接管指针，光标也不改
+  // 一打开就用旧规则铺草稿起点（#69 / #81 无首次模式）：没有配置时是空清单，同一条路
+  initEditDrafts();
+  // 打开时不是点选阶段（「标题和图标」是单步表单）：捕获层不接管指针，光标也不改
   if (phase.value !== 'pick') {
     pickLayer.style.display = 'none';
     pick.stop();
     document.documentElement.style.cursor = '';
+    // 标题和图标：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
+    pushTitlePreview();
   } else {
     document.documentElement.style.cursor = 'crosshair';
-    // 一打开就在点选阶段（收起更多内容）：先把页面上「已经收起过」的标出来，
-    // 否则整页原样摆在面前，用户分不清哪些收过了（#74）
-    renderMarkers();
   }
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('resize', reclampToolbar);
-  // 第 1 步：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
-  if (phase.value === 'title') pushTitlePreview();
-  // 编辑已有规则（#69）：一打开就在「看效果」，用这个页面上用得上的规则铺草稿
-  else if ((props.initialRules?.length ?? 0) > 0) void initEditDrafts();
 });
 
 onBeforeUnmount(() => {
@@ -703,15 +666,14 @@ function draftSignature(): string {
   );
 }
 
-/** 有没有还没保存的东西：第 1 步看标题 / 图标是否动过，编辑已有规则看草稿有没有变，其余看选了几项 */
+/** 有没有还没保存的东西：标题表单看标题 / 图标是否动过，「收起内容」看草稿或选择有没有变 */
 function isDirty(): boolean {
   if (phase.value === 'title') {
     return titleInput.value.trim() !== props.initialTitle.trim() || iconDataUrl.value !== props.initialIcon;
   }
-  if (props.mode !== 'newSite') {
-    return selEls.value.length > 0 || (baselineDrafts !== null && draftSignature() !== baselineDrafts);
-  }
-  return phase.value === 'pick' ? selEls.value.length > 0 : drafts.value.length > 0;
+  if (baselineDrafts !== null && draftSignature() !== baselineDrafts) return true;
+  // 还没进过看效果的新选（草稿未建）：选择集里有旧草稿之外的元素就是改过
+  return selEls.value.some((el) => !drafts.value.some((d) => d.el === el));
 }
 
 function onExitClose() {
@@ -736,20 +698,19 @@ async function finish(saved: boolean, notice?: string) {
   emit('done', saved, notice);
 }
 
-// ---------- 三步骨架（#51） ----------
+// ---------- 两步流程的骨架（#81） ----------
 
-/** 右下角前进：标题 → 选内容 → 看效果（看效果这一步的右下角直接是「保存」，不经过这里） */
+/** 右下角前进：选内容 → 看效果（「标题和图标」没有下一步；看效果的右下角直接是「保存」） */
 function goNext() {
   const next = wizardNextPhase(props.mode, phase.value);
   if (next === 'pick') enterPick();
   else if (next === 'preview') void enterPreview();
 }
 
-/** 左下角回退：看效果 → 选内容 → 标题（第 1 步没有上一步，按钮不渲染） */
+/** 左下角回退：看效果 → 选内容（选内容没有上一步；「标题和图标」是单步表单） */
 function goBack() {
   const prev = wizardPrevPhase(props.mode, phase.value);
-  if (prev === 'title') enterTitle();
-  else if (prev === 'pick') void backToPick();
+  if (prev === 'pick') void backToPick();
 }
 
 /** 点选阶段的页内状态：十字光标 + 全屏捕获层 + 已有序号牌 */
@@ -767,24 +728,12 @@ function enterPick() {
   enterPickUI();
 }
 
-/** 回到第 1 步：撤掉点选层与页内标记，选择集保留（再点「下一步」还能带走） */
-function enterTitle() {
-  phase.value = 'title';
-  document.documentElement.style.cursor = '';
-  pick.stop();
-  if (pickLayer) pickLayer.style.display = 'none';
-  updateHoverBox(null);
-  clearMarkers();
-  void setDraftCss(null);
-  pushTitlePreview();
-}
-
-/** 把标题 / 图标实时压到当前标签页（第 1 步专用；退出时由内容脚本运行时还原） */
+/** 把标题 / 图标实时压到当前标签页（标题表单专用；退出时由内容脚本运行时还原） */
 function pushTitlePreview() {
   props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconDataUrl.value || props.fallbackIcon);
 }
 
-// ---------- 编辑已有规则（#69） ----------
+// ---------- 草稿起点（#69 / #81 无首次模式） ----------
 
 /** 依次用候选选择器找页面上第一个命中的元素（不算插件自己的界面） */
 function firstElementFor(selectors: readonly string[]): Element | null {
@@ -868,31 +817,45 @@ function captureBaseRects() {
 }
 
 /**
- * 编辑入口（#77）一打开就用旧规则铺草稿：落点不同（editTitle 在第 1 步、editContent 在选内容），
- * 所以这里只铺数据、量位置，不应用预览——预览由各阶段自己画（看效果进 enterPreview，标题步不画）。
- * 页面此刻是原始状态（打开向导时已临时还原），位置量得到；选内容阶段的「之前收起了」标记也在这之后画。
+ * 打开时用旧规则铺草稿起点（#81 无首次模式）：站点还没有配置时是空清单，同一条路。
+ * 已收起的项（草稿里找得到元素的）直接进选择集：统一编号、进同一份清单（#81）。
  */
-async function initEditDrafts() {
+function initEditDrafts() {
   drafts.value = initialDrafts();
   baselineDrafts = draftSignature();
   captureBaseRects();
+  for (const d of drafts.value) if (d.el) pick.add(d.el);
   if (phase.value === 'pick') renderMarkers();
 }
 
-/** 这个元素是不是已经被某条「从旧规则带进来」的草稿命中（点它就是重选那一条，不新增） */
-function draftHitBy(el: Element): Draft | null {  for (const d of drafts.value) {
-    if (!d.sourceRuleId) continue;
-    if (d.el === el) return d;
-    const hit = d.candidates.some((sel) => {
-      try {
-        return el.matches(sel);
-      } catch {
-        return false;
-      }
-    });
-    if (hit) return d;
+/**
+ * 选择集变化（toggle、调整层级、删行、初始铺底都汇到这里）：
+ * - 取消一项 = 从这次的清单里去掉，它的草稿一并去掉（#81：点已收起的项等同清单里点它的 ✕）；
+ *   再点回来时按默认值当新的一项（默认收起方式、同类默认只收一个）。
+ * - 失效行的「重新选」：下一次加进来的元素替换那条草稿——一个手势只许一个意思。
+ */
+function onSelectionChange(els: Element[]) {
+  const prev = selEls.value;
+  if (pendingReplace) {
+    const added = els.length > prev.length ? els.find((e) => !prev.includes(e)) : null;
+    if (added) {
+      const target = pendingReplace;
+      pendingReplace = null;
+      replaceDraftElement(target, added);
+      // 重选的元素留在选择集里（统一编号）：草稿已带着它，不会被当成新的一项
+      selEls.value = els;
+      lastSel.value = pick.last;
+      renderMarkers();
+      return;
+    }
   }
-  return null;
+  if (els.length < prev.length) {
+    const gone = new Set(prev.filter((e) => !els.includes(e)));
+    drafts.value = drafts.value.filter((d) => !(d.el && gone.has(d.el)));
+  }
+  selEls.value = els;
+  lastSel.value = pick.last;
+  renderMarkers();
 }
 
 /** 重算这一条的两个数（hits / sameHits） */
@@ -917,7 +880,7 @@ function dropOldSelection(old: Element | null, d: Draft, next: Element) {
   pick.remove(old);
 }
 
-/** 用刚点到的地方原地替换这一条：旧规则 id 不变，保存时仍是更新同一条（不新增重复规则） */
+/** 用重新选到的地方替换这一条：旧规则 id 不变，保存时仍是更新同一条（不新增重复规则） */
 function replaceDraftElement(d: Draft, el: Element) {
   const old = d.el;
   d.el = markRaw(el);
@@ -936,7 +899,7 @@ function replaceDraftElement(d: Draft, el: Element) {
 function reselectDraft(d: Draft) {
   pendingReplace = d;
   if (phase.value !== 'pick') void backToPick();
-  else renderMarkers();
+  showInfo(t.value.wizard.reselectHint);
 }
 
 /** 这一条要用的范围：旧规则带来的原样保留，没有才用底部三选一（#69） */
@@ -1002,8 +965,8 @@ function saveSelectors(d: Draft) {
 }
 
 /**
- * 「只改标题，完成」：保存 0 条规则 + 标题 / 图标，站点进入清爽态，向导直接关闭，
- * 不弹保存对话框（#51）。新站点的第一份配置在这里才第一次写入。
+ * 「标题和图标」的保存（#81）：写标题 / 图标 / 开关，不碰已有的收起规则，向导直接关闭。
+ * 站点还没有配置时，这份配置在这里第一次写入（0 条规则 + 清爽态）。
  */
 async function saveTitleOnly() {
   if (saving.value || finished) return;
@@ -1020,8 +983,8 @@ async function saveTitleOnly() {
       title: titleInput.value,
       icon: iconDataUrl.value,
       fallbackTitle: props.initialTitle,
-      // 已添加的网站保持它现在的开关状态：只改标题不该顺手打开清爽（#77）
-      keepState: props.mode === 'newSite' ? undefined : props.initialState,
+      // 已添加的网站保持它现在的开关状态：改标题不该顺手打开清爽（#77）
+      keepState: props.hasProfile ? props.initialState : undefined,
     });
     let saved;
     try {
@@ -1031,7 +994,7 @@ async function saveTitleOnly() {
         (p) => {
           Object.assign(p, patch);
         },
-        { create: props.mode === 'newSite' },
+        { create: !props.hasProfile },
       );
     } catch (e) {
       showWarn(t.value.wizard.warnSaveFailedTitleOnly(e instanceof Error ? e.message : String(e)));
@@ -1051,8 +1014,21 @@ async function saveTitleOnly() {
 
 // ---------- 选择阶段 ----------
 
+/**
+ * 「选大一点 / 选小一点」：对旧项照常可用（旧项在草稿里，就是当前选择的一部分，#81）。
+ * 换了元素的草稿跟着换（候选、名字、两个数都重算）；被去掉的那一项由 onSelectionChange
+ * 统一按取消处理（草稿一并去掉）。
+ */
 function adjust(dir: 'bigger' | 'smaller') {
+  const el = pick.last;
+  if (!el) return;
+  const selBefore = selEls.value;
+  const d = drafts.value.find((x) => x.el === el) ?? null;
   pick.adjust(dir);
+  const next = pick.last;
+  if (!d || !next || next === el) return; // 新项还没有草稿；或这一项被去掉 / 没换成
+  if (selBefore.includes(next)) return; // 选大成已选中的另一项：这一项已按取消处理
+  replaceDraftElement(d, next);
 }
 
 /**
@@ -1125,10 +1101,6 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
 
 /** 号码牌的固定尺寸：定位要先知道尺寸，才能算在元素外面放不放得下 */
 const BADGE_SIZE = { width: 24, height: 24 };
-/** 「之前收起了」角标的定位尺寸（比号码牌宽，给五个字留位置） */
-const HIDDEN_BADGE_SIZE = { width: 76, height: 24 };
-/** 选内容阶段最多标出多少个「之前收起了」的元素（多了反而看不清页面） */
-const HIDDEN_MARK_LIMIT = 40;
 /** 一条规则最多给多少个「一样的」画虚线框（页面上一两百个同类时不刷屏） */
 const SAME_MARK_LIMIT = 30;
 
@@ -1232,14 +1204,12 @@ function markSameGroup(d: Draft, seq: number) {
 function renderMarkers() {
   clearMarkers();
   if (phase.value === 'pick') {
-    // 序号与清单同源：selectionRows 的第几行就是号码牌上的数字（删掉一项后一起重排）
+    // 序号与清单同源：selectionRows 的第几行就是号码牌上的数字（删掉一项后一起重排）。
+    // 已收起的项也在选择集里（#81）：与新选的统一编号，点它就是取消
     for (const row of selectionRows.value) {
       const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
-    // 把页面上之前收起过的元素标出来（虚线框 +「之前收起了」，不吃指针）。
-    // 两个入口都要标：编辑时是「这些是你正在改的」，添加时是「这些已经收过了，别重复选」
-    renderHiddenMarkers();
     return;
   }
   drafts.value.forEach((d, i) => {
@@ -1272,58 +1242,6 @@ function renderMarkers() {
     // 勾了「页面上另外 N 个一样的也一起收起」：把同组其它元素用虚线框标出来
     if (!onlyOneOf(d) && d.sameHits > 1) markSameGroup(d, i + 1);
   });
-}
-
-/**
- * 选内容阶段标出「这些之前收起了」（#69 / #74）：每条已有规则命中的元素（含同类）画虚线框 + 角标，
- * 总量封顶 HIDDEN_MARK_LIMIT。已经进入本次选择集的元素不重复标（它有自己的号码牌）。
- *
- * 来源分两种：
- * - 编辑已有规则：看当前草稿——把某一行 ✕ 掉，它的标记也跟着消失（保存时这条规则会被删）；
- * - 收起更多内容：草稿是空的，直接看打开时带进来的旧规则。
- */
-function hiddenRulesForMarks(): { candidates: string[] }[] {
-  // 编辑入口（#77）：旧规则铺成了草稿——把某一行 ✕ 掉，标记跟着消失；新选的还没保存，不算
-  return drafts.value.filter((d) => d.sourceRuleId).map((d) => ({ candidates: d.candidates }));
-}
-
-function renderHiddenMarkers() {
-  const selected = new Set(selEls.value);
-  const seen = new Set<Element>();
-  let count = 0;
-  for (const rule of hiddenRulesForMarks()) {
-    for (const sel of rule.candidates) {
-      let found: NodeListOf<Element>;
-      try {
-        found = document.querySelectorAll(sel);
-      } catch {
-        continue;
-      }
-      for (const el of found) {
-        if (count >= HIDDEN_MARK_LIMIT) return;
-        if (seen.has(el) || selected.has(el) || isOwnUiNode(el)) continue;
-        seen.add(el);
-        addHiddenMarker(el);
-        count++;
-      }
-    }
-  }
-}
-
-/** 一条「之前收起了」标记：虚线框跟元素，角标同样用 badgePlacement 贴到元素外面 */
-function addHiddenMarker(el: Element) {
-  const box = makeBox('pm-wiz-hidden');
-  box.dataset.testid = 'pm-hidden-mark';
-  const badgeBox = makeBox('pm-wiz-badge-box', 'hidden');
-  const tag = document.createElement('span');
-  tag.className = 'pm-wiz-badge pm-wiz-hidden-tag';
-  tag.textContent = t.value.wizard.badgeHidden;
-  tag.dataset.testid = 'pm-hidden-badge';
-  badgeBox.appendChild(tag);
-  markerBoxes.push(box, badgeBox);
-  const place = badgePlace(badgeBox, HIDDEN_BADGE_SIZE);
-  follower.trackLive(el, box);
-  follower.trackLive(el, badgeBox, place);
 }
 
 /**
@@ -1378,27 +1296,20 @@ async function enterPreview() {
   updateHoverBox(null);
   pendingReplace = null;
 
-  if (props.mode !== 'newSite') {
-    // 编辑入口：旧规则带来的草稿全部保留，本次新点选的追加在后面（#69 / #77）
-    drafts.value = mergeEditDrafts(
-      drafts.value,
-      selEls.value,
-      (d) => d.sourceRuleId,
-      (d) => d.el,
-      newDraft,
-    );
-    // 失效的草稿再看一眼页面（页面加载晚了 / 从别处改回来）：能找回元素就找回
-    for (const d of drafts.value) {
-      if (d.el) continue;
-      const found = firstElementFor(d.candidates);
-      if (found) d.el = markRaw(found);
-    }
-  } else {
-    // 继续选择后回来：已有草稿（改过的名称、方案、同类设置）保留，只给新元素建草稿（N12）
-    const existing = new Map(
-      drafts.value.filter((d): d is Draft & { el: Element } => !!d.el).map((d) => [d.el, d] as const),
-    );
-    drafts.value = [...reconcileDrafts(selEls.value, existing, newDraft).values()];
+  // 旧规则带来的草稿全部保留，本次新点选的追加在后面（#69 / #81）。
+  // 站点还没有配置时草稿是空的，效果就是给全部新选的建草稿——同一条路
+  drafts.value = mergeEditDrafts(
+    drafts.value,
+    selEls.value,
+    (d) => d.sourceRuleId,
+    (d) => d.el,
+    newDraft,
+  );
+  // 失效的草稿再看一眼页面（页面加载晚了 / 从别处改回来）：能找回元素就找回
+  for (const d of drafts.value) {
+    if (d.el) continue;
+    const found = firstElementFor(d.candidates);
+    if (found) d.el = markRaw(found);
   }
   // 页面可能变过（滚动加载、懒渲染）：两个数都按当前 DOM 重算——「同类一起（N）」的 N 与当前选项无关，
   // 所以切到「只这一个」的行也要重算同类那组（#53）
@@ -1600,32 +1511,16 @@ async function doSave() {
       saved = await storage.updateProfile(
         origin,
         (p) => {
-          if (props.mode !== 'newSite') {
-            // 编辑已有规则（#69）：有来源的原地更新（保留 id 与体检记录），没有的追加；
-            // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动
-            p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: initialIds, now, makeId: newRuleId });
-          } else {
-            // 新网站：只有这次新选的，纯追加
-            p.hideRules.push(
-              ...incoming.map((d) => ({
-                id: newRuleId(),
-                elementName: d.elementName,
-                candidates: [...d.candidates],
-                strategy: d.strategy,
-                scope: d.scope,
-                onlyThis: d.onlyThis,
-                createdAt: now,
-              })),
-            );
-          }
-          if (props.mode === 'newSite') {
-            // 第 1 步填的标题 / 图标随这次保存一起落库（#51）；老站点不碰标题
-            p.disguisedTitle = titleFromInput(titleInput.value, props.initialTitle);
-            p.faviconDataUrl = iconDataUrl.value || null;
-            p.switchState = 'disguised'; // 新站点保存后自动开启清爽模式
+          // 有来源的原地更新（保留 id 与体检记录），没有的追加；
+          // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动。
+          // 站点还没有配置时 initialIds 是空的，效果就是纯追加（#81 两条流程同一条保存路径）
+          p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: initialIds, now, makeId: newRuleId });
+          if (!props.hasProfile) {
+            // 新站点保存即建站并开启清爽（#81：标题和图标流程只改标题，「收起内容」流程不碰标题）
+            p.switchState = 'disguised';
           }
         },
-        { create: props.mode === 'newSite' },
+        { create: !props.hasProfile },
       );
     } catch (e) {
       // 写入失败（例如存储空间不足）：恢复预览，留在向导里，可以再试
@@ -1638,12 +1533,8 @@ async function doSave() {
       noticeDlg.value?.showModal();
       return;
     }
-    // 保存即完成（#53）：不再弹第二个确认框；0 条规则时只给一句轻提示
-    const notice =
-      incoming.length === 0
-        ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle))
-        : undefined;
-    await finish(true, notice);
+    // 保存即完成（#53）：不再弹第二个确认框
+    await finish(true);
   } finally {
     saving.value = false;
   }

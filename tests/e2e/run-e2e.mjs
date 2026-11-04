@@ -205,18 +205,18 @@ async function main() {
     await waitStyle(page, '存储切回清爽态后样式重新注入', '#site-header', 'display', 'none');
     check(true, '存储切回清爽态 → 样式重新注入');
 
-    // ===================== 向导全流程（第 1 步 → 拾取 → 预览 → 保存） =====================
+    // ===================== 向导全流程（点选 → 预览 → 保存，#81 两步） =====================
     console.log('\n--- 向导全流程 ---');
     await patchProfile(ext.control, ORIGIN, { hideRules: [], switchState: 'original' });
     await page.reload({ waitUntil: 'load' });
     // 标题、图标、收起项全空才不挂胶囊（#67）：等隔离环境里的内容脚本就绪，而不是等页面上某个界面
     await poll(async () => evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false), '内容脚本就绪');
-    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'newSite' });
+    // 模拟新站点：清掉配置（内容脚本已在，向导照常打开；保存时按「还没有配置」建站并自动清爽，#81）
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));
-    check((await shadowText(page, WIZARD_HOST, tid('pm-wiz-progress'))).trim() === '第 1 步 / 共 3 步', '新站点向导从第 1 步（标题与图标）开始，共 3 步');
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-next'));
-    await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-preview'));
-    check(true, '向导工具条出现（第 2 步：选内容）');
+    check((await shadowText(page, WIZARD_HOST, tid('pm-wiz-progress'))).trim() === '第 1 步 / 共 2 步', '「收起内容」从点选开始，共 2 步（#81）');
+    check(true, '向导工具条出现（第 1 步：选内容）');
 
     // 拾取：真实鼠标点击页头左侧（避开顶部中央的工具条）+ 第一张推荐卡
     const headerPt = await page.evaluate(() => {
@@ -295,7 +295,7 @@ async function main() {
     await waitForShadow(page, TOGGLE_HOST, '[data-testid="pm-toggle-menu"]', { timeout: 3000 });
     await clickInShadow(page, TOGGLE_HOST, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'), { timeout: 5000 });
-    check(true, '点菜单「标题和图标」进向导第 1 步（#77）');
+    check(true, '点菜单「标题和图标」进单步小表单（#81）');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
     await waitFor(page, '向导关闭（复位）', (h) => !document.querySelector(h), [WIZARD_HOST]);

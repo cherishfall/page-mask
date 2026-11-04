@@ -11,7 +11,7 @@
 - [x] 版本号已改（`package.json` → `0.4.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.4.1`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.4.1 改了界面用词，截图 4、6 里的按钮名需要跟上）
-- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（0.5.0 界面：按设置 / 原样、设置这个网站、网站设置、允许访问；菜单五项按用途分三组）
+- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（#81 界面：弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、网站设置、允许访问；菜单四项按用途分三组）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
 - [x] `npm run check:docs` 通过（用户可见文档无禁用词、内部链接有效）
 
@@ -40,7 +40,8 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 
 【功能】
 • 点选收起：鼠标悬停高亮、点击选中（可连选），用「选大一点 / 选小一点」调整范围，不需要懂任何代码
-• 设置分三步：先填标签页标题和图标（只改标题也可以），再点选要收起的内容，最后「看效果」确认——选中的内容列成清单、可逐项删掉，在哪些页面收起也在这里定，保存即完成
+• 收起内容分两步：先在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——选中的内容列成清单、可逐项去掉，在哪些页面收起也在这里定，保存即完成
+• 标题和图标单独一个小表单：填完点「保存」，只想改标题的网站不必收起任何内容
 • 三种收起方式：消失（整块不见，下面的内容往上顶）、留空（看不见了，但位置还占着）、盖住（原位盖一块和背景同色的方块，不改网站自身样式）
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题和图标；没单独设置的网站用插件默认图标
@@ -54,13 +55,13 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 
 【怎么用】
 1. 打开想收拾的网站，点工具栏的 PageMask 图标
-2. 点「设置这个网站」，在 Chrome 的提示里点「允许」
-3. 设置分三步：填标签页标题和图标（可跳过）→ 点选要收起的内容 → 「看效果」确认，保存即完成
-4. 想看网站原样，点页面右下角的小按钮；想改收起的内容，点旁边的「⋯」→「编辑收起的内容」，或从弹窗点「编辑收起的内容」
+2. 第一次用：在 Chrome 的提示里点「允许」——点「收起内容」或「标题和图标」时都会问这一次
+3. 「收起内容」分两步：在页面上点选要收起的内容 → 「看效果」确认，保存即完成；「标题和图标」填完点「保存」
+4. 想看网站原样，点页面右下角的小按钮；想改收起的内容或标题图标，点弹窗的两颗按钮，或小按钮旁边的「⋯」菜单
 
 【隐私与权限】
 • 只对你添加的网站生效；没添加的网站，PageMask 不会运行任何内容
-• 访问某个网站的权限只在你点「设置这个网站」时申请，而且只申请这一个网站
+• 访问某个网站的权限只在你点「收起内容」或「标题和图标」时申请，而且只申请这一个网站
 • 所有设置只保存在你的浏览器里；PageMask 自身不发起任何网络请求，没有统计，没有第三方代码
 • 隐私政策：https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md
 
@@ -77,7 +78,8 @@ PageMask declutters the sites you choose: point at the parts of a page you don't
 
 FEATURES
 • Point-and-click hiding: hover to highlight, click to select (multi-select), use "bigger / smaller" to adjust the selection. No code needed
-• Setting up takes three steps: first the tab title and icon (title only is fine), then pick what to hide, then "Check the result" — everything picked is listed and can be removed one by one, the pages it applies to are decided here, and saving finishes it
+• Hiding takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then "Check the result" — everything picked is listed and can be removed one by one, the pages it applies to are decided here, and saving finishes it
+• Title & icon is a separate one-step form: fill it in and click "Save" — a title-only site doesn't need anything hidden
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page colour sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
@@ -91,9 +93,9 @@ FEATURES
 
 HOW TO USE
 1. Open the site you want to tidy up and click the PageMask toolbar icon
-2. Click 「设置这个网站」 (Set up this site) and choose Allow in Chrome's prompt
-3. Setting up takes three steps: fill in the tab title and icon (skippable) → pick what to hide → "Check the result" and save
-4. To see the site as it is, click the small button at the bottom-right; to edit what's hidden, click 「⋯」→「编辑收起的内容」 (Edit hidden items) next to it, or 「编辑收起的内容」 in the popup
+2. First time: choose Allow in Chrome's prompt — you'll be asked once, whichever button you click
+3. "Hide items" takes two steps: pick what to hide on the page → "Check the result" and save; "Title & icon" is saved with "Save"
+4. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the "⋯" menu next to the small button
 
 PRIVACY & PERMISSIONS
 • Runs only on sites you add. On every other site, PageMask runs nothing
@@ -112,7 +114,7 @@ NOTES
 - **storage**: Saves the user's settings for each site they add (which page elements to hide, how, on which pages, the tab title/icon they chose, the on/off state) in `chrome.storage.local` on the device. Nothing is synced or sent anywhere.
 - **scripting**: For sites the user has explicitly enabled only: (1) registers PageMask's bundled content script for that site's pages, (2) runs it once in the already-open tab right after the user enables the site, and (3) inserts/removes the user's hiding stylesheet (`insertCSS`/`removeCSS`) when the user switches the site between clean and original. No remote code is ever executed.
 - **activeTab**: When the user opens the popup, it reads the active tab's URL to show which site it is, whether it's supported (browser pages, local files and the Web Store are not), and whether it is already configured. No other tab is accessed.
-- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. When the user clicks 「设置这个网站」, PageMask calls `chrome.permissions.request` for that single origin (e.g. `https://example.com/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that origin. Deleting that site's settings (from the site's settings page, or the small button's ⋯ menu on the page) removes the origin's permission.
+- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. When the user clicks 「收起内容」 ("Hide items") or 「标题和图标」 ("Title & icon"), PageMask calls `chrome.permissions.request` for that single origin (e.g. `https://example.com/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that origin. Deleting that site's settings (from the site's settings page, or the small button's ⋯ menu on the page) removes the origin's permission.
 
 ## 4. 单一用途（Single purpose）
 
@@ -139,24 +141,24 @@ Declutters websites the user chooses: it hides page elements the user picks (wit
 ```
 What it does: lets the user hide page elements they pick on sites they explicitly add, with an optional custom tab title/icon for those sites. UI is bilingual (Chinese and English; the interface language follows the browser and can be switched in Settings).
 
-Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup button 「设置这个网站」 ("Set up this site") calls permissions.request for that single origin; only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that origin) and inject the hiding styles there.
+Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that single origin; only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that origin) and inject the hiding styles there.
 
 Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off.
 
 No network requests, no analytics, no remote code, no bundled site rules. All data stays in chrome.storage.local.
 
 Test steps (no login needed):
-1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click the blue button 「设置这个网站」 (Set up this site), choose Allow.
-2. The setup opens at step 1 of 3 (tab title and icon). Click 下一步 (Next) to skip it.
-3. Step 2: click on the "From today's featured article" box (or any element you'd like to hide) — it is highlighted and listed in the toolbar's picked list. Click 「下一步：看效果」 (Next: check the result).
-4. Step 3: the picked element is hidden with ghost markers; the list on the right lets you change the hide method or delete an item, and the "where it applies" options are on this step too. Click 保存 (Save). The element is hidden and the tab title changes to "Reading" («阅读» when Chrome's UI language is Chinese).
+1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click the blue button 「收起内容」 ("Hide items"), choose Allow.
+2. The page enters pick mode: click on the "From today's featured article" box (or any element you'd like to hide) — it is highlighted and listed in the toolbar's picked list. Click 「下一步：看效果」 (Next: check the result).
+3. The picked element is hidden with ghost markers; the list on the right lets you change the hide method or remove an item, and the "where it applies" options are in each row's 「调整」 (Adjust). Click 保存 (Save). The element is hidden.
+4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it ("Reading" / «阅读» when left empty and Chrome's UI language is Chinese).
 5. Click the small button at the bottom-right to switch the site back to as-is: the element reappears and the title reverts.
-6. Click 「⋯」 on the small button. The menu has five items in three groups: 「标签页标题和图标」 (Tab title and icon — opens an in-place editor) / 「收起更多内容」 (Hide more) / 「编辑收起的内容」 (Edit hidden items — opens the wizard at its last step; only shown when the site has something hidden) | 「按钮放回右下角」 (put the button back at the bottom-right) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission).
+6. Click 「⋯」 on the small button. The menu has four items in three groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「按钮放回右下角」 (put the button back at the bottom-right) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission).
 7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore) and two entries at the bottom: 「网站设置」 (Site settings — the site list; a site's settings page has 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.5.0 待重走**：上面 7 步按 0.5.0 界面核对一遍（主按钮「设置这个网站」、底部「网站设置」与「插件设置」、「遮住这一页 / 恢复这一页」、「允许访问」、胶囊五项菜单分三组），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 98 项，check-pages 187 / check-wizard 147 / check-toggle 142 / check-edit-rules 59 / check-language 27，浅深色实测通过）。
+**0.5.0 待重走**：上面 7 步按 #81 界面核对一遍（弹窗两颗按钮「收起内容」「标题和图标」、底部「网站设置」与「插件设置」、「遮住这一页 / 恢复这一页」、「允许访问」、胶囊四项菜单分三组），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 98 项，check-pages 187 / check-wizard 147 / check-toggle 142 / check-edit-rules 59 / check-language 27，浅深色实测通过）。
 
 ## 7. 版本历史
 
@@ -205,7 +207,7 @@ Test steps (no login needed):
 
 | 问题 | 回答 |
 |---|---|
-| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「设置这个网站」并选「允许」后，才按单个 origin 请求，代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「全部允许」也只是一个用户手势内的多 origin 请求，且只包含用户自己导入/已配置的站点）。 |
+| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「收起内容」或「标题和图标」并选「允许」后，才按单个 origin 请求，代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「全部允许」也只是一个用户手势内的多 origin 请求，且只包含用户自己导入/已配置的站点）。 |
 | 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
 | 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。不改网页原有 DOM、不发请求、不注入远程代码。 |
 | 会不会收集浏览记录？ | 不收集。网站地址存在本机 `chrome.storage.local`（用户配置的一部分），不上传、不同步（没用 `storage.sync`）。 |

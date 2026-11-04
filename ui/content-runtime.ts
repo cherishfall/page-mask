@@ -22,9 +22,9 @@
  *   （WXT 在 runtime.id 消失时就地触发失效）；扩展更新后后台还会向已打开页面重新注入新脚本
  *
  * 入口核对（REVIEW B28）：注册的匹配模式不写端口时会命中该主机的所有端口，所以启动后先按
- * location.origin 读站点配置；没有配置（也不是新站点向导）就撤掉首屏遮挡、什么都不挂，保持休眠。
+ * location.origin 读站点配置；没有配置（也不是正开着向导）就撤掉首屏遮挡、什么都不挂，保持休眠。
  * 一键清空前后台发 siteReset，本页立即移除样式、还原标题图标、卸载所有界面；
- * 新站点首次向导取消时通知后台收回授权（cancelNewSite）。
+ * 站点还没有配置时取消向导会通知后台收回授权（cancelNewSite）。
  */
 import { createApp, h, reactive, type App } from 'vue';
 import { browser } from 'wxt/browser';
@@ -82,7 +82,7 @@ function warnIfFailed(what: string, res: CssAck): void {
 
 /** 登记在隔离环境 window.__pagemask 上的句柄（entrypoints/content.ts、后台 enableSite 使用） */
 export interface ContentRuntimeHandle {
-  /** 打开设置向导；新站点（还没有配置）只能用 newSite。返回是否受理 */
+  /** 打开设置向导；站点还没有配置时也能打开（保存时才写配置）。返回是否受理 */
   open(mode: OpenIntent): boolean;
   /** 本运行时是否仍有效（扩展更新 / 重载后、被新注入的实例取代后为 false） */
   alive(): boolean;
@@ -159,7 +159,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let wizardHost: PageHost | null = null;
   let wizardApp: App | null = null;
   let wizardActive = false;
-  /** 入口核对通过（本页有站点配置或正在进行新站点向导），已挂上监听 */
+  /** 入口核对通过（本页有站点配置或正有打开向导的请求），已挂上监听 */
   let active = false;
   /** 入口核对（读配置）是否已完成；完成前到来的打开请求先记下 */
   let gateDone = false;
@@ -290,7 +290,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     }
   }
 
-  /** 菜单「标题和图标」（#77）：进向导第 1 步，改完可「只改标题，完成」提前走 */
+  /** 菜单「标题和图标」（#77）：进单步小表单，填完点「保存」 */
   function handleEdit() {
     if (ctx.isValid) void openWizard('editTitle');
   }
@@ -347,7 +347,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   /**
    * 打开设置向导：伪装态先临时还原全部规则再进入，退出后恢复（design.md 核心流程）。
-   * 新站点（还没有配置）只能以 newSite 打开：保存时才写入配置；取消则通知后台收回授权。
+   * 站点还没有配置时同样打开（#81 无首次模式）：保存时才写配置；取消则通知后台收回授权。
    */
   const initialRulesFor = (url: string) => rulesApplicableAt(profile?.hideRules ?? [], url);
 
@@ -355,7 +355,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (wizardActive || disposed) return;
     // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
     await exclusive(async () => undefined);
-    if (wizardActive || resetting || disposed || (!profile && mode !== 'newSite')) return;
+    if (wizardActive || resetting || disposed) return;
+    // 打开前重读一次配置（#81）：缓存要等 150ms 防抖刷新才跟上存储的变化，
+    // 而 hasProfile / 草稿起点必须按当下事实算——配置刚在别处被删时，缓存还当它存在，
+    // 保存就会走错「已存在的配置」分支（E2E 模拟新站点正是这个时序）
+    profile = (await storage.getProfile(origin)) ?? null;
     wizardActive = true;
     healthGen++;
     hideCurtain(); // 进向导前先撤幕布（#45）
@@ -375,21 +379,22 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
     ensureHostShield();
     wizardHost = createPageHost(ctx, 'wizard');
-    // 第 1 步（#51）：默认标题按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
+    // 标题输入框的默认值按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
     const fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
     const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
     wizardApp = createApp(WizardApp, {
       mode,
       url: pageUrl,
-      // 这个页面上用得上的旧规则，按打开这一刻的地址算。编辑入口（editTitle / editContent）
-      // 靠它铺草稿（#69）与标出「之前收起了」（#74）；newSite 没有旧规则，传空
+      // 这个页面上用得上的旧规则，按打开这一刻的地址算：编辑时铺成草稿起点（#69）。
+      // 站点还没有配置时是空清单——同一条路，只是还没有已收起的项
       initialRules: initialRulesFor(pageUrl),
+      hasProfile: !!profile,
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,
       initialState: profile?.switchState ?? 'disguised',
       hasDefaultIcon: !!settings.defaultIconDataUrl,
-      // 实时预览标题 / 图标：直接压到当前标签页（guard 在第 1 步第一次调用时快照真实标题），
+      // 实时预览标题 / 图标：直接压到当前标签页（guard 在标题表单第一次调用时快照真实标题），
       // 退出向导后由 refreshState → applyAll / restoreAll / clearPageUi 还原
       previewDisguise: (title: string, icon: string | null) => {
         if (!ctx.isValid) return;
@@ -401,8 +406,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         closeWizard();
         // 保存后的一句话（例如 0 条规则时说明只有标签页名字变了）：向导已关，提示自己一个宿主，几秒后消失
         if (saved && notice) showPageNotice(ctx, notice);
-        if (!saved && mode === 'newSite' && !profile) {
-          // 新站点首次向导被取消：还没写过配置，请后台收回刚给的授权（后台会再核对一次确实没有配置）
+        if (!saved && !profile) {
+          // 向导被取消且站点还没有配置：还没写过配置，请后台收回刚给的授权（后台会再核对一次确实没有配置）
           void browser.runtime.sendMessage({ t: 'cancelNewSite' } satisfies BgRequest).catch(() => undefined);
         }
         // 保存路径已写入 storage；这里统一按当前配置恢复（保存触发 onChanged 但被向导屏蔽）

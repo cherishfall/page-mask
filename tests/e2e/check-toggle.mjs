@@ -8,10 +8,10 @@
  * - 菜单：默认右下角时菜单完整在视口内（右侧与底部都不出屏）；Esc 关闭；点页面关闭；
  *   右键胶囊不再弹出菜单（「永不做」清单：不新增右键菜单入口）
  * - 菜单按用途分组（#56 / #77）：标题和图标 / 收起内容 ｜ 按钮放回右下角 ｜ 删除这个网站的设置
- *   （红字，与上面用分隔线隔开）；两项都进同一个三步向导，只是停的步不同
+ *   （红字，与上面用分隔线隔开）；两项各进一条流程（#81：单步表单 / 两步点选）
  * - 显示条件（#67）：站点有任何设置（标题 / 图标 / 收起项）就显示胶囊，三样全空才不显示
- * - 点菜单「标题和图标」停在向导第 1 步，「收起内容」停在选内容；开关状态都不变（N1 的实测故障）
- * - 「标题和图标」在向导第 1 步就地实时预览，「只改标题，完成」保存走人；原样态下不顺手打开清爽
+ * - 点菜单「标题和图标」进单步小表单（#81），「收起内容」停在选内容；开关状态都不变（N1 的实测故障）
+ * - 「标题和图标」就地实时预览，「保存」保存走人；原样态下不顺手打开清爽
  * - 删除这个网站的设置（#56）：确认框标题带域名、默认焦点在「取消」、按钮实底红；
  *   确认后配置删除、权限收回、页面还原、标签页恢复真名、列表里也没有了
  * - 键盘：Tab 能聚焦把手 / 主按钮 / 「⋯」，主按钮上回车切换开关；主按钮有 aria-pressed 与可见文字
@@ -286,13 +286,13 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '标题和图标 / 收起内容 / 按钮放回右下角 / 删除这个网站的设置',
-      `菜单是四项、与弹窗同名（${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置',
+      `菜单是四项、与弹窗同名、收起内容在前（#80，${menuShape.items.join(' / ')}）`,
     );
     check(menuShape.seps === 2, `菜单里有两条分隔线（实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') === '标题和图标 | 收起内容 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
-      `分组顺序：改内容两项 / 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
+      `分组顺序：改内容两项（收起内容在前，#80）/ 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -320,10 +320,10 @@ async function main() {
     await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(
-      (await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 1 步 / 共 3 步',
-      '菜单「标题和图标」停在向导第 1 步（#77）',
+      (await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '标题和图标',
+      '菜单「标题和图标」进单步小表单（#81）',
     );
-    check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '标签页标题和图标', '向导标题是「标签页标题和图标」');
+    check(!(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-progress"]'), WIZARD)), '单步表单没有进度行');
     const afterMenu = await getProfile(ext.control, ORIGIN);
     check(afterMenu.switchState === 'disguised', `开关没有被菜单点击切掉（${afterMenu.switchState}）`);
     // 没有改动时退出不弹确认框（编辑已有规则按草稿快照判断）
@@ -332,15 +332,14 @@ async function main() {
     // 进向导时胶囊让位；退出后运行时重新挂回来，再继续点菜单
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
 
-    // ===================== 「标题和图标」进向导第 1 步（#77） =====================
-    console.log('\n--- 菜单「标题和图标」：向导第 1 步就地实时预览，「只改标题，完成」保存走人 ---');
+    // ===================== 「标题和图标」单步表单（#81） =====================
+    console.log('\n--- 菜单「标题和图标」：单步表单就地实时预览，「保存」走人 ---');
     const urlBefore = page.url();
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(page.url() === urlBefore, `就地打开，没有跳到别的标签页（地址仍是 ${new URL(page.url()).pathname}）`);
-    check((await shadowText(page, WIZARD, tid('pm-wiz-progress'))) === '第 1 步 / 共 3 步', '停在向导第 1 步');
     // 实时预览：改标题 → 标签页当场改名（不等保存）
     const NEW_TITLE = '安静的标题';
     await page.evaluate(
@@ -354,13 +353,13 @@ async function main() {
       NEW_TITLE,
     );
     await waitFor(page, '改标题实时预览', (t) => document.title === t, [NEW_TITLE], { timeout: 3000 });
-    await clickInShadow(page, WIZARD, tid('pm-wiz-title-done'));
+    await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
     await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     check((await getProfile(ext.control, ORIGIN)).disguisedTitle === NEW_TITLE, '标题写进存储');
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '保存后胶囊挂回来');
 
-    // 原样态：只改标题不顺手打开清爽（面板时代的「切到清爽」入口随三口归一退场，#77）
+    // 原样态：改标题不顺手打开清爽（#77）
     await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
     await waitFor(page, '切到原样', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
     const ORIGINAL_TITLE = '原样下改的标题';
@@ -378,7 +377,7 @@ async function main() {
       WIZARD,
       ORIGINAL_TITLE,
     );
-    await clickInShadow(page, WIZARD, tid('pm-wiz-title-done'));
+    await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     const afterOriginal = await getProfile(ext.control, ORIGIN);
     check(
@@ -524,7 +523,7 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      noRulesMenu.items.join(' / ') === '标题和图标 / 收起内容 / 按钮放回右下角 / 删除这个网站的设置',
+      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置',
       `0 条收起项时菜单不变：收起内容这时就是纯添加（${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
