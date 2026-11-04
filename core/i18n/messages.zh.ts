@@ -157,12 +157,12 @@ export const zh = {
     missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它。',
 
     titleHeading: '标签页标题',
-    titleIntro: '打开开关后，这个网站的标签页显示这段文字。',
+    titleIntro: '上面的「按你的设置显示」开关打开时，标签页显示这段文字。',
     titleFootnote: (fallback: string) =>
       `停止输入后自动保存。留空就用「${fallback}」——标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
     iconHeading: '标签页图标',
-    iconIntro: '打开开关后，这个网站的标签页用这张图当图标。',
+    iconIntro: '上面的「按你的设置显示」开关打开时，标签页用这张图当图标。',
     currentIcon: '当前图标',
     currentIconAlt: '当前的标签页图标',
     iconUnsetDefault: '没设置：用插件设置里的默认图标',
@@ -214,13 +214,13 @@ export const zh = {
     back: '← 全部网站设置',
 
     titleHeading: '默认标题',
-    titleIntro: '网站自己没有设置标题时，打开开关后它的标签页显示这段文字。',
+    titleIntro: '网站自己没有设置标题时，它的标签页显示这段文字。',
     titleLabel: '默认标签页标题',
     titleFootnote: (fallback: string) =>
       `留空就用「${fallback}」（跟随浏览器语言）。标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
     iconHeading: '默认图标',
-    iconIntro: '网站自己没有设置图标时，打开开关后它的标签页用这张图。改这里，没单独设过图标的网站会一起变。',
+    iconIntro: '网站自己没有设置图标时，它的标签页用这张图。改这里，没单独设过图标的网站会一起变。',
     currentIcon: '当前默认图标',
     currentIconAlt: '当前的默认图标',
     iconUnset: '没设置：标签页上不显示图标',

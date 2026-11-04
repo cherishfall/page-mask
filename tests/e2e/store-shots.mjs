@@ -213,35 +213,9 @@ try {
   await waitForShadow(p, 'pagemask-wizard', '[data-testid="pm-wiz-pick-lead"]');
 
   /** 点选一个元素；点击后核对已选数量，偶尔首个 pointerdown 不生效时重试 */
-  const pickElement = async (sel, dx = null) => {
-    const at = await p.evaluate(
-      (s, d) => {
-        const r = document.querySelector(s).getBoundingClientRect();
-        return { x: r.x + (d ?? r.width / 2), y: r.y + r.height / 2 };
-      },
-      sel,
-      dx,
-    );
-    const count = () =>
-      p.evaluate(
-        (h, s) => parseInt((document.querySelector(h)?.shadowRoot?.querySelector(s)?.textContent ?? '').match(/（(\d+)）/)?.[1] ?? '0', 10),
-        'pagemask-wizard',
-        '[data-testid="pm-wiz-preview"]',
-      );
-    const before = await count();
-    for (let i = 0; i < 3; i++) {
-      await p.mouse.move(at.x, at.y);
-      await new Promise((r) => setTimeout(r, 200));
-      await p.mouse.click(at.x, at.y);
-      await new Promise((r) => setTimeout(r, 400));
-      if ((await count()) > before) return;
-    }
-    throw new Error(`点选 ${sel} 没有生效`);
-  };
-  // 与 run-e2e 同款命中点：页头左侧（避开顶部中央）+ 第一张推荐卡
-  await pickElement('#site-header', 40);
-  await pickElement('.card:nth-child(1)');
-  await new Promise((r) => setTimeout(r, 500));
+  // #81 起旧规则自动铺成点选起点的草稿：demoProfile 的 6 条都在清单里、页面上挂着标记，
+  // 不需要（也不应该）再点——现在再点一下反而会把已选项从清单里去掉
+  await new Promise((r) => setTimeout(r, 600));
   const wizardPickFile = path.join(TMP, 'wizard-pick.png');
   await shot(p, wizardPickFile);
   // 看效果：草稿已应用 + 幽灵标记 + 清单逐项编辑

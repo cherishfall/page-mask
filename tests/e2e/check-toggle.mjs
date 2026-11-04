@@ -644,8 +644,8 @@ async function main() {
     );
     check(covered.opacity === '1', `恢复按钮常态全不透明（遮住后唯一出路，白底上要过 3:1，#87；${covered.opacity}）`);
     check(
-      covered.labelText === '恢复' && covered.labelOpacity === '0',
-      `常态只显示图标：「恢复」在 DOM 里但不显示（文字不透明度 ${covered.labelOpacity}）`,
+      covered.labelText === '恢复' && covered.labelOpacity === '1',
+      `「恢复」二字常显，不靠悬停才自我解释（#92 审查；文字不透明度 ${covered.labelOpacity}）`,
     );
     check(covered.radius === '999px' && covered.btnBg === 'rgb(255, 255, 255)', `与胶囊同一套材质（圆角 ${covered.radius}、底色 ${covered.btnBg}）`);
     check(!!covered.aria && covered.aria.includes('取消遮住'), `按钮有可读名字（${covered.aria}）`);

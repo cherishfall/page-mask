@@ -720,6 +720,23 @@ async function main() {
     );
     check(true, '点子号牌 3.1：清单第 3 行高亮');
 
+    // #88「检查同类」：预览行跳回点选亮出整组，看完「下一步」回来草稿不丢
+    console.log('\n--- 看效果 ↔ 检查同类：往返一圈状态都在（#88） ---');
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitFor(page, '进入看效果', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 2 步'), [HOST]);
+    await waitFor(page, '看效果第 3 行有「检查同类」入口', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-3-inspect-same"]'), [HOST]);
+    await clickInShadow(page, HOST, tid('pm-draft-3-inspect-same'));
+    await waitFor(page, '跳回点选阶段', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 1 步'), [HOST]);
+    await waitFor(page, '整组子号牌重新亮出', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
+    check(true, '「检查同类」跳回点选，第 3 行的组员牌子都在');
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitFor(page, '回到看效果', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 2 步'), [HOST]);
+    check(true, '回到看效果：第 2 步 / 共 2 步，草稿原样（摘要细节由上面既有断言覆盖）');
+    // 后续用例在点选阶段继续：走「上一步」回点选（也顺带验返回按钮）
+    await clickInShadow(page, HOST, tid('pm-wiz-back'));
+    await waitFor(page, '上一步回到点选', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 1 步'), [HOST]);
+    check(true, '「上一步：重新选内容」回到点选，继续大组用例');
+
     // 焦点切换：选一条大组（25 条帖子 > 20）勾上 → 上一组收回，整片一条描边样式规则。
     // 滚到视口顶部再点：底部居中的工具条加了行内勾选框后更高，视口中央会被它盖住
     await page.evaluate(() => document.querySelector('#feed .post:first-child').scrollIntoView());

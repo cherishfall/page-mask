@@ -123,6 +123,11 @@ h1 {
   align-items: center;
   justify-content: space-between;
   margin-top: var(--pm-space-6);
+  /* 主操作不压在折叠线下（#92 审查）：整页内容超过一屏，底栏滚动时贴着视口底部走 */
+  position: sticky;
+  bottom: 0;
+  padding: var(--pm-space-2) 0;
+  background: var(--pm-bg-subtle);
 }
 /* 底栏两个按钮是这一步的主要提交：用 40 高（docs/design-ui.md §四） */
 .nav button {

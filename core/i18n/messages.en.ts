@@ -137,12 +137,12 @@ export const en: Messages = {
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
     titleHeading: 'Tab title',
-    titleIntro: 'When the switch is on, this site’s tab shows this text.',
+    titleIntro: 'When the “Shown your way” switch at the top is on, this site’s tab shows this text.',
     titleFootnote: (fallback: string) =>
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome shows the address instead.`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'When the switch is on, this site’s tab uses this image.',
+    iconIntro: 'When the “Shown your way” switch at the top is on, this site’s tab uses this image.',
     currentIcon: 'Current icon',
     currentIconAlt: 'Current tab icon',
     iconUnsetDefault: 'Not set: uses the default icon from Settings',
@@ -191,14 +191,14 @@ export const en: Messages = {
     back: '← All site settings',
 
     titleHeading: 'Default title',
-    titleIntro: 'When a site has no title of its own, its tab shows this text once the switch is on.',
+    titleIntro: 'When a site has no title of its own, its tab shows this text.',
     titleLabel: 'Default tab title',
     titleFootnote: (fallback: string) =>
       `Leave it empty to use “${fallback}” (follows the browser language). A title can’t be blank, or Chrome shows the address instead.`,
 
     iconHeading: 'Default icon',
     iconIntro:
-      'Used in the tab when a site has no icon of its own and the switch is on. Changing it updates every site without its own icon.',
+      'Used in the tab when a site has no icon of its own. Changing it updates every site without its own icon.',
     currentIcon: 'Current default icon',
     currentIconAlt: 'Current default icon',
     iconUnset: 'Not set: the tab shows no icon',
