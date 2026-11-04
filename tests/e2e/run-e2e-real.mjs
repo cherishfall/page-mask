@@ -7,7 +7,7 @@
  */
 import path from 'node:path';
 import { resultsDir, waitFor } from './lib/harness.mjs';
-import { getProfile, launchExtension, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
+import { getProfile, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
 const OUT = resultsDir('real');
@@ -71,13 +71,12 @@ async function main() {
         assert(res?.ok, `${site.name}：enableSite 成功`);
         // 三样全空（#67）：不挂胶囊，不再等悬浮按钮，内容脚本在 enableSite 注入完成时已就绪
 
-        // 打开向导（新站点）：第 1 步是标题与图标，标题已按默认填好；直接进选内容
-        await sendToTab(control, tabId, { t: 'openWizard', mode: 'newSite' });
+        // 打开向导：直接进点选阶段（#81 起「标题和图标」是单步表单，没有「下一步」——旧脚本在用它）
+        await sendToTab(control, tabId, { t: 'openWizard', mode: 'editContent' });
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wizard-toolbar"]');
-        assert(true, `${site.name}：向导打开（第 1 步：标签页标题和图标）`);
-        await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-next"]');
+        assert(true, `${site.name}：向导打开（点选阶段）`);
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-bigger"]');
-        assert(true, `${site.name}：进入第 2 步（选内容）`);
+        assert(true, `${site.name}：进入点选阶段（选大 / 选小在）`);
 
         // 找一个可见可点选的元素（避开链接跳转：点选不触发导航，preventDefault 兜底）
         const pt = await page.evaluate((pickSel) => {
@@ -124,9 +123,14 @@ async function main() {
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
         await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
-        await waitFor(page, '标题已伪装', () => document.title === '阅读');
-        assert(true, `${site.name}：保存后向导关闭、标题已伪装`);
+        // 「收起内容」流程不碰开关（#81）：存完是原样态；规则落库后手动开清爽，再验伪装
+        const saved = await getProfile(control, origin);
+        assert((saved?.hideRules?.length ?? 0) >= 1, `${site.name}：规则已落库`);
         assert(await page.$('pagemask-toggle'), `${site.name}：悬浮按钮在`);
+        await patchProfile(control, origin, { switchState: 'disguised' });
+        // 本脚本不锁定浏览器语言：默认标题按语言取「阅读」/ "Reading"（#89 起显式选择优先，此处未选）
+        await waitFor(page, '标题已伪装', () => ['阅读', 'Reading'].includes(document.title));
+        assert(true, `${site.name}：保存后向导关闭，开清爽后标题已伪装`);
 
         // 硬校验：保存的规则候选在页面真实命中且已被隐藏
         const candidates = (await getProfile(control, origin))?.hideRules?.[0]?.candidates ?? null;
