@@ -3,7 +3,7 @@
        不再包在会吃掉 pointerdown 的拖动容器里（N1：点菜单项会把开关切掉）。
        幕布期间整根胶囊由 content-runtime 卸掉，恢复按钮归幕布宿主所有（ui/curtain-restore.ts） -->
   <div ref="rootEl" class="pm-tg" :style="rootStyle" data-testid="pm-toggle">
-    <!-- 拖动把手：六个点的 SVG（图形 10×16，命中区由 CSS 撑到 24×24）
+    <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）
          不用点阵字符：各平台字形大小不一，还会把字号压到 12px 以下 -->
     <button
       v-if="!mini"
@@ -18,19 +18,7 @@
       @lostpointercapture="onGripUp"
       @keydown="onGripKey"
     >
-      <svg
-        class="pm-tg-grip-icon"
-        viewBox="0 0 10 16"
-        aria-hidden="true"
-        fill="currentColor"
-      >
-        <circle cx="2" cy="2" r="1.5" />
-        <circle cx="8" cy="2" r="1.5" />
-        <circle cx="2" cy="8" r="1.5" />
-        <circle cx="8" cy="8" r="1.5" />
-        <circle cx="2" cy="14" r="1.5" />
-        <circle cx="8" cy="14" r="1.5" />
-      </svg>
+      <GripIcon />
     </button>
 
     <button
@@ -139,6 +127,7 @@ import type { SiteProfile } from '@/core/types';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
+import GripIcon from './GripIcon.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;

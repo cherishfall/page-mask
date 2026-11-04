@@ -54,8 +54,6 @@
   border-radius: var(--pm-radius-control);
   background: transparent;
   color: var(--pm-fg-muted);
-  font-size: 14px;
-  line-height: 1;
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
@@ -66,6 +64,12 @@
 }
 .pm-wiz-handle.dragging {
   cursor: grabbing;
+}
+/* 把手图形：与胶囊同一枚六点图标（ui/GripIcon.vue，#83）——此前这里用 ⠿ 字符，
+   与胶囊的 SVG 大小不一，正是「同一控件两种长相」（一致性清单第 1 条） */
+.pm-wiz-handle .pm-grip-icon {
+  inline-size: 10px;
+  block-size: 16px;
 }
 .pm-wiz-title {
   margin: 0;

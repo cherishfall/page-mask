@@ -25,7 +25,7 @@
           @lostpointercapture="dragging = false"
           @keydown="onHandleKey"
         >
-          ⠿
+          <GripIcon />
         </button>
         <div class="pm-wiz-headtext">
           <h2 id="pm-wiz-title" class="pm-wiz-title" data-testid="pm-wiz-heading">{{ t.wizard.heading[phase] }}</h2>
@@ -423,6 +423,7 @@ import { t } from '@/ui/i18n';
 import { PickController } from './pick-controller';
 import { adoptWizardStyles } from './wizard-styles';
 import TitleIconFields from '../title-icon/TitleIconFields.vue';
+import GripIcon from '../GripIcon.vue';
 import { ElementFollower } from '../follow';
 
 /** 草稿：DraftItem + 当前候选选择器、自动命名、「只这一个 / 同类一起」的两个命中数 */
