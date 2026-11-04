@@ -11,7 +11,7 @@
 - [x] 版本号已改（`package.json` → `0.4.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.4.1`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.4.1 改了界面用词，截图 4、6 里的按钮名需要跟上）
-- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（#81 界面：弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、网站设置、允许访问；菜单四项按用途分三组）
+- [ ] §6 的测试步骤在真实 Chrome 上重走一遍（#81 界面：弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、全部网站设置、允许访问；菜单四项按用途分三组）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
 - [x] `npm run check:docs` 通过（用户可见文档无禁用词、内部链接有效）
 
@@ -48,7 +48,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时）；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 每个网站一个开关：页面右下角的小按钮点一下，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
 • 页面内编辑：右下角小按钮的「⋯」菜单可以就地改标签页标题和图标；「编辑收起的内容」打开设置向导的「看效果」，页面上逐行换收起方式、换在哪些页面收起、重新选这一项，删掉的行随保存移除
-• 设置分成两个页面：「网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
+• 设置分成两个页面：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
 • 失效提醒：网站改版导致某一项找不到目标时，会提醒你重新选一次
 • 中英双语：弹窗、管理页、设置与页面内的按钮都有中文和英文，可在插件设置里选界面语言
 • 导出 / 导入：全部网站的设置和插件设置导出成一个文件（文件名带版本号与导出时间），换电脑后导入
@@ -86,7 +86,7 @@ FEATURES
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over); a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • One switch per site: the small button at the bottom-right flips between 「按你的设置显示」 (Shown your way) and 「网站原样」 (As the site is); all tabs of that site switch together
 • On-page editing: the small button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
-• Settings split into two pages: "Site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
+• Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
 • Broken-item notices: if a site redesign means an item can no longer be found, you're asked to pick it again
 • Bilingual: the popup, management pages, settings and on-page controls all have Chinese and English; pick the interface language in Settings
 • Export / import: move all site settings plus the plugin settings to another computer as one file (the file name carries the version and the export time)
@@ -154,11 +154,11 @@ Test steps (no login needed):
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it ("Reading" / «阅读» when left empty and Chrome's UI language is Chinese).
 5. Click the small button at the bottom-right to switch the site back to as-is: the element reappears and the title reverts.
 6. Click 「⋯」 on the small button. The menu has four items in three groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「按钮放回右下角」 (put the button back at the bottom-right) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission).
-7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore) and two entries at the bottom: 「网站设置」 (Site settings — the site list; a site's settings page has 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
+7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore) and two entries at the bottom: 「全部网站设置」 (All site settings — the site list; a site's settings page has 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.5.0 待重走**：上面 7 步按 #81 界面核对一遍（弹窗两颗按钮「收起内容」「标题和图标」、底部「网站设置」与「插件设置」、「遮住这一页 / 恢复这一页」、「允许访问」、胶囊四项菜单分三组），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 98 项，check-pages 187 / check-wizard 147 / check-toggle 142 / check-edit-rules 59 / check-language 27，浅深色实测通过）。
+**0.5.0 待重走**：上面 7 步按 #81 界面核对一遍（弹窗两颗按钮「收起内容」「标题和图标」、底部「全部网站设置」与「插件设置」、「遮住这一页 / 恢复这一页」、「允许访问」、胶囊四项菜单分三组），提交前在真实 Chrome 上跑一次并回填结果。E2E 已按新文案全量跑过（run-e2e 98 项，check-pages 187 / check-wizard 147 / check-toggle 142 / check-edit-rules 59 / check-language 27，浅深色实测通过）。
 
 ## 7. 版本历史
 
@@ -181,7 +181,7 @@ Test steps (no login needed):
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：三步设置第 2 步（点选，选中项列成清单）与第 3 步（看效果，逐项编辑 + 在哪些页面收起）并排 |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
 | 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ⚠️ 待按 0.4.1 文案重拍 1280×800：弹窗（按你的设置显示开关、＋ 收起更多内容、编辑收起的内容、遮住这一页、底部两个入口） |
-| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「网站设置」（网站列表）与「插件设置」两个独立页面并排 |
+| 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
 | 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ⚠️ 待按 0.4.1 文案重拍 1280×800：右下角小按钮「⋯」菜单四项 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」） |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 

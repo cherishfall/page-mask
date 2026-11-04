@@ -22,7 +22,7 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三层顺序——网站自己设的 > 插件默认图标 > 透明（不显示）。网站自己改标题时会被自动改回
-- **设置分成两个页面**：「网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
+- **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面右下角的小按钮，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
 - **幕布**：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住，再点一下回到刚才的样子；遮住后页面上是一颗睁眼的小按钮，可以拖动，鼠标移上去显出「恢复」。没添加过的网站也能用
@@ -56,7 +56,7 @@
 
 1. 按上面的步骤加载后，打开任意一个你想收拾的网站，点工具栏的 PageMask 图标（建议先把它固定到工具栏：拼图图标 → 图钉）
 2. 改完代码重新 `npm run build` 后，回到 `chrome://extensions` 点这个扩展卡片上的**刷新**按钮；**已经打开的页面要再刷新一次**——内容脚本只在页面加载时注入
-3. 想从头再来：在「网站设置」里打开该网站的设置页，点「删除这个网站的设置」，或点页面右下角小按钮菜单里的同名项（两种方式都会同时收回访问权限），或直接在 `chrome://extensions` 移除扩展
+3. 想从头再来：在「全部网站设置」里打开该网站的设置页，点「删除这个网站的设置」，或点页面右下角小按钮菜单里的同名项（两种方式都会同时收回访问权限），或直接在 `chrome://extensions` 移除扩展
 4. 出问题时先看两处日志：页面的 DevTools Console（内容脚本的报错会打在这里）、`chrome://extensions` 里本扩展的「服务工作进程」→「检查」
 
 之前装过 0.1.0 的话，对同一个目录点刷新即可，旧设置会保留；如果旧规则看起来不对，删掉这个网站的设置后重新设一次最省事。
@@ -66,7 +66,7 @@
 1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（第一次会问这一次）
 2. 「收起内容」分两步：在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
 3. 想临时看网站原样，点页面右下角的小按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或小按钮旁边的「⋯」菜单
-4. 弹窗底部两个入口：「网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题与图标、导出 / 导入、界面语言）
+4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题与图标、导出 / 导入、界面语言）
 5. 想临时挡住整页，用弹窗或小按钮上的「遮住」；恢复时点页面上的睁眼小按钮
 
 ### 已知限制
@@ -85,7 +85,7 @@
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
   - `activeTab`：打开弹窗时读取当前标签页的网址，用来判断是哪个网站、是否支持
   - 可选主机权限：只在你点「收起内容」或「标题和图标」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
-- 收回访问权限：在「网站设置」里打开该网站的设置页点「删除这个网站的设置」，或点页面右下角小按钮菜单里的同名项（会同时删掉该网站的设置），或在 Chrome 扩展详情页的「网站访问权限」里移除
+- 收回访问权限：在「全部网站设置」里打开该网站的设置页点「删除这个网站的设置」，或点页面右下角小按钮菜单里的同名项（会同时删掉该网站的设置），或在 Chrome 扩展详情页的「网站访问权限」里移除
 - 本仓库不作为任何配置分发通道，不提供预置规则
 
 ### 开发
@@ -116,7 +116,7 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; icons follow a three-layer order — the site's own icon > the default icon in Settings > transparent (nothing shown). If the site rewrites its title, it is changed back automatically
-- **Settings split into two pages**: "Site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, default icon, export / import, interface language and version info, and is registered as Chrome's "Options" page
+- **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, default icon, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
 - **Curtain**: the "Cover this page / Restore this page" switch in the popup covers the whole page and the tab title, then takes you straight back. After covering, a small open-eye button remains — draggable, and hovering it reveals the word "Restore". It works on sites you have not added too
@@ -150,7 +150,7 @@ Requires **Chrome 116 or later**.
 
 1. After loading, open any site you want to tidy up and click the PageMask toolbar icon (pin it first if you like: puzzle icon → pin)
 2. After changing code and running `npm run build` again, click the **reload** button on the extension card in `chrome://extensions`; **reload open pages too** — the content script is only injected when a page loads
-3. To start over: open that site's settings page from 「网站设置」 (Site settings) and use 「删除这个网站的设置」 (Delete this site's settings), or click the same item in the ⋯ menu of the small button at the bottom-right (this also withdraws access), or remove the extension from `chrome://extensions`
+3. To start over: open that site's settings page from 「全部网站设置」 (All site settings) and use 「删除这个网站的设置」 (Delete this site's settings), or click the same item in the ⋯ menu of the small button at the bottom-right (this also withdraws access), or remove the extension from `chrome://extensions`
 4. When something looks wrong, check two places: the page's DevTools Console (content-script errors land there) and 「服务工作进程」 → 「检查」 (service worker → Inspect) on the extension card
 
 If you had 0.1.0 loaded, just hit reload on the same folder — existing settings are kept. If old rules look off, delete that site's settings and set it up again.
@@ -160,7 +160,7 @@ If you had 0.1.0 loaded, just hit reload on the same folder — existing setting
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
 3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button
-4. Two entries at the bottom of the popup: 「网站设置」 (Site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title and icon, export / import, interface language)
+4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title and icon, export / import, interface language)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
 ### Known limitations
@@ -179,7 +179,7 @@ If you had 0.1.0 loaded, just hit reload on the same folder — existing setting
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
   - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
   - Optional host permissions: requested for a single origin only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), used to run the content script and apply your hiding styles and tab title/icon on that site
-- Revoking access: open that site's settings page from 「网站设置」 (Site settings) and use 「删除这个网站的设置」 (Delete this site's settings), or click the same item in the ⋯ menu of the small button at the bottom-right (this also deletes its settings), or remove it under "Site access" in Chrome's extension details page
+- Revoking access: open that site's settings page from 「全部网站设置」 (All site settings) and use 「删除这个网站的设置」 (Delete this site's settings), or click the same item in the ⋯ menu of the small button at the bottom-right (this also deletes its settings), or remove it under "Site access" in Chrome's extension details page
 - This repository distributes no site presets or configurations
 
 ### Development

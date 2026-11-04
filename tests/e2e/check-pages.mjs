@@ -276,7 +276,7 @@ async function checkPopupChrome(popup, label) {
     [tid('pm-popup-manage'), tid('pm-popup-settings')],
   );
   check(
-    entries[0].text === '网站设置' && entries[1].text === '插件设置',
+    entries[0].text === '全部网站设置' && entries[1].text === '插件设置',
     `${label}：底部是「${entries[0].text}」「${entries[1].text}」`,
   );
   const minH = Math.min(entries[0].height, entries[1].height);
@@ -332,7 +332,7 @@ async function footerLandings(ext, browser, page, label) {
     return tab;
   };
   const mgmt = await openAndClick('pm-popup-manage', '/management.html#/sites');
-  check(mgmt.url().endsWith('/management.html#/sites'), `${label}：「网站设置」落到 ${mgmt.url()}`);
+  check(mgmt.url().endsWith('/management.html#/sites'), `${label}：「全部网站设置」落到 ${mgmt.url()}`);
   await mgmt.close();
   const settings = await openAndClick('pm-popup-settings', '/settings.html');
   check(settings.url().endsWith('/settings.html'), `${label}：「插件设置」落到 ${settings.url()}`);
@@ -711,8 +711,8 @@ async function main() {
       href: a.getAttribute('href'),
     }));
     check(
-      backLink.text === '← 网站设置' && backLink.href === 'management.html#/sites',
-      '左上角有返回「网站设置」的轻量链接',
+      backLink.text === '← 全部网站设置' && backLink.href === 'management.html#/sites',
+      '左上角有返回「全部网站设置」的轻量链接',
     );
     const manifest = JSON.parse(fs.readFileSync(ext.manifestPath, 'utf8'));
     check(manifest.options_ui?.page === 'settings.html' && manifest.options_ui?.open_in_tab === true, '插件设置页注册为扩展程序选项，且在标签页里打开');
@@ -799,7 +799,7 @@ async function main() {
     await m.click(tid('pm-settings-back'));
     await poll(
       async () => (await m.evaluate(() => location.pathname)) === '/management.html' && (await hash()) === '#/sites',
-      '点返回链接回到「网站设置」',
+      '点返回链接回到「全部网站设置」',
     );
     await m.waitForSelector(tid('pm-mgmt-pending-all'), { timeout: 5000 });
     const pendingText = await m.$eval(tid('pm-mgmt-pending-all'), (e) => e.innerText);

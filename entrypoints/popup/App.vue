@@ -73,7 +73,7 @@
       </button>
     </template>
 
-    <!-- 底部两个入口：进「网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
+    <!-- 底部两个入口：进「全部网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
     <div class="links">
       <button class="small link" data-testid="pm-popup-manage" @click="manage">{{ t.popup.manageAll }}</button>
       <button class="small link" data-testid="pm-popup-settings" @click="openSettings">{{ t.popup.settings }}</button>

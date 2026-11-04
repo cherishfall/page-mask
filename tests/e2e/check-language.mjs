@@ -80,7 +80,7 @@ try {
   // 这个用例要守的是「语言真的换了」，不是某个按钮叫什么。
   const hasCJK = (s) => /[\u4e00-\u9fff]/.test(s);
   check(hasCJK(await shadowText(page, TOGGLE, `${tid('pm-toggle-main')} .pm-tg-label`)), '小胶囊显示中文');
-  check(await bodyHas(mgmt, '网站设置'), '管理页是中文');
+  check(await bodyHas(mgmt, '全部网站设置'), '管理页是中文');
   check(await bodyHas(settingsPage, '插件设置'), '插件设置页是中文');
   const autoLabel = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
   check(autoLabel.startsWith('自动（') && autoLabel.includes('简体中文'), `「自动」后面显示当前探测结果（${autoLabel}）`);
@@ -116,7 +116,7 @@ try {
   );
   check(true, '插件设置页本页立刻变英文');
 
-  await mgmt.waitForFunction(() => document.body.textContent.includes('Site settings'), { timeout: 5000 });
+  await mgmt.waitForFunction(() => document.body.textContent.includes('All site settings'), { timeout: 5000 });
   check(true, '管理页（另一个标签页）没刷新就变英文');
 
   await page.waitForFunction(
@@ -171,7 +171,7 @@ try {
   );
   await settingsPage.waitForFunction(() => document.querySelector('h1')?.textContent.trim() === '插件设置', { timeout: 5000 });
   check(true, '设置页变回中文');
-  await mgmt.waitForFunction(() => document.body.textContent.includes('网站设置'), { timeout: 5000 });
+  await mgmt.waitForFunction(() => document.body.textContent.includes('全部网站设置'), { timeout: 5000 });
   check(true, '管理页变回中文');
   await page.waitForFunction(
     (h) => {

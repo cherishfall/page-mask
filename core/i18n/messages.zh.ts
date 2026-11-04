@@ -121,7 +121,7 @@ export const zh = {
     restorePage: '恢复这一页',
     covering: '正在遮住…',
     restoring: '正在恢复…',
-    manageAll: '网站设置',
+    manageAll: '全部网站设置',
     settings: '插件设置',
     /** 失败提示：不暴露内部错误 */
     error: {
@@ -139,10 +139,10 @@ export const zh = {
 
   /** 管理页：网站列表、站点设置页，以及它们共用的 store（entrypoints/management） */
   management: {
-    pageTitle: 'PageMask · 网站设置',
+    pageTitle: 'PageMask · 全部网站设置',
     appSub: '这里是你添加过的网站。点一个进去，改它的标签页标题、图标，或者看它收起了哪些内容。',
 
-    sitesTitle: '网站设置',
+    sitesTitle: '全部网站设置',
     sitesHint: '点一个网站进入它的设置。你没添加的网站，PageMask 完全不碰。',
     sitesEmpty: '还没有添加任何网站。打开一个你想收拾的网站，点浏览器工具栏上的 PageMask 图标就能开始设置。',
     pendingAll: (n: number) => `有 ${n} 个网站还没允许访问。在你允许之前，这些网站的设置不会起作用。`,
@@ -151,8 +151,8 @@ export const zh = {
     pendingHint: '浏览器还没允许 PageMask 访问这个网站。设置都还在，允许之后就会按设置显示。',
     authorize: '允许访问',
 
-    back: '← 网站设置',
-    backShort: '回到网站设置',
+    back: '← 全部网站设置',
+    backShort: '回到全部网站设置',
     missingTitle: '没有这个网站的设置',
     missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它。',
 
@@ -211,7 +211,7 @@ export const zh = {
     pageTitle: 'PageMask · 插件设置',
     title: '插件设置',
     sub: '这里的设置对所有网站生效。',
-    back: '← 网站设置',
+    back: '← 全部网站设置',
 
     titleHeading: '默认标题',
     titleIntro: '网站自己没有设置标题时，打开开关后它的标签页显示这段文字。',
@@ -271,7 +271,7 @@ export const zh = {
     prev: '上一步',
     next: '下一步',
     start: '开始使用',
-    tip: '小提示：「网站设置」和「插件设置」（导出 / 导入、界面语言都在里面）就在弹出窗口的最下面，并排两个。',
+    tip: '小提示：「全部网站设置」和「插件设置」（导出 / 导入、界面语言都在里面）就在弹出窗口的最下面，并排两个。',
     steps: [
       {
         title: '把 PageMask 固定到工具栏',
@@ -279,7 +279,7 @@ export const zh = {
       },
       {
         title: '点图标，弹出一个小窗口',
-        text: '点工具栏上的 PageMask 图标，弹出一个窗口。里面有两颗按钮：「收起内容」点选页面上不想要的部分把它们收起来，「标题和图标」改这个网站的标签页名字和图标。再下面是「遮住这一页」：有人走近时把整个页面连同标签页标题一起遮住，再点「恢复这一页」就回来。最下面并排两个入口：「网站设置」和「插件设置」。',
+        text: '点工具栏上的 PageMask 图标，弹出一个窗口。里面有两颗按钮：「收起内容」点选页面上不想要的部分把它们收起来，「标题和图标」改这个网站的标签页名字和图标。再下面是「遮住这一页」：有人走近时把整个页面连同标签页标题一起遮住，再点「恢复这一页」就回来。最下面并排两个入口：「全部网站设置」和「插件设置」。',
       },
       {
         title: '收起内容分两步',

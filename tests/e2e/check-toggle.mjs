@@ -1159,13 +1159,13 @@ async function main() {
       '浏览器给 PageMask 的访问权限已收回',
     );
 
-    // 「网站设置」列表里也没有了
+    // 「全部网站设置」列表里也没有了
     const mgmt = await ext.browser.newPage();
     await mgmt.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
     await mgmt.waitForSelector(tid('pm-mgmt-empty'), { timeout: 5000 });
     check(
       (await mgmt.$$eval('li[data-origin]', (rows) => rows.length)) === 0,
-      '管理页「网站设置」里已经没有它',
+      '管理页「全部网站设置」里已经没有它',
     );
     await mgmt.close();
   } catch (e) {

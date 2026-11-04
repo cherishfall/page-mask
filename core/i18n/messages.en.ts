@@ -100,7 +100,7 @@ export const en: Messages = {
     restorePage: 'Restore this page',
     covering: 'Covering…',
     restoring: 'Restoring…',
-    manageAll: 'Site settings',
+    manageAll: 'All site settings',
     settings: 'Settings',
     error: {
       tabMismatch: 'The page changed. Go back to the site you want and click PageMask again',
@@ -116,10 +116,10 @@ export const en: Messages = {
   },
 
   management: {
-    pageTitle: 'PageMask · Site settings',
+    pageTitle: 'PageMask · All site settings',
     appSub: 'These are the sites you added. Open one to change its tab title and icon, or see what it hides.',
 
-    sitesTitle: 'Site settings',
+    sitesTitle: 'All site settings',
     sitesHint: 'Pick a site to open its settings. PageMask never touches sites you didn’t add.',
     sitesEmpty: 'No sites yet. Open a site you want to tidy up and click the PageMask icon in the toolbar to start.',
     pendingAll: (n: number) =>
@@ -131,8 +131,8 @@ export const en: Messages = {
     pendingHint: 'The browser hasn’t allowed PageMask to open this site. Your settings are kept and apply once you allow it.',
     authorize: 'Allow access',
 
-    back: '← Site settings',
-    backShort: 'Back to site settings',
+    back: '← All site settings',
+    backShort: 'Back to all site settings',
     missingTitle: 'No settings for this site',
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
@@ -188,7 +188,7 @@ export const en: Messages = {
     pageTitle: 'PageMask · Settings',
     title: 'Settings',
     sub: 'These settings apply to every site.',
-    back: '← Site settings',
+    back: '← All site settings',
 
     titleHeading: 'Default title',
     titleIntro: 'When a site has no title of its own, its tab shows this text once the switch is on.',
@@ -249,7 +249,7 @@ export const en: Messages = {
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
-    tip: 'Tip: “Site settings” and “Settings” (export / import and the language live there) sit side by side at the bottom of the popup.',
+    tip: 'Tip: “All site settings” and “Settings” (export / import and the language live there) sit side by side at the bottom of the popup.',
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
@@ -257,7 +257,7 @@ export const en: Messages = {
       },
       {
         title: 'Click the icon to open a small window',
-        text: 'Click the PageMask toolbar icon and a small window opens. It has two buttons: “Hide items” picks the parts of the page you don’t want and hides them, and “Title & icon” changes this site’s tab name and picture. Below them, “Cover this page” covers the whole page along with the tab title when someone walks over — click “Restore this page” to come back. Two entries sit side by side at the bottom — “Site settings” and “Settings”.',
+        text: 'Click the PageMask toolbar icon and a small window opens. It has two buttons: “Hide items” picks the parts of the page you don’t want and hides them, and “Title & icon” changes this site’s tab name and picture. Below them, “Cover this page” covers the whole page along with the tab title when someone walks over — click “Restore this page” to come back. Two entries sit side by side at the bottom — “All site settings” and “Settings”.',
       },
       {
         title: 'Hiding takes two steps',
