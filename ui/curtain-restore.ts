@@ -15,11 +15,10 @@
  */
 import { isCurtainDrag } from '@/core/curtain';
 import { onLocaleChange, t } from '@/core/i18n';
+import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
 import type { ButtonPos } from '@/core/types';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 
-/** 离视口边缘至少留这么多 */
-const EDGE = 8;
 /** 没存过坐标时的默认位置：与胶囊同一套（离线右各 16px） */
 const DEFAULT_INSET = 16;
 /** 首帧还没排版时按典型尺寸夹紧，避免算出负数（实际约 61×28，只用于极端情况兜底） */
@@ -96,12 +95,16 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
   function clamp(p: ButtonPos): ButtonPos {
     const { width, height } = size();
     return {
-      x: Math.min(Math.max(EDGE, p.x), Math.max(EDGE, window.innerWidth - width - EDGE)),
-      y: Math.min(Math.max(EDGE, p.y), Math.max(EDGE, window.innerHeight - height - EDGE)),
+      x: Math.min(Math.max(BUTTON_EDGE, p.x), Math.max(BUTTON_EDGE, window.innerWidth - width - BUTTON_EDGE)),
+      y: clampEdgeY(p.y, height, window.innerHeight),
     };
   }
 
-  function place(): void {
+  /**
+   * 摆放按钮。free = 拖动中：跟手（左上角自由坐标，已夹紧）；
+   * 否则按停靠边锚定（#84）：与胶囊同一口径——右停靠渲染 right，显隐「恢复」文字时贴边不动。
+   */
+  function place(free = false): void {
     if (!pos) {
       btn.style.left = '';
       btn.style.top = '';
@@ -109,15 +112,24 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
       btn.style.bottom = `${DEFAULT_INSET}px`;
       return;
     }
-    btn.style.right = '';
     btn.style.bottom = '';
-    btn.style.left = `${Math.round(pos.x)}px`;
-    btn.style.top = `${Math.round(pos.y)}px`;
+    if (free) {
+      btn.style.right = '';
+      btn.style.left = `${Math.round(pos.x)}px`;
+      btn.style.top = `${Math.round(pos.y)}px`;
+      return;
+    }
+    btn.style.top = `${Math.round(clampEdgeY(pos.y, size().height, window.innerHeight))}px`;
+    if (isLeftDock(pos.x)) {
+      btn.style.right = '';
+      btn.style.left = `${Math.round(pos.x)}px`;
+    } else {
+      btn.style.left = '';
+      btn.style.right = `${BUTTON_EDGE}px`;
+    }
   }
 
   deps.root.appendChild(btn);
-  // 插进文档后才量得到尺寸：存下来的坐标可能来自更大的窗口，这里夹一次（不回写存储）
-  if (pos) pos = clamp(pos);
   place();
 
   const ac = new AbortController();
@@ -150,7 +162,7 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
     drag.moved = true;
     btn.classList.add('pm-curtain-restore-dragging');
     pos = clamp({ x: e.clientX - drag.grabX, y: e.clientY - drag.grabY });
-    place();
+    place(true);
   }
 
   /**
@@ -165,7 +177,14 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
     if (btn.hasPointerCapture(e.pointerId)) btn.releasePointerCapture(e.pointerId);
     if (moved) {
       suppressClick = true;
-      if (pos) deps.onMove(pos);
+      if (pos) {
+        // 与胶囊同规则贴边（#84）：两个控件共用 floatingBtnPos，锚定语义必须一致，
+        // 否则恢复按钮拖到屏幕中间，之后胶囊会被带到半空
+        const { width } = size();
+        pos = { x: snapXToEdge(pos.x, width, window.innerWidth), y: pos.y };
+        place();
+        deps.onMove(pos);
+      }
     }
   }
 
@@ -177,12 +196,12 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
     deps.onRestore();
   }
 
-  /** 窗口变小后重新夹紧：只改显示位置，不回写存储（与胶囊同一口径） */
+  /** 窗口变小后纵向重新夹紧：只改显示位置，不回写存储（x 由贴边锚定，永远在视口内） */
   function onResize(): void {
     if (!pos) return;
-    const next = clamp(pos);
-    if (next.x === pos.x && next.y === pos.y) return;
-    pos = next;
+    const nextY = clampEdgeY(pos.y, size().height, window.innerHeight);
+    if (nextY === pos.y) return;
+    pos = { x: pos.x, y: nextY };
     place();
   }
 

@@ -573,14 +573,16 @@ async function main() {
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
 
-    // 先把胶囊放到一个已知坐标：幕布恢复按钮与该站胶囊共用同一个锚点（遮住前后不跳位）
-    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 300, y: 220 } });
+    // 先把胶囊放到一个已知停靠位（右缘 y=220，x>8 即右停靠 #84）：
+    // 幕布恢复按钮与该站胶囊共用同一个停靠边（遮住前后贴同一边，不跳位）
+    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 1200, y: 220 } });
+    const vw = await page.evaluate(() => window.innerWidth);
     await waitFor(
       page,
-      '胶囊挪到指定坐标',
+      '胶囊贴右缘挂到指定纵坐标',
       (h) => {
         const r = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle"]')?.getBoundingClientRect();
-        return !!r && Math.round(r.x) === 300 && Math.round(r.y) === 220;
+        return !!r && Math.round(window.innerWidth - r.right) === 8 && Math.round(r.y) === 220;
       },
       [TOGGLE],
       { timeout: 5000 },
@@ -624,8 +626,10 @@ async function main() {
     check(covered.iconLinks === 1, `图标换成伪装图标（icon link ×${covered.iconLinks}）`);
     check(!covered.capsule, '幕布期间整根小胶囊不渲染（一个页面上只有一套恢复入口）');
     check(
-      covered.btn !== null && covered.btn.x === 300 && covered.btn.y === 220,
-      `恢复按钮与该站胶囊共用同一锚点（${JSON.stringify(covered.btn)}，胶囊原本在 300,220）`,
+      covered.btn !== null &&
+        Math.round(vw - covered.btn.x - covered.btn.w) === 8 &&
+        covered.btn.y === 220,
+      `恢复按钮与该站胶囊贴同一右缘（右距 ${covered.btn ? Math.round(vw - covered.btn.x - covered.btn.w) : '?'}px，y=${covered.btn?.y}）`,
     );
     check(covered.opacity === '0.85', `恢复按钮常态不透明度 85%（${covered.opacity}）`);
     check(
@@ -698,8 +702,8 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     const capsuleBack = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
-      Math.round(capsuleBack.x) === 300 && Math.round(capsuleBack.y) === 220,
-      `撤幕后胶囊按原坐标挂回来（${Math.round(capsuleBack.x)},${Math.round(capsuleBack.y)}）`,
+      Math.round(vw - capsuleBack.right) === 8 && Math.round(capsuleBack.y) === 220,
+      `撤幕后胶囊贴同一右缘挂回来（右距 ${Math.round(vw - capsuleBack.right)}px，y=${Math.round(capsuleBack.y)}）`,
     );
     const afterRestore = await getProfile(ext.control, ORIGIN);
     check(afterRestore.switchState === 'disguised', `遮住前后开关状态不变（${afterRestore.switchState}）`);
@@ -718,7 +722,7 @@ async function main() {
       const deadline = Date.now() + 4000;
       while (Date.now() < deadline) {
         const p = await getProfile(ext.control, ORIGIN);
-        if (p?.floatingBtnPos && p.floatingBtnPos.x !== 300) return p;
+        if (p?.floatingBtnPos && p.floatingBtnPos.y !== 220) return p;
         await new Promise((res) => setTimeout(res, 100));
       }
       return getProfile(ext.control, ORIGIN);
@@ -729,16 +733,16 @@ async function main() {
     );
     const draggedRect = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
     check(
-      Math.abs(draggedRect.x - draggedProfile.floatingBtnPos.x) < 2,
-      `按钮停在松手处（${Math.round(draggedRect.x)} ≈ ${draggedProfile.floatingBtnPos.x}）`,
+      Math.abs(vw - draggedRect.right - 8) < 2,
+      `松手贴最近边（右距 ${Math.round(vw - draggedRect.right)}px ≈ 8，落库 x=${draggedProfile.floatingBtnPos.x}）`,
     );
     await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
     await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     const capsuleMoved = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
-      Math.abs(capsuleMoved.x - draggedProfile.floatingBtnPos.x) < 2,
-      `撤幕后胶囊出现在拖动后的位置（${Math.round(capsuleMoved.x)} ≈ ${draggedProfile.floatingBtnPos.x}）`,
+      Math.abs(vw - capsuleMoved.right - 8) < 2,
+      `撤幕后胶囊贴同一右缘（右距 ${Math.round(vw - capsuleMoved.right)}px ≈ 8）`,
     );
 
     // ---- 消息通道（#50）：查询本页是否遮着、命令撤掉；都只作用于发送方自己的文档 ----

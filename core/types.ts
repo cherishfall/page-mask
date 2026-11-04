@@ -49,7 +49,11 @@ export interface HideRule {
   lastHealthAt?: number;
 }
 
-/** 视口坐标（像素，锚点是按钮左上角） */
+/**
+ * 停靠类悬浮控件的位置（#84）：x 只表达「贴哪一边」（≤ 8 视为左停靠，否则右停靠），
+ * y 是顶边纵坐标。渲染按停靠边锚定（core/button-pos.ts），宽度变化时贴边不动；
+ * 落库前由 snapXToEdge 取最近边贴靠（胶囊与幕布恢复按钮同一规则）。
+ */
 export interface ButtonPos {
   x: number;
   y: number;
@@ -66,7 +70,7 @@ export interface SiteProfile {
   /** 伪装图标 data URL；null = 默认全透明图标（标签页上图标位显示为空白） */
   faviconDataUrl: string | null;
   hideRules: HideRule[];
-  /** 悬浮按钮记住的位置（视口坐标）；null = 默认右下角 */
+  /** 悬浮按钮记住的位置（#84：x 表贴边侧、y 为顶边）；null = 默认右下角 */
   floatingBtnPos: ButtonPos | null;
   /** 胶囊用 mini 形态（只有状态圆点、遮住、展开三个小钮）；缺省 = 全功能（#78，按站点各自记） */
   capsuleMini?: boolean;

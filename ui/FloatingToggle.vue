@@ -125,6 +125,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
+import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
@@ -132,8 +133,6 @@ import GripIcon from './GripIcon.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;
-/** 离视口边缘至少留这么多 */
-const EDGE = 8;
 /** 方向键每次移动的距离 */
 const KEY_STEP = 15;
 
@@ -184,8 +183,8 @@ const size = () => {
 function clamp(left: number, top: number): { x: number; y: number } {
   const { width, height } = size();
   return {
-    x: Math.min(Math.max(EDGE, left), Math.max(EDGE, window.innerWidth - width - EDGE)),
-    y: Math.min(Math.max(EDGE, top), Math.max(EDGE, window.innerHeight - height - EDGE)),
+    x: Math.min(Math.max(BUTTON_EDGE, left), Math.max(BUTTON_EDGE, window.innerWidth - width - BUTTON_EDGE)),
+    y: clampEdgeY(top, height, window.innerHeight),
   };
 }
 
@@ -193,8 +192,11 @@ const pos = computed(() => dragPos.value ?? viewPos.value ?? props.position);
 
 const rootStyle = computed(() => {
   const p = pos.value;
-  if (!p) return { right: `${EDGE + 8}px`, bottom: `${EDGE + 8}px` };
-  return { left: `${p.x}px`, top: `${p.y}px` };
+  if (!p) return { right: `${BUTTON_EDGE + 8}px`, bottom: `${BUTTON_EDGE + 8}px` };
+  // 停靠边为锚（#84）：x ≤ BUTTON_EDGE 是左停靠，其余是右停靠——右停靠渲染 right，
+  // 全功能 ↔ mini 换宽时贴边不动（右停靠往右收，用户要的「以右侧位置为准」）
+  const top = `${clampEdgeY(p.y, size().height, window.innerHeight)}px`;
+  return isLeftDock(p.x) ? { left: `${p.x}px`, top } : { right: `${BUTTON_EDGE}px`, top };
 });
 
 const tipText = computed(() => (props.state === 'disguised' ? t.value.toggle.tipOn : t.value.toggle.tipOff));
@@ -276,24 +278,22 @@ function onGripKey(e: KeyboardEvent) {
   const current = dragPos.value ?? viewPos.value ?? props.position ?? defaultPos();
   const next = clamp(current.x + d[0] * KEY_STEP, current.y + d[1] * KEY_STEP);
   dragPos.value = null;
-  viewPos.value = next;
-  commit(next);
+  // viewPos 记贴边后的值（#84）：渲染按停靠边锚定，记中途回造成一帧跳到另一侧
+  const snapped = { x: snapXToEdge(next.x, size().width, window.innerWidth), y: next.y };
+  viewPos.value = snapped;
+  commit(snapped);
 }
 
 /** 默认位置（还没存过坐标时）的像素值：右下角 */
 function defaultPos(): { x: number; y: number } {
   const { width, height } = size();
-  return { x: window.innerWidth - width - EDGE - 8, y: window.innerHeight - height - EDGE - 8 };
+  return { x: window.innerWidth - width - BUTTON_EDGE - 8, y: window.innerHeight - height - BUTTON_EDGE - 8 };
 }
 
-/** 松手 / 方向键后落库：按「贴边 + 纵向位置」记，贴边后换窗口宽度也不会跑到中间去 */
+/** 松手 / 方向键后落库：贴最近边（#84，与幕布恢复按钮同一规则），渲染按停靠边锚定 */
 function commit(p: { x: number; y: number }) {
   const { width } = size();
-  const onLeft = p.x + width / 2 <= window.innerWidth / 2;
-  emit('moved', {
-    x: onLeft ? EDGE : Math.max(EDGE, window.innerWidth - width - EDGE),
-    y: p.y,
-  });
+  emit('moved', { x: snapXToEdge(p.x, width, window.innerWidth), y: p.y });
 }
 
 // ---------- 菜单 ----------
@@ -352,12 +352,12 @@ function positionMenu() {
   const t = more.getBoundingClientRect();
   const gap = 6;
   let top = t.top - m.height - gap;
-  if (top < EDGE) top = t.bottom + gap; // 上方放不下 → 翻到下方
+  if (top < BUTTON_EDGE) top = t.bottom + gap; // 上方放不下 → 翻到下方
   let left = t.right - m.width; // 默认右对齐触发按钮
-  if (left < EDGE) left = EDGE;
-  if (left + m.width > window.innerWidth - EDGE) left = window.innerWidth - EDGE - m.width;
-  const maxTop = window.innerHeight - EDGE - m.height;
+  if (left < BUTTON_EDGE) left = BUTTON_EDGE;
+  if (left + m.width > window.innerWidth - BUTTON_EDGE) left = window.innerWidth - BUTTON_EDGE - m.width;
+  const maxTop = window.innerHeight - BUTTON_EDGE - m.height;
   menu.style.left = `${Math.round(left)}px`;
-  menu.style.top = `${Math.round(Math.max(EDGE, Math.min(top, maxTop)))}px`;
+  menu.style.top = `${Math.round(Math.max(BUTTON_EDGE, Math.min(top, maxTop)))}px`;
 }
 </script>
