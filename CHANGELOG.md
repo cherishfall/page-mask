@@ -5,6 +5,26 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.5.2] - 2026-11-05
+
+第二轮「新眼睛」全量目检后的三处小修。/ Three small fixes from the second full "fresh eyes" pass.
+
+### 中文
+
+#### 修复
+
+- **站点设置页与插件设置页的「打开开关后」说法**：站点页指名为「上面的『按你的设置显示』开关」；插件设置页那两处删掉开关说法——那页没有开关，条件本来就是「网站自己没设置时」
+- **首次引导页的主按钮不再压在折叠线下**：整页内容超过一屏，底部「下一步」一栏滚动时贴着视口底走
+- **遮住整页后「恢复」二字常显**：此前只有图标，右侧留空看着像没渲染完整；唯一的出路不该靠悬停才自我解释
+
+### English
+
+#### Fixed
+
+- **“When the switch is on” copy**: the site page now names the switch (“Shown your way” at the top); the two spots on the Settings page drop the switch wording — that page has no switch, the condition is simply “when a site has none of its own”
+- **The onboarding primary button no longer sits below the fold**: the page is taller than one screen, so the bottom bar sticks to the viewport while scrolling
+- **“Restore” on the curtain button is always shown**: icon-only with blank right half read as a rendering glitch; the only way back shouldn't need hover to explain itself
+
 ## [0.5.1] - 2026-11-05
 
 交付验收加了一道「渲染出来看一眼」的关：每轮改动交付前拍真实渲染截图、交给只看图的「新眼睛」审一轮，发版前全量巡检。本版由此拦下并修掉一批装机才会发现的问题。/ Delivery now includes a rendered-eyes pass: real screenshots reviewed by a context-free "fresh eyes" agent per round, and a full sweep before each release. This release fixes a batch of issues that previously only surfaced after install.
