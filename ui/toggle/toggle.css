@@ -65,13 +65,14 @@
   block-size: 16px;
 }
 
-/* ── 主按钮：切换清爽 / 原样 ── */
+/* ── 主按钮：切换清爽 / 原样 ──
+   全功能时主按钮在把手旁边（中间段）：悬停底色用直角，免得圆角在胶囊中间留豁口（#85） */
 .pm-tg-main {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: none;
-  border-radius: var(--pm-radius-pill);
+  border-radius: 0;
   padding: 4px 8px;
   background: transparent;
   color: inherit;
@@ -79,6 +80,10 @@
   line-height: var(--pm-line-height);
   cursor: pointer;
   white-space: nowrap;
+}
+/* mini 时主按钮是左端点：左圆头归它（#85，圆角跟着实际的端点元素走） */
+.pm-tg-mini .pm-tg-main {
+  border-radius: var(--pm-radius-pill) 0 0 var(--pm-radius-pill);
 }
 .pm-tg-main:hover {
   background: var(--pm-bg-subtle);
@@ -95,7 +100,8 @@
   border-color: var(--pm-accent);
 }
 
-/* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ── */
+/* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
+   #79 起收放钮排在它后面：⋯成了中间段，右圆头归最末的收放钮（#85），这里只留直角 */
 .pm-tg-more {
   display: inline-flex;
   align-items: center;
@@ -103,7 +109,7 @@
   min-inline-size: 24px;
   min-block-size: 24px;
   border: none;
-  border-radius: 0 var(--pm-radius-pill) var(--pm-radius-pill) 0;
+  border-radius: 0;
   padding: 0;
   background: transparent;
   color: var(--pm-fg-muted);
@@ -138,6 +144,11 @@
 .pm-tg-cover-icon {
   inline-size: 13px;
   block-size: 13px;
+}
+/* 收放钮（#79 引入，#85 起两态都是胶囊右端点）：右圆头归它——此前圆头挂在「⋯」上，
+   收放钮的直角悬停底色超出胶囊圆头轮廓 */
+.pm-tg-fold {
+  border-radius: 0 var(--pm-radius-pill) var(--pm-radius-pill) 0;
 }
 /* 收放钮图标（#79）：与「遮住」同规格的 13 盒——此前双箭头无尺寸约束，
    笔画在 24 盒下渲染比眼睛图标粗一倍；13 盒下单箭头与眼睛笔画实测同粗 */

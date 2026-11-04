@@ -208,7 +208,7 @@ async function main() {
         const r = sr.querySelector(sel).getBoundingClientRect();
         return { w: r.width, h: r.height };
       };
-      return { grip: box('.pm-tg-grip-icon'), cover: box('.pm-tg-cover-icon'), more: box('[data-testid="pm-toggle-more"] span') };
+      return { grip: box('.pm-grip-icon'), cover: box('.pm-tg-cover-icon'), more: box('[data-testid="pm-toggle-more"] span') };
     }, TOGGLE);
     check(
       iconBoxes.grip.w <= 12 && iconBoxes.grip.h <= 18 && iconBoxes.cover.w <= 14 && iconBoxes.more.w <= 16,

@@ -2,7 +2,7 @@
   <!-- 一根小胶囊：拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」菜单。菜单项与主按钮是兄弟节点，
        不再包在会吃掉 pointerdown 的拖动容器里（N1：点菜单项会把开关切掉）。
        幕布期间整根胶囊由 content-runtime 卸掉，恢复按钮归幕布宿主所有（ui/curtain-restore.ts） -->
-  <div ref="rootEl" class="pm-tg" :style="rootStyle" data-testid="pm-toggle">
+  <div ref="rootEl" class="pm-tg" :class="{ 'pm-tg-mini': mini }" :style="rootStyle" data-testid="pm-toggle">
     <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）
          不用点阵字符：各平台字形大小不一，还会把字号压到 12px 以下 -->
     <button
@@ -75,10 +75,11 @@
 
     <!-- 收成小按钮 / 展开成完整（#79）：单箭头指明点击后的变化——mini「›」展开变大、
          全功能「‹」收起变小；永远排在最末（mini 的「展开」本来就在最末，两态位置连续）。
-         图标与「遮住」同规格（pm-tg-fold-icon 13 盒），笔画实测同粗 -->
+         图标与「遮住」同规格（pm-tg-fold-icon 13 盒），笔画实测同粗。
+         两态它都是胶囊的右端点：右圆头归它（.pm-tg-fold，#85） -->
     <button
       type="button"
-      class="pm-tg-cover"
+      class="pm-tg-cover pm-tg-fold"
       :aria-label="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
       :title="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
       :data-testid="mini ? 'pm-toggle-expand' : 'pm-toggle-shrink'"
