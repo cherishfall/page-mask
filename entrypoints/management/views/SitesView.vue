@@ -1,6 +1,10 @@
 <template>
   <section class="view" aria-labelledby="pm-sites-title">
-    <h2 id="pm-sites-title" class="view-title">{{ t.management.sitesTitle }}</h2>
+    <!-- 标题行右侧给「插件设置」入口：插件设置页有「← 全部网站设置」返回，两页互达（#87 审查第 6 条） -->
+    <div class="sites-head">
+      <h2 id="pm-sites-title" class="view-title">{{ t.management.sitesTitle }}</h2>
+      <a class="forward" href="settings.html" data-testid="pm-mgmt-settings-link">{{ t.popup.settings }}</a>
+    </div>
     <p class="hint">{{ t.management.sitesHint }}</p>
 
     <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
@@ -75,9 +79,27 @@ const initialOf = (origin: string) => siteLabelOf(origin).slice(0, 1).toUpperCas
 </script>
 
 <style scoped>
+.sites-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
+  margin-bottom: var(--pm-space-1);
+}
+
+.forward {
+  flex: none;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+
+.forward:hover {
+  color: var(--pm-fg);
+}
+
 .view-title {
   font-size: var(--pm-font-size-title);
-  margin: 0 0 var(--pm-space-1);
+  margin: 0;
 }
 
 .empty {

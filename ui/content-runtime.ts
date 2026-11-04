@@ -253,6 +253,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function handleMoved(pos: { x: number; y: number }) {
     if (!profile || !ctx.isValid) return;
     profile.floatingBtnPos = pos;
+    toggleState.position = pos; // 菜单的「放回右下角」跟随实时位置（#90）
     // 坐标是本机界面状态，不算用户修改设置
     await storage.updateProfile(
       origin,

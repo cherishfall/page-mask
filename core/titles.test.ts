@@ -40,6 +40,14 @@ describe('effectiveTitle 站点覆盖 > 全局设置 > 界面语言默认 > 常�
     expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null }, 'zh-CN')).toBe('阅读');
     expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null }, 'en-US')).toBe('Reading');
   });
+  it('显式选了界面语言就跟它走，浏览器语言靠边（#89）', () => {
+    expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'en' }, 'zh-CN')).toBe('Reading');
+    expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'zh' }, 'en-US')).toBe('阅读');
+  });
+  it("auto / 没写 uiLanguage 仍按浏览器语言（#89 不改存量行为）", () => {
+    expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'auto' }, 'zh-CN')).toBe('阅读');
+    expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'auto' }, 'en-US')).toBe('Reading');
+  });
   it('空白 / 非字符串一律跳过，最终返回非空常量', () => {
     for (const bad of ['', '   ', '\t\n', 42, {}, [], undefined, null]) {
       const t = effectiveTitle({ disguisedTitle: bad }, { defaultTitle: bad }, undefined);

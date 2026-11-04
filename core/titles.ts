@@ -5,8 +5,10 @@
  * 「新建标签页」——想要这个效果的用户可在管理页用快捷标题一键填入（用户自选）。
  * 本文件只放纯函数，内容脚本与管理页共用。
  *
- * 与界面语言开关（设置里的「界面语言」，#57）的关系：
- * - 兜底标题**不跟**这个开关走，永远按浏览器界面语言（语言是标签栏里的一张脸，不该被界面偏好顺手改掉）
+ * 与界面语言开关（设置里的「界面语言」，#57）的关系（#89 起修订）：
+ * - 兜底标题跟随**显式选择**的界面语言（zh / en）——伪装出来的门面该是用户选的语言；
+ *   'auto'（默认档）按浏览器界面语言。旧决策「永远按浏览器语言」推翻于 #89：英文界面
+ *   + 中文浏览器会得到中文「阅读」标签，是旧决策没料到的受害场景
  * - 快捷标题是用户自己点的「填入什么」，按钮上显示什么就填什么，所以按**当前界面语言**取：
  *   英文界面上不会出现一排中文按钮，点下去得到的也正是按钮上的字
  */
@@ -61,16 +63,18 @@ function nonBlank(v: unknown): v is string {
  * 永不返回空白——标题为空时 Chrome 会在标签页上显示网址。
  * 参数做运行时类型检查：存储里的旧数据/坏数据可能不是字符串。
  *
- * 注意：这里读的是**浏览器界面语言**（第三个参数），不读全局设置里的 uiLanguage ——
- * 那是插件的界面偏好（#57），切换它不该让标签栏里的字跟着变。
+ * 默认标题的语言（#89）：全局设置里显式选了界面语言（zh / en）就跟随它；
+ * 'auto' 或缺失才读**浏览器界面语言**（第三个参数）。
  */
 export function effectiveTitle(
   profile: { disguisedTitle: unknown },
-  settings: { defaultTitle: unknown } | null | undefined,
+  settings: { defaultTitle: unknown; uiLanguage?: unknown } | null | undefined,
   uiLanguage: string | null | undefined = currentUiLanguage(),
 ): string {
   if (nonBlank(profile.disguisedTitle)) return profile.disguisedTitle;
   if (nonBlank(settings?.defaultTitle)) return settings.defaultTitle;
-  const lang = defaultTitleFor(uiLanguage);
+  const chosen = settings?.uiLanguage;
+  const lang =
+    chosen === 'zh' || chosen === 'en' ? defaultTitleFor(chosen) : defaultTitleFor(uiLanguage);
   return nonBlank(lang) ? lang : DEFAULT_TITLE_EN;
 }

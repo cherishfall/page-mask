@@ -102,10 +102,14 @@
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
       </button>
-      <hr class="pm-tg-sep" />
-      <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
-        {{ t.toggle.menuResetPos }}
-      </button>
+      <!-- 按钮已在默认位（没存过坐标）时「放回右下角」点了没效果：连同前面的分隔线一起不摆（#90）；
+           拖过之后照常出现 -->
+      <template v-if="props.position">
+        <hr class="pm-tg-sep" />
+        <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
+          {{ t.toggle.menuResetPos }}
+        </button>
+      </template>
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item danger" data-testid="pm-toggle-delete" @click="onDelete">
         {{ t.toggle.menuDelete }}

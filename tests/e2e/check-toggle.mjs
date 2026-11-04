@@ -263,8 +263,8 @@ async function main() {
     await new Promise((res) => setTimeout(res, 300));
     check(!(await menuOpen(page)), '右键胶囊不会打开菜单（没有右键菜单入口）');
 
-    // ===================== 菜单五项、两条分隔线（#67） =====================
-    console.log('\n--- 菜单：五项、两条分隔线、删除项红字 ---');
+    // ===================== 菜单（#67 / #90）：默认位时三项一条线，拖过之后四项两条线 =====================
+    console.log('\n--- 菜单：默认位时「按钮放回右下角」隐藏，三项一条线 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     const menuShape = await page.evaluate((h) => {
@@ -286,17 +286,17 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置',
-      `菜单是四项、与弹窗同名、收起内容在前（#80，${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 删除这个网站的设置',
+      `默认位（没存过坐标）时菜单三项，与弹窗同名、收起内容在前（#80/#90，${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 2, `菜单里有两条分隔线（实际 ${menuShape.seps} 条）`);
+    check(menuShape.seps === 1, `菜单里只有一条分隔线（实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 按钮放回右下角 | --- | 删除这个网站的设置',
-      `分组顺序：改内容两项（收起内容在前，#80）/ 按钮位置 / 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 删除这个网站的设置',
+      `分组顺序：改内容两项（收起内容在前，#80）/ 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
-      `删除项是红字、与上面三项分开（${menuShape.deleteColor}）`,
+      `删除项是红字、与上面两项分开（${menuShape.deleteColor}）`,
     );
     await page.keyboard.press('Escape');
     await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
@@ -482,9 +482,20 @@ async function main() {
       `拖到左上角时贴边、不出视口（${Math.round(corner.x)},${Math.round(corner.y)}）`,
     );
 
-    // 按钮放回右下角
+    // 按钮放回右下角（#90：坐标已存，菜单这时是四项两条线）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
+    const movedMenu = await page.evaluate((h) => {
+      const menu = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]');
+      return {
+        items: [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim()),
+        seps: menu.querySelectorAll('.pm-tg-sep').length,
+      };
+    }, TOGGLE);
+    check(
+      movedMenu.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置' && movedMenu.seps === 2,
+      `拖过之后菜单四项、两条分隔线（#90，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
+    );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
     const reset = await (async () => {
       const deadline = Date.now() + 4000;
@@ -523,8 +534,8 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置',
-      `0 条收起项时菜单不变：收起内容这时就是纯添加（${noRulesMenu.items.join(' / ')}）`,
+      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 删除这个网站的设置',
+      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 
