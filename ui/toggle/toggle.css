@@ -138,6 +138,12 @@
   inline-size: 13px;
   block-size: 13px;
 }
+/* 收放钮图标（#79）：与「遮住」同规格的 13 盒——此前双箭头无尺寸约束，
+   笔画在 24 盒下渲染比眼睛图标粗一倍；13 盒下单箭头与眼睛笔画实测同粗 */
+.pm-tg-fold-icon {
+  inline-size: 13px;
+  block-size: 13px;
+}
 
 /* 触屏：三个图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
 @media (pointer: coarse) {

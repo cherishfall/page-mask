@@ -71,27 +71,6 @@
       </svg>
     </button>
 
-    <!-- 收成小按钮 / 展开成完整（#78）：一对图标钮，一键互切，不进菜单 -->
-    <button
-      type="button"
-      class="pm-tg-cover"
-      :aria-label="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
-      :title="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
-      :data-testid="mini ? 'pm-toggle-expand' : 'pm-toggle-shrink'"
-      @click="emit('setMini', !mini)"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <template v-if="mini">
-          <polyline points="9 5 4 12 9 19" />
-          <polyline points="15 5 20 12 15 19" />
-        </template>
-        <template v-else>
-          <polyline points="15 5 20 12 15 19" />
-          <polyline points="9 5 4 12 9 19" />
-        </template>
-      </svg>
-    </button>
-
     <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
     <button
       v-if="!mini"
@@ -104,6 +83,23 @@
       @click="toggleMenu"
     >
       <span aria-hidden="true">⋯</span>
+    </button>
+
+    <!-- 收成小按钮 / 展开成完整（#79）：单箭头指明点击后的变化——mini「›」展开变大、
+         全功能「‹」收起变小；永远排在最末（mini 的「展开」本来就在最末，两态位置连续）。
+         图标与「遮住」同规格（pm-tg-fold-icon 13 盒），笔画实测同粗 -->
+    <button
+      type="button"
+      class="pm-tg-cover"
+      :aria-label="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
+      :title="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
+      :data-testid="mini ? 'pm-toggle-expand' : 'pm-toggle-shrink'"
+      @click="emit('setMini', !mini)"
+    >
+      <svg class="pm-tg-fold-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline v-if="mini" points="7 3 17 12 7 21" />
+        <polyline v-else points="17 3 7 12 17 21" />
+      </svg>
     </button>
 
     <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住。
