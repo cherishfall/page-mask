@@ -888,6 +888,29 @@ async function main() {
     await waitBoxOn(page, '选中指针下的元素', 1, `#${under}`);
     check(true, `滚动后点击选中的是指针下的元素（#${under}），不是滚动前悬停的 #${hoverBefore}`);
 
+    // #88 捕获层不挡内层容器滚动：信息流站常把滚动放在内层容器上，点选阶段也要能滚。
+    // 把 #feed（25 条帖子，天然高过一屏）固定成满屏滚动容器，滚轮打在它内部
+    console.log('\n--- 选择阶段：内层容器滚动（信息流站）不被捕获层挡住（#88） ---');
+    await page.evaluate(() => {
+      const style = document.createElement('style');
+      style.dataset.pmProbe = 'inner-scroll';
+      style.textContent = 'html,body{overflow:hidden;height:100%;margin:0} #feed{position:fixed;inset:0;overflow-y:auto;background:#fff;z-index:50}';
+      document.head.appendChild(style);
+      const spacer = document.createElement('div');
+      spacer.style.height = '2000px';
+      spacer.id = 'pm-probe-spacer';
+      document.querySelector('#feed')?.appendChild(spacer); // 不依赖前情，保证内层有可滚高度
+    });
+    await page.mouse.move(640, 400); // 滚轮落点要压在 #feed 上（它已是满屏滚动容器）
+    await page.mouse.wheel({ deltaY: 500 });
+    await waitFor(page, '内层容器滚动了', () => (document.querySelector('#feed')?.scrollTop ?? 0) > 300);
+    check(true, '点选阶段：内层容器的滚动不被捕获层挡住（#88）');
+    await page.evaluate(() => {
+      document.querySelector('style[data-pm-probe="inner-scroll"]')?.remove();
+      document.getElementById('pm-probe-spacer')?.remove();
+      window.scrollTo(0, 0);
+    });
+
     console.log('\n--- 「选大一点」作用于最后选中的元素 ---');
     await page.evaluate(() => window.scrollTo(0, 0));
     await waitFor(page, '滚回顶部', () => scrollY === 0);

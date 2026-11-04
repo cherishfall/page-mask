@@ -62,6 +62,9 @@ export class PickController {
     layer.addEventListener('pointermove', this.onPointerMove);
     layer.addEventListener('pointerdown', this.onPointerDown);
     layer.addEventListener('pointerleave', this.onPointerLeave);
+    // 捕获层会吞掉滚轮的默认滚动（实测文档滚动也滚不动，#88）：手动把滚动量
+    // 交给指针下最近的竖向可滚动祖先，没有就滚文档；preventDefault 防止再滚一遍
+    layer.addEventListener('wheel', this.onWheel, { passive: false });
     // 捕获阶段：页面里任何滚动容器滚动都能收到（scroll 不冒泡）
     window.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
   }
@@ -70,6 +73,7 @@ export class PickController {
     this.layer?.removeEventListener('pointermove', this.onPointerMove);
     this.layer?.removeEventListener('pointerdown', this.onPointerDown);
     this.layer?.removeEventListener('pointerleave', this.onPointerLeave);
+    this.layer?.removeEventListener('wheel', this.onWheel);
     window.removeEventListener('scroll', this.onScroll, { capture: true });
     this.layer = null;
     this.setHover(null);
@@ -157,6 +161,18 @@ export class PickController {
     if (this.lastPoint) this.setHover(this.elementUnderPoint(this.lastPoint.x, this.lastPoint.y));
   };
 
+  /** 滚轮路由（#88）：信息流页面必须能边选边滚——懒加载的内容在下面 */
+  private readonly onWheel = (e: WheelEvent) => {
+    if (e.ctrlKey) return; // Ctrl/⌘+滚轮是页面缩放，还给浏览器
+    e.preventDefault();
+    const dx = e.deltaX;
+    const dy = e.deltaY;
+    if (!dx && !dy) return;
+    const scroller = scrollableAncestor(this.elementUnderPoint(e.clientX, e.clientY));
+    if (scroller) scroller.scrollBy(dx, dy);
+    else window.scrollBy(dx, dy);
+  };
+
   private readonly onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0 || !e.isPrimary) return;
     e.preventDefault();
@@ -174,4 +190,15 @@ export class PickController {
 
 function viewport() {
   return { width: window.innerWidth, height: window.innerHeight };
+}
+
+/** 指针下元素往上找第一个竖向可滚动的容器（信息流站常把滚动放在内层容器上，#88） */
+function scrollableAncestor(el: Element | null): HTMLElement | null {
+  let node: HTMLElement | null = el as HTMLElement | null;
+  while (node && node !== document.body) {
+    const oy = getComputedStyle(node).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 1) return node;
+    node = node.parentElement;
+  }
+  return null;
 }

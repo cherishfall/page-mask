@@ -183,6 +183,17 @@
               >
                 {{ t.wizard.adjust }}
               </button>
+              <!-- #88：预览里组员已真实收起、看不到牌子——勾了同类的行给一个检查入口，
+                   跳回点选阶段亮出这一组（成员牌子与实时计数都在那儿） -->
+              <button
+                v-if="!onlyOneOf(d) && d.el"
+                type="button"
+                class="pm-btn ghost small"
+                :data-testid="`pm-draft-${i + 1}-inspect-same`"
+                @click="inspectSameGroup(d)"
+              >
+                {{ t.wizard.inspectSame }}
+              </button>
               <button
                 type="button"
                 class="pm-btn ghost pm-icon-btn"
@@ -558,6 +569,9 @@ const pickRows = computed<PickRow[]>(() =>
  * 焦点只是看哪个组的标记，不改任何设置。空 = 现在没有亮着的组
  */
 const sameFocusEl = shallowRef<Element | null>(null);
+/** 懒加载重算（#88）：页面变更后去抖重算草稿计数；句柄随向导卸载一起撤 */
+let draftObserver: MutationObserver | null = null;
+let draftTimer: ReturnType<typeof setTimeout> | null = null;
 /**
  * 本次点选里、还没有草稿的元素勾没勾「一起收起」：进看效果建草稿时用（newDraft）。
  * 元素被取消选择时清掉——再点回来按默认值当新的一项，不记住上一次的勾
@@ -636,12 +650,24 @@ onMounted(() => {
   }
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('resize', reclampToolbar);
+  // 懒加载信息流（#88）：页面随滚动补内容，同类的命中数与组员标记要跟着重算。
+  // MutationObserver 事件驱动，不做轮询；去抖 300ms 免得被高频变更拖着跑
+  draftObserver = new MutationObserver(() => {
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      drafts.value.forEach(refreshDraftCounts);
+      if (phase.value === 'pick') renderMarkers();
+    }, 300);
+  });
+  draftObserver.observe(document.body, { childList: true, subtree: true });
 });
 
 onBeforeUnmount(() => {
   document.documentElement.style.cursor = '';
   window.removeEventListener('keydown', onKeyDown, true);
   window.removeEventListener('resize', reclampToolbar);
+  draftObserver?.disconnect();
+  if (draftTimer) clearTimeout(draftTimer);
   pick?.stop();
   follower.stop();
   // 兜底：任何退出路径都撤掉预览样式（不允许免保存临时隐藏）
@@ -1566,6 +1592,23 @@ async function onPickRowClick(row: PickRow, e: MouseEvent) {
   sameFocusEl.value = row.el;
   renderMarkers();
   await pushPageCss();
+}
+
+/** 预览行「检查同类」（#88）：回点选阶段亮出这一组，看完「下一步」回来，草稿不丢 */
+async function inspectSameGroup(d: Draft) {
+  if (!d.el) return;
+  await backToPick();
+  if (phase.value !== 'pick') return;
+  sameFocusEl.value = d.el;
+  renderMarkers();
+  await pushPageCss();
+  // 滚到这一组的第一个标记上（与勾选时同一口径）
+  await nextTick();
+  const seq = pickRows.value.find((r) => r.el === d.el)?.seq ?? 0;
+  const target =
+    overlayLayer.value?.querySelector('[data-testid^="pm-sub-badge-' + seq + '-"]') ??
+    overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+  target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
 /** 用户要求减少动态时不做平滑滚动（与 flashRow 同一口径） */

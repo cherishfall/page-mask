@@ -301,6 +301,8 @@ export const en: Messages = {
       'Scroll the page to check the result (Cover should stay glued to its element). Rename any row right here; open Adjust to change how it hides or where it applies.',
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
+    /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
+    inspectSame: 'Check matches',
     staleSummary: 'May be broken · can’t be found on this page',
     /** Shown after tapping "Pick again" on a broken row: names the next action */
     reselectHint: 'Click where this item sits on the page now',
