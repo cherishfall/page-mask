@@ -169,7 +169,9 @@
 
 /* ── 幕布上的「恢复」按钮（#50）：与胶囊同一套材质（--pm-bg 底色、--pm-border-control 控件描边、
       --pm-radius-pill 胶囊圆角、--pm-shadow-overlay 浮层阴影），也由这套样式表注入幕布宿主的 shadow。
-      常态 0.85 不透明度、只显示睁开的眼睛；悬停 / 键盘聚焦升到 1 并显出「恢复」。
+      常态全不透明（#87）：这是遮住后唯一的出路，而幕布在白底页面取画布色——半透明会把外圈描边
+      的对比拉到 3:1 以下（WCAG 1.4.11）；低调靠尺寸与弱化图标，不靠透明度。
+      常态只显示睁开的眼睛；悬停 / 键盘聚焦显出「恢复」。
       「恢复」两个字始终占位、只变透明度，所以文字出现时按钮不位移、不挤压 ── */
 .pm-curtain-restore {
   position: fixed;
@@ -191,12 +193,6 @@
   -webkit-user-select: none;
   user-select: none;
   touch-action: none;
-  opacity: 0.85;
-  transition: opacity 120ms ease;
-}
-.pm-curtain-restore:hover,
-.pm-curtain-restore:focus-visible {
-  opacity: 1;
 }
 .pm-curtain-restore-dragging {
   cursor: grabbing;

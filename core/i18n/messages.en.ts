@@ -89,7 +89,7 @@ export const en: Messages = {
     },
     pendingBadge: 'Needs access',
     newSiteHint:
-      'This site isn’t set up yet. Both buttons start you off: “Hide items” picks the parts of the page you don’t want, “Title & icon” changes the tab’s name and picture.',
+      'This site isn’t set up yet. “Hide items” picks the parts of the page you don’t want, “Title & icon” changes the tab’s name and picture; to cover the whole page for a moment, use “Cover this page”.',
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
     reauthorize: 'Allow access',
     reauthorizing: 'Waiting for you to allow…',

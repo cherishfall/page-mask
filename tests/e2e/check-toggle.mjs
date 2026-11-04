@@ -631,7 +631,7 @@ async function main() {
         covered.btn.y === 220,
       `恢复按钮与该站胶囊贴同一右缘（右距 ${covered.btn ? Math.round(vw - covered.btn.x - covered.btn.w) : '?'}px，y=${covered.btn?.y}）`,
     );
-    check(covered.opacity === '0.85', `恢复按钮常态不透明度 85%（${covered.opacity}）`);
+    check(covered.opacity === '1', `恢复按钮常态全不透明（遮住后唯一出路，白底上要过 3:1，#87；${covered.opacity}）`);
     check(
       covered.labelText === '恢复' && covered.labelOpacity === '0',
       `常态只显示图标：「恢复」在 DOM 里但不显示（文字不透明度 ${covered.labelOpacity}）`,
@@ -975,7 +975,7 @@ async function main() {
     check(oneShot.title !== 'Acme 阅读', `标签页标题已换成低调标题（${oneShot.title}）`);
     check(!oneShot.capsule, '幕布上没有悬浮胶囊（没添加的网站本来就没有）');
     check(
-      oneShot.opacity === '0.85' && oneShot.radius === '999px' && oneShot.btnBg === 'rgb(255, 255, 255)',
+      oneShot.opacity === '1' && oneShot.radius === '999px' && oneShot.btnBg === 'rgb(255, 255, 255)',
       `一次性脚本的按钮与已添加站点同一套（不透明度 ${oneShot.opacity}、圆角 ${oneShot.radius}、底色 ${oneShot.btnBg}）`,
     );
 

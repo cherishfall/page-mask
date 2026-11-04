@@ -22,7 +22,7 @@ export function fixtureHtml(pathname = '/') {
   return `<!doctype html><html><head><meta charset="utf-8">
 <title>${FIXTURE_TITLE}</title>
 <link rel="icon" href="${FAVICON}">
-<style>body{font-family:system-ui,sans-serif;margin:0}header,footer,aside,main{padding:12px 16px}header{background:#eef}aside{background:#ffe}</style>${
+<style>body{font-family:system-ui,sans-serif;margin:0}header,footer,aside,main{padding:12px 16px}header{background:#eef}aside{background:#ffe;float:right;width:32%;min-height:96px;margin-left:16px}footer{clear:both}</style>${
     hostile ? `\n<style>${HOSTILE_CSS}</style>` : ''
   }
 </head><body>
