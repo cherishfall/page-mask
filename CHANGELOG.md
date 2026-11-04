@@ -5,6 +5,51 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.5.1] - 2026-11-05
+
+交付验收加了一道「渲染出来看一眼」的关：每轮改动交付前拍真实渲染截图、交给只看图的「新眼睛」审一轮，发版前全量巡检。本版由此拦下并修掉一批装机才会发现的问题。/ Delivery now includes a rendered-eyes pass: real screenshots reviewed by a context-free "fresh eyes" agent per round, and a full sweep before each release. This release fixes a batch of issues that previously only surfaced after install.
+
+### 中文
+
+#### 修复
+
+- **点选阶段页面滚不动**：全屏捕获层吞掉了滚轮的默认滚动——信息流站（滚动放在内层容器上）完全滚不了。现在滚轮转交给指针下的滚动容器，边选边滚、随下随加载（#88）
+- **「另外 N 个一样的」不随懒加载更新**：向导开着时页面变了就重算（事件驱动，不做轮询），新卡片加载进来计数与成员标记实时跟上（#88）
+- **看效果阶段没法确认同类勾得对不对**：勾了同类的行新增「检查同类」，跳回点选亮出整组，看完回来草稿不丢（#88）
+- **遮住整页后的恢复按钮几乎看不见**：常态半透明在白底幕布上对比度不足 3:1，而它是唯一的出路；改常态全不透明（#87）
+- **收起/展开按钮悬停底色溢出胶囊圆头**：圆角跟着实际的端点元素走（#85）
+- **拖动把手两副样子**：胶囊与向导工具条统一为同一枚六点 SVG（#83）
+- **全功能 ↔ mini 切换位置跳**：改为按贴边侧锚定——右停靠往右收、左停靠往左收；幕布恢复按钮松手同规则贴最近边（顺带修掉「恢复按钮拖到中间、胶囊悬在半空」的潜伏 bug）（#84）
+- **收起/展开按钮悬停范围超出胶囊本体**：同上圆角修正（#85）
+
+#### 变更
+
+- **「网站设置」改名「全部网站设置」**：弹窗里它会读成「这个网站的设置」；弹窗入口、列表页标题、返回链接、首次引导提及全部同步，英文 All site settings（#86）
+- **管理列表页加「插件设置」入口**：插件设置页本有返回，两页从此互达（#87 审查）
+- **默认标签页标题跟随显式选择的界面语言**：选了 English 就得到 "Reading"；「自动」档仍按浏览器语言（#89，推翻旧决策，理由见票）
+- **按钮在默认位时「⋯」菜单不再显示「按钮放回右下角」**：不起作用的项不摆；拖过之后照常出现（#90）
+- **弹窗空状态提示与实物一致**：不再说「两颗按钮」（漏了「遮住这一页」）（#87）
+
+### English
+
+#### Fixed
+
+- **The page couldn't scroll while picking**: the full-screen capture layer swallowed wheel scrolling — sites that scroll in an inner container (infinite feeds) couldn't scroll at all. Wheel input is now routed to the scrollable container under the pointer, so you can pick and scroll as the feed loads (#88)
+- **“Also hide N alike” didn't follow lazy loading**: with the wizard open, page changes now recompute counts and member badges (event-driven, no polling) (#88)
+- **No way to check a "similar" match in the preview**: rows with the checkbox ticked get a “Check matches” button that jumps back to picking with the whole group lit; your draft is kept (#88)
+- **The restore button on the curtain was nearly invisible**: its semi-transparent look fell below 3:1 contrast on white pages — and it is the only way back. Now fully opaque by default (#87)
+- **The fold/unfold button's hover background spilled outside the pill**: cap radii now follow whichever element actually sits at each end (#85)
+- **Two different drag handles**: the capsule and the wizard toolbar now share one six-dot SVG grip (#83)
+- **The button jumped when switching full ↔ mini**: positions anchor to the docked edge — right-docked shrinks rightward, left-docked leftward; the curtain restore button snaps the same way on release (also fixes a latent bug where the capsule could end up mid-screen) (#84)
+
+#### Changed
+
+- **“网站设置” renamed “全部网站设置” (All site settings)**: in the popup it read as "this site's settings"; popup entry, list title, browser tab title, back links and onboarding mentions all follow (#86)
+- **The site list page links to “插件设置” (Settings)**: the two pages now reach each other (#87 review)
+- **The default tab title follows an explicitly chosen interface language**: picking English yields "Reading"; “自动” still follows the browser language (#89, overturning the old decision — see the issue for why)
+- **The “⋯” menu hides “按钮放回右下角” while the button is at its default spot**: a no-op item isn't shown; it returns once you drag (#90)
+- **The popup's empty-state hint now matches what's on screen**: it no longer says “two buttons” and skip “Cover this page” (#87)
+
 ## [0.5.0] - 2026-11-04
 
 把界面从上到下过了一遍：同一个东西只有一个样子、一个叫法，一个动作只剩一条路。/ Went over the whole interface: one look and one name per thing, one path per action.
