@@ -8,7 +8,7 @@
  * 与扩展自己的资源，不画假界面、不含第三方商标。
  *
  * - screenshot-1-before-after：同一页面的「之前 / 之后」并排 + 大字说明
- * - screenshot-2-wizard：三步向导的第 2 步（点选）与第 3 步（看效果）并排
+ * - screenshot-2-wizard：向导的点选与看效果两步并排（#81 起两步）
  * - screenshot-3-tabbar：标签栏里的两个标签页（原样 / 清爽），展示标题与图标
  * - screenshot-4-popup：面板正常状态（开关、编辑当前网站、遮住本页、底部两个入口）
  * - screenshot-5-management：「你添加的网站」与「插件设置」两个独立页面并排
@@ -66,7 +66,7 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
   <div id="promo"><b>开通示例会员</b><span>解锁全部章节与离线缓存（本例为虚构内容）</span></div>
   <article>
     <p>这是一段用于演示的正文内容。PageMask 只做减法：收起你点选的部分，其余版式保持原样，阅读位置不会跳。</p>
-    <p>你可以只收起推荐卡片与横幅，也可以把页头一起收起；每条规则的生效范围可以设为整站，或只是这类页面。</p>
+    <p>你可以只收起推荐卡片与横幅，也可以把页头一起收起；每条收起项在「调整」里改收起方式与在哪些页面收起（整站或只是这类页面）。</p>
   </article>
 </main>
 <footer id="site-footer">© Acme 书房（虚构站点，仅用于截图）</footer>
@@ -200,18 +200,16 @@ try {
      </div>`,
   );
 
-  // 2. 三步向导：第 2 步（点选）+ 第 3 步（看效果）
-  // 先把站点切回原样态并整页刷新（与 run-e2e 同款路径），再以新站点模式打开向导（第 1 步是标题和图标，共 3 步）
+  // 2. 向导：点选 + 看效果（#81 起两步；「标题和图标」独立成单步表单，不在商店截图里）
+  // 先把站点切回原样态并整页刷新（与 run-e2e 同款路径），再直接进点选阶段
   await setProfile(control, ORIGIN, demoProfile({ switchState: 'original' }));
   await p.reload({ waitUntil: 'load' });
   await poll(
     async () => evalInContentWorld(p, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false),
     '内容脚本就绪',
   );
-  await sendToTab(control, await tabIdOf(control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'newSite' });
+  await sendToTab(control, await tabIdOf(control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
   await waitForShadow(p, 'pagemask-wizard', '[data-testid="pm-wizard-toolbar"]');
-  // 第 1 步（标题和图标）直接下一步，进第 2 步点选
-  await clickInShadow(p, 'pagemask-wizard', '[data-testid="pm-wiz-next"]');
   await waitForShadow(p, 'pagemask-wizard', '[data-testid="pm-wiz-pick-lead"]');
 
   /** 点选一个元素；点击后核对已选数量，偶尔首个 pointerdown 不生效时重试 */
@@ -246,7 +244,7 @@ try {
   await new Promise((r) => setTimeout(r, 500));
   const wizardPickFile = path.join(TMP, 'wizard-pick.png');
   await shot(p, wizardPickFile);
-  // 看效果：统一应用 + 幽灵标记 + 清单逐项编辑 + 生效范围
+  // 看效果：草稿已应用 + 幽灵标记 + 清单逐项编辑
   await clickInShadow(p, 'pagemask-wizard', '[data-testid="pm-wiz-preview"]');
   await waitForShadow(p, 'pagemask-wizard', '[data-testid="pm-marker-1"]');
   await new Promise((r) => setTimeout(r, 700));
@@ -257,17 +255,17 @@ try {
   await compose(
     'screenshot-2-wizard',
     `<div style="padding:30px 44px 0">
-      <div class="big">设置分三步：标签页标题和图标 → 点选要收起的内容 → 看效果</div>
-      <div class="sub">选中的内容列成清单、可逐项删掉；在哪些页面收起在「看效果」这一步定，保存即完成</div>
+      <div class="big">点选要收起的内容 → 看效果，保存即完成</div>
+      <div class="sub">选中的内容列成清单、可逐项去掉；每项的收起方式与在哪些页面收起，在「调整」里改</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(wizardPickFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">第 2 步：悬停高亮、点一下选中，选中项列成清单</figcaption>
+         <figcaption class="cap" style="margin-top:10px">点选：悬停高亮、点一下选中，选中项列成清单</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(wizardPreviewFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">第 3 步：逐项换收起方式、定生效范围，滚动确认效果</figcaption>
+         <figcaption class="cap" style="margin-top:10px">看效果：滚动确认效果，逐项在「调整」里换收起方式、定范围</figcaption>
        </figure>
      </div>`,
   );
