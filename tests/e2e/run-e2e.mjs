@@ -450,7 +450,7 @@ async function main() {
     const oPage = await browser.newPage();
     await oPage.goto(`${ext.extOrigin}/onboarding.html`, { waitUntil: 'load' });
     await oPage.waitForSelector('.step', { timeout: 5000 });
-    check((await oPage.$$('.step')).length === 4, '引导页 4 步（含固定到工具栏）');
+    check((await oPage.$$('.step')).length === 3, '引导页 3 步（固定到工具栏 / 三件事 / 小按钮，#103）');
     const next = await oPage.waitForSelector('xpath/.//button[normalize-space()="下一步"]', { timeout: 3000 });
     await next.click();
     await waitFor(oPage, '引导页切到第 2 步', () => document.querySelector('.step.active .num')?.textContent === '2');

@@ -284,7 +284,7 @@ import { localeName } from '@/core/i18n';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { TOGGLE_OPACITY, TOGGLE_OPACITY_LEVELS, type ToggleOpacity } from '@/core/toggle-opacity';
 import FloatingToggle from '@/ui/FloatingToggle.vue';
-import toggleCss from '@/ui/toggle/toggle.css?inline';
+import { ensureTogglePreviewStyles } from '@/ui/toggle/preview-style';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { locale, t } from '@/ui/i18n';
 import { siteLabelOf } from '../management/site';
@@ -349,12 +349,7 @@ onMounted(() => {
   void store.init();
   void refreshShortcut();
   // 预览用的是真实胶囊组件：把同一份 toggle.css 注入本页一次（shadow 版走 adoptedStyleSheets）
-  if (!document.querySelector('style[data-pm-toggle-preview]')) {
-    const style = document.createElement('style');
-    style.dataset.pmTogglePreview = '';
-    style.textContent = toggleCss;
-    document.head.appendChild(style);
-  }
+  ensureTogglePreviewStyles();
   // 用户去快捷键页改完再回来：聚焦时重新读一次（Chrome 没有「快捷键变了」的事件）
   window.addEventListener('focus', refreshShortcut);
 });

@@ -23,7 +23,7 @@
  *   所有表单控件都有关联的标签
  * - 旧入口清理（#56）：`#/add/<来源>`（「待添加」页）不再可达，落到网站列表；
  *   只想改标题改走页面右下角 ⋯ 菜单的「标签页标题和图标」
- * - 引导页：4 步（含「固定到工具栏」），aria-current="step" 跟随「下一步」，无 🎭 与第三方品牌
+ * - 引导页：3 步（含「固定到工具栏」），第 2/3 步直接渲染真实弹窗与真实胶囊（#103），aria-current="step" 跟随「下一步」
  * - 三个页面：lang="zh-CN"、color-scheme meta；浅色 / 深色下 body 背景与前景等于 tokens 值；
  *   所有可见文字与其背景的对比度 ≥ 4.5、字号 ≥ 12px；可见文案（以及模板源码）里没有「伪装 / 泄露」
  *
@@ -182,7 +182,8 @@ async function checkCommon(page, label) {
       .filter((el) => !(el.labels?.length || el.getAttribute('aria-label') || el.getAttribute('aria-labelledby')))
       .map((el) => el.outerHTML.slice(0, 80)),
     text: document.body.innerText,
-    h1: document.querySelectorAll('h1').length,
+    // 装饰性嵌入（欢迎页里的真实弹窗预览）带 aria-hidden：读屏读不到，也就不该算作页面的标题
+    h1: [...document.querySelectorAll('h1')].filter((el) => !el.closest('[aria-hidden="true"]')).length,
   }));
   check(info.lang === 'zh-CN' && info.meta === 'light dark', `${label}：lang=zh-CN、color-scheme meta = "${info.meta}"`);
   check(info.h1 === 1, `${label}：有且只有一个 h1`);
@@ -923,7 +924,19 @@ async function main() {
     check(ob.text.includes('固定到工具栏') && ob.text.includes('拼图') && ob.text.includes('图钉'), '引导页有「把 PageMask 固定到工具栏」一步（拼图图标 → 图钉）');
     const current = () => o.evaluate(() => [...document.querySelectorAll('.step')].map((s) => s.getAttribute('aria-current')));
     let cur = await current();
-    check(cur.length === 4 && cur[0] === 'step' && cur.filter(Boolean).length === 1, `4 步，第 1 步 aria-current="step"（${JSON.stringify(cur)}）`);
+    check(cur.length === 3 && cur[0] === 'step' && cur.filter(Boolean).length === 1, `3 步，第 1 步 aria-current="step"（${JSON.stringify(cur)}）`);
+    // #103：示意图就是真实组件，不是照着画的假图
+    check(!!(await o.$(tid('pm-popup-setup'))) && !!(await o.$(tid('pm-popup-cover'))), '第 2 步是真实弹窗组件（三个入口都在）');
+    check(!!(await o.$(tid('pm-toggle'))), '第 3 步是真实胶囊组件');
+    check(
+      (await o.$$eval('.art', (els) => els.every((e) => e.hasAttribute('inert') && e.getAttribute('aria-hidden') === 'true'))),
+      '示意图能看不能点、读屏不重复朗读（inert + aria-hidden）',
+    );
+    const featuresText = await o.$eval('.features', (e) => e.textContent ?? '');
+    check(
+      ['收起内容', '标题和图标', '遮住这一页'].every((k) => featuresText.includes(k)),
+      `三件主要功能各说了一句（${featuresText.split('：').join(': ').slice(0, 60)}…）`,
+    );
     await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
     await waitFor(o, '切到第 2 步', () => document.querySelectorAll('.step')[1].getAttribute('aria-current') === 'step');
     cur = await current();

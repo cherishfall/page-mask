@@ -273,19 +273,22 @@ export const en: Messages = {
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
-        text: 'Click the puzzle icon, find PageMask and pin it.',
+        text: 'Open the puzzle menu, find PageMask and click the pin.',
+        features: [],
       },
       {
-        title: 'Click the icon to open a small window',
-        text: '“Hide items” and “Title & icon” live there; “Cover this page” sits at the bottom.',
+        title: 'Three things the popup does',
+        text: 'Click PageMask in the toolbar — this is the popup.',
+        features: [
+          'Hide items: click the parts of a page you don’t want; they disappear.',
+          'Title & icon: give the tab a neutral name and icon.',
+          'Cover this page: hide the whole page, then click Restore when you’re back. You can also press Ctrl+Shift+X (Windows) or ⌘+Shift+X (Mac).',
+        ],
       },
       {
-        title: 'Hiding takes two steps',
-        text: 'Click on the page to pick, check the result, save.',
-      },
-      {
-        title: 'Every day after that',
-        text: 'The small button at the bottom-right is the daily switch; use “Cover” when someone walks over.',
+        title: 'The small button in the corner',
+        text: 'On sites you’ve added it stays at the bottom-right: click the middle to switch “Your settings / As is”, click the eye to cover the page, click ⋯ for settings.',
+        features: [],
       },
     ],
   },

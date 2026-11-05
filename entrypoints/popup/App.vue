@@ -1,94 +1,32 @@
 <template>
-  <!-- aria-busy：读取中、处理中时告诉读屏这里的内容还会变（modern-web-guidance「accessibility」） -->
-  <main class="popup" :aria-busy="phase === 'loading' || busy !== '' ? 'true' : 'false'">
-    <header class="head">
-      <h1 class="logo">PageMask</h1>
-    </header>
-
-    <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">{{ t.popup.loading }}</p>
-    <p v-else-if="phase === 'unsupported'" class="hint" data-testid="pm-popup-unsupported">
-      {{ supported.reason || t.popup.unsupportedFallback }}
-    </p>
-
-    <template v-else>
-      <div class="site">
-        <div class="site-head">
-          <h2 class="host">{{ host }}</h2>
-          <span v-if="phase === 'pending'" class="pm-mark pm-mark-warning" data-testid="pm-popup-pending-badge">
-            <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.popup.pendingBadge }}
-          </span>
-        </div>
-
-        <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"（modern-web-guidance「switch」）。
-             处理期间不禁用：多拨一次由 toggleSwitch 忽略并拨回实际状态，状态由界面文字与 aria-busy 表达 -->
-        <div v-if="phase === 'ready' && profile" class="switch-row">
-          <label for="pm-popup-switch">{{ t.common.cleanMode }}</label>
-          <input
-            id="pm-popup-switch"
-            type="checkbox"
-            switch
-            role="switch"
-            data-testid="pm-popup-switch"
-            :checked="profile.switchState === 'disguised'"
-            @change="toggleSwitch"
-          />
-        </div>
-
-        <p v-if="profile" class="meta">
-          {{ ruleSummary }}<template v-if="staleCount > 0">
-            ·
-            <span class="pm-mark pm-mark-danger" data-testid="pm-popup-stale">
-              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount) }}
-            </span>
-          </template>
-        </p>
-        <p v-else class="hint" data-testid="pm-popup-hint-new">{{ t.popup.newSiteHint }}</p>
-      </div>
-
-      <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
-
-      <template v-if="phase === 'pending'">
-        <!-- 有配置、没授权：配置还在，只是浏览器收回了这个网站的访问权限 -->
-        <p class="hint" data-testid="pm-popup-pending">{{ t.popup.pendingHint }}</p>
-        <!-- 处理中的按钮不禁用：点第二下由处理函数忽略，按钮文字自己写「正在等你允许…」 -->
-        <button class="primary" data-testid="pm-popup-reauth" @click="reauthorize">
-          {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
-        </button>
-      </template>
-      <template v-else>
-        <!-- 两个入口（#81）：新旧网站同构，都有这两颗。「收起内容」是主按钮（进点选），
-             「标题和图标」是次按钮（单步小表单，填完点保存） -->
-        <button class="primary" data-testid="pm-popup-setup" @click="setup">
-          {{ busy === 'setup' ? t.common.opening : t.popup.setupMore }}
-        </button>
-        <button data-testid="pm-popup-title" @click="editTitle">
-          {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
-        </button>
-      </template>
-
-      <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
-      <button data-testid="pm-popup-cover" @click="toggleCurtain">
-        <span class="popup-cover-label">
-          <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
-          <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
-        </span>
-        <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
-        <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
-      </button>
-    </template>
-
-    <!-- 底部两个入口：进「全部网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
-    <div class="links">
-      <button class="small link" data-testid="pm-popup-manage" @click="manage">{{ t.popup.manageAll }}</button>
-      <button class="small link" data-testid="pm-popup-settings" @click="openSettings">{{ t.popup.settings }}</button>
-    </div>
-  </main>
+  <!-- 界面在 ui/popup/PopupBody.vue（#103）：欢迎页复用同一份，手抄的示意图不会再有 -->
+  <PopupBody
+    :phase="phase"
+    :unsupported-reason="supported.reason || ''"
+    :host="host"
+    :has-profile="!!profile"
+    :switch-on="profile?.switchState === 'disguised'"
+    :rule-summary="ruleSummary"
+    :stale-count="staleCount"
+    :message="message"
+    :busy="busy"
+    :covered="covered"
+    :cover-shortcut="coverShortcut"
+    @toggle-switch="toggleSwitch"
+    @setup="setup"
+    @edit-title="editTitle"
+    @reauthorize="reauthorize"
+    @toggle-curtain="toggleCurtain"
+    @manage="manage"
+    @open-settings="openSettings"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { t } from '@/ui/i18n';
+import PopupBody from '@/ui/popup/PopupBody.vue';
 import { createPageMaskStorage } from '@/core/storage';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
@@ -204,8 +142,7 @@ async function refreshCurtain() {
   covered.value = reply?.covered === true;
 }
 
-async function toggleSwitch(e: Event) {
-  const input = e.target as HTMLInputElement;
+async function toggleSwitch(input: HTMLInputElement) {
   if (!profile.value || !origin.value) return;
   // 上一个动作还没回来：忽略这一次拨动并拨回实际状态（不禁用开关，避免出现没有原因的禁用态）
   if (busy.value) {
@@ -389,87 +326,3 @@ function openSettings() {
   void openPage('/settings.html');
 }</script>
 
-<style>
-/* 共享样式（字体、颜色、按钮、开关、徽标）来自 @/styles/base.css；这里只写 popup 布局 */
-.popup {
-  width: 320px;
-  box-sizing: border-box;
-  padding: var(--pm-space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--pm-space-3);
-}
-.head {
-  display: flex;
-  align-items: center;
-}
-.logo {
-  font-size: var(--pm-font-size-title);
-  margin: 0;
-  letter-spacing: 0.2px;
-}
-.popup > .hint {
-  font-size: var(--pm-font-size-body);
-  margin: 0;
-}
-.site {
-  display: flex;
-  flex-direction: column;
-  gap: var(--pm-space-2);
-}
-.site-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--pm-space-2);
-}
-.host {
-  font-size: var(--pm-font-size-body);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--pm-space-2);
-}
-.switch-row label {
-  cursor: pointer;
-}
-.meta {
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
-  margin: 0;
-}
-.site .hint {
-  margin: 0;
-}
-/* 主按钮是这一屏唯一的提交按钮：按「主要提交」的尺寸放大到 40 */
-.popup > button.primary {
-  min-block-size: var(--pm-control-lg);
-  padding-inline: var(--pm-space-3);
-}
-/* 底部一行两个入口：它们不是「内容里的小动作」，是两个页面唯一的入口，所以用次按钮
-   （有底有边、比主按钮浅一档），不用无框小字——无框小字看着像不能点（#74） */
-.links {
-  display: flex;
-  gap: var(--pm-space-2);
-}
-.links > .link {
-  flex: 1;
-  padding-inline: var(--pm-space-1);
-}
-/* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
-.popup-kbd {
-  padding: 0 4px;
-  border: 1px solid var(--pm-border);
-  border-radius: 4px;
-  color: var(--pm-fg-muted);
-  font: inherit;
-  font-size: var(--pm-font-size-caption);
-  line-height: 16px;
-}
-</style>
