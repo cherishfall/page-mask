@@ -1247,6 +1247,25 @@ async function main() {
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit'));
     await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);
     check(true, '这个入口打开的向导可以正常退出');
+
+    // ===================== 回退出口：恢复网站原来的标题和图标（#99） =====================
+    console.log('\n--- 恢复网站原来的标题和图标：回到没设置过，不动收起内容 ---');
+    await clickInShadow(pageOnly, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(pageOnly, TOGGLE, tid('pm-toggle-title'));
+    await clickInShadow(pageOnly, TOGGLE, tid('pm-toggle-title'));
+    await waitForShadow(pageOnly, HOST, tid('pm-wiz-title-reset'));
+    check(true, '保存过标题和图标的网站，表单底部出现回退出口');
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-title-reset'));
+    await waitFor(pageOnly, '恢复后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    await waitFor(pageOnly, '标签页回到网站原来的标题', () => document.title === 'Acme 书房 · 向导测试');
+    const afterReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
+    check(
+      afterReset?.titleIconSet === false && afterReset.disguisedTitle === null && afterReset.faviconDataUrl === null,
+      `恢复后配置回到「没设置过」（${JSON.stringify(afterReset && { title: afterReset.disguisedTitle, icon: afterReset.faviconDataUrl, titleIconSet: afterReset.titleIconSet })}）`,
+    );
+    check(afterReset?.hideRules.length === 0, '恢复不产生也不删除收起规则');
+    await waitFor(pageOnly, '什么都没设置后胶囊也撤掉', (h) => !document.querySelector(h), [TOGGLE]);
+    check(true, '恢复后胶囊随之消失（页面完全回到原样）');
     await pageOnly.close();
 
 

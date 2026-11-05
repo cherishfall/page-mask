@@ -131,6 +131,20 @@ export function titleOnlyPatch(input: {
   };
 }
 
+/**
+ * 「恢复网站原来的标题和图标」（#99）：回到「没设置过」的状态。
+ * 只动这三个字段——收起规则、开关状态、按钮位置一概不碰。
+ */
+export interface TitleIconResetPatch {
+  titleIconSet: false;
+  disguisedTitle: null;
+  faviconDataUrl: null;
+}
+
+export function titleIconResetPatch(): TitleIconResetPatch {
+  return { titleIconSet: false, disguisedTitle: null, faviconDataUrl: null };
+}
+
 // ---------- 选择集（顺序 = 序号牌编号） ----------
 // 选择集是有序列表：序号牌、预览标记、草稿清单都按它的下标编号，任何变化后整体重新编号（N6）。
 

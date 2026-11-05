@@ -133,6 +133,14 @@
         <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
       </section>
 
+      <!-- 回退出口（#99）：保存过标题和图标才出现；只撤销这两项，不动收起的内容 -->
+      <div v-if="profile.titleIconSet" class="row title-reset" data-testid="pm-mgmt-title-reset-row">
+        <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="resetTitleIcon">
+          {{ t.common.resetTitleIcon }}
+        </button>
+        <span class="hint">{{ t.common.resetTitleIconHint }}</span>
+      </div>
+
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card">
         <h3>{{ t.management.rulesHeading }}</h3>
@@ -318,6 +326,12 @@ async function clearIcon() {
   }
 }
 
+/** 恢复网站原来的标题和图标（#99）：只撤销标题 / 图标，收起的内容不动 */
+async function resetTitleIcon() {
+  if (!profile.value) return;
+  await store.resetTitleIcon(profile.value.origin);
+}
+
 async function openReset() {
   if (!profile.value) return;
   store.askReset(profile.value);
@@ -404,6 +418,14 @@ async function onResetClose() {
 .row-label {
   min-width: 96px;
   color: var(--pm-fg);
+}
+
+/* 回退出口（#99）：不是卡片标题下的字段，单独一行，和上下两张卡都留出距离 */
+.title-reset {
+  margin: var(--pm-space-2) 0 var(--pm-space-3);
+}
+.title-reset .hint {
+  margin: 0;
 }
 
 .title-input {

@@ -390,6 +390,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       // 站点还没有配置时是空清单——同一条路，只是还没有已收起的项
       initialRules: initialRulesFor(pageUrl),
       hasProfile: !!profile,
+      titleIconSet: profile?.titleIconSet === true,
       initialTitle: fallbackTitle,
       initialIcon: profile?.faviconDataUrl ?? null,
       fallbackIcon,

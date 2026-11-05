@@ -17,6 +17,7 @@ import type { HideRule, SiteProfile } from '@/core/types';
 import { originPattern } from '@/core/registration';
 import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
+import { titleIconResetPatch } from '@/core/wizard-logic';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
 import { exportFileName } from '@/core/export-file';
 
@@ -257,6 +258,19 @@ export function createManagementStore() {
   }
 
   /**
+   * 恢复网站原来的标题和图标（#99）：回到「没设置过」的状态。
+   * 只动标题 / 图标 / 标记三项，收起规则、开关状态、按钮位置一概不碰。
+   */
+  async function resetTitleIcon(origin: string): Promise<void> {
+    await storage.updateProfile(origin, (d) => {
+      Object.assign(d, titleIconResetPatch());
+    });
+    // 输入框跟着回到「没设置过」：不清掉草稿的话，页面上还留着刚清空前那段字
+    state.drafts[origin] = '';
+    dirty.delete(origin);
+  }
+
+  /**
    * 界面语言偏好（#57）：写进全局设置，所有打开的页面（含本页）通过 storage.onChanged
    * 即时切换，不需要刷新。
    */
@@ -371,6 +385,7 @@ export function createManagementStore() {
     updateRules,
     setIcon,
     setDefaultIcon,
+    resetTitleIcon,
     setUiLanguage,
     askReset,
     confirmReset,

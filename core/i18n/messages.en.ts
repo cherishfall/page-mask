@@ -26,6 +26,8 @@ export const en: Messages = {
     uploadIcon: 'Upload icon',
     replaceIcon: 'Replace icon',
     clearIcon: 'Clear icon',
+    resetTitleIcon: 'Use the site’s own title and icon',
+    resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
     clean: 'Your settings',
     original: 'As is',
     cleanMode: 'Show this site your way',
@@ -346,6 +348,7 @@ export const en: Messages = {
     exitConfirm: 'Exit',
     notSavedTitle: 'Not saved',
     zeroRuleNotice: (title: string) => `Saved — the tab is now named “${title}”`,
+    titleResetNotice: 'Back to the site’s own title and icon',
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',
     warnUnstable: 'This element can’t be found reliably once switched back, so the previous setting was kept',
     warnUnsavable: (index: number) =>

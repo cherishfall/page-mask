@@ -13,6 +13,7 @@ import {
   scopeFromChoice,
   selectionRows,
   titleFromInput,
+  titleIconResetPatch,
   titleOnlyPatch,
   toggleSelection,
   unsavableDraftWarning,
@@ -209,6 +210,28 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
       faviconDataUrl: 'data:image/png;base64,AAA',
       switchState: 'disguised',
     });
+  });
+
+  it('恢复网站原来的标题和图标：只碰标题 / 图标 / 标记，收起项与开关一概不动（#99）', () => {
+    const profile = createEmptyProfile('https://example.test', 1);
+    profile.switchState = 'disguised';
+    profile.titleIconSet = true;
+    profile.disguisedTitle = '阅读';
+    profile.faviconDataUrl = 'data:image/png;base64,AAA';
+    profile.floatingBtnPos = { x: 12, y: 34 };
+    profile.hideRules = [
+      { id: 'r1', elementName: '横幅', candidates: ['#b'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false, createdAt: 1 },
+    ];
+
+    Object.assign(profile, titleIconResetPatch());
+
+    expect(profile.titleIconSet).toBe(false);
+    expect(profile.disguisedTitle).toBeNull();
+    expect(profile.faviconDataUrl).toBeNull();
+    // 其余设置原封不动
+    expect(profile.hideRules.map((r) => r.id)).toEqual(['r1']);
+    expect(profile.switchState).toBe('disguised');
+    expect(profile.floatingBtnPos).toEqual({ x: 12, y: 34 });
   });
 });
 

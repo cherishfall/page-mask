@@ -568,6 +568,8 @@ async function main() {
     await m.reload({ waitUntil: 'load' });
     await m.waitForSelector(siteTitle, { timeout: 5000 });
     check((await m.$eval(siteTitle, (i) => i.value)) === SITE_TITLE, '重新打开管理页，站点标题值仍在');
+    // 回退出口（#99）：保存过标题和图标之后才出现
+    check(!!(await m.$(tid('pm-mgmt-title-reset'))), '站点设置页出现「恢复网站原来的标题和图标」');
 
     // 标签页图标：上传 → 预览，清除 → 回到「未设置」（真实的解码、缩放与编码）
     const iconPng = path.join(tmp, 'icon.png');

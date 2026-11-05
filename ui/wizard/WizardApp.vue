@@ -54,6 +54,19 @@
             :title-hint="t.wizard.titleHint(initialTitle)"
             :icon-hint="hasDefaultIcon ? t.wizard.iconHintWithDefault : t.wizard.iconHintNoDefault"
           />
+          <!-- 回退出口（#99）：保存过才出现。不是删除，所以不用危险色，也不进底栏 -->
+          <div v-if="props.titleIconSet" class="pm-wiz-reset" data-testid="pm-wiz-title-reset-row">
+            <button
+              type="button"
+              class="pm-wiz-link plain"
+              data-testid="pm-wiz-title-reset"
+              :disabled="saving"
+              @click="resetTitleIcon"
+            >
+              {{ t.common.resetTitleIcon }}
+            </button>
+            <p class="pm-wiz-reset-hint">{{ t.common.resetTitleIconHint }}</p>
+          </div>
         </div>
       </template>
 
@@ -415,6 +428,7 @@ import {
   mergeSavedRules,
   selectionRows as buildSelectionRows,
   titleFromInput,
+  titleIconResetPatch,
   titleOnlyPatch,
   unsavableDraftWarning,
   wizardEscAction,
@@ -478,6 +492,8 @@ const props = defineProps<{
   initialRules?: HideRule[];
   /** 这个网站是否已有配置：没有时保存即建站（0 条规则 + 清爽态） */
   hasProfile: boolean;
+  /** 这个网站保存过「标题和图标」（#98）：只有保存过才显示「恢复原来的标题和图标」（#99） */
+  titleIconSet: boolean;
   /** 标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
   initialTitle: string;
   /** 站点现有的图标（新站点为 null） */
@@ -1056,6 +1072,36 @@ function saveSelectors(d: Draft) {
   refreshDraftCounts(d);
   if (found) dropOldSelection(old, d, found);
   void recaptureAndPreview();
+}
+
+/**
+ * 「恢复网站原来的标题和图标」（#99）：写回「没设置过」的状态，关掉向导并给一句提示。
+ * 不碰收起规则与开关状态——它只撤销标题 / 图标这一项定制。
+ */
+async function resetTitleIcon() {
+  if (saving.value || finished) return;
+  saving.value = true;
+  try {
+    const storage = createPageMaskStorage(browser.storage.local);
+    const origin = new URL(props.url).origin;
+    let saved;
+    try {
+      saved = await storage.updateProfile(origin, (p) => {
+        Object.assign(p, titleIconResetPatch());
+      });
+    } catch (e) {
+      showWarn(t.value.wizard.warnSaveFailedTitleOnly(e instanceof Error ? e.message : String(e)));
+      return;
+    }
+    if (!saved) {
+      noticeText.value = t.value.wizard.noticeGone;
+      noticeDlg.value?.showModal();
+      return;
+    }
+    await finish(true, t.value.wizard.titleResetNotice);
+  } finally {
+    saving.value = false;
+  }
 }
 
 /**

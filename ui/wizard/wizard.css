@@ -169,6 +169,23 @@
 .pm-wiz-link:focus-visible {
   color: var(--pm-danger);
 }
+/* 非破坏性的文字动作（#99「恢复原来的标题和图标」）：悬停不用危险色，回到正文色 */
+.pm-wiz-link.plain:hover,
+.pm-wiz-link.plain:focus-visible {
+  color: var(--pm-fg);
+}
+
+/* 标题表单底部的回退出口：与上面的字段隔一条细线，说明跟着动作走（不进底栏） */
+.pm-wiz-reset {
+  margin-top: var(--pm-space-3);
+  padding-top: var(--pm-space-2);
+  border-top: 1px solid var(--pm-border);
+}
+.pm-wiz-reset-hint {
+  margin: var(--pm-space-1) 0 0;
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-caption);
+}
 /* 已选清单：一行一项，限高、内部滚动（选到十几项也不会把工具条撑到挡住页面） */
 .pm-wiz-rows {
   margin: var(--pm-space-1) 0 0;

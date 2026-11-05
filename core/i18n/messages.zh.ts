@@ -33,6 +33,9 @@ export const zh = {
     uploadIcon: '上传图标',
     replaceIcon: '换一张图标',
     clearIcon: '清除图标',
+    /** 回退出口（#99）：两处同名同物，动作说清结果、不叫「重置」 */
+    resetTitleIcon: '恢复网站原来的标题和图标',
+    resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响。',
     /** 两个状态的名字（GLOSSARY「清爽态 / 原样态」）：短名，用在胶囊与列表上，不用来解释动作 */
     clean: '按设置',
     original: '原样',
@@ -374,6 +377,7 @@ export const zh = {
     notSavedTitle: '没有保存',
     /** 保存后 0 条收起设置的轻提示 */
     zeroRuleNotice: (title: string) => `已保存，标签页名字换成「${title}」了`,
+    titleResetNotice: '已恢复网站原来的标题和图标',
     /** 运行中的提示条 */
     warnTooBig: '选到接近整页的内容了，可能不是你要的。试试「选小一点」',
     warnUnstable: '切回去以后没法稳定找到这个元素，已经保留原来的设置',
