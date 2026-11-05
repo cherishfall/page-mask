@@ -244,28 +244,28 @@ export const en: Messages = {
   onboarding: {
     pageTitle: 'PageMask · Getting started',
     title: 'Welcome to PageMask',
-    sub: 'A few clicks on the sites you read, and the parts you don’t want are gone. You can also change a tab’s title and icon so it doesn’t stand out. PageMask never touches sites you didn’t add.',
+    sub: 'A few clicks on the sites you read, and the parts you don’t want are gone. PageMask never touches sites you didn’t add.',
     done: '(done)',
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
-    tip: 'Tip: “All site settings” and “Settings” (export / import and the language live there) sit side by side at the bottom of the popup.',
+    tip: 'Both settings entries sit at the bottom of the popup: all site settings, and the extension settings.',
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
-        text: 'A freshly installed extension hides in the menu. Click the puzzle-piece icon (Extensions) at the top right of the browser, find PageMask in the list and click the pin next to it — the icon then stays on the toolbar.',
+        text: 'Click the puzzle icon, find PageMask and pin it.',
       },
       {
         title: 'Click the icon to open a small window',
-        text: 'Click the PageMask toolbar icon and a small window opens. It has two buttons: “Hide items” picks the parts of the page you don’t want and hides them, and “Title & icon” changes this site’s tab name and picture. Below them, “Cover this page” covers the whole page along with the tab title when someone walks over — click “Restore this page” to come back. Two entries sit side by side at the bottom — “All site settings” and “Settings”.',
+        text: '“Hide items” and “Title & icon” live there; “Cover this page” sits at the bottom.',
       },
       {
         title: 'Hiding takes two steps',
-        text: 'Click “Hide items” and pick on the page: click to pick, click again to unpick, and everything you pick is listed. Then check the result — scroll the page, rename rows, change how each one hides and where it applies, and save. Sites you already set up follow the same path: what you hid before is already in the list; click it to take it out, and edit any row you like.',
+        text: 'Click on the page to pick, check the result, save.',
       },
       {
         title: 'Every day after that',
-        text: 'The small button at the bottom-right of the page is the daily switch: one click flips between “Shown your way” and “As the site is”. Its “⋯” menu holds the same two entries (Hide items, Title & icon). When someone walks over, use “Cover” in the window or on the small button — a small open-eye button stays on the page; click it to restore.',
+        text: 'The small button at the bottom-right is the daily switch; use “Cover” when someone walks over.',
       },
     ],
   },

@@ -5,6 +5,24 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.5.3] - 2026-11-05
+
+首次引导页减负：文字砍到每步一句，每步配一张小图。/ The welcome page loses its walls of text: one line per step, one small illustration each.
+
+### 中文
+
+#### 变更
+
+- **引导页文字减负**：四段长文各砍成一句具体动作；每步配一张小图——工具栏固定示意（SVG）、弹窗微缩模型（真实按钮名）、「点选 → 看效果 → 保存」流程、胶囊微缩模型
+- 小提示压成一行；上一轮的贴底「下一步」保留
+
+### English
+
+#### Changed
+
+- **Welcome page text diet**: each of the four long paragraphs is now one concrete action, with a small illustration — toolbar pinning (SVG), a miniature popup (real button names), the pick → preview → save flow, and a miniature capsule
+- One-line tip; the bottom-docked “Next” from the previous release stays
+
 ## [0.5.2] - 2026-11-05
 
 第二轮「新眼睛」全量目检后的三处小修。/ Three small fixes from the second full "fresh eyes" pass.
