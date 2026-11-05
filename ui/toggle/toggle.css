@@ -23,7 +23,8 @@
   opacity: var(--pm-tg-idle-opacity, 1);
   display: inline-flex;
   align-items: stretch;
-  padding: 2px;
+  /* 不留内边距（#109）：高度=可点段 24 + 上下边框各 1 = 26，WCAG 2.5.8 允许的最小整壳 */
+  padding: 0;
   gap: 1px;
   border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-pill);
@@ -85,7 +86,8 @@
   gap: 4px;
   border: none;
   border-radius: 0;
-  padding: 4px 8px;
+  /* 上下 3px：12px 字 × 1.5 行高 = 18，加起来正好 24（可点段的下限，#109） */
+  padding: 3px 7px;
   background: transparent;
   color: inherit;
   font-size: var(--pm-font-size-caption);

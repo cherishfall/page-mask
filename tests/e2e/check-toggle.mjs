@@ -187,6 +187,13 @@ async function main() {
     for (const b of hitBoxes) {
       check(b.w >= 24 && b.h >= 24, `${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 24×24`);
     }
+    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 164（不再有 170×32）
+    const fullPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(
+      Math.abs(fullPill.h - 26) <= 1,
+      `全功能胶囊高 ${fullPill.h.toFixed(1)} ≈ 26（可点区 24 + 上下边框）`,
+    );
+    check(fullPill.w >= 150 && fullPill.w <= 168, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 164（≤168，没删文字也没删段）`);
     const pillFont = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       let min = Infinity;
@@ -896,6 +903,10 @@ async function main() {
     check(!miniShape.grip && !miniShape.more, 'mini 没有把手与菜单');
     check(miniShape.cover, 'mini 保留遮住（急用一步直达，#78）');
     check((await getProfile(ext.control, ORIGIN)).capsuleMini === true, 'mini 记在站点配置里');
+    // mini 同样收到最小壳（#109）：高 26，宽约 76
+    const miniPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(Math.abs(miniPill.h - 26) <= 1, `mini 胶囊高 ${miniPill.h.toFixed(1)} ≈ 26`);
+    check(miniPill.w >= 70 && miniPill.w <= 82, `mini 胶囊宽 ${Math.round(miniPill.w)} 收到约 76`);
 
     // mini 上点圆点 = 照常切换两态（切回清爽，后面的用例要）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
