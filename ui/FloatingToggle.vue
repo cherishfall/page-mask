@@ -195,6 +195,10 @@ function clamp(left: number, top: number): { x: number; y: number } {
 const pos = computed(() => dragPos.value ?? viewPos.value ?? props.position);
 
 const rootStyle = computed(() => {
+  // 拖动中跟手（#94 回归修复）：拖动坐标是自由左上角坐标，不走停靠解释——
+  // 否则右半视口里拖动会被钉死在右缘（#84 引入的回归，用户实测「只能沿右缘拖」）
+  const d = dragPos.value;
+  if (d) return { left: `${d.x}px`, top: `${d.y}px` };
   const p = pos.value;
   if (!p) return { right: `${BUTTON_EDGE + 8}px`, bottom: `${BUTTON_EDGE + 8}px` };
   // 停靠边为锚（#84）：x ≤ BUTTON_EDGE 是左停靠，其余是右停靠——右停靠渲染 right，

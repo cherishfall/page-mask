@@ -452,7 +452,15 @@ async function main() {
     const grip = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
     await page.mouse.move(grip.x + grip.w / 2, grip.y + grip.h / 2);
     await page.mouse.down();
+    // #94 回归断言：拖动中要跟手——中心应落在「原中心 - 400」，不能被钉在右缘
+    const beforeDrag = await rectIn(page, TOGGLE, tid('pm-toggle'));
     await page.mouse.move(grip.x + grip.w / 2 - 400, grip.y + grip.h / 2 - 300, { steps: 6 });
+    const midDrag = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    const expectCenter = beforeDrag.x + beforeDrag.w / 2 - 400;
+    check(
+      Math.abs(midDrag.x + midDrag.w / 2 - expectCenter) < 5,
+      `拖动中跟手，不被钉在右缘（中心 ${Math.round(midDrag.x + midDrag.w / 2)}，期望 ${Math.round(expectCenter)}）`,
+    );
     await page.mouse.up();
     const moved = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(moved.x >= 0 && moved.y >= 0, `拖动后位置在视口内（${Math.round(moved.x)},${Math.round(moved.y)}）`);
