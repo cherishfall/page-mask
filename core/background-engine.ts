@@ -34,12 +34,15 @@ import type {
   Ack,
   BgRequest,
   CssAck,
+  CurtainStateReply,
   EnableSiteRequest,
   EnableSiteResponse,
   OpenIntent,
   ReconcileResponse,
 } from './messages';
 import { fromExtensionPage as isExtensionPageSender } from './messages';
+import { t } from './i18n';
+import { isSupportedPage } from './origin';
 
 export interface BackgroundDeps {
   /** 扩展 API（生产传 wxt/browser 的 browser，单测传 fakeBrowser 并按需 stub scripting/permissions） */
@@ -218,6 +221,66 @@ export function createBackground({ browser }: BackgroundDeps): void {
     } catch (e) {
       return { ok: false, error: String(e) };
     }
+  }
+
+  // ---------- 幕布快捷键（#101） ----------
+
+  /** 快捷键失败时图标角标亮多久；SW 的空闲回收在 30 秒量级，3 秒内不会被收走 */
+  const SHORTCUT_BADGE_MS = 3000;
+
+  /**
+   * 快捷键在当前标签页切换幕布。
+   * 按快捷键算一次用户手势，Chrome 会临时授予 activeTab——没添加过的网站也能遮。
+   * 分支：内容脚本在 → 先问状态再切；不在 → 注入一次性脚本；
+   * 注入不了（chrome:// / 商店 / PDF / file://）→ 图标角标 + title 说明，不许静默失败。
+   */
+  async function toggleCurtainByShortcut(): Promise<void> {
+    let tab: Browser.tabs.Tab | undefined;
+    try {
+      [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    } catch {
+      return;
+    }
+    const tabId = tab?.id;
+    if (tabId === undefined) return;
+
+    const state = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+      | CurtainStateReply
+      | undefined;
+    if (state) {
+      const msg = state.covered ? { t: 'curtainDismiss' } : { t: 'curtainCover' };
+      await browser.tabs.sendMessage(tabId, msg).catch(() => undefined);
+      return;
+    }
+
+    const supported = tab?.url ? isSupportedPage(tab.url) : { ok: true };
+    if (!supported.ok) {
+      await flagShortcutBlocked(tabId, supported.reason);
+      return;
+    }
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId },
+        files: [CURTAIN_ONESHOT_FILE] as unknown as ScriptPublicPath[],
+      });
+    } catch {
+      await flagShortcutBlocked(tabId);
+    }
+  }
+
+  /** 快捷键在这个页面用不了：给一次短暂、可见的反馈（角标 + 悬停说明），不弹窗、不打扰 */
+  async function flagShortcutBlocked(tabId: number, reason?: string): Promise<void> {
+    try {
+      await browser.action.setBadgeBackgroundColor({ tabId, color: '#b91c1c' });
+      await browser.action.setBadgeText({ tabId, text: '!' });
+      await browser.action.setTitle({ tabId, title: reason || t().common.shortcutBlocked });
+    } catch {
+      return;
+    }
+    setTimeout(() => {
+      void browser.action.setBadgeText({ tabId, text: '' }).catch(() => undefined);
+      void browser.action.setTitle({ tabId, title: '' }).catch(() => undefined);
+    }, SHORTCUT_BADGE_MS);
   }
 
   // ---------- 扩展更新后重新注入（#22） ----------
@@ -479,6 +542,13 @@ export function createBackground({ browser }: BackgroundDeps): void {
   browser.runtime.onStartup.addListener(() => reconcileInBackground('onStartup'));
   browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
   browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
+
+  // 幕布快捷键（#101）：全产品只此一条命令，其他功能一律不加快捷键（ADR-0010）
+  browser.commands?.onCommand?.addListener((command) => {
+    if (command !== 'toggle-curtain') return;
+    // 返回 Promise 只为了单测能等它跑完；Chrome 不关心 onCommand 的返回值
+    return toggleCurtainByShortcut();
+  });
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     // 只关心站点配置的创建与删除；规则、开关、体检回写等修改不影响注册

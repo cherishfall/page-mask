@@ -75,7 +75,20 @@ function stubBrowser() {
   Object.assign(fakeBrowser.permissions, permissions);
   const sendMessage = vi.fn(async (_tabId: number, _msg: unknown): Promise<unknown> => ({ ok: true }));
   Object.assign(fakeBrowser.tabs, { sendMessage });
-  return { scripting, permissions, registered, granted, sendMessage };
+  // 快捷键（#101）：fakeBrowser 没有 commands / action，用最小替身记录调用
+  const onCommand = fakeEvent<[string]>();
+  const commands = { onCommand };
+  const fake = fakeBrowser as unknown as { commands?: object; action?: object };
+  fake.commands ??= {};
+  Object.assign(fake.commands, commands);
+  const action = {
+    setBadgeText: vi.fn(async (_i: { tabId?: number; text: string }) => undefined),
+    setBadgeBackgroundColor: vi.fn(async (_i: { tabId?: number; color: string }) => undefined),
+    setTitle: vi.fn(async (_i: { tabId?: number; title: string }) => undefined),
+  };
+  fake.action ??= {};
+  Object.assign(fake.action, action);
+  return { scripting, permissions, registered, granted, sendMessage, onCommand, action };
 }
 
 /** 内容脚本所在文档（后台按 sender 定位文档、判断生效范围） */
@@ -779,5 +792,81 @@ describe('后台引擎（fakeBrowser）', () => {
 
     const tabs = await fakeBrowser.tabs.query({});
     expect(tabs.map((t) => t.url)).toContain('chrome-extension://test-extension-id/onboarding.html');
+  });
+
+  describe('幕布快捷键（#101）', () => {
+    /** 当前活动标签页：默认停在可注入的普通网页；返回 restore 供用例结束时还原 */
+    function activeTab(url = `${ORIGIN}/book/1`) {
+      const original = fakeBrowser.tabs.query;
+      fakeBrowser.tabs.query = (async () => [{ id: 42, url }]) as never;
+      return () => {
+        fakeBrowser.tabs.query = original;
+      };
+    }
+
+    it('已经遮着：再按一次撤掉，不再注入', async () => {
+      const restore = activeTab();
+      stubs.sendMessage.mockResolvedValue({ ok: true, covered: true });
+
+      await stubs.onCommand.trigger('toggle-curtain');
+
+      expect(stubs.sendMessage).toHaveBeenNthCalledWith(1, 42, { t: 'curtainState' });
+      expect(stubs.sendMessage).toHaveBeenNthCalledWith(2, 42, { t: 'curtainDismiss' });
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+      restore();
+    });
+
+    it('没遮着：按一次遮住', async () => {
+      const restore = activeTab();
+      stubs.sendMessage.mockResolvedValue({ ok: true, covered: false });
+
+      await stubs.onCommand.trigger('toggle-curtain');
+
+      expect(stubs.sendMessage).toHaveBeenNthCalledWith(2, 42, { t: 'curtainCover' });
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+      restore();
+    });
+
+    it('页面里没有内容脚本（没添加过的网站）：注入一次性幕布脚本', async () => {
+      const restore = activeTab('https://news.example/article/1');
+      stubs.sendMessage.mockRejectedValue(new Error('Could not establish connection'));
+
+      await stubs.onCommand.trigger('toggle-curtain');
+
+      expect(stubs.scripting.executeScript).toHaveBeenCalledWith(
+        expect.objectContaining({ target: { tabId: 42 }, files: ['curtain-oneshot.js'] }),
+      );
+      restore();
+    });
+
+    it('chrome:// 之类不能注入的页面：不尝试注入，图标角标给出一次可见反馈', async () => {
+      vi.useFakeTimers();
+      const restore = activeTab('chrome://settings/');
+      stubs.sendMessage.mockRejectedValue(new Error('Could not establish connection'));
+
+      await stubs.onCommand.trigger('toggle-curtain');
+
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+      expect(stubs.action.setBadgeText).toHaveBeenCalledWith({ tabId: 42, text: '!' });
+      expect(stubs.action.setTitle).toHaveBeenCalledWith(
+        expect.objectContaining({ tabId: 42, title: expect.stringMatching(/.+/) }),
+      );
+
+      // 3 秒后自己消失，不在图标上留一个常驻的错误标记
+      await vi.runAllTimersAsync();
+      expect(stubs.action.setBadgeText).toHaveBeenLastCalledWith({ tabId: 42, text: '' });
+      vi.useRealTimers();
+      restore();
+    });
+
+    it('其他命令一概不响应（全产品只有这一条命令）', async () => {
+      const restore = activeTab();
+
+      await stubs.onCommand.trigger('some-other-command');
+
+      expect(stubs.sendMessage).not.toHaveBeenCalled();
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+      restore();
+    });
   });
 });

@@ -35,6 +35,8 @@ export const zh = {
     clearIcon: '清除图标',
     /** 回退出口（#99）：两处同名同物，动作说清结果、不叫「重置」 */
     resetTitleIcon: '恢复网站原来的标题和图标',
+    /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
+    shortcutBlocked: '这个页面不能遮住',
     resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响。',
     /** 两个状态的名字（GLOSSARY「清爽态 / 原样态」）：短名，用在胶囊与列表上，不用来解释动作 */
     clean: '按设置',
@@ -231,6 +233,15 @@ export const zh = {
     iconUnset: '没设置：标签页上不显示图标',
     iconHint:
       '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。网站自己设的图标优先；网站和这里都没设时，标签页上不显示图标。',
+
+    shortcutHeading: '快捷键',
+    shortcutIntro: '有人走过来时，不用找鼠标：按一下遮住整页，再按一下恢复。',
+    shortcutLabel: '遮住 / 恢复',
+    shortcutUnbound: '没有绑定快捷键，可能被别的扩展占用了',
+    shortcutChange: '在 Chrome 里更改',
+    shortcutHint:
+      'Windows / Linux 默认 Ctrl+Shift+X，Mac 默认 ⌘+Shift+X。改键在 Chrome 自己的快捷键页面，改完这里会跟着变。',
+    shortcutOpenFailed: '这个浏览器不让扩展直接打开那一页，请在新标签页输入 chrome://extensions/shortcuts',
 
     transferHeading: '导出 / 导入',
     transferIntro: '把全部网站的设置和这里的插件设置存成一个文件。换电脑或重装浏览器后导入，就能恢复。',

@@ -68,8 +68,12 @@
 
       <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
       <button data-testid="pm-popup-cover" @click="toggleCurtain">
-        <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
-        <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
+        <span class="popup-cover-label">
+          <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
+          <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
+        </span>
+        <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
+        <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
       </button>
     </template>
 
@@ -86,6 +90,7 @@ import { computed, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { t } from '@/ui/i18n';
 import { createPageMaskStorage } from '@/core/storage';
+import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
 import type { SiteProfile } from '@/core/types';
@@ -151,7 +156,21 @@ onMounted(async () => {
   // 用户可能在扩展详情里改了站点访问权限
   browser.permissions.onAdded.addListener(() => void refresh());
   browser.permissions.onRemoved.addListener(() => void refresh());
+  void refreshShortcut();
 });
+
+/** 幕布快捷键（#101）：显示当前平台的实际绑定，没绑定就不显示 */
+const coverShortcut = ref('');
+
+async function refreshShortcut() {
+  try {
+    const commands = await browser.commands.getAll();
+    const shortcut = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
+    coverShortcut.value = formatShortcut(shortcut, isMacPlatform());
+  } catch {
+    coverShortcut.value = '';
+  }
+}
 
 async function refresh() {
   const o = origin.value;
@@ -442,5 +461,15 @@ function openSettings() {
 .links > .link {
   flex: 1;
   padding-inline: var(--pm-space-1);
+}
+/* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
+.popup-kbd {
+  padding: 0 4px;
+  border: 1px solid var(--pm-border);
+  border-radius: 4px;
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  line-height: 16px;
 }
 </style>

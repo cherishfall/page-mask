@@ -10,5 +10,9 @@
   "actionTitle": {
     "message": "PageMask: change this site's tab title or hide things",
     "description": "Tooltip of the toolbar button."
+  },
+  "commandToggleCurtain": {
+    "message": "Cover this page, or restore it",
+    "description": "Keyboard shortcut description shown in Chrome."
   }
 }

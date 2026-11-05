@@ -127,6 +127,26 @@
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
         </section>
 
+        <!-- 快捷键（#101）：全产品只有幕布这一条命令；改键只能去 Chrome 自己的页面 -->
+        <section class="card" aria-labelledby="pm-settings-shortcut-heading" data-testid="pm-settings-shortcut">
+          <h2 id="pm-settings-shortcut-heading">{{ t.settings.shortcutHeading }}</h2>
+          <p class="hint">{{ t.settings.shortcutIntro }}</p>
+          <div class="row">
+            <span class="row-label">{{ t.settings.shortcutLabel }}</span>
+            <kbd v-if="shortcutLabel" class="shortcut-kbd" data-testid="pm-settings-shortcut-value">{{ shortcutLabel }}</kbd>
+            <span v-else-if="shortcutLoaded" class="pm-mark pm-mark-warning" data-testid="pm-settings-shortcut-unbound">
+              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
+            </span>
+            <button type="button" class="ghost" data-testid="pm-settings-shortcut-change" @click="openShortcutSettings">
+              {{ t.settings.shortcutChange }}
+            </button>
+          </div>
+          <p class="hint">{{ t.settings.shortcutHint }}</p>
+          <p v-if="shortcutOpenFailed" class="hint error" role="alert" data-testid="pm-settings-shortcut-error">
+            {{ t.settings.shortcutOpenFailed }}
+          </p>
+        </section>
+
         <!-- 导出 / 导入 -->
         <section class="card" aria-labelledby="pm-settings-transfer-heading">
           <h2 id="pm-settings-transfer-heading">{{ t.settings.transferHeading }}</h2>
@@ -226,10 +246,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { browser } from 'wxt/browser';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { localeName } from '@/core/i18n';
+import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { locale, t } from '@/ui/i18n';
 import { siteLabelOf } from '../management/site';
@@ -255,9 +276,42 @@ const replaceDialog = ref<HTMLDialogElement | null>(null);
 const iconBusy = ref(false);
 const iconError = ref('');
 
+/**
+ * 快捷键（#101）：显示 Chrome 里**当前实际绑定**的值（用户改过就显示改后的），
+ * 未绑定时给出警告；改键只能去 chrome://extensions/shortcuts，这里只提供入口。
+ */
+const shortcut = ref('');
+const shortcutLoaded = ref(false);
+const shortcutOpenFailed = ref(false);
+const shortcutLabel = computed(() => formatShortcut(shortcut.value, isMacPlatform()));
+
+async function refreshShortcut() {
+  try {
+    const commands = await browser.commands.getAll();
+    shortcut.value = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
+  } catch {
+    shortcut.value = '';
+  }
+  shortcutLoaded.value = true;
+}
+
+async function openShortcutSettings() {
+  shortcutOpenFailed.value = false;
+  try {
+    await browser.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  } catch {
+    // 某些浏览器版本不允许扩展打开这个内部页面：退化成一句可以照着输入的地址
+    shortcutOpenFailed.value = true;
+  }
+}
+
 onMounted(() => {
   void store.init();
+  void refreshShortcut();
+  // 用户去快捷键页改完再回来：聚焦时重新读一次（Chrome 没有「快捷键变了」的事件）
+  window.addEventListener('focus', refreshShortcut);
 });
+onBeforeUnmount(() => window.removeEventListener('focus', refreshShortcut));
 
 async function onIconChange(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -361,6 +415,17 @@ function onReplaceClose() {
 .row-label {
   min-width: 96px;
   color: var(--pm-fg);
+}
+
+/* 键帽（#101）：一眼认得出「这是一个按键」，不用解释文字 */
+.shortcut-kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: 6px;
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
 }
 
 .row input:not([type]) {

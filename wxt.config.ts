@@ -23,6 +23,14 @@ export default defineConfig({
     options_ui: { page: 'settings.html', open_in_tab: true },
     permissions: ['storage', 'scripting', 'activeTab'],
     optional_host_permissions: ['*://*/*'],
+    // 幕布快捷键（#101）：全产品只此一条命令（ADR-0010）。默认键避开 Chrome 保留组合与 macOS 系统键；
+    // 用户可在 chrome://extensions/shortcuts 改，界面显示以 chrome.commands.getAll() 为准。
+    commands: {
+      'toggle-curtain': {
+        suggested_key: { default: 'Ctrl+Shift+X', mac: 'Command+Shift+X' },
+        description: '__MSG_commandToggleCurtain__',
+      },
+    },
   },
   hooks: {
     // WXT 会把 popup/index.html 的 <title> 写成 action.default_title，覆盖上面的配置

@@ -27,6 +27,7 @@ export const en: Messages = {
     replaceIcon: 'Replace icon',
     clearIcon: 'Clear icon',
     resetTitleIcon: 'Use the site’s own title and icon',
+    shortcutBlocked: 'This page can’t be covered',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
     clean: 'Your settings',
     original: 'As is',
@@ -208,6 +209,15 @@ export const en: Messages = {
     iconUnset: 'Not set: the tab shows no icon',
     iconHint:
       'PNG, JPG, GIF, WebP or ICO, up to 5MB. It’s scaled down to 32×32. A site’s own icon wins; with neither, the tab shows no icon.',
+
+    shortcutHeading: 'Keyboard shortcut',
+    shortcutIntro: 'When someone walks up, no need to hunt for the mouse: press it to cover the page, press again to restore.',
+    shortcutLabel: 'Cover / restore',
+    shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
+    shortcutChange: 'Change in Chrome',
+    shortcutHint:
+      'Default: Ctrl+Shift+X on Windows/Linux, ⌘+Shift+X on Mac. Shortcuts are changed on Chrome’s own page; this line follows whatever you set there.',
+    shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
 
     transferHeading: 'Export / Import',
     transferIntro: 'Saves every site’s settings plus these preferences into one file. Import it after switching computers or reinstalling the browser to restore.',

@@ -10,5 +10,9 @@
   "actionTitle": {
     "message": "PageMask：设置这个网站的标签页标题、收起内容",
     "description": "工具栏按钮的悬停提示。"
+  },
+  "commandToggleCurtain": {
+    "message": "遮住这一页 / 恢复这一页",
+    "description": "快捷键说明，显示在 Chrome 的快捷键设置页。"
   }
 }

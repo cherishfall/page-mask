@@ -263,9 +263,12 @@ function checkSources() {
 async function checkPopupChrome(popup, label) {
   check(!(await popup.$(tid('pm-popup-title-settings'))), `${label}：面板里不再有「设置标题和图标」`);
   check(
-    (await popup.$eval(tid('pm-popup-cover'), (b) => b.textContent.trim())) === '遮住这一页',
+    (await popup.$eval(`${tid('pm-popup-cover')} .popup-cover-label`, (b) => b.textContent.trim())) === '遮住这一页',
     `${label}：未遮住时开关写「遮住这一页」`,
   );
+  // 快捷键提示（#101）：按钮上带当前平台的实际绑定
+  const coverKbd = await popup.evaluate((s) => document.querySelector(`${s} .popup-kbd`)?.textContent.trim() ?? '', tid('pm-popup-cover'));
+  check(coverKbd.length > 0, `${label}：遮住按钮带当前快捷键（${coverKbd}）`);
   const entries = await popup.evaluate(
     (s) =>
       s.map((x) => {
@@ -304,7 +307,7 @@ async function coverAndRestore(ext, popup, page, label) {
   await waitFor(
     popup,
     `${label}：重开面板显示「恢复这一页」`,
-    (s) => document.querySelector(s).textContent.trim() === '恢复这一页',
+    (s) => document.querySelector(`${s} .popup-cover-label`)?.textContent.trim() === '恢复这一页',
     [tid('pm-popup-cover')],
     { timeout: 5000 },
   );
@@ -336,6 +339,10 @@ async function footerLandings(ext, browser, page, label) {
   await mgmt.close();
   const settings = await openAndClick('pm-popup-settings', '/settings.html');
   check(settings.url().endsWith('/settings.html'), `${label}：「插件设置」落到 ${settings.url()}`);
+  // 快捷键区块（#101）：显示 Chrome 里当前绑定，不是写死的默认值
+  await settings.waitForSelector(tid('pm-settings-shortcut-value'), { timeout: 5000 });
+  const shortcutText = await settings.$eval(tid('pm-settings-shortcut-value'), (e) => e.textContent.trim());
+  check(shortcutText.length > 0, `${label}：插件设置显示当前快捷键（${shortcutText}）`);
   await settings.close();
 }
 
@@ -491,9 +498,14 @@ async function main() {
       chrome.runtime.sendMessage = () => new Promise(() => undefined);
     });
     await popup.click(tid('pm-popup-cover'));
-    await waitFor(popup, '遮住处理中', (s) => document.querySelector(s).textContent.trim() === '正在遮住…', [tid('pm-popup-cover')]);
+    await waitFor(
+      popup,
+      '遮住处理中',
+      (s) => document.querySelector(`${s} .popup-cover-label`)?.textContent.trim() === '正在遮住…',
+      [tid('pm-popup-cover')],
+    );
     const busyCover = await popup.evaluate((s) => ({
-      text: document.querySelector(s).textContent.trim(),
+      text: document.querySelector(`${s} .popup-cover-label`)?.textContent.trim() ?? '',
       ariaBusy: document.querySelector('main').getAttribute('aria-busy'),
       disabled: document.querySelector(s).disabled,
     }), tid('pm-popup-cover'));
