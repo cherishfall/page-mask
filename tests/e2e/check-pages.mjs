@@ -943,6 +943,67 @@ async function main() {
     check(cur[1] === 'step' && cur.filter(Boolean).length === 1, '「下一步」后 aria-current 移到第 2 步');
     check(await o.$eval('.dots', (d) => d.getAttribute('aria-hidden') === 'true'), '步骤圆点 aria-hidden');
     await checkSchemes(o, '引导页', 'bgSubtle');
+
+    // ---- 矮视口是欢迎页的一等约束（#108）：滚动在内容区，底栏固定、不压任何卡片 ----
+    await o.setViewport({ width: 1084, height: 544 });
+    await o.reload({ waitUntil: 'load' });
+    await o.waitForSelector('.step', { timeout: 5000 });
+    // 切到第 2 步（内嵌真实弹窗，单步比视口高），当前步骤应自动滚进视野
+    await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
+    await waitFor(o, '矮窗切到第 2 步', () => document.querySelectorAll('.step')[1].getAttribute('aria-current') === 'step');
+    await new Promise((res) => setTimeout(res, 700)); // 等平滑滚动到位
+    const shortVp = await o.evaluate(() => {
+      const scroll = document.querySelector('.scroll');
+      const nav = document.querySelector('.nav');
+      const step2 = document.querySelectorAll('.step')[1];
+      const s = scroll.getBoundingClientRect();
+      const n = nav.getBoundingClientRect();
+      const st = step2.getBoundingClientRect();
+      return {
+        scrollable: scroll.scrollHeight > scroll.clientHeight,
+        navBelowScroll: n.top >= s.bottom - 1, // 底栏不覆盖内容区（允许 1px 误差）
+        navHeight: n.height,
+        step2TopVisible: st.top >= s.top - 1, // 切步后第 2 步顶部进入可视区
+        pageOverflow: document.documentElement.scrollHeight <= window.innerHeight, // 整页不滚
+      };
+    });
+    check(shortVp.pageOverflow, '1084×544：整页不出现滚动条，滚动属于内容区');
+    check(shortVp.scrollable, '1084×544 第 2 步：内容区可滚动');
+    check(shortVp.navBelowScroll, `底栏不覆盖内容区（nav.top >= scroll.bottom）`);
+    check(shortVp.step2TopVisible, '切步后第 2 步的顶部自动滚进内容区视野');
+    // 滚到底：第 2 步卡片底部完整可见（不被底栏切掉）
+    await o.evaluate(() => document.querySelector('.scroll').scrollTo(0, 999999));
+    await new Promise((res) => setTimeout(res, 200));
+    const bottom = await o.evaluate(() => {
+      const scroll = document.querySelector('.scroll');
+      const s = scroll.getBoundingClientRect();
+      const st = document.querySelectorAll('.step')[1].getBoundingClientRect();
+      return { step2BottomVisible: st.bottom <= s.bottom + 1 };
+    });
+    check(bottom.step2BottomVisible, '内容区滚到底后第 2 步卡片完整可见');
+    // 读屏播报：切步更新为「第 N 步，共 M 步：<标题>」
+    const statusText = await o.$eval('[role="status"]', (e) => e.textContent ?? '');
+    check(/第 2 步/.test(statusText) && statusText.includes('弹窗里能做的三件事'), `role="status" 播报当前步（${statusText}）`);
+    // 高窗口：整页仍不出现滚动条（滚动只属于内容区），底栏仍在底部。
+    // 内容区本身允许滚动：三张步骤卡 + 真实弹窗预览总高约 1100px，900 高的窗口装不下是内容事实。
+    await o.setViewport({ width: 1440, height: 900 });
+    await new Promise((res) => setTimeout(res, 300));
+    const tall = await o.evaluate(() => {
+      const nav = document.querySelector('.nav');
+      return {
+        pageNoOverflow: document.documentElement.scrollHeight <= window.innerHeight,
+        navAtBottom: Math.abs(nav.getBoundingClientRect().bottom - window.innerHeight) <= 1,
+      };
+    });
+    check(tall.pageNoOverflow, '1440×900：整页无滚动条（滚动只属于内容区）');
+    check(tall.navAtBottom, '1440×900：底栏仍贴窗口底部');
+    // Tab 顺序：上一步 → 下一步（示意图 inert，圆点装饰不可聚焦，滚动区没有别的焦点目标）
+    await o.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await o.keyboard.press('Tab');
+    const tab1 = await o.evaluate(() => (document.activeElement?.textContent ?? '').trim());
+    await o.keyboard.press('Tab');
+    const tab2 = await o.evaluate(() => (document.activeElement?.textContent ?? '').trim());
+    check(tab1 === '上一步' && tab2 === '下一步', `Tab 顺序：上一步 → 下一步（${JSON.stringify([tab1, tab2])}）`);
     await o.close();
 
     // ===================== popup 待授权（最后做：撤销权限） =====================

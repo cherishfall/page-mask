@@ -293,6 +293,8 @@ export const zh = {
     next: '下一步',
     start: '开始使用',
     tip: '两个设置入口在弹窗最下面：全部网站设置、插件设置。',
+    /** 读屏播报当前步（#108）：切步时更新，不抢焦点 */
+    stepStatus: (n: number, m: number, title: string) => `第 ${n} 步，共 ${m} 步：${title}`,
     steps: [
       {
         title: '把 PageMask 固定到工具栏',

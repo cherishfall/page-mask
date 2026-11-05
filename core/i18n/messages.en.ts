@@ -270,6 +270,8 @@ export const en: Messages = {
     next: 'Next',
     start: 'Start using it',
     tip: 'Both settings entries sit at the bottom of the popup: all site settings, and the extension settings.',
+    /** Screen-reader announcement for the current step (#108): updated on step change, never steals focus */
+    stepStatus: (n: number, m: number, title: string) => `Step ${n} of ${m}: ${title}`,
     steps: [
       {
         title: 'Pin PageMask to the toolbar',
