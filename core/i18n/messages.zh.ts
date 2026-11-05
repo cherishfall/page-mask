@@ -155,6 +155,8 @@ export const zh = {
 
     sitesTitle: '全部网站设置',
     sitesHint: '点一个网站进入它的设置。你没添加的网站，PageMask 完全不碰。',
+    /** 行尾「⋯」按钮（#113）：读屏名带域名，一行一个互不混淆 */
+    moreActions: (label: string) => `更多操作：${label}`,
     sitesEmpty: '还没有添加任何网站。打开一个你想收拾的网站，点浏览器工具栏上的 PageMask 图标就能开始设置。',
     pendingAll: (n: number) => `有 ${n} 个网站还没允许访问。在你允许之前，这些网站的设置不会起作用。`,
     authorizeAll: '全部允许',

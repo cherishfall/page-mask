@@ -130,6 +130,8 @@ export const en: Messages = {
 
     sitesTitle: 'All site settings',
     sitesHint: 'Pick a site to open its settings. PageMask never touches sites you didn’t add.',
+    /** Row-end "more" button (#113): accessible name carries the host so rows never blur together */
+    moreActions: (label: string) => `More actions: ${label}`,
     sitesEmpty: 'No sites yet. Open a site you want to tidy up and click the PageMask icon in the toolbar to start.',
     pendingAll: (n: number) =>
       n === 1

@@ -207,52 +207,26 @@
       <footer class="danger-zone">
         <h3>{{ deleteSiteHeading() }}</h3>
         <p class="hint">{{ deleteSiteImpact() }}</p>
-        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="openReset">{{ deleteSiteAction() }}</button>
+        <!-- 确认框在 App.vue（#113：列表页与详情页共用一个实例），这里只发起 -->
+        <button type="button" class="danger" data-testid="pm-mgmt-reset" @click="store.askReset(profile)">{{ deleteSiteAction() }}</button>
         <p v-if="store.state.resetError[profile.origin]" class="hint error" role="alert">
           {{ store.state.resetError[profile.origin] }}
         </p>
       </footer>
     </template>
-
-    <!-- 删除二次确认（原生模态对话框：安全按钮「取消」默认聚焦，危险按钮实底红） -->
-    <dialog
-      ref="resetDialog"
-      aria-labelledby="pm-mgmt-reset-title"
-      data-testid="pm-mgmt-reset-dialog"
-      @close="onResetClose"
-    >
-      <template v-if="store.state.resetTarget">
-        <h2 id="pm-mgmt-reset-title">
-          {{ deleteSiteTitle(siteLabelOf(store.state.resetTarget.origin)) }}
-        </h2>
-        <p data-testid="pm-mgmt-reset-impact">{{ deleteSiteImpact() }}</p>
-      </template>
-      <form method="dialog" class="dialog-actions">
-        <button value="cancel" autofocus data-testid="pm-mgmt-reset-cancel">{{ t.common.cancel }}</button>
-        <button value="confirm" class="primary danger" data-testid="pm-mgmt-reset-confirm">
-          {{ deleteSiteAction() }}
-        </button>
-      </form>
-    </dialog>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
-import {
-  deleteSiteAction,
-  deleteSiteHeading,
-  deleteSiteImpact,
-  deleteSiteTitle,
-} from '@/core/site-delete';
+import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import type { HideRule } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
-import { SITES_HASH } from '../router';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
 import { fileToIconDataUrl } from '../tab-icon';
@@ -277,7 +251,6 @@ const titlePlaceholder = computed(() => {
   return (store.state.drafts[DEFAULT_KEY] ?? '').trim() || store.languageDefaultTitle;
 });
 
-const resetDialog = ref<HTMLDialogElement | null>(null);
 const iconBusy = ref(false);
 const iconError = ref('');
 // 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
@@ -330,23 +303,6 @@ async function clearIcon() {
 async function resetTitleIcon() {
   if (!profile.value) return;
   await store.resetTitleIcon(profile.value.origin);
-}
-
-async function openReset() {
-  if (!profile.value) return;
-  store.askReset(profile.value);
-  await nextTick();
-  resetDialog.value?.showModal();
-}
-
-async function onResetClose() {
-  const dialog = resetDialog.value;
-  const confirmed = dialog?.returnValue === 'confirm';
-  if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次
-  const target = store.state.resetTarget;
-  await store.confirmReset(confirmed);
-  // 删掉后这一页已经没有内容，回列表（失败时留在本页看提示）
-  if (confirmed && target && !store.state.resetError[target.origin]) location.hash = SITES_HASH;
 }
 </script>
 

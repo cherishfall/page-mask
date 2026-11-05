@@ -9,22 +9,40 @@
       <SitesView v-if="route.name === 'sites'" />
       <SiteSettingsView v-else-if="route.name === 'site'" :key="route.host" :host="route.host" />
     </main>
+
+    <!-- 删除二次确认（#113）：两个视图共用这一个实例，谁发起谁调 store.askReset -->
+    <DeleteSiteDialog
+      v-if="store.state.resetTarget"
+      :label="siteLabelOf(store.state.resetTarget.origin)"
+      @deleted="onResetDeleted"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { t } from '@/ui/i18n';
+import DeleteSiteDialog from './DeleteSiteDialog.vue';
 import SiteSettingsView from './views/SiteSettingsView.vue';
 import SitesView from './views/SitesView.vue';
-import { useHashRoute } from './router';
-import { managementStore } from './store';
+import { SITES_HASH, useHashRoute } from './router';
+import { siteHostOf, siteLabelOf } from './site';
+import { managementStore as store } from './store';
 
 const route = useHashRoute();
 const mainEl = ref<HTMLElement | null>(null);
 
+/** 确认框关了：确认才删；删成功且当前在被删站点的详情页时回列表（列表页原地消失，不用跳） */
+async function onResetDeleted(confirmed: boolean) {
+  const target = store.state.resetTarget;
+  await store.confirmReset(confirmed);
+  if (confirmed && target && !store.state.resetError[target.origin] && route.value.name === 'site' && route.value.host === siteHostOf(target.origin)) {
+    location.hash = SITES_HASH;
+  }
+}
+
 onMounted(() => {
-  void managementStore.init();
+  void store.init();
 });
 
 // 切换视图后把焦点交给主区域：点的那一行 / 那个链接可能已经不在页面上，

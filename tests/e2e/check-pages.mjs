@@ -586,7 +586,7 @@ async function main() {
     console.log('\n--- 管理页：两个 tab 与网站列表 ---');
     await site.close(); // 关掉已配置站点的页面，避免页面里的体检回写干扰下面的断言
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
-    const m = await browser.newPage();
+    let m = await browser.newPage(); // grantPermissions 会重载扩展：扩展页会死，后面用新页替换（#113 段落）
     await m.goto(`${extOrigin}/management.html`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
     await m.bringToFront();
@@ -604,10 +604,15 @@ async function main() {
     const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
     check(rowText.includes('原样') && rowText.includes('2 项收起设置'), `一行一站：${rowText.split('\n').join(' / ')}`);
     check((await m.$eval(tid('pm-mgmt-site-link'), (a) => a.getAttribute('href'))) === SITE_HASH, `行链接指向 ${SITE_HASH}`);
-    // #41 / #56：删除入口只在站点设置页页脚，列表行上没有
+    // #113：行尾「⋯」收删除菜单；链接与按钮是兄弟不嵌套；读屏名带域名
+    check(!!(await m.$(tid('pm-mgmt-site-more'))), '每行行尾有「⋯」按钮（删除收进溢出菜单，不常驻红钮）');
     check(
-      !(await m.$(`xpath/.//li[@data-origin="${ORIGIN}"]//button[normalize-space()="删除设置"]`)),
-      '列表行上没有「删除设置」（入口只在站点设置页页脚）',
+      (await m.$eval(tid('pm-mgmt-site-more'), (e) => e.getAttribute('aria-label'))) === `更多操作：${HOST}`,
+      '「⋯」的读屏名带域名',
+    );
+    check(
+      (await m.$eval(tid('pm-mgmt-site-link'), (a) => a.querySelector('button'))) === null,
+      '链接里没有按钮（HTML 合法，读屏不会把两件事读成一个）',
     );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
@@ -780,6 +785,56 @@ async function main() {
       `列表行也不写「0 项」（${zeroRow.split('\n').join(' / ')}）`,
     );
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+
+    // ===================== 管理页：列表行尾删除（#113） =====================
+    console.log('\n--- 管理页：行尾「⋯」菜单与逐行删除 ---');
+    // 打开菜单：焦点进菜单项；Esc 关闭、焦点回「⋯」；点外面也关
+    await m.click(tid('pm-mgmt-site-more'));
+    await m.waitForSelector(tid('pm-mgmt-site-menu'), { timeout: 3000 });
+    check((await m.$eval(tid('pm-mgmt-site-more'), (e) => e.getAttribute('aria-expanded'))) === 'true', '⋯ aria-expanded=true');
+    check(
+      (await m.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'pm-mgmt-row-delete',
+      '菜单打开后焦点进菜单项',
+    );
+    await m.keyboard.press('Escape');
+    await waitFor(m, 'Esc 关菜单', () => !document.querySelector('[data-testid="pm-mgmt-site-menu"]'));
+    check(
+      (await m.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'pm-mgmt-site-more',
+      'Esc 关闭后焦点回「⋯」',
+    );
+    await m.click(tid('pm-mgmt-site-more'));
+    await m.waitForSelector(tid('pm-mgmt-site-menu'), { timeout: 3000 });
+    await m.click('.view-title');
+    await waitFor(m, '点外面关菜单', () => !document.querySelector('[data-testid="pm-mgmt-site-menu"]'));
+    // 菜单项 → 共用确认框：标题带域名、取消不动
+    await m.click(tid('pm-mgmt-site-more'));
+    await m.waitForSelector(tid('pm-mgmt-site-menu'), { timeout: 3000 });
+    await m.click(tid('pm-mgmt-row-delete'));
+    await m.waitForSelector(tid('pm-mgmt-reset-dialog'), { timeout: 3000 });
+    check((await m.$eval(tid('pm-mgmt-reset-dialog'), (d) => d.open)) === true, '列表发起的删除也走共用确认框');
+    check((await m.$eval(tid('pm-mgmt-reset-title'), (e) => e.textContent)).includes(HOST), `确认框标题带域名（${HOST}）`);
+    await m.click(tid('pm-mgmt-reset-cancel'));
+    check((await getProfile(ext.control, ORIGIN)) !== null, '取消后设置还在');
+    // 确认：行消失、留在列表、权限收回
+    await m.click(tid('pm-mgmt-site-more'));
+    await m.waitForSelector(tid('pm-mgmt-site-menu'), { timeout: 3000 });
+    await m.click(tid('pm-mgmt-row-delete'));
+    await m.waitForSelector(tid('pm-mgmt-reset-dialog'), { timeout: 3000 });
+    await m.click(tid('pm-mgmt-reset-confirm'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)) === null, '确认后配置删除');
+    await poll(async () => !(await m.$(`li[data-origin="${ORIGIN}"]`)), '列表行消失');
+    check((await hash()) === '#/sites', '删除后仍留在列表');
+    check(
+      (await ext.control.evaluate(async (o) => chrome.permissions.contains({ origins: [`${o}/*`] }), ORIGIN)) === false,
+      '权限收回（与详情页删除同一套收尾）',
+    );
+    // 恢复现场给下面的用例（grantPermissions 重载扩展会杀掉扩展页：关掉重建一个）
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await grantPermissions(ext, [ORIGIN]);
+    await m.close().catch(() => undefined);
+    m = await browser.newPage();
+    await m.goto(`${extOrigin}/management.html`, { waitUntil: 'load' });
+    await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
 
     console.log('\n--- 插件设置页（默认标题、默认图标、关于） ---');
     await m.goto(`${extOrigin}/settings.html`, { waitUntil: 'load' });
