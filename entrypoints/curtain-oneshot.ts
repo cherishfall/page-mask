@@ -202,7 +202,10 @@ async function run(): Promise<void> {
         } catch {
           // 动作失败也回当前状态，不把回复通道挂死
         }
-        sendResponse({ ok: true, covered: controller.state() });
+        // covered 把「遮住流程进行中」也算上（#114 三轮复查）：后台 coverPage 注入后的回查
+        // 可能落在「监听器已注册、存储还没读完」的几毫秒窗口里，只查 state() 会回 false、
+        // 后台就此误报失败。动作类回复走到这里时流程已完成，covering 恒为 false，不受影响。
+        sendResponse({ ok: true, covered: controller.state() || controller.covering?.() === true });
       })();
       return true; // 异步回复
     },

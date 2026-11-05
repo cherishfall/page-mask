@@ -5,6 +5,37 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.3] - 2026-11-06
+
+发版后深度审查第二、三轮（#115）：复查上一轮修复本身，10 处跟进 + 1 处毫秒级收口。
+Post-release deep review, rounds two and three (#115): reviewing the previous round's own fixes — 10 follow-ups plus one millisecond-level close-out.
+
+### 中文
+
+#### 修复
+
+- **向导开着时弹窗不再报「没能遮住」**：页面控制器拒遮（向导正开着）时不再触发重新注入——重新注入会把用户正开着的向导关掉（#115）
+- **一次遮住请求不再可能被两个控制器互相推让掉**：控制器接口补「遮住进行中」标记，接管方据此把这次请求接住补遮（#115）
+- **「遮住」报成功更严谨**：注入后的回查避开一次性脚本还在加载的窗口（等一拍重查）；毫秒级的「读配置还没读完」窗口也并入「遮住进行中」（#115）
+- 删除确认框关闭后焦点不再被菜单的收起事件拽走；列表「⋯」快速点两行不再可能报错（#115）
+
+#### 变更
+
+- 表单与视觉细节：向导和胶囊面板的标题输入也不再触发密码管理器；弹窗底部链接文字颜色与按钮一致；欢迎页示意图显式不可点；单选行间距与命中区补齐；清理不再使用的文案键（#115）
+
+### English
+
+#### Fixed
+
+- **The popup no longer reports "couldn't cover" while the wizard is open**: when the page controller refuses (the wizard owns the page), the fallback no longer re-injects — which would tear down the user's open wizard (#115)
+- **A cover request can no longer be dropped between two controllers**: the controller interface gained a "covering in progress" flag so the adopting controller picks up and completes the request (#115)
+- **"Covered" reporting is stricter**: the post-injection check waits out the one-shot script's module load; the millisecond window while it reads storage now also counts as "in progress" (#115)
+- Focus is no longer yanked out of the delete dialog by the menu's collapse event; clicking "⋯" on two list rows quickly can no longer throw (#115)
+
+#### Changed
+
+- Form and visual details: the wizard and capsule-panel title inputs no longer trigger the password manager; popup footer links use the same text colour as buttons; the welcome-page artwork is explicitly non-interactive; radio rows got back spacing and hit-area padding; an unused copy key was removed (#115)
+
 ## [0.6.2] - 2026-11-06
 
 发版后深度审查第一轮（#114）：代码复查 + Web Interface Guidelines 审计 + 真站冒烟，修复 16 项。
