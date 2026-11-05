@@ -5,6 +5,39 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.2] - 2026-11-06
+
+发版后深度审查第一轮（#114）：代码复查 + Web Interface Guidelines 审计 + 真站冒烟，修复 16 项。
+Post-release deep review, round one (#114): code review + Web Interface Guidelines audit + real-site smoke — 16 fixes.
+
+### 中文
+
+#### 修复
+
+- **删除确认框可能被跳过**：弹窗里的删除失败过一次后，再按 Esc 关闭确认框会被当成「确认」，直接再次删除。现在与站点设置页同一口径，关闭即复位（#114）
+- **遮住功能可能在一个标签页里永久失效**：极少数时序下（页面注入与启用站点赛跑），一次性脚本会静默退位却留下「初始化中」标记，之后这个标签页再也遮不上。修复退位路径，标记总会复位（#114）
+- **遮住/恢复的状态更可信**：幕布遮住后注入不再假报成功（注入后回查一次）；弹窗的「恢复」不再拿打开时的旧状态比对（期间页面可能已被别处改过）（#114）
+- **列表「⋯」菜单快速点两行不再报错**；弹窗底部两个入口变成真链接，中键 / Cmd+点击也能开新标签页（#114）
+
+#### 变更
+
+- 表单细节：标题输入框不再触发密码管理器（autocomplete=off，三处）；单选行点击区没有死区；返回链接与所有链接悬停有反馈；长域名标题换行不出孤行（#114）
+- 真站冒烟脚本跟上 #98 的行为（只收起内容不改标签页标题），微信读书 / 得到 / 墨问重跑全绿（#114）
+
+### English
+
+#### Fixed
+
+- **The delete confirmation could be skipped**: after one failed delete in the popup, pressing Esc on the dialog was treated as confirmation and deleted again. It now resets on close, same as the site settings page (#114)
+- **Covering could permanently fail in a tab**: in a rare race (one-shot injection vs. enabling the site), the one-shot script bowed out but left an "initializing" flag behind, after which that tab could never be covered. The bow-out path now always resets the flag (#114)
+- **Cover state is more trustworthy**: injection now verifies the curtain is really up before reporting success; the popup's "Restore" no longer compares against a snapshot taken when the popup opened (the page may have changed meanwhile) (#114)
+- **Clicking "⋯" on two list rows quickly no longer errors**; the two popup footer entries are real links now — middle-click / Cmd+click open them in a new tab (#114)
+
+#### Changed
+
+- Form details: title inputs no longer trigger the password manager (autocomplete=off, three places); radio rows have no dead zones; the back link and all links show hover feedback; long hostnames don't leave orphan lines when wrapped (#114)
+- The real-site smoke script now matches #98 (content-only sites keep their tab title); re-run green on weread / dedao / mowen (#114)
+
 ## [0.6.1] - 2026-11-06
 
 第二轮装机反馈：幕布三处入口互通、欢迎页矮窗口、胶囊可淡可小可藏、删除入口补齐。
