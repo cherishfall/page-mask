@@ -5,6 +5,22 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.5.4] - 2026-11-05
+
+拖动回归修复。/ Drag regression fix.
+
+### 中文
+
+#### 修复
+
+- **全功能胶囊拖动被钉在右缘**：上一版重构位置逻辑时删掉了「拖动中跟手」分支——右半视口里拖动只能上下滑。现在拖动全程跟手，松手后仍按停靠边贴靠（往右收不变）（#94）
+
+### English
+
+#### Fixed
+
+- **The capsule was pinned to the right edge while dragging**: the position refactor dropped the follow-the-pointer branch — dragging in the right half only moved vertically. Dragging now follows the pointer the whole way; releasing still docks to the nearest edge (#94)
+
 ## [0.5.3] - 2026-11-05
 
 首次引导页减负：文字砍到每步一句，每步配一张小图。/ The welcome page loses its walls of text: one line per step, one small illustration each.
