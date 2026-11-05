@@ -5,6 +5,82 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.1] - 2026-11-06
+
+第二轮装机反馈：幕布三处入口互通、欢迎页矮窗口、胶囊可淡可小可藏、删除入口补齐。
+Second round of real-device feedback: curtain entries now agree, the welcome page survives short windows, the capsule can fade / shrink / disappear, and delete entries are everywhere you need them.
+
+### 中文
+
+#### 修复
+
+- **幕布三处入口（胶囊 / 弹窗 / 快捷键）现在互相认账**：以前页面上可能同时有两套幕布控制器，「遮 → 撤 → 再遮」第三次会失灵。现在每个页面只有一个控制器，任何一处遮住、另外两处都能恢复；没添加过的网站也能反复遮 / 撤（#107）
+- **欢迎页在矮窗口里显示不全**：窗口只有几百像素高时，底栏压住第 2 步卡片、切步也不滚动。现在滚动只发生在内容区，底栏固定在底部；切「下一步」自动把当前步骤带进视野，读屏同步播报当前步（#108）
+
+#### 变更
+
+- **胶囊收到 WCAG 允许的最小尺寸**：高 32 → 26，全功能宽 170 → 164、mini 宽约 80 → 74；可点区仍是 24×24，触屏仍 40×40。不做大小档——现在就是上限（#109）
+- **不透明度改成 10%–100% 的滑杆**：原来的三档（100% / 85% / 70%）换成一档 10% 的滑杆，拖动即时预览、松手保存；鼠标移上去、键盘选中或拖动时立刻恢复全清楚。旧设置里的三档自动迁移（清晰 → 100%、淡一点 → 90%、很淡 → 70%）（#110）
+
+#### 新增
+
+- **「右下角的小按钮」可以按网站关掉**：插件弹窗里一个开关，关掉后这个网站不显示胶囊；再打开时胶囊回到右下角、完整形态。关掉不影响收起规则、标题和图标、遮住整页的快捷键（#111、#112）
+- **弹窗里能删除这个网站的设置**：藏在弹窗最底部的红字入口，二次确认后删除配置、收回权限——胶囊被藏起来之后，删除从这里仍然够得着（#112）
+- **「全部网站设置」列表可以逐行删除**：每行行尾一个「⋯」菜单，点开就是「删除这个网站的设置」；不用再先进详情页。确认框与详情页是同一个，不加编辑按钮、不做多选（#113）
+
+### English
+
+#### Fixed
+
+- **The three curtain entries (capsule / popup / shortcut) now agree with each other**: two curtain controllers could coexist on a page, so cover → restore → cover again failed on the third press. There is now exactly one controller per page; covering from any entry can be undone from any other, and unadded sites can be covered and restored repeatedly (#107)
+- **The welcome page was cut off in short windows**: with a few hundred pixels of height the bottom bar covered step 2 and switching steps didn't scroll. Scrolling now happens only in the content area with a fixed bottom bar; moving to a step brings it into view and a screen-reader announcement follows (#108)
+
+#### Changed
+
+- **The capsule shrunk to the smallest size WCAG allows**: height 32 → 26, full width 170 → 164, mini width ~80 → 74; hit areas stay 24×24 (40×40 on touch). No size presets — this is the ceiling (#109)
+- **Opacity is now a 10%–100% slider**: the three presets (100% / 85% / 70%) became a slider with 10% steps, previewing instantly and saving on release; it turns fully clear on hover, keyboard focus or drag. Old presets migrate automatically (Clear → 100%, Softer → 90%, Faintest → 70%) (#110)
+
+#### Added
+
+- **The small button in the corner can be turned off per site**: a switch in the popup hides the capsule on that site; turning it back on restores the capsule at the bottom-right corner in full form. Hiding doesn't affect hide rules, the title and icon, or the cover shortcut (#111, #112)
+- **The popup can now delete a site's settings**: a red text entry at the very bottom with a confirmation — reachable even when the capsule is hidden (#112)
+- **The site list supports per-row deletion**: each row ends with a "⋯" menu containing "Delete this site's settings" — no need to open the details page first. Same confirmation dialog as the details page; no edit button, no multi-select (#113)
+
+## [0.6.0] - 2026-11-05
+
+第一轮装机复核内容（装机版：已由产品所有者安装复核，未作为商店版本发布）。
+First review round (installed build: reviewed on the reviewer's machine, never published as a store version).
+
+### 中文
+
+#### 新增
+
+- **幕布快捷键**：默认 Ctrl+Shift+X（Windows）/ ⌘+Shift+X（Mac），按一下遮住整页、再按一下恢复；没添加过的网站也能遮。全产品只有这一条快捷键（#101）
+- **胶囊不透明度三档**：清晰 / 淡一点 / 很淡（0.6.1 起改为 10%–100% 滑杆），只调它闲着的时候有多淡，一碰就恢复清楚（#102）
+
+#### 变更
+
+- **只改保存过「标题和图标」的网站**：只收起内容的网站不再被顺手改掉标签页标题（#98）
+- **保存过标题的网站可以恢复原样**：站点设置页里一键还原网站自己的标题和图标，收起的内容不动（#99）
+- **向导同类组统一用描边**：删掉 1.1 / 1.2 子号牌，组与组的边界一眼可辨（#100）
+- **欢迎页改用真实组件**：三步三功能，示意图就是真的弹窗与胶囊，不会再过期（#103）
+- **新插件图标**：一副歪着放在纸上的面具，16px 起每一档都单独核对（#104）
+
+### English
+
+#### Added
+
+- **Curtain keyboard shortcut**: Ctrl+Shift+X (Windows) / ⌘+Shift+X (Mac) by default — press to cover the page, press again to restore; works on unadded sites too. This remains the product's only shortcut (#101)
+- **Capsule opacity presets**: Clear / Softer / Faintest (replaced by the 10%–100% slider in 0.6.1) — only how faint it sits when idle, instantly clear on touch (#102)
+
+#### Changed
+
+- **Only sites with a saved title and icon get renamed**: sites that only hide content no longer have their tab title changed as a side effect (#98)
+- **Saved titles can be restored**: one click in the site settings puts back the site's own title and icon without touching hidden content (#99)
+- **Wizard groups share one outline**: the 1.1 / 1.2 sub-badges are gone; group boundaries read at a glance (#100)
+- **The welcome page renders real components**: three steps, three features — the artwork is the actual popup and capsule, so it can't go stale (#103)
+- **A new extension icon**: a mask resting tilted on a page, verified at every size from 16px up (#104)
+
 ## [0.5.5] - 2026-11-05
 
 标记语言定案 + 测试脚本加固。/ Marker language settled, plus a test-script fix.

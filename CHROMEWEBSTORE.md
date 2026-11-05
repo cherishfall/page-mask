@@ -3,12 +3,12 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-02 · 对应构建 **0.4.1**（`.output/page-mask-0.4.1-chrome.zip`）
+> 最后更新：2026-11-06 · 对应构建 **0.6.1**（`.output/page-mask-0.6.1-chrome.zip`）
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.4.1-chrome.zip`（27 个文件 / 192 KB）
-- [x] 版本号已改（`package.json` → `0.4.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.4.1`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.6.1-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.6.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.6.1`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.4.1 改了界面用词，截图 4、6 里的按钮名需要跟上）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（#81 界面：弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、全部网站设置、允许访问；菜单四项按用途分三组）
@@ -46,9 +46,12 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题和图标；没单独设置的网站用插件默认图标
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时）；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
+• 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
+• 胶囊可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
 • 每个网站一个开关：页面右下角的小按钮点一下，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
 • 页面内编辑：右下角小按钮的「⋯」菜单可以就地改标签页标题和图标；「编辑收起的内容」打开设置向导的「看效果」，页面上逐行换收起方式、换在哪些页面收起、重新选这一项，删掉的行随保存移除
 • 设置分成两个页面：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
+• 删除入口齐全：弹窗最底部和「全部网站设置」每行的「⋯」菜单里都有「删除这个网站的设置」，不必先点进详情页
 • 失效提醒：网站改版导致某一项找不到目标时，会提醒你重新选一次
 • 中英双语：弹窗、管理页、设置与页面内的按钮都有中文和英文，可在插件设置里选界面语言
 • 导出 / 导入：全部网站的设置和插件设置导出成一个文件（文件名带版本号与导出时间），换电脑后导入
@@ -84,9 +87,12 @@ FEATURES
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over); a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
-• One switch per site: the small button at the bottom-right flips between 「按你的设置显示」 (Shown your way) and 「网站原样」 (As the site is); all tabs of that site switch together
+• Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the capsule, the popup and the shortcut all work on the same state — any of them can undo any other
+• A capsule you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
+• One switch per site: the small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
 • On-page editing: the small button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
 • Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
+• Delete is always reachable: the very bottom of the popup and every row's "⋯" menu in "All site settings" both carry "Delete this site's settings" — no need to open the details page first
 • Broken-item notices: if a site redesign means an item can no longer be found, you're asked to pick it again
 • Bilingual: the popup, management pages, settings and on-page controls all have Chinese and English; pick the interface language in Settings
 • Export / import: move all site settings plus the plugin settings to another computer as one file (the file name carries the version and the export time)
@@ -164,6 +170,8 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.6.1 | 2026-11-06 | 第二轮装机反馈：幕布三处入口（胶囊 / 弹窗 / 快捷键）互通且未添加网站可反复遮撤、欢迎页矮窗口改为内容区滚动 + 底栏固定、胶囊收到 WCAG 最小尺寸（高 26）、不透明度改 10%–100% 滑杆（旧三档自动迁移）、胶囊可按网站隐藏（弹窗开关，显示时回右下角 + 全功能）、弹窗补「删除这个网站的设置」、「全部网站设置」列表逐行删除（⋯ 菜单）。详见 `CHANGELOG.md` |
+| 0.6.0 | 2026-11-05 | 第一轮装机复核（装机版，未作为商店版本发布）：幕布快捷键（Ctrl+Shift+X / ⌘+Shift+X）、胶囊不透明度三档（0.6.1 起为滑杆）、只改保存过标题和图标的网站、可恢复网站原标题与图标、向导同类组统一描边、欢迎页改用真实组件、新插件图标。详见 `CHANGELOG.md` |
 | 0.4.1 | 2026-11-02 | 只说人话的批次：全界面文案重写一遍——菜单与按钮改成具体动作（「设置这个网站」「编辑收起的内容」「网站设置」），两态改叫「按你的设置显示 / 网站原样」，技术词「授权 / 生效 / 规则」全部换成「允许访问 / 起作用 / 收起设置」，同一概念在四个界面只留一种叫法；扩展简介去掉「一键」，工具栏提示改成具体动作。详见 `CHANGELOG.md` |
 | 0.4.0 | 2026-10-30 | 界面捋顺批次：面板只留三件事并新增「遮住本页 / 恢复本页」开关、设置拆成「网站设置」与「插件设置」两个独立页面（插件设置注册为扩展选项）、默认标签页图标三层生效、向导改三步（标题和图标 → 点选内容 → 看效果）、⋯ 菜单四项、「一键清空」改名「删除这个网站的设置」、幕布恢复按钮改为可拖动的睁眼图标、导出文件带插件设置与版本号、全界面中英双语与界面语言设置。详见 `CHANGELOG.md` |
 | 0.3.0 | 2026-10-28 | 真实使用反馈批次：新站点授权后直接进入向导、只想改标题也能配置、站点设置页、向导清空与取消、预览清单行内编辑、幕布（含未添加网站）。详见 `CHANGELOG.md` |
