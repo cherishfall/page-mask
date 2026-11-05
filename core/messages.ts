@@ -179,6 +179,15 @@ export interface CurtainDismissMsg {
   t: 'curtainDismiss';
 }
 
+/**
+ * 扩展页面 → 内容脚本 / 一次性脚本：切换本页的幕布（#107）。
+ * 方向由页面控制器决定（遮着就撤、没遮就遮），回复动作执行后的状态。
+ * 后台快捷键只发这一条：不用「先问状态、再发动作」两步，两步之间状态不会变化。
+ */
+export interface CurtainToggleMsg {
+  t: 'curtainToggle';
+}
+
 /** 幕布状态查询的回复 */
 export interface CurtainStateReply extends Ack {
   covered: boolean;
@@ -224,7 +233,8 @@ export type ContentMsg =
   | SiteResetMsg
   | CurtainStateMsg
   | CurtainCoverMsg
-  | CurtainDismissMsg;
+  | CurtainDismissMsg
+  | CurtainToggleMsg;
 
 /** 内容脚本 / 一次性脚本给扩展页面的回复 */
 export type ContentReply = Ack | CurtainStateReply;

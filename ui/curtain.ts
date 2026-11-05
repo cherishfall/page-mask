@@ -8,6 +8,7 @@
  * - 幕布是页面内的临时状态：不写存储、刷新 / 整页跳转即消失；不是安全边界，页面脚本可以直接删掉宿主
  */
 import { curtainBackgroundFor } from './mask-color';
+import { HOST_TAGS } from '@/core/host-shield';
 import type { PageHost } from './page-host';
 
 /** 在幕布宿主的 shadow root 上拦住、不让页面收到的事件（不拦滚轮与键盘） */
@@ -48,6 +49,10 @@ export class CurtainLayer {
   /** 铺开幕布（已开着时无操作） */
   show(): void {
     if (this.host) return;
+    // 跨隔离环境的兜底（#107）：扩展重载前的旧实例在另一个隔离环境里，登记处（ui/curtain-controller.ts）
+    // 看不见它，但它留下的幕布宿主在同一个文档里。宿主是本产品的自定义元素（core/host-shield.ts），
+    // 页面自己不会长出来，铺自己的层之前摘掉旧的，保证任何时刻文档里最多一个幕布宿主。
+    for (const orphan of document.querySelectorAll(HOST_TAGS.curtain)) orphan.remove();
     const host = this.deps.createHost();
     for (const type of BLOCKED_EVENTS) host.shadow.addEventListener(type, (e) => e.stopPropagation());
     const cover = document.createElement('div');

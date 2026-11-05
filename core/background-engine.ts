@@ -206,12 +206,16 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 未添加网站的幕布（#46） ----------
 
   /**
-   * popup 的「遮住本页」：把一次性幕布脚本注入当前标签页。
-   * 未添加的网站里没有内容脚本（ADR-0001：未配置零注入），只能走这条——activeTab 在用户点
+   * popup 的「遮住本页」：让页面控制器遮，实在没有接收方才注入一次性幕布脚本。
+   * 已添加的网站只要内容脚本在线（弹窗的兜底路径会先注入），curtainCover 就有应答，不重复注入（#107）；
+   * 未添加的网站里没有任何脚本（ADR-0001：未配置零注入），只能走注入——activeTab 在用户点
    * 工具栏图标时授予，注入不需要站点授权，也不注册、不写配置；脚本随文档消失。
-   * 幂等由脚本自己保证：已遮住时再注入一次什么都不做。
    */
   async function coverPage(tabId: number): Promise<Ack> {
+    const reply = (await browser.tabs.sendMessage(tabId, { t: 'curtainCover' }).catch(() => undefined)) as
+      | CurtainStateReply
+      | undefined;
+    if (reply?.covered) return { ok: true };
     try {
       await browser.scripting.executeScript({
         target: { tabId },
@@ -229,9 +233,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
   const SHORTCUT_BADGE_MS = 3000;
 
   /**
-   * 快捷键在当前标签页切换幕布。
+   * 快捷键在当前标签页切换幕布（#107）。
    * 按快捷键算一次用户手势，Chrome 会临时授予 activeTab——没添加过的网站也能遮。
-   * 分支：内容脚本在 → 先问状态再切；不在 → 注入一次性脚本；
+   * 分支：只发一条 curtainToggle，方向由页面控制器决定（遮着就撤、没遮就遮）——
+   * 不再「先问状态、再发动作」两步，两步之间状态不会变化；
+   * 没有接收方 → 判断页面是否可注入 → 注入一次性脚本（脚本自己会遮住）；
    * 注入不了（chrome:// / 商店 / PDF / file://）→ 图标角标 + title 说明，不许静默失败。
    */
   async function toggleCurtainByShortcut(): Promise<void> {
@@ -244,14 +250,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const tabId = tab?.id;
     if (tabId === undefined) return;
 
-    const state = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+    const reply = (await browser.tabs.sendMessage(tabId, { t: 'curtainToggle' }).catch(() => undefined)) as
       | CurtainStateReply
       | undefined;
-    if (state) {
-      const msg = state.covered ? { t: 'curtainDismiss' } : { t: 'curtainCover' };
-      await browser.tabs.sendMessage(tabId, msg).catch(() => undefined);
-      return;
-    }
+    if (reply?.ok) return;
 
     const supported = tab?.url ? isSupportedPage(tab.url) : { ok: true };
     if (!supported.ok) {

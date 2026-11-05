@@ -37,6 +37,7 @@ import type {
   CurtainDismissMsg,
   CurtainStateMsg,
   CurtainStateReply,
+  CurtainToggleMsg,
   EnableSiteResponse,
   OpenIntent,
   OpenWizardMsg,
@@ -129,7 +130,7 @@ async function refresh() {
  */
 async function sendCurtain(
   tabId: number,
-  msg: CurtainStateMsg | CurtainCoverMsg | CurtainDismissMsg,
+  msg: CurtainStateMsg | CurtainCoverMsg | CurtainDismissMsg | CurtainToggleMsg,
 ): Promise<CurtainStateReply | undefined> {
   return (await browser.tabs.sendMessage(tabId, msg).catch(() => undefined)) as CurtainStateReply | undefined;
 }
@@ -265,7 +266,8 @@ async function editTitle() {
 }
 
 /**
- * 遮住开关（#54）：一个按钮两个方向，处理期间禁用防连点。
+ * 遮住 / 恢复开关（#54、#107）：一条 curtainToggle 交给页面控制器，方向由页面决定，
+ * 回复的是动作执行后的状态——不再「先读状态、再发动作」两步，两步之间状态不会变化。
  * 成功后面板关闭——拖走视线的那一步不该再留一个窗口在屏幕上。
  */
 async function toggleCurtain() {
@@ -275,19 +277,39 @@ async function toggleCurtain() {
   errorCode.value = '';
   busy.value = 'curtain';
   try {
-    const ok = wantRestore ? await dismissCurtain(tabId) : await coverCurtain(tabId);
-    if (!ok) {
-      errorCode.value = wantRestore ? 'restoreFailed' : 'coverFailed';
+    const reply = await sendCurtain(tabId, { t: 'curtainToggle' });
+    if (!reply) {
+      // 没有接收方：页面里没有任何还活着的脚本。要恢复——幕布只活在页面里，文档一换就没了，算已恢复；
+      // 要遮住——走兜底注入（未添加过的网站没有内容脚本）。
+      if (wantRestore) {
+        window.close();
+        return;
+      }
+      if (!(await coverCurtain(tabId))) errorCode.value = 'coverFailed';
+      else window.close();
       return;
     }
-    window.close();
+    covered.value = reply.covered === true;
+    // 方向达成才算成功：遮的方向要真遮上，撤的方向要真撤掉
+    if (reply.ok && (wantRestore ? !covered.value : covered.value)) {
+      window.close();
+      return;
+    }
+    if (wantRestore) {
+      // 接收方还在却没撤掉：报错，面板留着让用户重试
+      errorCode.value = 'restoreFailed';
+      return;
+    }
+    // 页面控制器没遮上（例如站点刚被删除，内容脚本遮不了）：走一次性注入兜底
+    if (!(await coverCurtain(tabId))) errorCode.value = 'coverFailed';
+    else window.close();
   } finally {
     busy.value = '';
   }
 }
 
 /**
- * 遮住当前标签页，两条路径按站点状态分流：
+ * 遮住当前标签页，两条路径按站点状态分流（curtainToggle 没有接收方时的兜底）：
  * - 内容脚本在（已添加的网站，页面开过）：让它遮——与悬浮胶囊上的「遮住」同一颗按钮、同一位置、
  *   同一标题来源。不看授权状态：待授权站点只要页面开在撤销授权之前，内容脚本仍然活着；
  * - 已添加且已授权、内容脚本却还没在（页面开在授权之前）：先让后台对账注入一次再发；
@@ -304,12 +326,6 @@ async function coverCurtain(tabId: number): Promise<boolean> {
     .sendMessage({ t: 'coverPage', tabId })
     .catch(() => undefined);
   return res?.ok === true;
-}
-
-/** 撤掉当前标签页的幕布；接收方已经不在了（刷新 / 跳走，幕布本来也随文档消失）就算已恢复 */
-async function dismissCurtain(tabId: number): Promise<boolean> {
-  const reply = await sendCurtain(tabId, { t: 'curtainDismiss' });
-  return reply ? reply.covered === false : true;
 }
 
 /** 底部两个入口：都关掉面板再开新标签页 */

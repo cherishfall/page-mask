@@ -448,7 +448,30 @@ describe('后台引擎（fakeBrowser）', () => {
   // ---------- 未添加网站的幕布（#46：activeTab 注入一次性脚本） ----------
 
   describe('coverPage', () => {
-    it('popup 发来：注入一次性幕布脚本', async () => {
+    it('页面里没有接收方：注入一次性幕布脚本', async () => {
+      stubs.sendMessage.mockRejectedValueOnce(new Error('Could not establish connection'));
+
+      const res = await send({ t: 'coverPage', tabId: siteTabId });
+
+      expect(res).toEqual({ ok: true });
+      expect(stubs.scripting.executeScript).toHaveBeenCalledWith({
+        target: { tabId: siteTabId },
+        files: ['curtain-oneshot.js'],
+      });
+    });
+
+    it('已有页面控制器且遮上了（内容脚本在线）：直接让页面遮，不再注入第二套（#107）', async () => {
+      stubs.sendMessage.mockResolvedValueOnce({ ok: true, covered: true });
+
+      const res = await send({ t: 'coverPage', tabId: siteTabId });
+
+      expect(res).toEqual({ ok: true });
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('接收方回了没遮上（例如站点刚被删除，控制器遮不了）：仍注入一次性脚本兜底', async () => {
+      stubs.sendMessage.mockResolvedValueOnce({ ok: true, covered: false });
+
       const res = await send({ t: 'coverPage', tabId: siteTabId });
 
       expect(res).toEqual({ ok: true });
@@ -459,6 +482,7 @@ describe('后台引擎（fakeBrowser）', () => {
     });
 
     it('注入失败时回复错误，不吞掉原因', async () => {
+      stubs.sendMessage.mockRejectedValueOnce(new Error('Could not establish connection'));
       stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Cannot access a chrome:// URL'));
 
       const res = (await send({ t: 'coverPage', tabId: siteTabId })) as { ok: boolean; error?: string };
@@ -794,7 +818,7 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(tabs.map((t) => t.url)).toContain('chrome-extension://test-extension-id/onboarding.html');
   });
 
-  describe('幕布快捷键（#101）', () => {
+  describe('幕布快捷键（#101、#107）', () => {
     /** 当前活动标签页：默认停在可注入的普通网页；返回 restore 供用例结束时还原 */
     function activeTab(url = `${ORIGIN}/book/1`) {
       const original = fakeBrowser.tabs.query;
@@ -804,32 +828,44 @@ describe('后台引擎（fakeBrowser）', () => {
       };
     }
 
-    it('已经遮着：再按一次撤掉，不再注入', async () => {
+    it('页面控制器有应答：只发一条 curtainToggle，方向由页面决定，不注入', async () => {
       const restore = activeTab();
       stubs.sendMessage.mockResolvedValue({ ok: true, covered: true });
 
       await stubs.onCommand.trigger('toggle-curtain');
 
-      expect(stubs.sendMessage).toHaveBeenNthCalledWith(1, 42, { t: 'curtainState' });
-      expect(stubs.sendMessage).toHaveBeenNthCalledWith(2, 42, { t: 'curtainDismiss' });
+      expect(stubs.sendMessage).toHaveBeenCalledTimes(1);
+      expect(stubs.sendMessage).toHaveBeenCalledWith(42, { t: 'curtainToggle' });
       expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
       restore();
     });
 
-    it('没遮着：按一次遮住', async () => {
+    it('页面回复没遮着：同样只发一条（遮住方向也由页面控制器完成），不注入', async () => {
       const restore = activeTab();
       stubs.sendMessage.mockResolvedValue({ ok: true, covered: false });
 
       await stubs.onCommand.trigger('toggle-curtain');
 
-      expect(stubs.sendMessage).toHaveBeenNthCalledWith(2, 42, { t: 'curtainCover' });
+      expect(stubs.sendMessage).toHaveBeenCalledTimes(1);
       expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
       restore();
     });
 
-    it('页面里没有内容脚本（没添加过的网站）：注入一次性幕布脚本', async () => {
+    it('页面里没有接收方（没添加过的网站）：注入一次性幕布脚本', async () => {
       const restore = activeTab('https://news.example/article/1');
       stubs.sendMessage.mockRejectedValue(new Error('Could not establish connection'));
+
+      await stubs.onCommand.trigger('toggle-curtain');
+
+      expect(stubs.scripting.executeScript).toHaveBeenCalledWith(
+        expect.objectContaining({ target: { tabId: 42 }, files: ['curtain-oneshot.js'] }),
+      );
+      restore();
+    });
+
+    it('接收方回了 ok:false（登记处没有控制器）：同样注入兜底', async () => {
+      const restore = activeTab();
+      stubs.sendMessage.mockResolvedValue({ ok: false, covered: false });
 
       await stubs.onCommand.trigger('toggle-curtain');
 

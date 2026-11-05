@@ -52,6 +52,7 @@ import { t } from '@/core/i18n';
 import { applySettingsLanguage } from '@/ui/i18n';
 import { MaskLayer } from './mask-layer';
 import { CurtainLayer } from './curtain';
+import { currentCurtainController, registerCurtainController, type CurtainControllerSlot, type PageCurtainController } from './curtain-controller';
 import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain-restore';
 import { createPageHost, type PageHost } from './page-host';
 import { showPageNotice } from './page-notice';
@@ -176,6 +177,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let appliedKey: string | null = null;
   /** 幕布开启前的开关态（恢复分支的判据）；null = 幕布没开（#45，不写存储） */
   let curtainEntryState: SiteProfile['switchState'] | null = null;
+  /** 本文档幕布控制器的登记（ui/curtain-controller.ts）；null = 还没登记（或已被 clearPageUi 摘掉） */
+  let curtainSlot: CurtainControllerSlot | null = null;
+  /** 接管旧控制器时它正遮着、而 profile 还没读到：等 refreshState 就绪后由自己重新遮住（#107） */
+  let adoptCoverPending = false;
   /** 体检代次：路由变化、切原样、进向导、收尾时加一，进行中的体检随之作废 */
   let healthGen = 0;
   let handoverRecord: Promise<StyleRecord> | null = null;
@@ -508,6 +513,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    */
   function showCurtain(): void {
     if (!profile || curtain.active) return;
+    // 向导开着时不再铺幕布（#107）：进向导前刚撤过，弹窗/快捷键此时的切换请求不应把幕布盖回向导上
+    if (wizardActive) return;
     curtainEntryState = profile.switchState;
     ensureHostShield();
     curtain.show();
@@ -553,6 +560,55 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 幕布期间开关被其他标签页 / popup 改过时，进入前的状态已不等于当前：按最新配置重应用对齐
     // （正常情形二者相同，不会走到这；点「恢复」回到的仍是点击「遮住」之前的样子）
     if (profile && entry !== profile.switchState) void scheduleRefresh({ force: true });
+  }
+
+  // ---------- 幕布控制器（#107，ADR-0011：每个文档一个，三处入口与跨脚本委托共用） ----------
+
+  /** 页面级控制器：胶囊、弹窗、快捷键与一次性脚本的委托都通过它 */
+  const curtainController: PageCurtainController = {
+    state: () => curtain.active,
+    cover: () => {
+      showCurtain();
+    },
+    dismiss: () => {
+      handleRestore();
+    },
+    toggle: () => {
+      if (curtain.active) handleRestore();
+      else showCurtain();
+    },
+  };
+
+  /**
+   * 确保本运行时的控制器已登记（幂等）。已有登记时：
+   * - 是自己的（adopt 已完成）——不动；
+   * - 是一次性脚本的——让它让位（adoptExistingCurtain），撤掉它的层、换成自己的登记，
+   *   之前遮着的话由自己重新遮住（遮住状态不因接管丢失）。
+   */
+  function ensureCurtainSlotClaimed(): void {
+    if (curtainSlot || disposed) return;
+    const existing = currentCurtainController();
+    if (existing && existing.controller === curtainController) return;
+    if (!existing) {
+      curtainSlot = registerCurtainController('content', curtainController);
+      return;
+    }
+    void adoptExistingCurtain(existing);
+  }
+
+  /** 旧控制器（一次性脚本先到）让位：撤掉它的层、换成自己的登记；之前遮着的话接着遮 */
+  async function adoptExistingCurtain(existing: CurtainControllerSlot): Promise<void> {
+    const wasCovered = existing.controller.state() === true;
+    try {
+      await Promise.resolve(existing.controller.dismiss());
+    } catch {
+      // 旧控制器已失联（扩展重载前的旧一次性脚本）：撤不掉就算了，层随文档消失
+    }
+    if (curtainSlot || disposed) return;
+    curtainSlot = registerCurtainController('content', curtainController);
+    if (!wasCovered || curtain.active) return;
+    if (profile && !wizardActive) showCurtain();
+    else adoptCoverPending = true; // profile 还没读到 / 向导开着：等 refreshState 就绪后再遮
   }
 
   // ---------- 体检 ----------
@@ -601,6 +657,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
   function clearPageUi(): void {
     hideCurtain({ remount: false }); // 先撤幕布再继续（#45；teardown 也走这里）
+    // 控制器登记一并摘掉：profile 都没了就遮不了页，留着登记会让一次性脚本委托到一个遮不了的控制器（#107）
+    curtainSlot?.unregister();
+    curtainSlot = null;
+    adoptCoverPending = false;
     healthGen++;
     shield.release();
     unmountToggle();
@@ -627,6 +687,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (resetting) return;
     profile = p;
     syncToggleState();
+    ensureCurtainSlotClaimed();
+    // 接管旧控制器时它正遮着而 profile 还没就绪：现在补上（#107，遮住状态不因接管丢失）
+    if (adoptCoverPending && !wizardActive && !curtain.active) {
+      adoptCoverPending = false;
+      showCurtain();
+    }
     // 只有体检回写、按钮坐标变化时页面效果不变：只更新按钮，不整页重应用（原样态与地址无关）
     const key = applyKey(p, s, p.switchState === 'disguised' ? location.href : '');
     if (key === appliedKey) return;
@@ -678,14 +744,26 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     sendResponse: (r: ContentReply) => void,
   ): boolean {
     if (disposed) return false;
-    // 幕布的三条消息（#50、#54）：只作用于本文档，且只接受扩展自己的页面发来的——
-    // 网页里的内容脚本 / 网页脚本不能让别的站点遮住 / 撤幕布（core/messages.ts 的 fromExtensionPage）
-    if (msg?.t === 'curtainState' || msg?.t === 'curtainDismiss' || msg?.t === 'curtainCover') {
+    // 幕布的四条消息（#50、#54、#107）：只作用于本文档，且只接受扩展自己的页面发来的——
+    // 网页里的内容脚本 / 网页脚本不能让别的站点遮住 / 撤幕布（core/messages.ts 的 fromExtensionPage）。
+    // 回复的都是动作执行后的状态；cover / dismiss / toggle 在这里是同步的，直接回复。
+    if (
+      msg?.t === 'curtainState' ||
+      msg?.t === 'curtainDismiss' ||
+      msg?.t === 'curtainCover' ||
+      msg?.t === 'curtainToggle'
+    ) {
       if (!fromExtensionPage(sender as { id?: string; url?: string } | undefined, browser.runtime.id, extensionBase)) {
         return false;
       }
+      // 没有配置就遮不了页（站点刚被一键清空等）：不占回复通道——后台会按「没有接收方」注入
+      // 一次性脚本兜底，它的应答才是页面的真实状态（#107：避免两个监听器报告互相矛盾的状态）
+      if (!profile) return false;
+      // 登记处已换人（一次性脚本还在、接管尚未完成的窗口期）：由登记者应答，自己静默（#107）
+      if (currentCurtainController()?.controller !== curtainController) return false;
       if (msg.t === 'curtainDismiss') handleRestore();
       else if (msg.t === 'curtainCover') handleCover();
+      else if (msg.t === 'curtainToggle') curtainController.toggle();
       sendResponse({ ok: true, covered: curtain.active });
       return false;
     }
@@ -701,6 +779,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function activate(): void {
     if (active || disposed) return;
     active = true;
+    // 控制器登记先行（#107）：此时 profile 可能还没读到，接管旧控制器的「接着遮」由 refreshState 补上
+    ensureCurtainSlotClaimed();
     browser.storage.onChanged.addListener(onStorageChanged);
     browser.runtime.onMessage.addListener(onRuntimeMessage);
     ctx.onInvalidated(() => {
