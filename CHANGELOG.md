@@ -5,6 +5,24 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.5.5] - 2026-11-05
+
+标记语言定案 + 测试脚本加固。/ Marker language settled, plus a test-script fix.
+
+### 中文
+
+#### 修复
+
+- **密行里的号码牌归属不明**：在 24 像素高的列表行上，号码牌浮在元素上方、视觉上落在上一行里——看着像上一行的编号，同组最后一行像漏了牌子。密行的号码牌现在放在该行**左侧、与该行同高**，归属一眼确定，也不遮行首文字；够高的卡片与横幅维持原样
+- 测试脚本加固：真站冒烟/真机脚本在无头浏览器里动画帧不触发时不再整条崩掉
+
+### English
+
+#### Fixed
+
+- **Badges were ambiguous in dense rows**: on a 24-pixel list row the badge floated above the element and visually landed in the previous row — it read as that row’s number, and the last member of a group looked like it had none. Dense-row badges now sit to the **left of their row, aligned with it**, so ownership is obvious and the row’s text stays clear; taller cards and banners are unchanged
+- Test scripts no longer crash when animation frames don’t fire in a headless browser
+
 ## [0.5.4] - 2026-11-05
 
 拖动回归修复。/ Drag regression fix.
