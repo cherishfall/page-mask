@@ -137,7 +137,9 @@ export const en: Messages = {
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
     titleHeading: 'Tab title',
-    titleIntro: 'When the “Shown your way” switch at the top is on, this site’s tab shows this text.',
+    titleIntro: 'Once saved, this site’s tab shows this text. With the switch on “As is”, the site’s own title comes back.',
+    titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
+    titleFootnoteUnset: 'Type here and save, and this site starts using your title.',
     titleFootnote: (fallback: string) =>
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome shows the address instead.`,
 
@@ -187,18 +189,18 @@ export const en: Messages = {
   settings: {
     pageTitle: 'PageMask · Settings',
     title: 'Settings',
-    sub: 'These settings apply to every site.',
+    sub: 'These are shared by every site.',
     back: '← All site settings',
 
     titleHeading: 'Default title',
-    titleIntro: 'When a site has no title of its own, its tab shows this text.',
+    titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own.',
     titleLabel: 'Default tab title',
     titleFootnote: (fallback: string) =>
       `Leave it empty to use “${fallback}” (follows the browser language). A title can’t be blank, or Chrome shows the address instead.`,
 
     iconHeading: 'Default icon',
     iconIntro:
-      'Used in the tab when a site has no icon of its own. Changing it updates every site without its own icon.',
+      'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no icon of its own.',
     currentIcon: 'Current default icon',
     currentIconAlt: 'Current default icon',
     iconUnset: 'Not set: the tab shows no icon',

@@ -157,7 +157,9 @@ export const zh = {
     missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它。',
 
     titleHeading: '标签页标题',
-    titleIntro: '上面的「按你的设置显示」开关打开时，标签页显示这段文字。',
+    titleIntro: '保存后，这个网站的标签页就显示这段文字；开关切到「原样」时，仍显示网站本来的标题。',
+    titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
+    titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题。',
     titleFootnote: (fallback: string) =>
       `停止输入后自动保存。留空就用「${fallback}」——标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
@@ -210,17 +212,17 @@ export const zh = {
   settings: {
     pageTitle: 'PageMask · 插件设置',
     title: '插件设置',
-    sub: '这里的设置对所有网站生效。',
+    sub: '这里管的是所有网站共用的一套设置。',
     back: '← 全部网站设置',
 
     titleHeading: '默认标题',
-    titleIntro: '网站自己没有设置标题时，它的标签页显示这段文字。',
+    titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住整页时，没单独设过标题的网站也用它。',
     titleLabel: '默认标签页标题',
     titleFootnote: (fallback: string) =>
       `留空就用「${fallback}」（跟随浏览器语言）。标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
     iconHeading: '默认图标',
-    iconIntro: '网站自己没有设置图标时，它的标签页用这张图。改这里，没单独设过图标的网站会一起变。',
+    iconIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住整页时，没单独设过图标的网站也用它。',
     currentIcon: '当前默认图标',
     currentIconAlt: '当前的默认图标',
     iconUnset: '没设置：标签页上不显示图标',

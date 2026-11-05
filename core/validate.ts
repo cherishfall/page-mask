@@ -194,12 +194,19 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
     hideRules.push(rule);
   }
   const pos = v.floatingBtnPos;
+  const disguisedTitle = typeof v.disguisedTitle === 'string' ? v.disguisedTitle : null;
+  const faviconDataUrl = isSafeFaviconDataUrl(v.faviconDataUrl) ? v.faviconDataUrl : null;
+  // 「保存过标题和图标」(#98)：显式值优先；旧数据按「有标题或有图标」推导——
+  // 只有「标题和图标」那条流程会写这两个字段，所以这个推断对 0.5.x 的存量是准确的
+  const titleIconSet =
+    v.titleIconSet === true ? true : v.titleIconSet === false ? false : !!(disguisedTitle || faviconDataUrl);
   const profile: SiteProfile = {
     formatVersion: 1,
     origin,
     switchState: (SWITCH_STATES as readonly unknown[]).includes(v.switchState) ? (v.switchState as SwitchState) : 'original',
-    disguisedTitle: typeof v.disguisedTitle === 'string' ? v.disguisedTitle : null,
-    faviconDataUrl: isSafeFaviconDataUrl(v.faviconDataUrl) ? v.faviconDataUrl : null,
+    titleIconSet,
+    disguisedTitle,
+    faviconDataUrl,
     hideRules,
     floatingBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
     // mini 形态是本机界面偏好（与 floatingBtnPos 同口径）：只有显式 true 才落字段，缺省即全功能

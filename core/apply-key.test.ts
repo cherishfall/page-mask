@@ -43,11 +43,18 @@ describe('applyKey：判断存储变化是否需要整页重新应用', () => {
       applyKey(ruleChanged, settings, URL_A),
       applyKey(titled, settings, URL_A),
       applyKey(profile(), { defaultTitle: '文档', defaultIconDataUrl: null }, URL_A),
-      // 插件默认图标变了，没单独设过图标的网站要跟着变（#55）
+      // 插件默认图标变了：保存过标题和图标、但没单独设图标的网站要跟着变（#55/#98）
       applyKey(profile(), { defaultTitle: null, defaultIconDataUrl: 'data:image/png;base64,AAA' }, URL_A),
       applyKey(profile(), settings, 'https://site.test/b'),
     ]) {
       expect(key).not.toBe(base);
     }
+  });
+
+  it('「保存过标题和图标」翻转：需要重应用（标题会突然生效或消失，#98）', () => {
+    const base = profile();
+    const on = profile();
+    on.titleIconSet = true;
+    expect(applyKey(on, settings, URL_A)).not.toBe(applyKey(base, settings, URL_A));
   });
 });

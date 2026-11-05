@@ -558,8 +558,13 @@ async function main() {
     );
     check(true, '原样态下 0 条收起项也显示胶囊，文字是「原样」');
 
-    // 三样全空才不挂
-    await patchProfile(ext.control, ORIGIN, { disguisedTitle: null, faviconDataUrl: null, hideRules: [] });
+    // 三样全空才不挂（#98：还要把「保存过标题和图标」的标记一起清掉，否则仍算有设置）
+    await patchProfile(ext.control, ORIGIN, {
+      disguisedTitle: null,
+      faviconDataUrl: null,
+      titleIconSet: false,
+      hideRules: [],
+    });
     await waitFor(page, '三样全空时不显示胶囊', (h) => !document.querySelector(h), [TOGGLE], { timeout: 5000 });
     check(true, '标题、图标、收起项全空时不显示胶囊');
 
@@ -567,6 +572,7 @@ async function main() {
     await patchProfile(ext.control, ORIGIN, {
       switchState: 'disguised',
       disguisedTitle: '低调阅读',
+      titleIconSet: true,
       hideRules: RULES,
     });
     await waitFor(page, '恢复设置后胶囊挂回来', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });

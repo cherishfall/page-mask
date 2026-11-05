@@ -1078,8 +1078,16 @@ async function main() {
     await waitFor(pageNew, '保存后向导直接关闭', (h) => !document.querySelector(h), [HOST]);
     const newProfile = await getProfile(ext.control, NEW_ORIGIN);
     check(
-      newProfile?.hideRules.length === 1 && newProfile.switchState === 'disguised' && !newProfile.disguisedTitle,
-      `新站点保存即建站：1 条收起设置、清爽态、没写标题（标题和图标是另一条流程，${JSON.stringify(newProfile && { rules: newProfile.hideRules.length, state: newProfile.switchState, title: newProfile.disguisedTitle })}）`,
+      newProfile?.hideRules.length === 1 &&
+        newProfile.switchState === 'disguised' &&
+        !newProfile.disguisedTitle &&
+        newProfile.titleIconSet === false,
+      `新站点保存即建站：1 条收起设置、清爽态、没写标题、也没标「设置过标题和图标」（${JSON.stringify(newProfile && { rules: newProfile.hideRules.length, state: newProfile.switchState, title: newProfile.disguisedTitle, titleIconSet: newProfile.titleIconSet })}）`,
+    );
+    // #98：只保存收起内容的网站，标签页标题与图标保持网站原样
+    check(
+      (await pageNew.title()) === 'Acme 书房 · 向导测试',
+      `只设收起规则：标签页标题没有被改成默认标题（${await pageNew.title()}）`,
     );
     await pageNew.close();
 
@@ -1207,8 +1215,9 @@ async function main() {
     check(
       onlyProfile?.hideRules.length === 0 &&
         onlyProfile.disguisedTitle === '只看标题' &&
-        onlyProfile.switchState === 'disguised',
-      `保存 0 条收起设置 + 标题，站点进入清爽态（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState })}）`,
+        onlyProfile.switchState === 'disguised' &&
+        onlyProfile.titleIconSet === true,
+      `保存 0 条收起设置 + 标题，站点进入清爽态，并标记「设置过标题和图标」（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState, titleIconSet: onlyProfile.titleIconSet })}）`,
     );
     await waitFor(pageOnly, '标签页保持保存后的标题', () => document.title === '只看标题');
     // 有设置就显示（#67）：只改过标题的网站页面上也要有小胶囊，否则用户下次想改只能靠记住工具栏图标

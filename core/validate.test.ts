@@ -134,6 +134,23 @@ describe('sanitizeProfile', () => {
     expect(res.profile.hideRules.map((r) => r.id)).toEqual(['r1']);
     expect(res.droppedRules).toBe(2);
   });
+
+  it('「保存过标题和图标」（#98）：显式值优先，旧数据按有没有标题 / 图标推导', () => {
+    const empty = createEmptyProfile('https://a.com');
+    const derive = (over: Record<string, unknown>) => sanitizeProfile({ ...empty, ...over })!.profile.titleIconSet;
+
+    // 0.5.x 存量：只设过收起规则的网站没有一个标题 / 图标 → 没设置过
+    expect(derive({ hideRules: [] })).toBe(false);
+    // 存量里设过标题或图标的网站 → 设置过（只有那条流程会写这两个字段）
+    expect(derive({ disguisedTitle: '阅读' })).toBe(true);
+    expect(derive({ faviconDataUrl: PNG })).toBe(true);
+    // 显式 false 覆盖推导结果：用户点了「恢复网站原来的标题和图标」后，值清空但字段留下 false
+    expect(derive({ disguisedTitle: '阅读', titleIconSet: false })).toBe(false);
+    // 显式 true：保存时输入框清空（标题回落默认）也算设置过
+    expect(derive({ titleIconSet: true })).toBe(true);
+    // 坏类型按推导走，不炸
+    expect(derive({ disguisedTitle: '阅读', titleIconSet: 'yes' })).toBe(true);
+  });
 });
 
 describe('readSettings', () => {

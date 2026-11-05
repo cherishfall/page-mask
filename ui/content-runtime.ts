@@ -191,11 +191,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   }
 
   /**
-   * 这个网站有没有任何设置（#67）：标签页标题、图标、收起项任一非空。
+   * 这个网站有没有任何设置（#67）：保存过的标题和图标、收起项任一非空。
    * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
    */
   function hasSiteSettings(p: SiteProfile): boolean {
-    return !!p.disguisedTitle || !!p.faviconDataUrl || p.hideRules.length > 0;
+    return p.titleIconSet === true || !!p.disguisedTitle || !!p.faviconDataUrl || p.hideRules.length > 0;
   }
 
   function mountToggle(): void {
@@ -430,7 +430,13 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function applyAll(): Promise<boolean> {
     if (!profile) return false;
     // 先压标题、首屏遮挡换成精确规则（都不等后台往返），再同步正式样式
-    guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
+    // 标题与图标只在「保存过」时生效（#98）：只收起内容的网站不该被改掉标签页。
+    // 没保存过时要显式还原——之前可能压过（用户刚在别处清掉了那项设置）
+    if (profile.titleIconSet === true) {
+      guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
+    } else {
+      guard.restore();
+    }
     shield.narrow(buildDisguiseCss(profile.hideRules, location.href));
     const ok = await syncFormalStyles();
     shield.release();

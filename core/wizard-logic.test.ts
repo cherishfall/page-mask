@@ -198,10 +198,13 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
     expect(profile.disguisedTitle).toBe('工作笔记');
     expect(profile.faviconDataUrl).toBeNull();
     expect(profile.switchState).toBe('disguised');
+    // 点过保存 = 设置过（#98）：从此清爽态才改这个网站的标题与图标
+    expect(profile.titleIconSet).toBe(true);
   });
   it('标题留空用兜底值；上传的图标原样保留', () => {
     const patch = titleOnlyPatch({ title: '   ', icon: 'data:image/png;base64,AAA', fallbackTitle: '阅读' });
     expect(patch).toEqual({
+      titleIconSet: true,
       disguisedTitle: '阅读',
       faviconDataUrl: 'data:image/png;base64,AAA',
       switchState: 'disguised',

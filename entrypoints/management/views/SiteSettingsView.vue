@@ -86,7 +86,7 @@
           </button>
         </div>
         <p id="pm-site-title-hint" class="hint">
-          {{ t.management.titleFootnote(fallbackTitle) }}
+          {{ profile.titleIconSet ? t.management.titleFootnote(fallbackTitle) : t.management.titleFootnoteUnset }}
         </p>
       </section>
 
@@ -262,7 +262,12 @@ const isPending = computed(() => (profile.value ? store.state.pendingOrigins.inc
 
 /** 站点没单独设置时的实际标题（全局默认 > 界面语言默认），用作输入框占位与提示 */
 const fallbackTitle = computed(() => (store.state.defaultTitle ?? '').trim() || store.languageDefaultTitle);
-const titlePlaceholder = computed(() => (store.state.drafts[DEFAULT_KEY] ?? '').trim() || store.languageDefaultTitle);
+const titlePlaceholder = computed(() => {
+  // 从没保存过「标题和图标」的网站：输入框空着，标签页保持网站原样（#98）。
+  // 这时不能拿默认标题当占位——会让人以为这个网站已经被改名了。
+  if (profile.value && profile.value.titleIconSet !== true) return t.value.management.titleUnsetPlaceholder;
+  return (store.state.drafts[DEFAULT_KEY] ?? '').trim() || store.languageDefaultTitle;
+});
 
 const resetDialog = ref<HTMLDialogElement | null>(null);
 const iconBusy = ref(false);

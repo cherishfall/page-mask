@@ -65,6 +65,12 @@ export interface SiteProfile {
   /** 形如 https://weread.qq.com（含端口，如非默认） */
   origin: string;
   switchState: SwitchState;
+  /**
+   * 这个网站保存过「标题和图标」（#98）：清爽态只有它为 true 时才改标题与图标。
+   * 没保存过的网站一律保持原样——只收起内容不等于要改标签页。
+   * 缺省（旧数据）按 `!!(disguisedTitle || faviconDataUrl)` 推导：只有那条流程会写这两个字段。
+   */
+  titleIconSet?: boolean;
   /** 伪装标题；null = 用全局设置，全局也没设置时按界面语言取默认（core/titles.ts：「阅读」/ "Reading"） */
   disguisedTitle: string | null;
   /** 伪装图标 data URL；null = 默认全透明图标（标签页上图标位显示为空白） */
@@ -82,14 +88,15 @@ export interface SiteProfile {
 /** 全局设置（独立于各站点配置） */
 export interface GlobalSettings {
   /**
-   * 全局默认伪装标题，站点未覆盖时使用。
+   * 全局默认伪装标题（#98 起不再自动套到所有网站）。
+   * 两个用途：打开某个网站的「标题和图标」时作为预填值；遮住整页时作为没单独设过标题的网站的标题。
    * null = 用户没设置，跟随浏览器界面语言取默认（「阅读」/ "Reading"，见 core/titles.ts）。
    * 不存空白：标题为空时 Chrome 会在标签页上显示网址。
    */
   defaultTitle: string | null;
   /**
    * 全局默认标签页图标（data URL）；null = 用内置的 1×1 全透明图标。
-   * 生效顺序：站点自己的图标 > 这一项 > 内置透明图标（core/icon.ts 的 effectiveIcon）。
+   * 与 defaultTitle 同口径：预填「标题和图标」、以及遮住整页时使用（core/icon.ts 的 effectiveIcon）。
    */
   defaultIconDataUrl: string | null;
   /**

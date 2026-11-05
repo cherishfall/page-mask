@@ -16,6 +16,8 @@ export function applyKey(
   return JSON.stringify([
     url,
     profile.switchState,
+    // 「保存过标题和图标」变了也要重应用：从没设过 → 设过（标题突然生效），反向亦然（#98）
+    profile.titleIconSet === true,
     profile.disguisedTitle,
     profile.faviconDataUrl,
     settings.defaultTitle,

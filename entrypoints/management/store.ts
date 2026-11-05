@@ -157,6 +157,9 @@ export function createManagementStore() {
         const title = value.trim() ? value : null;
         await storage.updateProfile(key, (d) => {
           d.disguisedTitle = title;
+          // 在这张表单里保存过 = 设置过（#98）：从此清爽态按这里的标题与图标显示。
+          // 留空不取消「设置过」——那要走「恢复网站原来的标题和图标」这个明确动作。
+          d.titleIconSet = true;
         });
       }
       if ((state.drafts[key] ?? '') === value) dirty.delete(key);
@@ -242,6 +245,8 @@ export function createManagementStore() {
   async function setIcon(origin: string, dataUrl: string | null): Promise<void> {
     await storage.updateProfile(origin, (d) => {
       d.faviconDataUrl = dataUrl;
+      // 传过图标 = 设置过标题和图标（#98），标题跟着用默认值
+      d.titleIconSet = true;
     });
   }
 

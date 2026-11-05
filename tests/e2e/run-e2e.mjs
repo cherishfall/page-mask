@@ -90,6 +90,9 @@ function seedProfile(origin) {
     formatVersion: 1,
     origin,
     switchState: 'disguised',
+    // 这个网站「保存过标题和图标」（#98）：标题为空时用插件设置里的默认标题。
+    // 本脚本后半段要验证标题补刀 / SPA 翻页后重新压标题，需要一个会改标题的站点
+    titleIconSet: true,
     disguisedTitle: null,
     faviconDataUrl: null,
     hideRules: [
@@ -279,14 +282,23 @@ async function main() {
     await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-save'));
     await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
     await page.waitForSelector(TOGGLE_HOST, { timeout: 8000 });
-    await waitFor(page, '新站点保存后自动进入清爽态', (t) => document.title === t, [DISGUISED_TITLE]);
     await waitStyle(page, '正式规则生效', '.rec-card', 'display', 'none');
+    // #98：只保存收起内容的新站点不改标签页标题——没保存过「标题和图标」就完全不动
+    check(
+      (await page.title()) === FIXTURE_TITLE,
+      `新站点只保存收起内容：标签页保持网站原来的标题（${await page.title()}）`,
+    );
     check(true, '保存后向导关闭、悬浮按钮回归、自动进入清爽态、正式规则生效');
     check((await styleOf(page, '.top-nav')).visibility === 'visible', '删掉的那项没有被保存成规则');
     const stored = await getProfile(ext.control, ORIGIN);
     check(stored.hideRules.length === 1, `规则落库 1 条（实际 ${stored.hideRules.length}）`);
     check(stored.hideRules[0].elementName === RENAMED_CARD, `行内改的名字被保存（${stored.hideRules[0].elementName}）`);
     check(stored.switchState === 'disguised', '站点开关为清爽态');
+    check(stored.titleIconSet === false, '只保存收起内容：没有标记「设置过标题和图标」（#98）');
+    // 后面的用例要验证标题补刀与 SPA 翻页后的重压：模拟用户随后在「标题和图标」里点过保存。
+    // 顺带验证「标记翻转」会触发整页重应用（core/apply-key）
+    await patchProfile(ext.control, ORIGIN, { titleIconSet: true });
+    await waitFor(page, '标记为设置过标题后，标题按全局默认压上去', (t) => document.title === t, [DISGUISED_TITLE]);
     await shot(page, 'wizard-saved');
 
     // ===================== 悬浮按钮菜单（真实鼠标，#25） =====================

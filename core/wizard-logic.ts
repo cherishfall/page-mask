@@ -105,6 +105,8 @@ export function titleFromInput(value: unknown, fallback: unknown): string {
 
 /** 「标题和图标」保存时写进站点配置的字段：0 条收起规则，开关按 keepState（不传 = 清爽） */
 export interface TitleOnlyPatch {
+  /** 点过保存就是「设置过」(#98)：清爽态从此按这里的标题与图标显示，与输入框是否改过无关 */
+  titleIconSet: true;
   disguisedTitle: string;
   faviconDataUrl: string | null;
   switchState: 'disguised' | 'original';
@@ -122,6 +124,7 @@ export function titleOnlyPatch(input: {
   keepState?: 'disguised' | 'original';
 }): TitleOnlyPatch {
   return {
+    titleIconSet: true,
     disguisedTitle: titleFromInput(input.title, input.fallbackTitle),
     faviconDataUrl: input.icon || null,
     switchState: input.keepState ?? 'disguised',
