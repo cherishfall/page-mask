@@ -1206,11 +1206,14 @@ const MATCHED_LIMIT = 30;
 /**
  * 号码牌自己一个盒子（#52）：位置由 badgePlacement 算在元素边界外侧，不再压在元素自己的文字上。
  * 元素贴着视口顶边时号码牌翻到元素下方；实在没有空间才回到内侧，并改用半透明底。
+ * 密行（元素比牌子还矮）改为跨在左上角（#82 标记语言）：浮在上方会落在上一行里，
+ * 读起来像上一行的编号；跨角则归属一眼确定。
  */
 function badgePlace(box: HTMLElement, size = BADGE_SIZE) {
   return (rect: MarkerRect): MarkerRect => {
     const placed = badgePlacement(rect, size, { width: window.innerWidth, height: window.innerHeight });
     box.classList.toggle('inside', placed.side === 'inside');
+    box.classList.toggle('corner', placed.side === 'corner');
     return { left: placed.left, top: placed.top, width: size.width, height: size.height };
   };
 }

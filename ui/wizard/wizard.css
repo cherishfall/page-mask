@@ -542,6 +542,11 @@
   pointer-events: none;
 }
 /* 实在没地方放到外面（元素几乎占满一屏）时才回到内侧：半透明，尽量让下面的字还能看清 */
+/* 密行时号码牌跨在元素左上角（#82 标记语言）：一半在元素内、一半在元素外，归属一眼确定。
+   牌子有 2 像素的背景色描边，压在元素文字上时那圈描边把它隔开，不糊住字 */
+.pm-wiz-badge-box.corner .pm-wiz-badge {
+  box-shadow: 0 0 0 2px var(--pm-bg);
+}
 .pm-wiz-badge-box.inside .pm-wiz-badge {
   opacity: 0.85;
 }

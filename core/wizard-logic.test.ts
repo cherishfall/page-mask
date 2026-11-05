@@ -259,7 +259,29 @@ describe('badgePlacement 号码牌不压在元素自己的文字上（#52）', (
     expect(badgePlacement({ left: -120, top: 300, width: 300, height: 80 }, badge, vp).left).toBe(0);
   });
   it('元素贴右边时号码牌往左收，不超出视口', () => {
-    expect(badgePlacement({ left: 980, top: 300, width: 20, height: 20 }, badge, vp).left).toBe(1000 - 24);
+    // 够高的元素（浮在上方那条路）：贴右边时往左收
+    expect(badgePlacement({ left: 980, top: 300, width: 20, height: 40 }, badge, vp).left).toBe(1000 - 24);
+  });
+  it('密行贴右边时：牌子在元素左侧，不会超出视口右缘', () => {
+    const p = badgePlacement({ left: 980, top: 300, width: 20, height: 20 }, badge, vp);
+    expect(p.side).toBe('left');
+    expect(p.left + badge.width).toBeLessThanOrEqual(980);
+  });
+  it('密行（元素比牌子还矮）：放在元素左侧、垂直居中，归属一眼确定（#82 标记语言）', () => {
+    const p = badgePlacement({ left: 60, top: 300, width: 200, height: 24 }, badge, vp);
+    expect(p.side).toBe('left');
+    expect(p.left + badge.width + 2).toBe(60); // 牌在元素左侧，留 2px 空隙
+    // 垂直居中：牌心与该行文字同一行高
+    expect(p.top + badge.height / 2).toBeCloseTo(300 + 12);
+  });
+  it('密行且贴着视口左缘：左边放不下，改为跨在左上角', () => {
+    const p = badgePlacement({ left: 4, top: 300, width: 200, height: 24 }, badge, vp);
+    expect(p.side).toBe('corner');
+    expect(p.left).toBe(4);
+    expect(p.top + badge.height / 2).toBeCloseTo(300);
+  });
+  it('够高的元素仍浮在上方（观感不变）', () => {
+    expect(badgePlacement({ left: 100, top: 300, width: 200, height: 26 }, badge, vp).side).toBe('above');
   });
 });
 

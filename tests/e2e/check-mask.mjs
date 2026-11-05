@@ -119,7 +119,23 @@ const boxCount = (page) =>
   page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-pm-mask]').length ?? 0, MASK_HOST);
 
 /** 主世界里等两个动画帧（滚动后让跟随有机会更新） */
-const twoFrames = (page) => page.evaluate(() => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))));
+const twoFrames = (page) =>
+  page.evaluate(
+    () =>
+      new Promise((res) => {
+        // 无头浏览器里 rAF 可能不触发（页面隐藏/后台标签）：超时兜底，
+        // 否则整条用例卡在协议超时上（#95）。兜底只保证不卡死——
+        // 帧没跑到时的偏差由断言照常报出来，不掩盖问题
+        let done = false;
+        const fin = (why) => {
+          if (done) return;
+          done = true;
+          res(why);
+        };
+        requestAnimationFrame(() => requestAnimationFrame(() => fin('raf')));
+        setTimeout(() => fin('timeout'), 3000);
+      }),
+  );
 
 // 隔离环境里的钩子（字符串表达式，evalInContentWorld 求值）
 const HOOK_RAF = `(() => {

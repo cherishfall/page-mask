@@ -65,6 +65,7 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><tit
 .cards{display:flex;gap:12px;padding:12px 16px;margin:0;list-style:none}.card{flex:1;height:80px;background:#ffe}
 #promo{height:60px;background:#fee;margin:12px 16px}#banner{height:60px;background:#efe;margin:12px 16px}
 #feed .post{height:40px;background:#f6f6ff;border-bottom:1px solid #dde;padding:0 16px;line-height:40px;margin:0}
+#dense-list{list-style:none;margin:0;padding:0 0 0 40px}#dense-list li{height:24px;line-height:24px;padding:0 16px;background:#f0fff4;border-bottom:1px solid #dde}
 .row{height:60px;border-bottom:1px solid #ddd;padding:0 16px;line-height:60px}.row .txt{display:inline-block;width:120px}</style>
 </head><body>
 <nav id="top-nav">首页 书架 发现</nav>
@@ -73,6 +74,7 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><tit
 <section id="banner">横幅（示例）</section>
 ${Array.from({ length: 40 }, (_, i) => `<div class="row" id="r${i}"><span class="txt" id="t${i}">第 ${i} 行</span></div>`).join('\n')}
 <div id="feed">${Array.from({ length: 25 }, (_, i) => `<p class="post">帖子 ${i + 1}</p>`).join('\n')}</div>
+<ul id="dense-list"><li><span class="dense-t">密行一</span></li><li><span class="dense-t">密行二</span></li><li><span class="dense-t">密行三</span></li></ul>
 </body></html>`;
 
 function handler(req, res) {
@@ -131,7 +133,10 @@ function waitBoxOn(page, label, seq, elSel) {
   );
 }
 
-/** 号码牌是否完全在元素边界外侧（不压住元素自己的文字）：返回 null 表示还没画出来 */
+/**
+ * 号码牌不压住元素自己的文字：够高的元素浮在上方（完全在外），密行跨在左上角
+ * （垂直中线与元素上边相接，#82 标记语言）。返回 null 表示还没画出来。
+ */
 function badgeOutsideEl(page, seq, elSel) {
   return page.evaluate(
     (h, s, sel) => {
@@ -139,7 +144,11 @@ function badgeOutsideEl(page, seq, elSel) {
       const b = sr?.querySelector(`[data-testid="pm-badge-${s}"]`)?.getBoundingClientRect();
       const e = document.querySelector(sel)?.getBoundingClientRect();
       if (!b || !e) return null;
-      return b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5;
+      const outside = b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5;
+      // 密行：牌的垂直中线与元素上边相接（跨角），横向不超出元素宽度
+      const corner =
+        Math.abs(b.top + b.height / 2 - e.top) < 1.5 && b.left < e.left + e.width && b.right > e.left;
+      return outside || corner;
     },
     HOST,
     seq,
@@ -423,10 +432,13 @@ async function main() {
       const sr = document.querySelector(h).shadowRoot;
       const b = sr.querySelector('[data-testid="pm-badge-1"]')?.getBoundingClientRect();
       const e = document.querySelector('.card:nth-child(1)')?.getBoundingClientRect();
-      return !!b && !!e && (b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5);
+      if (!b || !e) return false;
+      const outside = b.bottom <= e.top + 0.5 || b.top >= e.bottom - 0.5;
+      const corner = Math.abs(b.top + b.height / 2 - e.top) < 1.5 && b.left < e.left + e.width;
+      return outside || corner;
     }, [HOST]);
-    check((await badgeOutsideEl(page, 1, C1)) === true, '号码牌 1 完全在第一张卡片外面，不遮住「卡片一」');
-    check((await badgeOutsideEl(page, 3, C3)) === true, '号码牌 3 同样在元素外面');
+    check((await badgeOutsideEl(page, 1, C1)) === true, '号码牌 1 不遮住「卡片一」的文字');
+    check((await badgeOutsideEl(page, 3, C3)) === true, '号码牌 3 同样不遮住元素文字');
 
     // 键盘：聚焦第 2 行的删除按钮，回车只删这一项，序号与号码牌一起重排
     await page.evaluate((h) => {
@@ -737,6 +749,7 @@ async function main() {
     await waitFor(page, '上一步回到点选', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 1 步'), [HOST]);
     check(true, '「上一步：重新选内容」回到点选，继续大组用例');
 
+
     // 焦点切换：选一条大组（25 条帖子 > 20）勾上 → 上一组收回，整片一条描边样式规则。
     // 滚到视口顶部再点：底部居中的工具条加了行内勾选框后更高，视口中央会被它盖住
     await page.evaluate(() => document.querySelector('#feed .post:first-child').scrollIntoView());
@@ -780,6 +793,35 @@ async function main() {
     await clickInShadow(page, HOST, tid('pm-sel-4-remove'));
     await waitFor(page, '收掉帖子行', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 3, [HOST]);
     check(!(await shadowExists(page, HOST, tid('pm-sel-2-same-group'))), '只有一处的行（横幅）不出现勾选框');
+
+    // 密行（#82 标记语言）：牌子跨在元素左上角，垂直中线与上边相接——不落在上一行里
+    await page.evaluate(() => document.querySelector('#dense-list .dense-t')?.scrollIntoView());
+    await clickEl(page, '#dense-list .dense-t');
+    const denseBadge = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const boxes = [...(sr?.querySelectorAll('[data-testid^="pm-badge-"]') ?? [])];
+      const rows = [...document.querySelectorAll('#dense-list .dense-t')].map((el) => el.getBoundingClientRect());
+      for (const box of boxes) {
+        const b = box.getBoundingClientRect();
+        for (const e of rows) {
+          // 密行：牌在元素左侧、垂直居中（不遮行首文字），归属与该行同高
+          if (e.height < b.height && Math.abs(b.top + b.height / 2 - (e.top + e.height / 2)) < 1.5) {
+            return { mid: b.top + b.height / 2, rowMid: e.top + e.height / 2, rowHeight: e.height, leftOf: b.right <= e.left + 0.5 };
+          }
+        }
+      }
+      return null;
+    }, HOST);
+    check(
+      denseBadge !== null && denseBadge.leftOf,
+      `密行的号码牌在该行左侧、与该行同高，不遮行首文字（行高 ${Math.round(denseBadge?.rowHeight ?? 0)}px）`,
+    );
+    // 收掉这一行，后面的用例清单行数不受影响（删清单里的最后一行）
+    const denseRowIdx = await page.evaluate((h) => {
+      const rows = [...document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li')];
+      return rows.length;
+    }, HOST);
+    await clickInShadow(page, HOST, tid(`pm-sel-${denseRowIdx}-remove`));
 
     // 「盖住」：预览必须盖住这一组全部，保存后遮的也是全部（#70，之前只盖了点中的那一个）
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
@@ -1197,6 +1239,8 @@ async function main() {
     await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);
     check(true, '这个入口打开的向导可以正常退出');
     await pageOnly.close();
+
+
   } catch (e) {
     r.fail(e);
   } finally {

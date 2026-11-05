@@ -179,8 +179,8 @@ export interface MarkerRect {
   height: number;
 }
 
-/** above / below = 号码牌完全在元素外面；inside = 实在没地方时的兜底 */
-export type BadgeSide = 'above' | 'below' | 'inside';
+/** above / below = 号码牌完全在元素外面；left = 密行时放在元素左侧、垂直居中；corner = 左边没地方时跨在左上角；inside = 实在没地方时的兜底 */
+export type BadgeSide = 'above' | 'below' | 'left' | 'corner' | 'inside';
 
 export interface BadgePlace {
   left: number;
@@ -193,6 +193,11 @@ const BADGE_GAP = 2;
 
 /**
  * 号码牌左上角的视口坐标。左右夹紧在视口里（元素贴着视口边、半个元素在屏幕外时也不会跑出去）。
+ *
+ * 密行（元素比一块牌还矮，例如 24 像素高的列表行）：牌浮在元素**上方**时视觉上落在**上一行**里——
+ * 读起来像上一行的编号，最后一行看着像漏了牌子（#82 标记语言）。这类改为放在元素**左侧**、
+ * 垂直居中：与该行文字同一行高，归属一眼确定，也不遮住行首文字。左边实在没地方（元素贴着视口左缘）
+ * 才跨在左上角，一半在元素内、一半在元素外。
  */
 export function badgePlacement(
   rect: MarkerRect,
@@ -201,6 +206,19 @@ export function badgePlacement(
   gap = BADGE_GAP,
 ): BadgePlace {
   const left = Math.max(0, Math.min(rect.left, viewport.width - badge.width));
+  // 密行：元素装不下一整块牌
+  if (rect.height < badge.height + gap) {
+    // 左边放得下：放在元素左侧、垂直居中（不遮行首文字）
+    if (rect.left >= badge.width + gap) {
+      return {
+        left: rect.left - badge.width - gap,
+        top: rect.top + (rect.height - badge.height) / 2,
+        side: 'left',
+      };
+    }
+    // 左边没地方：跨在左上角（牌的垂直中线与元素的上边相接）
+    return { left, top: rect.top - badge.height / 2, side: 'corner' };
+  }
   const above = rect.top - badge.height - gap;
   if (above >= 0) return { left, top: above, side: 'above' };
   const below = rect.top + rect.height + gap;
