@@ -128,9 +128,12 @@ async function main() {
         assert((saved?.hideRules?.length ?? 0) >= 1, `${site.name}：规则已落库`);
         assert(await page.$('pagemask-toggle'), `${site.name}：悬浮按钮在`);
         await patchProfile(control, origin, { switchState: 'disguised' });
-        // 本脚本不锁定浏览器语言：默认标题按语言取「阅读」/ "Reading"（#89 起显式选择优先，此处未选）
-        await waitFor(page, '标题已伪装', () => ['阅读', 'Reading'].includes(document.title));
-        assert(true, `${site.name}：保存后向导关闭，开清爽后标题已伪装`);
+        // #98 起只收起内容、没保存过「标题和图标」的网站保持原标题——本脚本没填标题，
+        // 所以这里断言标题「不变」（标题伪装的完整链路由本地 check-toggle 覆盖）
+        const titleBefore = await page.title();
+        await new Promise((r) => setTimeout(r, 1200)); // 等过刷新链路：若回归成「顺手改标题」这里就会变
+        const titleAfter = await page.title();
+        assert(titleAfter === titleBefore, `${site.name}：只收起内容不改标签页标题（#98，${titleAfter}）`);
 
         // 硬校验：保存的规则候选在页面真实命中且已被隐藏
         const candidates = (await getProfile(control, origin))?.hideRules?.[0]?.candidates ?? null;
