@@ -4,7 +4,7 @@
        这样弹窗改版时示意图自动跟上，不会再出现「手抄的假弹窗」。 -->
   <main class="popup" :aria-busy="ariaBusy ? 'true' : 'false'">
     <header class="head">
-      <h1 class="logo">PageMask</h1>
+      <h1 class="logo" translate="no">PageMask</h1>
     </header>
 
     <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">{{ t.popup.loading }}</p>
@@ -100,12 +100,12 @@
       </template>
     </template>
 
-    <!-- 底部两个入口：进「全部网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
+    <!-- 底部两个入口：真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭 -->
     <div class="links">
-      <button class="small link" data-testid="pm-popup-manage" @click="emit('manage')">{{ t.popup.manageAll }}</button>
-      <button class="small link" data-testid="pm-popup-settings" @click="emit('openSettings')">
+      <a class="button small link" href="/management.html#/sites" target="_blank" data-testid="pm-popup-manage">{{ t.popup.manageAll }}</a>
+      <a class="button small link" href="/settings.html" target="_blank" data-testid="pm-popup-settings">
         {{ t.popup.settings }}
-      </button>
+      </a>
     </div>
 
     <!-- 删除这个网站的设置（#112）：红字文字按钮，最底、与入口用分隔线隔开。
@@ -162,8 +162,6 @@ const emit = defineEmits<{
   toggleCapsule: [input: HTMLInputElement];
   /** 点了「删除这个网站的设置」：确认框由父组件（entrypoints/popup）打开 */
   deleteSite: [];
-  manage: [];
-  openSettings: [];
 }>();
 
 const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
@@ -247,6 +245,12 @@ const deleteLabel = deleteSiteHeading();
 .links > .link {
   flex: 1;
   padding-inline: var(--pm-space-1);
+  text-align: center;
+  text-decoration: none;
+}
+/* 按钮样式的链接：悬停底色来自控件样式，这里补一个文字色不变（避免链接默认色干扰） */
+.links > .link:hover {
+  color: inherit;
 }
 /* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
 .popup-kbd {

@@ -70,6 +70,8 @@
               @blur="store.onBlur(DEFAULT_KEY)"
               @input="store.onInput(DEFAULT_KEY)"
               @change="store.saveDraft(DEFAULT_KEY)"
+              name="default-title"
+              autocomplete="off"
             />
           </div>
           <div class="row quick" role="group" aria-labelledby="pm-settings-title-quick">
@@ -459,6 +461,10 @@ function onReplaceClose() {
   font-size: var(--pm-font-size-caption);
 }
 
+.back:hover {
+  text-decoration: underline;
+}
+
 .masthead h1 {
   font-size: var(--pm-font-size-heading);
   margin: 0;
@@ -578,7 +584,8 @@ function onReplaceClose() {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 6px;
+  /* 不留 gap（间距收进 label 的 padding，都是命中区，单选行没有点不着的死区） */
+  gap: 0;
   margin: var(--pm-space-1) 0;
 }
 

@@ -5,7 +5,7 @@
 
     <!-- 应用壳（#108）：标题、步骤、说明放进滚动区，底栏在 flex 里占自己的高度，不再压住内容 -->
     <div class="scroll">
-      <h1>{{ t.onboarding.title }}</h1>
+      <h1 translate="no">{{ t.onboarding.title }}</h1>
       <p class="sub">{{ t.onboarding.sub }}</p>
 
       <ol class="steps">

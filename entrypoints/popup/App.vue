@@ -21,8 +21,6 @@
     @toggle-curtain="toggleCurtain"
     @toggle-capsule="toggleCapsule"
     @delete-site="askDeleteSite"
-    @manage="manage"
-    @open-settings="openSettings"
   />
 
   <!-- 删除二次确认（#112）：与站点设置页 / 胶囊菜单同一套文案与焦点规则——
@@ -314,17 +312,17 @@ async function toggleCurtain() {
       return;
     }
     covered.value = reply.covered === true;
-    // 方向达成才算成功：遮的方向要真遮上，撤的方向要真撤掉
-    if (reply.ok && (wantRestore ? !covered.value : covered.value)) {
+    // 撤的方向信页面：切换已发生，弹窗打开期间页面状态可能已被别处改过
+    //（幕布不进存储，covered 是打开时的快照，拿旧意图比对会误报失败）
+    if (wantRestore) {
       window.close();
       return;
     }
-    if (wantRestore) {
-      // 接收方还在却没撤掉：报错，面板留着让用户重试
-      errorCode.value = 'restoreFailed';
+    if (covered.value) {
+      window.close();
       return;
     }
-    // 页面控制器没遮上（例如站点刚被删除，内容脚本遮不了）：走一次性注入兜底
+    // 遮的方向没遮上（例如站点刚被删除，内容脚本遮不了）：走一次性注入兜底
     if (!(await coverCurtain(tabId))) errorCode.value = 'coverFailed';
     else window.close();
   } finally {
@@ -376,6 +374,7 @@ async function toggleCapsule(input: HTMLInputElement) {
       { touch: false },
     );
     if (updated) profile.value = updated; // 开关立即反映；页面上的胶囊由内容脚本的存储监听卸下 / 挂上
+    else input.checked = !show; // 配置刚好被删（updateProfile 返回 null）：拨回原位
   } catch {
     input.checked = !show; // 写入失败：开关拨回实际状态
   }
@@ -400,7 +399,9 @@ function askDeleteSite() {
 /** 确认后发 resetSite：后台先让打开页面还原，再收回权限、删配置。成功关闭弹窗，失败留在原页 */
 async function onDeleteClose() {
   const dialog = deleteDialog.value;
-  if (!dialog || dialog.returnValue !== 'confirm') return;
+  const confirmed = dialog?.returnValue === 'confirm';
+  if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次（与管理页确认框同口径）
+  if (!confirmed) return;
   const o = origin.value;
   if (!o) return;
   busy.value = 'delete';
@@ -421,19 +422,7 @@ async function onDeleteClose() {
   }
 }
 
-/** 底部两个入口：都关掉面板再开新标签页 */
-async function openPage(path: `/management.html${string}` | `/settings.html${string}`) {
-  await browser.tabs.create({ url: browser.runtime.getURL(path) });
-  window.close();
-}
-
-function manage() {
-  void openPage('/management.html#/sites');
-}
-
-function openSettings() {
-  void openPage('/settings.html');
-}</script>
+</script>
 
 <style>
 /* 删除确认框在 320 宽的弹窗里（#112）：比全局对话框窄一档，不溢出弹窗 */

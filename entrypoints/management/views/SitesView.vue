@@ -57,7 +57,6 @@
               type="button"
               class="site-more"
               :aria-label="t.management.moreActions(siteLabelOf(p.origin))"
-              aria-haspopup="menu"
               :aria-expanded="menuOrigin === p.origin"
               :data-origin="p.origin"
               data-testid="pm-mgmt-site-more"
@@ -127,11 +126,13 @@ async function toggleMenu(p: SiteProfile) {
   }
   menuOrigin.value = p.origin;
   await nextTick();
+  // 等待期间又点了另一行的 ⋯：这一路的使命已经结束（后点的那个会开自己的菜单）
+  if (menuOrigin.value !== p.origin) return;
   const menu = menuEl.value;
   const more = document.querySelector<HTMLButtonElement>(`button.site-more[data-origin="${CSS.escape(p.origin)}"]`);
   moreEl.value = more;
   if (!menu || !more) return;
-  menu.showPopover();
+  if (!menu.matches(':popover-open')) menu.showPopover();
   positionMenu(menu, more);
   // 焦点进菜单（popover 自己不动焦点）；Esc / 点外面的关闭由 @toggle 统一收尾
   menu.querySelector<HTMLButtonElement>('button')?.focus();
@@ -163,6 +164,7 @@ function onMenuToggle() {
 function closeMenu() {
   menuEl.value?.hidePopover();
   menuOrigin.value = null;
+  moreEl.value?.focus(); // 焦点回「⋯」；Esc / 点外部的路径仍由 @toggle 兜底
 }
 
 /** 点了「删除这个网站的设置」：关菜单、发起删除——确认框是 App.vue 里共用的那一个 */

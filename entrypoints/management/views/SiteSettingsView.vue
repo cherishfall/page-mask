@@ -62,6 +62,8 @@
           <label class="visually-hidden" for="pm-site-title-input">{{ t.management.titleHeading }}</label>
           <input
             id="pm-site-title-input"
+            name="site-title"
+            autocomplete="off"
             v-model="store.state.drafts[profile.origin]"
             class="title-input"
             data-testid="pm-mgmt-title"
@@ -311,6 +313,10 @@ async function resetTitleIcon() {
   display: inline-block;
   margin-bottom: var(--pm-space-3);
   font-size: var(--pm-font-size-caption);
+}
+
+.back:hover {
+  text-decoration: underline;
 }
 
 .site-head {

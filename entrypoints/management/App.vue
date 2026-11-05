@@ -1,7 +1,7 @@
 <template>
   <div class="shell">
     <header class="masthead">
-      <h1>PageMask</h1>
+      <h1 translate="no">PageMask</h1>
       <p class="sub">{{ t.management.appSub }}</p>
     </header>
 

@@ -99,9 +99,11 @@ async function run(): Promise<void> {
   ]);
 
   const w = window as unknown as OneshotWindow;
-  // 并发的第二次注入已经先登记了控制器：交给它
+  // 并发的第二次注入已经先登记了控制器：交给它。
+  // pending 必须复位——不复位的话，此后本文档的任何一次注入都在入口处静默返回（实测过的失效模式）
   const existing = w.__pagemaskCurtain;
   if (existing) {
+    w.__pagemaskCurtainPending = false;
     void Promise.resolve(existing.controller.cover()).catch(() => undefined);
     return;
   }
@@ -138,6 +140,9 @@ async function run(): Promise<void> {
       ]);
       // 图标三层：站点自己的 > 插件默认 > 内置透明（#55）
       guard.apply(curtainTitle(profile, settings), effectiveIcon(profile ?? { faviconDataUrl: null }, settings));
+      // 读存储的间隙里登记处可能换了人（内容脚本让位接管，#107）：那就不再铺层——
+      // CurtainLayer.show() 的孤儿清扫会把新登记者的层一起摘掉，赢家自己会遮
+      if (w.__pagemaskCurtain?.controller !== controller) return;
       layer.show();
       const root = layer.root;
       if (!root) return;

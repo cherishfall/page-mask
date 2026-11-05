@@ -221,7 +221,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
         target: { tabId },
         files: [CURTAIN_ONESHOT_FILE] as unknown as ScriptPublicPath[],
       });
-      return { ok: true };
+      // 注入成功 ≠ 遮上了（页面控制器可能拒遮，比如向导开着）：回查一次，不假报成功（#107 复查修）
+      const after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+        | CurtainStateReply
+        | undefined;
+      return { ok: after?.covered === true, error: after?.covered ? undefined : 'curtain did not cover' };
     } catch (e) {
       return { ok: false, error: String(e) };
     }
