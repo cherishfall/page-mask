@@ -94,15 +94,15 @@ describe('buildPreviewCss 向导预览与正式样式同一实现', () => {
   });
 });
 
-describe('buildSameGroupOutlineCss 大组整片描边（#82）', () => {
-  it('全部候选合成一条样式规则（一个块），浅色虚线描边 + !important', () => {
+describe('buildSameGroupOutlineCss 同类组统一描边（#100）', () => {
+  it('全部候选合成一条样式规则（一个块），虚线描边 + !important', () => {
     expect(buildSameGroupOutlineCss(['.post', 'div.post'])).toBe(
-      '.post, div.post { outline: 2px dashed rgb(37 99 235 / 0.4) !important; outline-offset: -2px !important; }',
+      '.post, div.post { outline: 2px dashed rgb(59 130 246 / 0.9) !important; outline-offset: -2px !important; }',
     );
   });
   it('不安全的候选被丢弃，其余照常输出', () => {
     expect(buildSameGroupOutlineCss(['.post', 'a{}'])).toBe(
-      '.post { outline: 2px dashed rgb(37 99 235 / 0.4) !important; outline-offset: -2px !important; }',
+      '.post { outline: 2px dashed rgb(59 130 246 / 0.9) !important; outline-offset: -2px !important; }',
     );
   });
   it('全部候选都不可用时返回 null', () => {

@@ -1241,11 +1241,6 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
 
 /** 号码牌的固定尺寸：定位要先知道尺寸，才能算在元素外面放不放得下 */
 const BADGE_SIZE = { width: 24, height: 24 };
-/**
- * 勾了「一起收起」时逐个挂子号牌的档位上限（#82，可调）：整组不超过这个数才逐个挂牌，
- * 超过就整片一条描边样式规则（buildSameGroupOutlineCss），不为成员逐个建 DOM——信息流页面滚多少都不怕。
- */
-const SAME_SUB_BADGE_LIMIT = 20;
 /** 「盖住」预览 / 量位置时，一条规则的同类组最多数到多少个成员（防刷屏封顶，超出部分不画） */
 const MATCHED_LIMIT = 30;
 
@@ -1325,12 +1320,10 @@ function matchedElements(d: Draft): Element[] {
 }
 
 /**
- * 勾了「一起收起」的那一组里、这一项之外的成员（按候选逐个查、去重）。
- * 超过子号牌档位时提前收手：大组整片描边，不逐个建 DOM（#82 防爆红线）
+ * 这一组里、除了自己以外的第一个成员（#100）：只用于「勾上后把视口滚到看得见的地方」。
+ * 组员本身不再挂任何标记（统一走描边），所以不能再靠子号牌当滚动目标。
  */
-function sameGroupMembers(el: Element, candidates: readonly string[]): Element[] {
-  const out: Element[] = [];
-  const seen = new Set<Element>([el]);
+function firstSameGroupMember(el: Element, candidates: readonly string[]): Element | null {
   for (const sel of candidates) {
     let list: NodeListOf<Element>;
     try {
@@ -1339,52 +1332,10 @@ function sameGroupMembers(el: Element, candidates: readonly string[]): Element[]
       continue;
     }
     for (const member of list) {
-      if (seen.has(member) || isOwnUiNode(member)) continue;
-      seen.add(member);
-      out.push(member);
-      if (out.length > SAME_SUB_BADGE_LIMIT) return out;
+      if (member !== el && !isOwnUiNode(member)) return member;
     }
   }
-  return out;
-}
-
-/** 子号牌 2.1、2.2……：挂在这一组的成员上，点一下跳到清单里这一项的行（与号码牌同一机制） */
-function addSubBadge(el: Element, seq: number, k: number, onClick: () => void) {
-  const badgeBox = makeBox('pm-wiz-badge-box');
-  const tag = document.createElement('button');
-  tag.className = 'pm-wiz-badge';
-  tag.textContent = `${seq}.${k}`;
-  tag.type = 'button';
-  tag.tabIndex = -1; // 鼠标捷径：跳转到清单里对应的行；键盘入口是清单本身，不在这里
-  tag.setAttribute('aria-label', t.value.wizard.badgeJump(seq));
-  tag.dataset.testid = `pm-sub-badge-${seq}-${k}`;
-  tag.addEventListener('click', (e) => {
-    e.stopPropagation();
-    onClick();
-  });
-  badgeBox.appendChild(tag);
-  markerBoxes.push(badgeBox);
-  follower.trackLive(el, badgeBox, badgePlace(badgeBox));
-}
-
-/**
- * 勾了同类的行亮出自己的组（一次只亮这一组，#82）：≤ 20 个逐个挂子号牌，
- * 超过就整片一条描边样式规则（pushPageCss 注入，这里什么都不画）。
- * 主元素的号码牌常驻当锚点，不在这里重复
- */
-function markFocusedSameGroup() {
-  const focus = sameFocusEl.value;
-  if (!focus) return;
-  const row = pickRows.value.find((r) => r.el === focus);
-  if (!row || !sameGroupOn(row)) {
-    sameFocusEl.value = null; // 行没了或勾被取消：焦点一并收回
-    return;
-  }
-  if (row.sameHits > SAME_SUB_BADGE_LIMIT) return; // 大组走描边
-  const cands = row.draft ? row.draft.candidates : generateCandidates(focus, { onlyThis: false });
-  sameGroupMembers(focus, cands).forEach((el, i) => {
-    addSubBadge(el, row.seq, i + 1, () => flashRowByTestid(`pm-sel-${row.seq}`));
-  });
+  return null;
 }
 
 /** 按当前阶段整体重画标记：编号每次都按最新顺序重新计算（N6）；全部同步完成，没有延时登记（N21） */
@@ -1397,8 +1348,8 @@ function renderMarkers() {
       const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
-    // 勾了同类的行：整组亮出来（子号牌 / 大组描边）。看效果阶段不亮组——整组已真实收起，所见即答案（#82）
-    markFocusedSameGroup();
+    // 勾了同类的行：整组用一条描边样式规则亮出来（pushPageCss 注入，#100 起小组与大组同一形态）。
+    // 看效果阶段不亮组——整组已真实收起，所见即答案（#82）
     return;
   }
   drafts.value.forEach((d, i) => {
@@ -1539,8 +1490,8 @@ async function backToPick() {
 /**
  * 当前该注入页面的整份样式（走同一条预览通道，#82）：
  * - 看效果阶段：预览样式（预览所见 = 保存所得）；
- * - 选内容阶段：勾了同类的行若是小组就什么都不用注（子号牌是页内标记），
- *   大组（> 20 个）整片描边——一条样式规则，滚动新加载的元素自动带上。
+ * - 选内容阶段：勾了同类的行整片描边（小组与大组同一形态，#100）——一条样式规则，
+ *   滚动新加载的元素自动带上，不为成员逐个建 DOM。
  * 两个阶段互斥，任何时刻都只注其中一份。
  */
 async function pushPageCss() {
@@ -1619,13 +1570,12 @@ async function onPickSameToggle(row: PickRow, e: Event) {
   sameFocusEl.value = want ? el : sameFocusEl.value === el ? null : sameFocusEl.value;
   renderMarkers();
   await pushPageCss();
-  // 后果要看得见：另外那几个多半在屏幕外，滚到这一组第一个亮出来的标记上
+  // 后果要看得见：另外那几个多半在屏幕外，滚到这一组第一个成员上（组员现在只靠描边，没有牌子可找）
   if (want) {
     await nextTick();
     const seq = pickRows.value.find((r) => r.el === el)?.seq ?? 0;
-    const target =
-      overlayLayer.value?.querySelector('[data-testid^="pm-sub-badge-' + seq + '-"]') ??
-      overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+    const member = firstSameGroupMember(el, focusedGroupCandidates());
+    const target = member ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
     target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
 }
@@ -1651,12 +1601,11 @@ async function inspectSameGroup(d: Draft) {
   sameFocusEl.value = d.el;
   renderMarkers();
   await pushPageCss();
-  // 滚到这一组的第一个标记上（与勾选时同一口径）
+  // 滚到这一组的第一个成员上（与勾选时同一口径）
   await nextTick();
   const seq = pickRows.value.find((r) => r.el === d.el)?.seq ?? 0;
-  const target =
-    overlayLayer.value?.querySelector('[data-testid^="pm-sub-badge-' + seq + '-"]') ??
-    overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+  const member = firstSameGroupMember(d.el, focusedGroupCandidates());
+  const target = member ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
   target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 

@@ -19,8 +19,8 @@
  *   行内换收起方式（原生 radio）立即生效、下面的解释跟着换、第 2 项号码牌位置不变（N7、N8）；
  *   号码牌之外的标记不拦截点击（N8）；点号码牌滚到清单对应行并高亮，不再有调整弹片
  * - 「页面上另外 N 个一样的也一起收起」勾选框住在选内容清单的行内（#82）：勾谁看谁、一次一组整组展开——
- *   小组（≤ 20 个）逐个挂子号牌 3.1、3.2……点子号牌跳清单行；大组（> 20 个）整片一条描边样式规则
- *   （不逐个建 DOM，滚动新出现的同类自动带上）；点已勾选的行切换亮着的组；
+ *   整组统一一条描边样式规则（小组与大组同一形态，#100；不为成员逐个建 DOM，滚动新出现的同类自动带上）；
+ *   点已勾选的行切换亮着的组；
  *   点带标记的组员 = 取消那条规则，再点 = 按默认值加回；看效果不再有这道勾选框，勾了同类的行摘要报数
  * - 底部「在哪些页面收起」三选一；点保存直接落库并关掉向导，没有第二个确认框（#53）
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
@@ -225,7 +225,7 @@ const sameChecked = (page, n) =>
     HOST,
     n,
   );
-/** 页面上亮出来的子号牌（3.1、3.2……勾了同类的行整组挂牌，一次一组，#82） */
+/** 回归守卫（#100 起应为空）：同一组统一走描边，页面上不该再出现 3.1、3.2 这类子号牌 */
 const subBadgeTexts = (page) =>
   page.evaluate(
     (h) => [...(document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-testid^="pm-sub-badge-"]') ?? [])].map((e) => e.textContent.trim()),
@@ -712,25 +712,21 @@ async function main() {
     check(!(await shadowExists(page, HOST, tid('pm-sel-1-same-group'))), '只有一处的项不出现勾选框（#82 行内，条件与原来一致）');
     check((await sameLabel(page, 3)) === '页面上另外 2 个一样的也一起收起', `勾选框说的是具体几个（${await sameLabel(page, 3)}）`);
     check((await sameChecked(page, 3)) === false, '默认不勾（只收这一个）');
-    check((await subBadgeTexts(page)).length === 0, '默认没有组标记（常驻虚线框已退场，#82）');
-
-    // 勾上 → 整组亮出：子号牌 3.1、3.2 挂在另外两张卡片上；选内容阶段页面保持原样
-    await clickInShadow(page, HOST, tid('pm-sel-3-same-toggle'));
-    await waitFor(page, '勾上后另外两张卡片挂上子号牌', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
-    check(await visible(page, C1) && await visible(page, C3), '选内容阶段勾选只是亮出这一组，页面保持原样（不是收起）');
-    check(JSON.stringify(await subBadgeTexts(page)) === '["3.1","3.2"]', `子号牌按 3.1、3.2 编号（${JSON.stringify(await subBadgeTexts(page))}）`);
-    check((await sameChecked(page, 3)) === true, '勾上后勾选框跟着勾上');
-
-    // 点子号牌跳清单行（与号码牌同一机制）
-    await clickInShadow(page, HOST, tid('pm-sub-badge-3-1'));
-    await waitFor(
-      page,
-      '点子号牌后选内容清单第 3 行高亮',
-      (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-3"]')?.classList.contains('flash'),
-      [HOST],
-      { timeout: 3000 },
+    check(
+      (await outlineStyleOf(page, C1)) !== 'dashed' && (await outlineStyleOf(page, C3)) !== 'dashed',
+      '默认没有组标记（成员不带描边）',
     );
-    check(true, '点子号牌 3.1：清单第 3 行高亮');
+
+    // 勾上 → 整组亮出：另外两张卡片统一描边（小组与大组同一形态，#100）；选内容阶段页面保持原样
+    await clickInShadow(page, HOST, tid('pm-sel-3-same-toggle'));
+    await waitFor(page, '勾上后另外两张卡片出现描边', () => {
+      const one = document.querySelector('.card:nth-child(1)');
+      const three = document.querySelector('.card:nth-child(3)');
+      return getComputedStyle(one).outlineStyle === 'dashed' && getComputedStyle(three).outlineStyle === 'dashed';
+    });
+    check(await visible(page, C1) && await visible(page, C3), '选内容阶段勾选只是亮出这一组，页面保持原样（不是收起）');
+    check((await subBadgeTexts(page)).length === 0, '成员不再挂 3.1/3.2 子号牌：一组只有一种标记（#100）');
+    check((await sameChecked(page, 3)) === true, '勾上后勾选框跟着勾上');
 
     // #88「检查同类」：预览行跳回点选亮出整组，看完「下一步」回来草稿不丢
     console.log('\n--- 看效果 ↔ 检查同类：往返一圈状态都在（#88） ---');
@@ -739,8 +735,12 @@ async function main() {
     await waitFor(page, '看效果第 3 行有「检查同类」入口', (h) => !!document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-3-inspect-same"]'), [HOST]);
     await clickInShadow(page, HOST, tid('pm-draft-3-inspect-same'));
     await waitFor(page, '跳回点选阶段', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 1 步'), [HOST]);
-    await waitFor(page, '整组子号牌重新亮出', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
-    check(true, '「检查同类」跳回点选，第 3 行的组员牌子都在');
+    await waitFor(page, '整组描边重新亮出', () => {
+      const one = document.querySelector('.card:nth-child(1)');
+      const three = document.querySelector('.card:nth-child(3)');
+      return getComputedStyle(one).outlineStyle === 'dashed' && getComputedStyle(three).outlineStyle === 'dashed';
+    });
+    check(true, '「检查同类」跳回点选，第 3 行的组员都带描边');
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitFor(page, '回到看效果', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 2 步'), [HOST]);
     check(true, '回到看效果：第 2 步 / 共 2 步，草稿原样（摘要细节由上面既有断言覆盖）');
@@ -758,7 +758,11 @@ async function main() {
     check((await sameLabel(page, 4)) === '页面上另外 24 个一样的也一起收起', `大组勾选框报具体个数（${await sameLabel(page, 4)}）`);
     await clickInShadow(page, HOST, tid('pm-sel-4-same-toggle'));
     await waitFor(page, '大组整片描边', () => getComputedStyle(document.querySelector('#feed .post:nth-child(20)')).outlineStyle === 'dashed');
-    check((await subBadgeTexts(page)).length === 0, '焦点切走上一组收回；大组不逐个建标记（子号牌为 0，> 20 走描边档）');
+    check(
+      (await outlineStyleOf(page, C1)) !== 'dashed' && (await outlineStyleOf(page, C3)) !== 'dashed',
+      '焦点切走上一组：卡片组的描边收回（一次只亮一组）',
+    );
+    check((await subBadgeTexts(page)).length === 0, '同类组不再逐个挂牌（回归守卫：一个 3.x 子号牌都不该有）');
     check(
       (await page.evaluate(() => {
         const el = document.createElement('p');
@@ -771,11 +775,15 @@ async function main() {
 
     // 点已勾选的行 = 把亮着的组换成这一行的（上一组收回）。点在名称区，避开勾选框与 ✕
     await clickInShadow(page, HOST, tid('pm-sel-3'), { offset: { x: 100, y: 8 } });
-    await waitFor(page, '焦点切回卡片组：子号牌回来', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-sub-badge-"]').length === 2, [HOST]);
+    await waitFor(page, '焦点切回卡片组：描边回来', () => {
+      const one = document.querySelector('.card:nth-child(1)');
+      const three = document.querySelector('.card:nth-child(3)');
+      return getComputedStyle(one).outlineStyle === 'dashed' && getComputedStyle(three).outlineStyle === 'dashed';
+    });
     check((await outlineStyleOf(page, '#feed .post:nth-child(20)')) !== 'dashed', '大组的描边同时收回（一次只亮一组）');
     await clickInShadow(page, HOST, tid('pm-sel-4'), { offset: { x: 100, y: 8 } });
     await waitFor(page, '焦点切回大组：描边回来', () => getComputedStyle(document.querySelector('#feed .post:nth-child(20)')).outlineStyle === 'dashed');
-    check((await subBadgeTexts(page)).length === 0, '卡片组的子号牌同时收回');
+    check((await outlineStyleOf(page, C1)) !== 'dashed', '卡片组的描边同时收回');
 
     // 点带标记的组员 = 取消那条规则：整行从清单去掉、整组解标记（等同行上的 ✕，#82 交接铁律）
     await clickEl(page, '#feed .post:nth-child(3)');
@@ -783,7 +791,7 @@ async function main() {
     check((await outlineStyleOf(page, '#feed .post:nth-child(20)')) !== 'dashed', '整组解标记：描边撤掉');
     check(!(await shadowExists(page, HOST, tid('pm-sel-4-same-group'))), '被取消的那一行整个从清单去掉（第 4 行不再存在）');
     check((await sameChecked(page, 3)) === true, '卡片二那一行的勾选不受影响（取消的是被点的这一组）');
-    check((await subBadgeTexts(page)).length === 0, '亮着的组随取消一并收回');
+    check((await outlineStyleOf(page, C1)) !== 'dashed', '亮着的组随取消一并收回（描边撤掉）');
 
     // 再点刚才的组员位置 = 按默认值当新的一项加回（同类默认只收一个）
     await clickEl(page, '#feed .post:first-child');

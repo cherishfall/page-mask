@@ -37,11 +37,13 @@ export function buildPreviewCss(items: CssSource[]): string | null {
 }
 
 /** 大组（超过子号牌档位）整片浅色描边的样子：与向导标记同一族（虚线、accent 蓝的浅色版） */
-const OUTLINE_DECL = 'outline: 2px dashed rgb(37 99 235 / 0.4) !important; outline-offset: -2px !important;';
+// 勾选「一起收起」时这一组的统一标记（#100）：小组与大组同一形态。
+// 颜色比主选中框（橙色实线）弱一档，但要能在浅色与深色页面上都看清——0.4 的透明度在深色页上几乎消失
+const OUTLINE_DECL = 'outline: 2px dashed rgb(59 130 246 / 0.9) !important; outline-offset: -2px !important;';
 
 /**
- * 勾了「一起收起」的大组（超过逐个挂牌的档位）整片浅色描边：全部候选合成**一条**样式规则
- * （选择器列表一个块）。走用户样式表通道注入，滚动新加载的元素自动带上——不为成员逐个建 DOM（#82 防爆红线）。
+ * 勾了「一起收起」的整组：全部候选合成**一条**样式规则（选择器列表一个块）。
+ * 走用户样式表通道注入，滚动新加载的元素自动带上——不为成员逐个建 DOM（#82 防爆红线）。
  * 没有可用候选时返回 null（不注入空规则）。
  */
 export function buildSameGroupOutlineCss(candidates: readonly string[]): string | null {
