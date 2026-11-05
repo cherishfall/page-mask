@@ -5,6 +5,7 @@
  * 界面文案不在这里：全部集中在 core/i18n（收起方式的三个名字也从 `t().common.strategy` 取）。
  */
 import type { UiLanguage } from './i18n/locale';
+import type { ToggleOpacity } from './toggle-opacity';
 
 /** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖（界面用词见 core/i18n 的 common.strategy） */
 export type StrategyId = 'remove' | 'blank' | 'mask';
@@ -110,6 +111,11 @@ export interface GlobalSettings {
    * 只影响界面文字；标签页的兜底标题永远按浏览器界面语言取（core/titles.ts）。
    */
   uiLanguage: UiLanguage;
+  /**
+   * 右下角小胶囊的不透明度（#102）：'full' / 'soft' / 'faint'。
+   * 全局偏好，只作用于胶囊；幕布上的「恢复」按钮不跟随（它固定 85%，是遮住后唯一的回家路）。
+   */
+  toggleOpacity: ToggleOpacity;
 }
 
 export const DEFAULT_SETTINGS: GlobalSettings = {
@@ -117,6 +123,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
   defaultIconDataUrl: null,
   curtainBtnPos: null,
   uiLanguage: 'auto',
+  toggleOpacity: 'full',
 };
 
 /** 导出文件结构：带版本号字段供未来迁移（ADR-0004） */

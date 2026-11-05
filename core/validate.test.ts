@@ -163,6 +163,14 @@ describe('readSettings', () => {
     expect(readSettings({ defaultTitle: '新建标签页' }).defaultTitle).toBe('新建标签页'); // 不做旧版迁移
   });
 
+  it('胶囊不透明度（#102）：只接受三档，坏值 / 旧数据回落「清晰」', () => {
+    expect(readSettings(undefined).toggleOpacity).toBe('full');
+    expect(readSettings({ toggleOpacity: 'soft' }).toggleOpacity).toBe('soft');
+    expect(readSettings({ toggleOpacity: 'faint' }).toggleOpacity).toBe('faint');
+    expect(readSettings({ toggleOpacity: 'dim' }).toggleOpacity).toBe('full');
+    expect(readSettings({ toggleOpacity: 0.5 }).toggleOpacity).toBe('full');
+  });
+
   it('「遮住」按钮位置（#50）：合法坐标保留，缺字段 / 类型不对一律回落 null', () => {
     expect(readSettings({ curtainBtnPos: { x: 1.5, y: 2 } }).curtainBtnPos).toEqual({ x: 1.5, y: 2 });
     expect(readSettings(undefined).curtainBtnPos).toBeNull();
@@ -186,6 +194,7 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
+      toggleOpacity: 'full',
       settingsVersion: 2,
     });
     expect(readStoredSettings(stored)).toEqual({
@@ -193,6 +202,7 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
+      toggleOpacity: 'full',
     });
   });
 });

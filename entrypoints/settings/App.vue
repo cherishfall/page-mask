@@ -127,6 +127,37 @@
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
         </section>
 
+        <!-- 右下角那颗小按钮（#102）：三档不透明度 + 真实胶囊预览 -->
+        <section class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
+          <h2 id="pm-settings-toggle-heading">{{ t.settings.toggleHeading }}</h2>
+          <p class="hint">{{ t.settings.toggleIntro }}</p>
+          <div class="toggle-preview" aria-hidden="true" inert>
+            <FloatingToggle
+              state="disguised"
+              :position="null"
+              :mini="false"
+              site-label="example.com"
+              :opacity="TOGGLE_OPACITY[store.state.toggleOpacity]"
+              preview
+            />
+          </div>
+          <fieldset class="import-mode">
+            <legend>{{ t.settings.toggleHeading }}</legend>
+            <div v-for="level in TOGGLE_OPACITY_LEVELS" :key="level" class="radio">
+              <input
+                :id="`pm-settings-opacity-${level}`"
+                v-model="opacityPref"
+                type="radio"
+                name="pm-settings-opacity"
+                :value="level"
+                :data-testid="`pm-settings-opacity-${level}`"
+              />
+              <label :for="`pm-settings-opacity-${level}`">{{ t.settings.toggleOpacityLabel[level] }}</label>
+            </div>
+          </fieldset>
+          <p class="hint">{{ t.settings.toggleHint }}</p>
+        </section>
+
         <!-- 快捷键（#101）：全产品只有幕布这一条命令；改键只能去 Chrome 自己的页面 -->
         <section class="card" aria-labelledby="pm-settings-shortcut-heading" data-testid="pm-settings-shortcut">
           <h2 id="pm-settings-shortcut-heading">{{ t.settings.shortcutHeading }}</h2>
@@ -251,6 +282,9 @@ import { browser } from 'wxt/browser';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { localeName } from '@/core/i18n';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
+import { TOGGLE_OPACITY, TOGGLE_OPACITY_LEVELS, type ToggleOpacity } from '@/core/toggle-opacity';
+import FloatingToggle from '@/ui/FloatingToggle.vue';
+import toggleCss from '@/ui/toggle/toggle.css?inline';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { locale, t } from '@/ui/i18n';
 import { siteLabelOf } from '../management/site';
@@ -295,6 +329,12 @@ async function refreshShortcut() {
   shortcutLoaded.value = true;
 }
 
+/** 胶囊不透明度（#102）：全局偏好，三档 */
+const opacityPref = computed({
+  get: () => store.state.toggleOpacity,
+  set: (v: ToggleOpacity) => void store.setToggleOpacity(v),
+});
+
 async function openShortcutSettings() {
   shortcutOpenFailed.value = false;
   try {
@@ -308,6 +348,13 @@ async function openShortcutSettings() {
 onMounted(() => {
   void store.init();
   void refreshShortcut();
+  // 预览用的是真实胶囊组件：把同一份 toggle.css 注入本页一次（shadow 版走 adoptedStyleSheets）
+  if (!document.querySelector('style[data-pm-toggle-preview]')) {
+    const style = document.createElement('style');
+    style.dataset.pmTogglePreview = '';
+    style.textContent = toggleCss;
+    document.head.appendChild(style);
+  }
   // 用户去快捷键页改完再回来：聚焦时重新读一次（Chrome 没有「快捷键变了」的事件）
   window.addEventListener('focus', refreshShortcut);
 });
@@ -415,6 +462,19 @@ function onReplaceClose() {
 .row-label {
   min-width: 96px;
   color: var(--pm-fg);
+}
+
+/* 胶囊预览（#102）：一块浅底示意区，里面是真实组件（position: static 由 .pm-tg-preview 负责） */
+.toggle-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 72px;
+  margin: var(--pm-space-2) 0;
+  padding: var(--pm-space-3);
+  border: 1px dashed var(--pm-border);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg-subtle);
 }
 
 /* 键帽（#101）：一眼认得出「这是一个按键」，不用解释文字 */

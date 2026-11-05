@@ -234,6 +234,11 @@ export const zh = {
     iconHint:
       '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。网站自己设的图标优先；网站和这里都没设时，标签页上不显示图标。',
 
+    toggleHeading: '右下角的小按钮',
+    toggleIntro: '它平时压在网页上。嫌它显眼可以调淡一点——鼠标移上去、用键盘选中或拖动时，它会立刻恢复清晰。',
+    toggleOpacityLabel: { full: '清晰', soft: '淡一点', faint: '很淡' },
+    toggleHint: '只影响这颗小按钮，不影响遮住整页后那颗「恢复」。',
+
     shortcutHeading: '快捷键',
     shortcutIntro: '有人走过来时，不用找鼠标：按一下遮住整页，再按一下恢复。',
     shortcutLabel: '遮住 / 恢复',

@@ -50,6 +50,7 @@ const settingsOf = (defaultTitle: string | null) => ({
   defaultIconDataUrl: null,
   curtainBtnPos: null,
   uiLanguage: 'auto',
+  toggleOpacity: 'full',
   settingsVersion: 2,
 });
 

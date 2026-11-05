@@ -113,6 +113,7 @@ describe('站点配置 CRUD', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
+      toggleOpacity: 'full',
       settingsVersion: 2,
     });
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
@@ -121,6 +122,7 @@ describe('站点配置 CRUD', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
+      toggleOpacity: 'full',
     }); // 版本标记不进导出文件
   });
 
@@ -226,7 +228,7 @@ describe('导出/导入', () => {
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1);
     expect(bundle.profiles).toHaveLength(1);
-    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
   });
 
   it('非法文件报人话错误（用"导出文件"一词）', async () => {
@@ -364,6 +366,7 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
       defaultIconDataUrl: null,
       curtainBtnPos: { x: 24, y: 560 },
       uiLanguage: 'auto',
+      toggleOpacity: 'full',
     });
   });
 
@@ -426,7 +429,7 @@ describe('插件设置随导出 / 导入（#55）', () => {
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1); // 老字段不变
     expect(bundle.appVersion).toBe('0.4.0');
-    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
     expect(bundle.profiles).toHaveLength(1);
   });
 
@@ -438,11 +441,11 @@ describe('插件设置随导出 / 导入（#55）', () => {
 
     const merged = await store.importBundle(oldFile, 'merge');
     expect(merged.added).toBe(1);
-    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
 
     const replaced = await store.importBundle(bundleOf([createEmptyProfile('https://b.com')]), 'replace');
     expect(replaced.removed).toBe(1);
-    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
   });
 
   it('整体替换采用文件里的默认标题与默认图标；合并时本地已设置过的保留', async () => {
@@ -459,7 +462,7 @@ describe('插件设置随导出 / 导入（#55）', () => {
     withLocal.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: null, settingsVersion: 2 });
     const merged = createPageMaskStorage(withLocal);
     await merged.importBundle(file, 'merge');
-    expect(await merged.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(await merged.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
   });
 
   it('文件里的插件设置缺字段 / 不合法时按默认值处理（不报错、不写进存储坏图）', async () => {
@@ -470,7 +473,7 @@ describe('插件设置随导出 / 导入（#55）', () => {
       }),
       'replace',
     );
-    expect(await store.getSettings()).toEqual({ defaultTitle: '导入标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto' });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '导入标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 'full' });
   });
 
   it('导入不覆盖本机的按钮坐标（网站级 floatingBtnPos 与全局 curtainBtnPos）', async () => {

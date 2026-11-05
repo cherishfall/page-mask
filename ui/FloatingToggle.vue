@@ -2,7 +2,13 @@
   <!-- 一根小胶囊：拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」菜单。菜单项与主按钮是兄弟节点，
        不再包在会吃掉 pointerdown 的拖动容器里（N1：点菜单项会把开关切掉）。
        幕布期间整根胶囊由 content-runtime 卸掉，恢复按钮归幕布宿主所有（ui/curtain-restore.ts） -->
-  <div ref="rootEl" class="pm-tg" :class="{ 'pm-tg-mini': mini }" :style="rootStyle" data-testid="pm-toggle">
+  <div
+    ref="rootEl"
+    class="pm-tg"
+    :class="{ 'pm-tg-mini': mini, dragging, 'pm-tg-preview': preview }"
+    :style="[rootStyle, { '--pm-tg-idle-opacity': opacity ?? 1 }]"
+    data-testid="pm-toggle"
+  >
     <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）
          不用点阵字符：各平台字形大小不一，还会把字号压到 12px 以下 -->
     <button
@@ -147,6 +153,16 @@ const props = defineProps<{
   mini: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
+  /**
+   * 闲置不透明度（#102）：1 / 0.85 / 0.7。悬停、键盘聚焦、拖动时由 CSS 回到 1，
+   * 所以「淡」只在用户不碰它的时候存在。
+   */
+  opacity?: number;
+  /**
+   * 预览模式（#102 / 欢迎页）：静态展示用——不跟随页面定位（position: static）、不响应拖动。
+   * 调用方再套一层 inert + aria-hidden，让示意图能看不能点。
+   */
+  preview?: boolean;
 }>();
 const emit = defineEmits<{
   toggle: [];
@@ -254,6 +270,7 @@ watch(
 let grab = { x: 0, y: 0 };
 
 function onGripDown(e: PointerEvent) {
+  if (props.preview) return;
   if (e.button !== 0 || !rootEl.value) return;
   const r = rootEl.value.getBoundingClientRect();
   grab = { x: e.clientX - r.left, y: e.clientY - r.top };

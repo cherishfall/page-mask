@@ -18,6 +18,9 @@
 
 .pm-tg {
   position: fixed;
+  /* 闲置不透明度（#102）：默认 1；悬停 / 键盘聚焦 / 拖动时回到 1，
+     所以用户一碰它就完全清楚，不会出现「淡到找不到」 */
+  opacity: var(--pm-tg-idle-opacity, 1);
   display: inline-flex;
   align-items: stretch;
   padding: 2px;
@@ -30,6 +33,15 @@
   /* 界面元素自己不参与文字选择 */
   -webkit-user-select: none;
   user-select: none;
+}
+.pm-tg:hover,
+.pm-tg:focus-within,
+.pm-tg.dragging {
+  opacity: 1;
+}
+/* 预览模式（#102 / 欢迎页）：作为示意图嵌在扩展页面里，不跟随页面定位 */
+.pm-tg.pm-tg-preview {
+  position: static;
 }
 
 /* ── 拖动把手（drag 指南：专用把手、cursor、touch-action） ──
@@ -158,6 +170,12 @@
 }
 
 /* 触屏：三个图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
+@media (forced-colors: active) {
+  .pm-tg {
+    opacity: 1 !important;
+  }
+}
+
 @media (pointer: coarse) {
   .pm-tg-grip,
   .pm-tg-cover,

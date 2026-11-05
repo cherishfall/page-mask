@@ -41,7 +41,9 @@ import { applyKey } from '@/core/apply-key';
 import { TAKEOVER_EVENT, hostShieldPresent } from '@/core/host-shield';
 import { fromExtensionPage } from '@/core/messages';
 import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/messages';
+import { DEFAULT_SETTINGS } from '@/core/types';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
+import { TOGGLE_OPACITY } from '@/core/toggle-opacity';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 // 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
@@ -135,17 +137,20 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const uiReady = Promise.all([whenDomReady(ctx), activated]).then(() => undefined);
 
   let profile: SiteProfile | null = null;
-  let settings: GlobalSettings = { defaultTitle: null, defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto' }; // null = 跟随界面语言默认（core/titles.ts）
+  let settings: GlobalSettings = { ...DEFAULT_SETTINGS }; // null = 跟随界面语言默认（core/titles.ts）
   /** 悬浮按钮的显示状态：存储变化只改这里（响应式更新，不卸载重建，REVIEW N26） */
   const toggleState = reactive<{
     state: SiteProfile['switchState'];
     position: SiteProfile['floatingBtnPos'];
     /** mini 形态（#78）：按站点记忆，缺省全功能 */
     mini: boolean;
+    /** 整颗胶囊的不透明度（#102）：闲置值，悬停 / 聚焦 / 拖动时由 CSS 回到 1 */
+    opacity: number;
   }>({
     state: 'original',
     position: null,
     mini: false,
+    opacity: 1,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -188,6 +193,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
     toggleState.mini = profile?.capsuleMini === true;
+    toggleState.opacity = TOGGLE_OPACITY[settings.toggleOpacity];
   }
 
   /**
@@ -217,6 +223,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           state: toggleState.state,
           position: toggleState.position,
           mini: toggleState.mini,
+          opacity: toggleState.opacity,
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,

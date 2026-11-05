@@ -210,6 +210,12 @@ export const en: Messages = {
     iconHint:
       'PNG, JPG, GIF, WebP or ICO, up to 5MB. It’s scaled down to 32×32. A site’s own icon wins; with neither, the tab shows no icon.',
 
+    toggleHeading: 'The small button in the corner',
+    toggleIntro:
+      'It sits over the page. If it feels too loud, make it fainter — it turns fully clear as soon as you hover, focus it with the keyboard, or drag it.',
+    toggleOpacityLabel: { full: 'Clear', soft: 'Softer', faint: 'Faintest' },
+    toggleHint: 'Only this button. The “Restore” button on a covered page stays as it is.',
+
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro: 'When someone walks up, no need to hunt for the mouse: press it to cover the page, press again to restore.',
     shortcutLabel: 'Cover / restore',

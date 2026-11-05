@@ -734,6 +734,17 @@ async function main() {
     check(shownVersion === manifest.version, `「关于」显示版本号 ${shownVersion}`);
     check(!!(await m.$('a[href="https://github.com/cherishfall/page-mask/issues"]')), '「关于」有指向 GitHub issues 的反馈入口');
 
+    // 胶囊不透明度（#102）：三档单选 + 真实胶囊预览
+    const previewOpacity = () =>
+      m.$eval(`${tid('pm-settings-toggle')} ${tid('pm-toggle')}`, (e) => parseFloat(getComputedStyle(e).opacity));
+    check((await previewOpacity()) === 1, '默认「清晰」：预览胶囊不透明度为 1');
+    await m.click(tid('pm-settings-opacity-faint'));
+    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 'faint', '不透明度写入存储');
+    check(true, '选「很淡」后写入全局设置');
+    check((await previewOpacity()) === 0.7, `预览当场变淡（${await previewOpacity()}）`);
+    await m.click(tid('pm-settings-opacity-full'));
+    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 'full', '恢复清晰');
+
     // 编辑态与存储态分离：插件设置页的全局默认标题
     const titleSel = tid('pm-settings-default-title');
     const TYPED = '我的阅读标题';
