@@ -123,7 +123,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { deleteSiteAction } from '@/core/site-delete';
+import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
 
 const props = defineProps<{
@@ -167,8 +167,8 @@ const emit = defineEmits<{
 }>();
 
 const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
-/** 删除入口的文案与胶囊菜单 / 管理页同一份（core/site-delete.ts） */
-const deleteLabel = deleteSiteAction();
+/** 删除入口用全名（与胶囊菜单 / 管理页 / 列表 ⋯ 菜单同一叫法）；确认框里的实心红按钮才是「删除设置」 */
+const deleteLabel = deleteSiteHeading();
 </script>
 
 <style>
@@ -221,6 +221,9 @@ const deleteLabel = deleteSiteAction();
 }
 .switch-row label {
   cursor: pointer;
+  /* 命中区补偿（WCAG 2.5.8）：开关本体 20px 高，把标签的点击区垫到 ≥24（负 margin 抵消，视觉不变） */
+  padding: 3px 0;
+  margin: -3px 0;
 }
 .meta {
   font-size: var(--pm-font-size-caption);

@@ -15,8 +15,9 @@
         <section class="card" aria-labelledby="pm-settings-language-heading" data-testid="pm-settings-language">
           <h2 id="pm-settings-language-heading">{{ t.settings.languageHeading }}</h2>
           <p class="hint">{{ t.settings.languageIntro }}</p>
+          <!-- 图例保留给读屏（fieldset 的可及名称），视觉上与卡片标题只留一份 -->
           <fieldset class="import-mode">
-            <legend>{{ t.settings.languageHeading }}</legend>
+            <legend class="visually-hidden">{{ t.settings.languageHeading }}</legend>
             <div class="radio">
               <input
                 id="pm-settings-lang-auto"

@@ -234,7 +234,7 @@ h1 {
 /* 底栏（#108）：flex 里固定，不再 sticky 压住内容；只放按钮与圆点（操作栏里不放说明文字） */
 .nav {
   flex: none;
-  position: static;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -248,7 +248,11 @@ h1 {
   min-block-size: var(--pm-control-lg);
   padding-inline: var(--pm-space-4);
 }
+/* 圆点绝对居中：第 1 步没有「上一步」，普通流式排版会让它切步时横跳 */
 .dots {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 6px;
 }

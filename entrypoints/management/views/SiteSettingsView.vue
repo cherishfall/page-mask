@@ -334,6 +334,9 @@ async function resetTitleIcon() {
 
 .switch-row label {
   cursor: pointer;
+  /* 命中区补偿（WCAG 2.5.8）：开关本体 20px 高，把标签的点击区垫到 ≥24（负 margin 抵消，视觉不变） */
+  padding: 3px 0;
+  margin: -3px 0;
 }
 
 .state {

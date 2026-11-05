@@ -70,7 +70,7 @@
             <!-- ref 用函数形式：模板 ref 在 v-for 里会被收成数组（实测踩坑），拿不到元素 -->
             <div v-if="menuOrigin === p.origin" :ref="(el: Element | ComponentPublicInstance | null) => (menuEl = el as HTMLElement | null)" v-bind="POPOVER" class="site-menu" data-testid="pm-mgmt-site-menu" @toggle="onMenuToggle">
               <button type="button" class="site-menu-item danger" data-testid="pm-mgmt-row-delete" @click="onRowDelete">
-                {{ deleteActionLabel }}
+                {{ deleteMenuLabel }}
               </button>
             </div>
           </div>
@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
 import type { SiteProfile } from '@/core/types';
-import { deleteSiteAction } from '@/core/site-delete';
+import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
 import { siteHash } from '../router';
 import { siteHostOf, siteLabelOf, staleRulesOf } from '../site';
@@ -107,8 +107,8 @@ import { managementStore as store } from '../store';
 const isPending = (p: SiteProfile) => store.state.pendingOrigins.includes(p.origin);
 const staleCount = (p: SiteProfile) => staleRulesOf(p).length;
 const initialOf = (origin: string) => siteLabelOf(origin).slice(0, 1).toUpperCase();
-/** 删除项的文案与详情页页脚 / 胶囊菜单 / 弹窗同一份（core/site-delete.ts） */
-const deleteActionLabel = deleteSiteAction();
+/** 删除项的文案与胶囊菜单同名（「删除这个网站的设置」）；确认框里的实心红按钮才是「删除设置」 */
+const deleteMenuLabel = deleteSiteHeading();
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;
@@ -276,7 +276,7 @@ function onRowDelete() {
   position: fixed;
   inset: auto;
   margin: 0;
-  min-inline-size: 160px;
+  min-inline-size: 176px;
   padding: var(--pm-space-1);
   border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-card);
