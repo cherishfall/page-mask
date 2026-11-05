@@ -144,7 +144,6 @@ export const zh = {
       toggleFailed: '没能切换显示方式，请稍后再试一次',
       editFailed: '没能打开编辑面板。刷新这个页面后再试一次',
       coverFailed: '没能遮住这个页面。刷新后再试一次',
-      restoreFailed: '没能恢复这个页面。刷新后再试一次',
     },
   },
 

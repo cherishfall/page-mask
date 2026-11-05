@@ -245,12 +245,10 @@ const deleteLabel = deleteSiteHeading();
 .links > .link {
   flex: 1;
   padding-inline: var(--pm-space-1);
+  /* 链接默认色会盖过按钮字色（a 的特异性压过控件样式）：按钮样式的链接用正文色 */
+  color: var(--pm-fg);
   text-align: center;
   text-decoration: none;
-}
-/* 按钮样式的链接：悬停底色来自控件样式，这里补一个文字色不变（避免链接默认色干扰） */
-.links > .link:hover {
-  color: inherit;
 }
 /* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
 .popup-kbd {

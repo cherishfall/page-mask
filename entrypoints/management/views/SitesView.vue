@@ -164,7 +164,8 @@ function onMenuToggle() {
 function closeMenu() {
   menuEl.value?.hidePopover();
   menuOrigin.value = null;
-  moreEl.value?.focus(); // 焦点回「⋯」；Esc / 点外部的路径仍由 @toggle 兜底
+  moreEl.value?.focus(); // 焦点回「⋯」
+  moreEl.value = null; // 置空：hidePopover 排队的 toggle 事件随后到，别把焦点从确认框里拽回来（#114）
 }
 
 /** 点了「删除这个网站的设置」：关菜单、发起删除——确认框是 App.vue 里共用的那一个 */

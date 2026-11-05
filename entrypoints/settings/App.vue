@@ -588,6 +588,11 @@ function onReplaceClose() {
   gap: 0;
   margin: var(--pm-space-1) 0;
 }
+.radio label {
+  padding: 3px 8px 3px 6px; /* 与圆点的间距 + 上下命中区补偿（负 margin 抵消，视觉不变） */
+  margin: -3px 0;
+  cursor: pointer;
+}
 
 .radio input {
   margin: 0;

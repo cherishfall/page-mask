@@ -8,6 +8,8 @@
       :id="`${idPrefix}-title-input`"
       class="pm-tif-input"
       type="text"
+      name="site-title"
+      autocomplete="off"
       maxlength="60"
       :value="title"
       :placeholder="placeholder"

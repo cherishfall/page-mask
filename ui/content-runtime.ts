@@ -606,14 +606,19 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    * 到来的消息会让两边各说各话（#107 复查修）。
    */
   async function adoptExistingCurtain(existing: CurtainControllerSlot): Promise<void> {
-    const wasCovered = existing.controller.state() === true;
+    // 「遮着」包括遮住流程进行中（一次性脚本正在读存储、还没铺上）：
+    // 只看 state() 会把进行中的遮住请求当没遮，配合旧控制器的让位就没人遮了（#114 二轮复查）
+    const wasCovered = existing.controller.state() === true || existing.controller.covering?.() === true;
     if (curtainSlot || disposed) return;
-    curtainSlot = registerCurtainController('content', curtainController);
+    const slot = registerCurtainController('content', curtainController);
+    curtainSlot = slot;
     try {
       await Promise.resolve(existing.controller.dismiss());
     } catch {
       // 旧控制器已失联（扩展重载前的旧一次性脚本）：撤不掉就算了，层随文档消失
     }
+    // await 之后接口契约允许真异步的 dismiss：失效（disposed）或登记已易主就到此为止
+    if (disposed || curtainSlot !== slot) return;
     if (!wasCovered || curtain.active) return;
     if (profile && !wizardActive) showCurtain();
     else adoptCoverPending = true; // profile 还没读到 / 向导开着：等 refreshState 就绪后再遮

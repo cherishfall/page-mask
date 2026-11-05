@@ -161,6 +161,7 @@ async function run(): Promise<void> {
 
   const controller: PageCurtainController = {
     state: () => layer.active,
+    covering: () => pending !== null, // 遮住流程进行中（还没铺上）：让位接管方据此补遮（#114）
     cover,
     dismiss,
     toggle: () => {

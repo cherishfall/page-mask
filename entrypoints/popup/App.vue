@@ -339,7 +339,10 @@ async function toggleCurtain() {
  *   注入一次性脚本（#46），它与内容脚本共用同一套覆盖层、恢复按钮与标题来源。
  */
 async function coverCurtain(tabId: number): Promise<boolean> {
-  if ((await sendCurtain(tabId, { t: 'curtainCover' }))?.covered) return true;
+  const first = await sendCurtain(tabId, { t: 'curtainCover' });
+  if (first?.covered) return true;
+  // 有应答但拒遮（比如向导开着）：到此为止——重新注入会让旧实例收尾、把用户正开着的向导关掉
+  if (first) return false;
   const o = origin.value;
   if (profile.value && granted.value && o) {
     if ((await enableSite(tabId, o))?.ok && (await sendCurtain(tabId, { t: 'curtainCover' }))?.covered) return true;

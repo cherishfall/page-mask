@@ -16,6 +16,9 @@
 export interface PageCurtainController {
   /** 现在是否真的铺着幕布 */
   state(): boolean;
+  /** 遮住流程是否进行中（cover 已被调、还没铺上）：异步 cover 的控制器要实现它，
+   *  否则让位接管方会以为「没遮」而丢掉这次的遮住请求（#114 二轮复查） */
+  covering?(): boolean;
   /** 铺幕布（已铺时无操作）；一次性脚本要先读配置，允许异步 */
   cover(): void | Promise<void>;
   /** 撤幕布（没铺时无操作），撤掉后仍可再遮 */

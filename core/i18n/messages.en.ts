@@ -120,7 +120,6 @@ export const en: Messages = {
       toggleFailed: 'Couldn’t switch how the site is shown. Please try again',
       editFailed: 'Couldn’t open the editor. Reload this page and try again',
       coverFailed: 'Couldn’t cover this page. Reload it and try again',
-      restoreFailed: 'Couldn’t restore this page. Reload it and try again',
     },
   },
 

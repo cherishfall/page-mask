@@ -221,10 +221,17 @@ export function createBackground({ browser }: BackgroundDeps): void {
         target: { tabId },
         files: [CURTAIN_ONESHOT_FILE] as unknown as ScriptPublicPath[],
       });
-      // 注入成功 ≠ 遮上了（页面控制器可能拒遮，比如向导开着）：回查一次，不假报成功（#107 复查修）
-      const after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+      // 注入成功 ≠ 遮上了（页面控制器可能拒遮，比如向导开着）：回查确认，不假报成功（#107 复查修）。
+      // 一次性脚本的监听要等动态导入完成才注册：没人应答时等一拍再查一次，只有「有应答且没遮上」才算失败
+      let after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
         | CurtainStateReply
         | undefined;
+      if (!after) {
+        await new Promise((r) => setTimeout(r, 200));
+        after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+          | CurtainStateReply
+          | undefined;
+      }
       return { ok: after?.covered === true, error: after?.covered ? undefined : 'curtain did not cover' };
     } catch (e) {
       return { ok: false, error: String(e) };

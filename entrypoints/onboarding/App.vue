@@ -274,6 +274,8 @@ h1 {
 /* ── 每步一张图（#93）：文字只留一句，细节看图；全部用 tokens 配色 ── */
 .art {
   margin-top: var(--pm-space-3);
+  /* 示意图是静图（inert 已挡焦点与事件，这里把指针也显式关掉）：里面嵌的是真实组件，不该被点 */
+  pointer-events: none;
 }
 .art-svg {
   display: block;
