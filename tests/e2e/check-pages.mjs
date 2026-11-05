@@ -406,6 +406,70 @@ async function main() {
     await coverAndRestore(ext, popup, site, '已添加的网站');
     await footerLandings(ext, browser, site, '已添加的网站');
 
+    // ===================== popup：删除与「右下角的小按钮」开关（#112） =====================
+    console.log('\n--- popup：删除与胶囊显示开关 ---');
+    const HOST1 = new URL(ORIGIN).hostname; // 确认框标题用 hostname（去 www.，不带端口）
+    popup = await openPopup(ext, site); // footerLandings 会关面板：重开一个干净的 ready 弹窗
+    await popup.waitForSelector(tid('pm-popup-capsule'), { timeout: 5000 });
+    // 高度红线（#112）：加开关行与删除入口后仍要一屏放下（Chrome 弹窗最高 600）
+    const popupHeight = await popup.evaluate(() => document.body.scrollHeight);
+    check(popupHeight <= 600, `弹窗高度 ${popupHeight} ≤ 600，无纵向滚动`);
+    // 开关默认开；关掉 → 页面胶囊卸下，弹窗里站点四件仍然都在
+    check(!!(await popup.$(tid('pm-popup-capsule'))), 'ready 状态有「右下角的小按钮」开关，默认开');
+    check((await popup.$eval(tid('pm-popup-capsule'), (e) => e.checked)) === true, '开关默认为「显示」');
+    await popup.click(tid('pm-popup-capsule'));
+    await waitFor(site, '页面胶囊卸下', (h) => !document.querySelector(h), ['pagemask-toggle'], { timeout: 5000 });
+    check(!(await site.$('pagemask-toggle')), '关掉开关：页面上的胶囊消失');
+    for (const id of ['pm-popup-setup', 'pm-popup-title', 'pm-popup-cover', 'pm-popup-delete']) {
+      check(!!(await popup.$(tid(id))), `关掉开关后弹窗里仍有 ${id.replace('pm-popup-', '')}`);
+    }
+    // 重开弹窗：仍是关（按站点持久化）
+    await popup.close();
+    popup = await openPopup(ext, site);
+    await popup.waitForSelector(tid('pm-popup-capsule'), { timeout: 5000 });
+    check((await popup.$eval(tid('pm-popup-capsule'), (e) => e.checked)) === false, '重开弹窗：开关仍是关');
+    // 藏着时塞旧残留（mini + 非默认位置），再打开开关 → 重置为右下角 + 全功能
+    await patchProfile(ext.control, ORIGIN, { capsuleMini: true, floatingBtnPos: { x: 0, y: 100 } });
+    await popup.click(tid('pm-popup-capsule'));
+    await site.waitForSelector('pagemask-toggle', { timeout: 5000 });
+    await poll(async () => {
+      const p = await getProfile(ext.control, ORIGIN);
+      return p.capsuleMini == null && p.floatingBtnPos == null;
+    }, '打开开关重置位置与形态');
+    check(true, '打开开关：mini 与自定义位置残留被清掉（回右下角 + 全功能）');
+    // 删除确认框：标题带域名、默认焦点在「取消」；Esc 关闭后焦点回删除按钮
+    await popup.click(tid('pm-popup-delete'));
+    await popup.waitForSelector(tid('pm-popup-delete-dialog'), { timeout: 3000 });
+    const dlgTitle = await popup.$eval(tid('pm-popup-delete-title'), (e) => e.textContent ?? '');
+    check(dlgTitle.includes(HOST1), `确认框标题带域名（${dlgTitle}）`);
+    check(
+      (await popup.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'pm-popup-delete-cancel',
+      '默认焦点在「取消」',
+    );
+    await popup.keyboard.press('Escape');
+    await waitFor(popup, 'Esc 关闭确认框', () => !document.querySelector('[data-testid="pm-popup-delete-dialog"]').open);
+    check(
+      (await popup.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'pm-popup-delete',
+      'Esc 关闭后焦点回到删除按钮',
+    );
+    // 取消：什么都不动
+    await popup.click(tid('pm-popup-delete'));
+    await popup.click(tid('pm-popup-delete-cancel'));
+    check((await getProfile(ext.control, ORIGIN)) !== null, '取消后设置还在');
+    // 确认：配置删除、权限收回、页面胶囊消失、弹窗自动关闭
+    await popup.click(tid('pm-popup-delete'));
+    await popup.click(tid('pm-popup-delete-confirm'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)) === null, '确认后配置删除');
+    await poll(async () => !(await site.$('pagemask-toggle')), '页面上的胶囊随站点删除消失');
+    check(
+      (await ext.control.evaluate(async (o) => chrome.permissions.contains({ origins: [`${o}/*`] }), ORIGIN)) === false,
+      '浏览器给这个站点的访问权限已收回',
+    );
+    await poll(async () => popup.isClosed(), '删除成功后弹窗自动关闭');
+    // 删除是毁伤动作：把站点与权限恢复原样，后续用例继续用
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await grantPermissions(ext, [ORIGIN]);
+
     console.log('\n--- popup：不支持的页面 ---');
     const blank = await browser.newPage();
     await blank.goto('about:blank');
@@ -1036,6 +1100,9 @@ async function main() {
     popup = await openPopup(ext, site3);
     await popup.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
     check(!(await popup.$(tid('pm-popup-switch'))) && !!(await popup.$(tid('pm-popup-reauth'))), 'popup 显示「待授权」与「重新授权」，不显示开关');
+    // #112：待授权站点页面上本来就没有胶囊，开关先不出现；删除仍可用（删掉待授权站点）
+    check(!(await popup.$(tid('pm-popup-capsule'))), '待授权站点不显示「右下角的小按钮」开关');
+    check(!!(await popup.$(tid('pm-popup-delete'))), '待授权站点仍有「删除这个网站的设置」入口');
     // 「需要允许访问」与「可能失效」是同一套标记：都是 .pm-mark + 圆点在最前，只用颜色区分
     const pendingMark = await popup.$eval(tid('pm-popup-pending-badge'), (e) => ({
       classes: [...e.classList],

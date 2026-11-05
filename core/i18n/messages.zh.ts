@@ -123,6 +123,12 @@ export const zh = {
     /** 「标题和图标」入口：进单步小表单，填完点「保存」（#81） */
     editTitle: '标题和图标',
     coverPage: '遮住这一页',
+    /** 右下角的小按钮开关（#112）：标签 + 开关下的一行小字 */
+    showToggle: '右下角的小按钮',
+    showToggleHint: '关掉后还能从工具栏图标打开 PageMask；遮住整页的快捷键不受影响。',
+    /** 删除这个网站的设置（#112）：与站点设置页 / 胶囊菜单同一套文案（core/site-delete.ts） */
+    deleting: '正在删除…',
+    deleteFailed: '没能删除这个网站的设置，请再试一次。',
     restorePage: '恢复这一页',
     covering: '正在遮住…',
     restoring: '正在恢复…',

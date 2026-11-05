@@ -12,14 +12,37 @@
     :busy="busy"
     :covered="covered"
     :cover-shortcut="coverShortcut"
+    :show-toggle="profile?.capsuleHidden !== true"
+    :delete-error="deleteError"
     @toggle-switch="toggleSwitch"
     @setup="setup"
     @edit-title="editTitle"
     @reauthorize="reauthorize"
     @toggle-curtain="toggleCurtain"
+    @toggle-capsule="toggleCapsule"
+    @delete-site="askDeleteSite"
     @manage="manage"
     @open-settings="openSettings"
   />
+
+  <!-- 删除二次确认（#112）：与站点设置页 / 胶囊菜单同一套文案与焦点规则——
+       「取消」默认聚焦，最终确认才是实心红；确认后弹窗关闭，失败留在原页给一行错误 -->
+  <dialog
+    ref="deleteDialog"
+    class="popup-delete-dialog"
+    aria-labelledby="pm-popup-delete-title"
+    data-testid="pm-popup-delete-dialog"
+    @close="onDeleteClose"
+  >
+    <h2 id="pm-popup-delete-title" data-testid="pm-popup-delete-title">{{ deleteTitle }}</h2>
+    <p data-testid="pm-popup-delete-impact">{{ deleteImpact }}</p>
+    <form method="dialog" class="dialog-actions">
+      <button value="cancel" autofocus data-testid="pm-popup-delete-cancel">{{ t.common.cancel }}</button>
+      <button value="confirm" class="primary danger" data-testid="pm-popup-delete-confirm" :disabled="deleteBusy">
+        {{ deleteBusy ? t.popup.deleting : deleteAction }}
+      </button>
+    </form>
+  </dialog>
 </template>
 
 <script setup lang="ts">
@@ -28,6 +51,7 @@ import { browser } from 'wxt/browser';
 import { t } from '@/ui/i18n';
 import PopupBody from '@/ui/popup/PopupBody.vue';
 import { createPageMaskStorage } from '@/core/storage';
+import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site-delete';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
@@ -52,7 +76,7 @@ const granted = ref<boolean | null>(null);
 /** 当前标签页是否遮着（#54）：面板打开时问页面，问不到就当未遮住 */
 const covered = ref(false);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
-const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'curtain'>('');
+const busy = ref<'' | 'setup' | 'reauth' | 'toggle' | 'edit' | 'curtain' | 'delete'>('');
 /** 失败时给用户看的话（不暴露内部错误）：存 code，文案从 t 里取（语言切换后跟着变） */
 const errorCode = ref<string>('');
 const message = computed(() => {
@@ -328,6 +352,75 @@ async function coverCurtain(tabId: number): Promise<boolean> {
   return res?.ok === true;
 }
 
+/**
+ * 右下角的小按钮开关（#112）：按站点记。
+ * 关 = 这个网站不显示胶囊；开 = 显示，并重置为右下角 + 全功能——旧位置与形态是「藏起来之前」
+ * 的残留，找回来时没有保留价值。一次 updateProfile 写完，touch:false（本机界面状态）。
+ */
+async function toggleCapsule(input: HTMLInputElement) {
+  if (!profile.value || !origin.value) {
+    input.checked = true;
+    return;
+  }
+  const show = input.checked;
+  try {
+    const updated = await createPageMaskStorage(browser.storage.local).updateProfile(
+      origin.value,
+      (p) => {
+        p.capsuleHidden = show ? undefined : true;
+        if (show) {
+          p.floatingBtnPos = null;
+          p.capsuleMini = false;
+        }
+      },
+      { touch: false },
+    );
+    if (updated) profile.value = updated; // 开关立即反映；页面上的胶囊由内容脚本的存储监听卸下 / 挂上
+  } catch {
+    input.checked = !show; // 写入失败：开关拨回实际状态
+  }
+}
+
+// ---------- 删除这个网站的设置（#112） ----------
+
+const deleteDialog = ref<HTMLDialogElement | null>(null);
+const deleteBusy = ref(false);
+const deleteError = ref('');
+/** 文案与站点设置页 / 胶囊菜单同一份（core/site-delete.ts），不另写一套 */
+const deleteTitle = computed(() => deleteSiteTitle(host.value || ''));
+const deleteImpact = deleteSiteImpact();
+const deleteAction = deleteSiteAction();
+
+function askDeleteSite() {
+  if (busy.value) return;
+  deleteError.value = '';
+  deleteDialog.value?.showModal();
+}
+
+/** 确认后发 resetSite：后台先让打开页面还原，再收回权限、删配置。成功关闭弹窗，失败留在原页 */
+async function onDeleteClose() {
+  const dialog = deleteDialog.value;
+  if (!dialog || dialog.returnValue !== 'confirm') return;
+  const o = origin.value;
+  if (!o) return;
+  busy.value = 'delete';
+  deleteBusy.value = true;
+  deleteError.value = '';
+  try {
+    const res = (await browser.runtime.sendMessage({ t: 'resetSite', origin: o }).catch(() => undefined)) as
+      | { ok?: boolean }
+      | undefined;
+    if (res?.ok) {
+      window.close();
+      return;
+    }
+    deleteError.value = t.value.popup.deleteFailed; // 失败：弹窗留着，删除按钮上方一行错误
+  } finally {
+    deleteBusy.value = false;
+    busy.value = '';
+  }
+}
+
 /** 底部两个入口：都关掉面板再开新标签页 */
 async function openPage(path: `/management.html${string}` | `/settings.html${string}`) {
   await browser.tabs.create({ url: browser.runtime.getURL(path) });
@@ -342,3 +435,9 @@ function openSettings() {
   void openPage('/settings.html');
 }</script>
 
+<style>
+/* 删除确认框在 320 宽的弹窗里（#112）：比全局对话框窄一档，不溢出弹窗 */
+dialog.popup-delete-dialog {
+  width: min(288px, calc(100vw - 24px));
+}
+</style>

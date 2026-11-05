@@ -77,6 +77,27 @@
         <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
         <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
       </button>
+
+      <!-- 右下角的小按钮开关（#112）：只在这个网站已配置、已允许访问时出现——
+           待授权站点页面上本来就没有胶囊；关掉后下面四件事一件不少，这是隐藏胶囊后的唯一页外入口 -->
+      <template v-if="phase === 'ready'">
+        <div class="divider" role="presentation"></div>
+        <div class="switch-row">
+          <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
+          <input
+            id="pm-popup-capsule"
+            type="checkbox"
+            switch
+            role="switch"
+            data-testid="pm-popup-capsule"
+            :checked="showToggle"
+            @change="emit('toggleCapsule', $event.target as HTMLInputElement)"
+          />
+        </div>
+        <!-- 提示放在开关下面（说明跟着它解释的东西走），不塞进开关行 -->
+        <p class="hint capsule-hint">{{ t.popup.showToggleHint }}</p>
+        <div class="divider" role="presentation"></div>
+      </template>
     </template>
 
     <!-- 底部两个入口：进「全部网站设置」和「插件设置」的唯一入口，用次按钮（有底有边），不是无框小字 -->
@@ -86,11 +107,23 @@
         {{ t.popup.settings }}
       </button>
     </div>
+
+    <!-- 删除这个网站的设置（#112）：红字文字按钮，最底、与入口用分隔线隔开。
+         与胶囊菜单 / 管理页是同一件事、同一套文案（core/site-delete.ts）。
+         只在ready / pending 出现：new 还没有配置可删 -->
+    <template v-if="phase === 'ready' || phase === 'pending'">
+      <div class="divider" role="presentation"></div>
+      <p v-if="deleteError" class="hint error" role="alert" data-testid="pm-popup-delete-error">{{ deleteError }}</p>
+      <button type="button" class="text-danger" data-testid="pm-popup-delete" @click="emit('deleteSite')">
+        {{ busy === 'delete' ? t.popup.deleting : deleteLabel }}
+      </button>
+    </template>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { deleteSiteAction } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
 
 const props = defineProps<{
@@ -113,6 +146,10 @@ const props = defineProps<{
   covered: boolean;
   /** 弹窗上显示的快捷键（当前平台、已格式化；空串 = 没绑定，不显示） */
   coverShortcut: string;
+  /** 右下角的小按钮在这个网站是否显示（#112：capsuleHidden 的反面）；只在 ready 出现 */
+  showToggle?: boolean;
+  /** 删除失败时的一行错误（显示在删除按钮上方，role=alert） */
+  deleteError?: string;
 }>();
 
 const emit = defineEmits<{
@@ -121,11 +158,17 @@ const emit = defineEmits<{
   editTitle: [];
   reauthorize: [];
   toggleCurtain: [];
+  /** 拨动「右下角的小按钮」开关（#112） */
+  toggleCapsule: [input: HTMLInputElement];
+  /** 点了「删除这个网站的设置」：确认框由父组件（entrypoints/popup）打开 */
+  deleteSite: [];
   manage: [];
   openSettings: [];
 }>();
 
 const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
+/** 删除入口的文案与胶囊菜单 / 管理页同一份（core/site-delete.ts） */
+const deleteLabel = deleteSiteAction();
 </script>
 
 <style>
@@ -211,5 +254,28 @@ const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
   font: inherit;
   font-size: var(--pm-font-size-caption);
   line-height: 16px;
+}
+/* 分组分隔线（#112）：站点动作 ｜ 胶囊开关 ｜ 页面入口 ｜ 删除，一拍留白 + 一条细线 */
+.divider {
+  border-top: 1px solid var(--pm-border);
+  margin: calc(var(--pm-space-1) * -1) 0;
+}
+/* 胶囊开关下的说明：一行小字，跟着开关走 */
+.capsule-hint {
+  margin: 0;
+}
+/* 删除入口（#112）：最轻的一档——无框文字按钮、危险色；可点区仍够（min-block-size 由控件样式给） */
+.popup > .text-danger {
+  border: none;
+  background: none;
+  padding-inline: 0;
+  justify-content: flex-start;
+  color: var(--pm-danger);
+  text-align: left;
+}
+.popup > .text-danger:hover:not(:disabled) {
+  background: none;
+  color: var(--pm-danger);
+  text-decoration: underline;
 }
 </style>

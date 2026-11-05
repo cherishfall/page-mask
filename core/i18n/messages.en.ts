@@ -100,6 +100,12 @@ export const en: Messages = {
     /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
     coverPage: 'Cover this page',
+    /** Show-capsule switch (#112): label + one-line hint under the switch */
+    showToggle: 'The small button in the corner',
+    showToggleHint: 'Turn it off and PageMask stays reachable from the toolbar icon; the cover shortcut keeps working.',
+    /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
+    deleting: 'Deleting…',
+    deleteFailed: "Couldn't delete this site's settings, please try again.",
     restorePage: 'Restore this page',
     covering: 'Covering…',
     restoring: 'Restoring…',

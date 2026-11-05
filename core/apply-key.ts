@@ -20,6 +20,9 @@ export function applyKey(
     profile.titleIconSet === true,
     profile.disguisedTitle,
     profile.faviconDataUrl,
+    // 「不显示胶囊」变了胶囊要从页面上消失 / 回来（#111）：它改的是按钮的存在性，
+    // 响应式更新救不了——键里不计入的话 refreshState 会在「键没变」处提前返回，跳过 mountToggle
+    profile.capsuleHidden === true,
     settings.defaultTitle,
     settings.defaultIconDataUrl,
     profile.hideRules.map(({ lastHealth: _h, lastHealthAt: _t, ...rest }) => rest),
