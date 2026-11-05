@@ -81,6 +81,12 @@ export interface SiteProfile {
   floatingBtnPos: ButtonPos | null;
   /** 胶囊用 mini 形态（只有状态圆点、遮住、展开三个小钮）；缺省 = 全功能（#78，按站点各自记） */
   capsuleMini?: boolean;
+  /**
+   * 这个网站不显示胶囊（#111）：缺省 = 显示；只有显式 true 才落字段。
+   * 只影响胶囊本身，不影响收起规则、标题和图标、快捷键与幕布上的「恢复」按钮。
+   * 本机界面状态：写入不刷新 updatedAt（与 floatingBtnPos 同口径）。
+   */
+  capsuleHidden?: boolean;
   createdAt: number;
   /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */
   updatedAt: number;

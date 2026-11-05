@@ -211,6 +211,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function mountToggle(): void {
     // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
     if (curtain.active) return;
+    // 这个网站选择了「不显示胶囊」（#111）：直接卸掉，其余功能（收起规则、标题图标、快捷键）不受影响
+    if (profile?.capsuleHidden === true) {
+      unmountToggle();
+      return;
+    }
     // 按「有没有设置」决定出不出（#67）：三样全空才不挂
     if (!profile || !hasSiteSettings(profile)) {
       unmountToggle();

@@ -212,6 +212,8 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
     floatingBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
     // mini 形态是本机界面偏好（与 floatingBtnPos 同口径）：只有显式 true 才落字段，缺省即全功能
     ...(v.capsuleMini === true ? { capsuleMini: true as const } : {}),
+    // 不显示胶囊（#111）同口径：只有显式 true 才落字段，缺省 = 显示
+    ...(v.capsuleHidden === true ? { capsuleHidden: true as const } : {}),
     createdAt: finiteOr(v.createdAt, 0),
     updatedAt: finiteOr(v.updatedAt, 0),
   };

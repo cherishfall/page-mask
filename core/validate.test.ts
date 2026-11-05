@@ -110,6 +110,15 @@ describe('图标、origin、范围、方案校验（表格驱动）', () => {
 });
 
 describe('sanitizeProfile', () => {
+  it('capsuleHidden 只有显式 true 才落字段（#111）：缺省 = 显示，旧数据兼容', () => {
+    // 显式 true 保留
+    expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), capsuleHidden: true })?.profile.capsuleHidden).toBe(true);
+    // false / 非布尔 / 缺失都不落字段（缺省 = 显示）
+    expect('capsuleHidden' in (sanitizeProfile({ ...createEmptyProfile('https://a.com'), capsuleHidden: false })?.profile ?? {})).toBe(false);
+    expect('capsuleHidden' in (sanitizeProfile({ ...createEmptyProfile('https://a.com'), capsuleHidden: 'yes' })?.profile ?? {})).toBe(false);
+    expect('capsuleHidden' in (sanitizeProfile(createEmptyProfile('https://a.com'))?.profile ?? {})).toBe(false);
+  });
+
   it('身份字段非法整体拒绝', () => {
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: 'javascript:alert(1)' })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), formatVersion: 2 })).toBeNull();

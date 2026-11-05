@@ -974,6 +974,42 @@ async function main() {
     );
     check(top.open && top.onTop, `确认框在页面 z-index:2147483647 浮层之上（命中测试落在向导宿主上：${top.onTop}）`);
 
+    // ===================== 单站「不显示胶囊」（#111：数据与行为） =====================
+    console.log('\n--- 不显示胶囊：隐藏后有设置也不挂，其余功能不受影响 ---');
+    // 隐藏 + 故意留一堆旧形态残留（mini、非默认位置）：模拟「藏之前用过的状态」
+    await patchProfile(ext.control, ORIGIN, { capsuleHidden: true, capsuleMini: true, floatingBtnPos: { x: 0, y: 100 } });
+    await page.reload({ waitUntil: 'load' });
+    await new Promise((res) => setTimeout(res, 800)); // 负向断言：等过挂载时机
+    check(!(await page.$(TOGGLE)), 'capsuleHidden:true：有设置也不挂胶囊');
+    const hiddenState = await page.evaluate(() => ({
+      title: document.title,
+      ad: getComputedStyle(document.querySelector('#ad')).display,
+    }));
+    check(hiddenState.title === '低调阅读' && hiddenState.ad === 'none', '隐藏胶囊不影响收起规则与标题（仍是清爽态）');
+
+    // 隐藏期间快捷键遮住 → 幕布正常、恢复按钮在（隐藏只影响胶囊本身）
+    await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'curtainToggle' });
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
+    check(!!(await page.$(CURTAIN)), '隐藏胶囊时快捷键仍能遮住整页');
+    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+
+    // 重新显示：按弹窗（#112）将要做的那次写入——hidden=false、位置与形态一并重置——
+    // 直写存储后刷新：胶囊回到右下角默认位置、全功能形态
+    await patchProfile(ext.control, ORIGIN, { capsuleHidden: false, capsuleMini: false, floatingBtnPos: null });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    const reshown = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(
+      Math.abs(vw - reshown.right - 16) < 2 && Math.abs(reshown.bottom - 684) < 3,
+      `显示后胶囊回到右下角默认位置（右距 ${Math.round(vw - reshown.right)}px、底距 ${Math.round(700 - reshown.bottom)}px）`,
+    );
+    check(
+      !!(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-grip"]'), TOGGLE)),
+      '显示后是全功能形态（有拖动把手，mini 残留被清掉）',
+    );
+    check(!(await getProfile(ext.control, ORIGIN)).capsuleMini, '显示时 mini 残留被重置');
+
     // ===================== 幕布：未添加网站的一次性脚本（#46 / #50） =====================
     console.log('\n--- 幕布：未添加网站的一次性脚本（#46 / #50） ---');
     // 删掉配置：这个网站从此"没添加过"，页面里没有内容脚本、没有悬浮胶囊

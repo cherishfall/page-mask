@@ -204,6 +204,16 @@ describe('原子更新（S2：不丢更新）', () => {
     expect(got.updatedAt).toBe(100);
   });
 
+  it('capsuleHidden 写入不刷新用户修改时间（#111，本机界面状态，不参与较新一方合并）', async () => {
+    const area = memoryArea();
+    seed(area, createEmptyProfile('https://x.com', 100));
+    const store = createPageMaskStorage(area);
+    await store.updateProfile('https://x.com', (p) => void (p.capsuleHidden = true), { touch: false });
+    const got = (await store.getProfile('https://x.com'))!;
+    expect(got.capsuleHidden).toBe(true);
+    expect(got.updatedAt).toBe(100);
+  });
+
   it('写入前统一校验：危险候选与远程图标不会落库', async () => {
     const store = createPageMaskStorage(memoryArea());
     const got = await store.updateProfile(
@@ -314,6 +324,21 @@ describe('导出/导入', () => {
     expect(merged.hideRules.find((r) => r.id === 'r2')!.elementName).toBe('导入版');
     expect(merged.floatingBtnPos).toEqual({ x: 1, y: 1 });
     expect((await store.getProfile('https://new.com'))!.floatingBtnPos).toBeNull();
+  });
+
+  it('capsuleHidden 随 profile 管线走（#111）：导入带隐藏标记的文件保留，旧文件导入 = 显示', async () => {
+    const area = memoryArea();
+    const store = createPageMaskStorage(area);
+    const bundle = bundleOf([
+      { ...createEmptyProfile('https://hidden.com'), capsuleHidden: true },
+      createEmptyProfile('https://shown.com'),
+    ]);
+    await store.importBundle(bundle as unknown as ExportBundle, 'merge');
+    expect((await store.getProfile('https://hidden.com'))?.capsuleHidden).toBe(true);
+    expect('capsuleHidden' in ((await store.getProfile('https://shown.com')) ?? {})).toBe(false);
+    // 坏值不落字段
+    await store.importBundle(bundleOf([{ ...createEmptyProfile('https://bad.com'), capsuleHidden: 'yes' }]) as unknown as ExportBundle, 'merge');
+    expect('capsuleHidden' in ((await store.getProfile('https://bad.com')) ?? {})).toBe(false);
   });
 
   it('合并：本地已设置的全局设置保留；本地未设置时采用导入值', async () => {
