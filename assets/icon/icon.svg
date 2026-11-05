@@ -1,19 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- PageMask 图标（方案 A）：浏览器窗口线框 + 中间一段内容被折叠收起，露出干净留白。
-       用于 32/48/128。主体 96×96（16..112），四周 16px 透明留白。主色 = 设计 tokens 中的 pm-accent（#2563eb）。注意 XML 注释里不能出现两个连字符。 -->
-  <!-- 窗口：蓝色外框 + 白色内容区 -->
-  <rect x="16" y="16" width="96" height="96" rx="16" fill="#2563eb"/>
-  <rect x="22" y="38" width="84" height="68" rx="8" fill="#ffffff"/>
-  <!-- 标题栏上的三个小圆点（通用窗口意象） -->
-  <circle cx="32" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
-  <circle cx="43" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
-  <circle cx="54" cy="27" r="3.5" fill="#ffffff" opacity=".9"/>
-  <!-- 上方保留的内容行 -->
-  <rect x="32" y="46" width="64" height="8" rx="4" fill="#9aa3af"/>
-  <!-- 折叠：两个箭头向中线收拢，中线为虚线，四周是干净留白 -->
-  <path d="M56 60 L64 66 L72 60" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="32" y1="72" x2="96" y2="72" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="0.1 9"/>
-  <path d="M56 84 L64 78 L72 84" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- 下方保留的内容行 -->
-  <rect x="32" y="90" width="44" height="8" rx="4" fill="#9aa3af"/>
+  <!-- PageMask 图标（#104，方案 A）：一整块品牌蓝底，一页白纸，一副深蓝尖角眼罩歪着搭在纸上。
+       眼洞全部保留（那是“面具”成立的原因），但整只歪 10°、偏向左上、一角探出纸边——它是一副摘下来
+       放在纸上的面具，不是一张正对着你的脸。
+       用于 32/48/128；16px 另有手绘简化版。注意 XML 注释里不能出现两个连字符。 -->
+  <rect x="2" y="2" width="124" height="124" rx="24" fill="#2563eb"/>
+  <rect x="34" y="12" width="60" height="104" rx="8" fill="#ffffff"/>
+  <!-- 下方两行内容：让白纸读成“一页纸”，否则眼罩会像一枚无限符号 -->
+  <rect x="42" y="82" width="44" height="7" rx="3.5" fill="#9aa3af"/>
+  <rect x="42" y="95" width="30" height="7" rx="3.5" fill="#9aa3af"/>
+  <g transform="rotate(-10 64 50) translate(-4 -6)">
+    <path d="M26 48 C34 36 50 36 58 45 L64 51 L70 45 C78 36 94 36 102 48 C102 64 88 70 76 63 L64 56 L52 63 C40 70 26 64 26 48 Z" fill="#1e40af"/>
+    <circle cx="45" cy="51" r="6" fill="#ffffff"/>
+    <circle cx="83" cy="51" r="6" fill="#ffffff"/>
+  </g>
 </svg>

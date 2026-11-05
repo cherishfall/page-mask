@@ -4,7 +4,7 @@
 // 用法：
 //   npm run icons              生成 public/icon/{16,32,48,128}.png 与 docs/store-assets/icon-128.png
 //   npm run icons -- --preview 额外生成 16px 放大预览 docs/dev/evidence/icon-16-preview.png
-// 环境变量 CHROME_PATH 可覆盖 Chrome 可执行文件路径。
+// 环境变量 CHROME_PATH 可覆盖 Chrome 可执行文件路径；CHROME_ARGS 追加启动参数（CI / 沙箱里用 --no-sandbox）。
 import { readFile, writeFile, mkdir, readdir, access } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,7 +58,8 @@ async function render(page, html, width, height) {
 
 async function main() {
   const preview = process.argv.includes('--preview');
-  const browser = await puppeteer.launch({ executablePath: await findChrome(), headless: true });
+  const args = (process.env.CHROME_ARGS ?? '').split(/\s+/).filter(Boolean);
+  const browser = await puppeteer.launch({ executablePath: await findChrome(), headless: true, args });
   try {
     const page = await browser.newPage();
     await mkdir(join(root, 'public/icon'), { recursive: true });

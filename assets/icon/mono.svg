@@ -1,9 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
-  <!-- PageMask 单色图标（12-16px），供页内悬浮按钮使用；颜色跟随 currentColor。
-       图形与主图标一致：窗口线框 + 标题栏 + 上下内容行 + 中间点状折叠线。 -->
-  <rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2" stroke-width="1.5"/>
-  <line x1="2" y1="5.25" x2="14" y2="5.25" stroke-width="1.5"/>
-  <line x1="4.75" y1="7.75" x2="11.25" y2="7.75" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="4.75" y1="11.25" x2="9.25" y2="11.25" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="4" y1="9.5" x2="12" y2="9.5" stroke-width="1" stroke-dasharray="1 1.5" opacity=".8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+  <!-- PageMask 单色版（#104）：白纸轮廓 + 歪着搭上去的实心眼罩（单色下不画眼洞，否则会变成两个透明点）。
+       颜色跟随 currentColor，供页内小尺寸场景使用。 -->
+  <rect x="4" y="1.5" width="8" height="13" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+  <g transform="rotate(-12 8 5.6)">
+    <path d="M3.6 5.4 C4.4 4.5 5.9 4.5 6.8 5.4 L8 6.3 L9.2 5.4 C10.1 4.5 11.6 4.5 12.4 5.4 C12.4 7.2 11 7.8 9.4 7.2 L8 6.6 L6.6 7.2 C5 7.8 3.6 7.2 3.6 5.4 Z" fill="currentColor"/>
+  </g>
 </svg>
