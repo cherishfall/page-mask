@@ -78,6 +78,10 @@ h3 {
 .error {
   color: var(--pm-danger);
 }
+/* 提醒（不是错误）：可能带来「找不到」之类的副作用时用（如胶囊调到 10%–30%） */
+.warn {
+  color: var(--pm-warning);
+}
 
 .card {
   background: var(--pm-bg);

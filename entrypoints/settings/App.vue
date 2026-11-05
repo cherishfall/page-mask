@@ -127,7 +127,7 @@
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
         </section>
 
-        <!-- 右下角那颗小按钮（#102）：三档不透明度 + 真实胶囊预览 -->
+        <!-- 右下角那颗小按钮（#110）：不透明度滑杆 + 真实胶囊预览 -->
         <section class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
           <h2 id="pm-settings-toggle-heading">{{ t.settings.toggleHeading }}</h2>
           <p class="hint">{{ t.settings.toggleIntro }}</p>
@@ -137,24 +137,32 @@
               :position="null"
               :mini="false"
               site-label="example.com"
-              :opacity="TOGGLE_OPACITY[store.state.toggleOpacity]"
+              :opacity="previewOpacity"
               preview
             />
           </div>
-          <fieldset class="import-mode">
-            <legend>{{ t.settings.toggleHeading }}</legend>
-            <div v-for="level in TOGGLE_OPACITY_LEVELS" :key="level" class="radio">
-              <input
-                :id="`pm-settings-opacity-${level}`"
-                v-model="opacityPref"
-                type="radio"
-                name="pm-settings-opacity"
-                :value="level"
-                :data-testid="`pm-settings-opacity-${level}`"
-              />
-              <label :for="`pm-settings-opacity-${level}`">{{ t.settings.toggleOpacityLabel[level] }}</label>
-            </div>
-          </fieldset>
+          <div class="opacity-row">
+            <label for="pm-settings-opacity">{{ t.settings.toggleOpacityLabel }}</label>
+            <input
+              id="pm-settings-opacity"
+              v-model.number="opacityDraft"
+              type="range"
+              min="10"
+              max="100"
+              step="10"
+              data-testid="pm-settings-opacity"
+              :aria-valuetext="`${opacityDraft}%`"
+              @input="onOpacityInput"
+              @change="onOpacityChange"
+            />
+            <!-- 数值单独成一项：读屏读「百分之三十」，看的人不用猜数字在哪 -->
+            <output for="pm-settings-opacity" data-testid="pm-settings-opacity-value">{{ opacityDraft }}%</output>
+          </div>
+          <!-- 拖动即时改预览；存储在松手（change）时写一次，拖动过程不刷存储 -->
+          <p v-if="opacityDraft <= 30" class="hint warn" role="status" data-testid="pm-settings-opacity-low">
+            {{ t.settings.toggleOpacityLowHint }}
+          </p>
+          <p v-if="opacityError" class="hint error" role="alert" data-testid="pm-settings-opacity-error">{{ opacityError }}</p>
           <p class="hint">{{ t.settings.toggleHint }}</p>
         </section>
 
@@ -277,12 +285,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { browser } from 'wxt/browser';
 import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { localeName } from '@/core/i18n';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
-import { TOGGLE_OPACITY, TOGGLE_OPACITY_LEVELS, type ToggleOpacity } from '@/core/toggle-opacity';
 import FloatingToggle from '@/ui/FloatingToggle.vue';
 import { ensureTogglePreviewStyles } from '@/ui/toggle/preview-style';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
@@ -329,11 +336,40 @@ async function refreshShortcut() {
   shortcutLoaded.value = true;
 }
 
-/** 胶囊不透明度（#102）：全局偏好，三档 */
-const opacityPref = computed({
-  get: () => store.state.toggleOpacity,
-  set: (v: ToggleOpacity) => void store.setToggleOpacity(v),
-});
+/**
+ * 胶囊闲置不透明度（#110）：一根 10%–100% 的滑杆。
+ * input（拖动中 / 键盘调整中）即时改预览；change（松手）才写存储，避免拖动过程每 10ms 刷一次存储。
+ */
+const opacityDraft = ref(Math.round(store.state.toggleOpacity * 100));
+/** 预览跟随拖动即时变；存储被别处改动（导入 / 另一标签页）时也跟着回真实值 */
+const previewOpacity = ref(store.state.toggleOpacity);
+const opacityError = ref('');
+watch(
+  () => store.state.toggleOpacity,
+  (v) => {
+    opacityDraft.value = Math.round(v * 100);
+    previewOpacity.value = v;
+  },
+);
+
+function onOpacityInput(e: Event) {
+  // 从事件目标取值：v-model 与本监听都挂在 input 上，不依赖两者的触发顺序
+  const v = Number((e.target as HTMLInputElement).value);
+  opacityDraft.value = v;
+  previewOpacity.value = v / 100;
+}
+
+async function onOpacityChange() {
+  try {
+    await store.setToggleOpacity(opacityDraft.value / 100);
+    opacityError.value = '';
+  } catch {
+    // 写入失败：控件与预览回滚到存储里的实际值（不禁用滑杆，错误说明白就行）
+    opacityDraft.value = Math.round(store.state.toggleOpacity * 100);
+    previewOpacity.value = store.state.toggleOpacity;
+    opacityError.value = t.value.settings.toggleOpacityError;
+  }
+}
 
 async function openShortcutSettings() {
   shortcutOpenFailed.value = false;
@@ -470,6 +506,31 @@ function onReplaceClose() {
   border: 1px dashed var(--pm-border);
   border-radius: var(--pm-radius-control);
   background: var(--pm-bg-subtle);
+}
+
+/* 不透明度滑杆（#110）：标签、滑杆、数值一行排开。
+ * 滑杆本体用 Chromium 原生渲染（原生即 4px 轨道 / 16px 滑块，accent-color 已全局指向主色，
+ * forced-colors 下自动用系统色）；这里只定尺寸与可点区。 */
+.opacity-row {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-3);
+  margin: var(--pm-space-2) 0;
+}
+.opacity-row label {
+  flex: none;
+}
+.opacity-row input[type='range'] {
+  flex: 1;
+  min-inline-size: 160px;
+  min-block-size: 24px; /* 触屏可点区下限（WCAG 2.5.8）；原生滑块本体 16px */
+  margin: 0;
+}
+.opacity-row output {
+  flex: none;
+  min-inline-size: 44px; /* 「100%」不换行 */
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 键帽（#101）：一眼认得出「这是一个按键」，不用解释文字 */

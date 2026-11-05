@@ -43,7 +43,6 @@ import { fromExtensionPage } from '@/core/messages';
 import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/messages';
 import { DEFAULT_SETTINGS } from '@/core/types';
 import type { GlobalSettings, SiteProfile } from '@/core/types';
-import { TOGGLE_OPACITY } from '@/core/toggle-opacity';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 // 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
@@ -198,7 +197,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
     toggleState.mini = profile?.capsuleMini === true;
-    toggleState.opacity = TOGGLE_OPACITY[settings.toggleOpacity];
+    toggleState.opacity = settings.toggleOpacity; // 闲置不透明度（#110）：数值由 readSettings 归一化
   }
 
   /**

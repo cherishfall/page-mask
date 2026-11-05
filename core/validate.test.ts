@@ -164,11 +164,15 @@ describe('readSettings', () => {
   });
 
   it('胶囊不透明度（#102）：只接受三档，坏值 / 旧数据回落「清晰」', () => {
-    expect(readSettings(undefined).toggleOpacity).toBe('full');
-    expect(readSettings({ toggleOpacity: 'soft' }).toggleOpacity).toBe('soft');
-    expect(readSettings({ toggleOpacity: 'faint' }).toggleOpacity).toBe('faint');
-    expect(readSettings({ toggleOpacity: 'dim' }).toggleOpacity).toBe('full');
-    expect(readSettings({ toggleOpacity: 0.5 }).toggleOpacity).toBe('full');
+    expect(readSettings(undefined).toggleOpacity).toBe(1);
+    // 旧三档字符串（旧存储 / 旧导出文件）迁移：full→1 / soft→0.9 / faint→0.7（#110）
+    expect(readSettings({ toggleOpacity: 'full' }).toggleOpacity).toBe(1);
+    expect(readSettings({ toggleOpacity: 'soft' }).toggleOpacity).toBe(0.9);
+    expect(readSettings({ toggleOpacity: 'faint' }).toggleOpacity).toBe(0.7);
+    // 数值夹取与坏值回默认
+    expect(readSettings({ toggleOpacity: 0.35 }).toggleOpacity).toBe(0.4);
+    expect(readSettings({ toggleOpacity: 5 }).toggleOpacity).toBe(1);
+    expect(readSettings({ toggleOpacity: 'dim' }).toggleOpacity).toBe(1);
   });
 
   it('「遮住」按钮位置（#50）：合法坐标保留，缺字段 / 类型不对一律回落 null', () => {
@@ -194,7 +198,7 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
-      toggleOpacity: 'full',
+      toggleOpacity: 1,
       settingsVersion: 2,
     });
     expect(readStoredSettings(stored)).toEqual({
@@ -202,7 +206,7 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
       defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
-      toggleOpacity: 'full',
+      toggleOpacity: 1,
     });
   });
 });

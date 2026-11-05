@@ -235,8 +235,10 @@ export const zh = {
       '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。网站自己设的图标优先；网站和这里都没设时，标签页上不显示图标。',
 
     toggleHeading: '右下角的小按钮',
-    toggleIntro: '它平时压在网页上。嫌它显眼可以调淡一点——鼠标移上去、用键盘选中或拖动时，它会立刻恢复清晰。',
-    toggleOpacityLabel: { full: '清晰', soft: '淡一点', faint: '很淡' },
+    toggleIntro: '「不透明度」调的是它闲着的时候有多淡；鼠标移上去、用键盘选中或拖动时，它会立刻变清楚。',
+    toggleOpacityLabel: '不透明度',
+    toggleOpacityLowHint: '调得太淡会不容易找到；鼠标移上去会变清楚。',
+    toggleOpacityError: '不透明度没有存上，请再试一次。',
     toggleHint: '只影响这颗小按钮，不影响遮住整页后那颗「恢复」。',
 
     shortcutHeading: '快捷键',

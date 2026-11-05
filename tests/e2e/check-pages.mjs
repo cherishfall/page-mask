@@ -735,16 +735,35 @@ async function main() {
     check(shownVersion === manifest.version, `「关于」显示版本号 ${shownVersion}`);
     check(!!(await m.$('a[href="https://github.com/cherishfall/page-mask/issues"]')), '「关于」有指向 GitHub issues 的反馈入口');
 
-    // 胶囊不透明度（#102）：三档单选 + 真实胶囊预览
+    // 胶囊不透明度（#110）：一根 10%–100% 的滑杆，预览即时、存储在松手时写
     const previewOpacity = () =>
       m.$eval(`${tid('pm-settings-toggle')} ${tid('pm-toggle')}`, (e) => parseFloat(getComputedStyle(e).opacity));
-    check((await previewOpacity()) === 1, '默认「清晰」：预览胶囊不透明度为 1');
-    await m.click(tid('pm-settings-opacity-faint'));
-    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 'faint', '不透明度写入存储');
-    check(true, '选「很淡」后写入全局设置');
-    check((await previewOpacity()) === 0.7, `预览当场变淡（${await previewOpacity()}）`);
-    await m.click(tid('pm-settings-opacity-full'));
-    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 'full', '恢复清晰');
+    check((await previewOpacity()) === 1, '默认 100%：预览胶囊不透明度为 1');
+    const setSlider = async (v) => {
+      await m.$eval(
+        tid('pm-settings-opacity'),
+        (el, val) => {
+          el.value = String(val);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        v,
+      );
+      await m.$eval(tid('pm-settings-opacity'), (el) => el.dispatchEvent(new Event('change', { bubbles: true })));
+    };
+    await setSlider(30);
+    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 0.3, '松手后 30% 写入存储');
+    check((await previewOpacity()) === 0.3, `预览当场变淡（${await previewOpacity()}）`);
+    check(!!(await m.$(tid('pm-settings-opacity-low'))), '≤30% 出现「调得太淡会不容易找到」提示（role=status）');
+    check(
+      (await m.$eval(tid('pm-settings-opacity'), (e) => e.getAttribute('aria-valuetext'))) === '30%',
+      '滑杆 aria-valuetext 是百分比',
+    );
+    await setSlider(10);
+    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 0.1, '下限 10% 可写');
+    await setSlider(100);
+    await poll(async () => (await getSettings(ext.control)).toggleOpacity === 1, '拖回 100% 写入存储');
+    check((await previewOpacity()) === 1, '拖回 100%：预览恢复全不透明');
+    check(!(await m.$(tid('pm-settings-opacity-low'))), '回到 100% 后低档提示消失');
 
     // 编辑态与存储态分离：插件设置页的全局默认标题
     const titleSel = tid('pm-settings-default-title');

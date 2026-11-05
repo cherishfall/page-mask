@@ -11,7 +11,7 @@
  */
 import { normalizeOrigin } from './origin';
 import { isUiLanguage } from './i18n/locale';
-import { isToggleOpacity } from './toggle-opacity';
+import { normalizeToggleOpacity } from './toggle-opacity';
 import { t } from './i18n';
 import {
   DEFAULT_SETTINGS,
@@ -232,8 +232,8 @@ export function readSettings(v: unknown): GlobalSettings {
     curtainBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
     // 界面语言偏好（#57）：坏值 / 旧数据一律回到 auto
     uiLanguage: isUiLanguage(o.uiLanguage) ? o.uiLanguage : DEFAULT_SETTINGS.uiLanguage,
-    // 胶囊不透明度（#102）：坏值 / 旧数据一律回到「清晰」
-    toggleOpacity: isToggleOpacity(o.toggleOpacity) ? o.toggleOpacity : DEFAULT_SETTINGS.toggleOpacity,
+    // 胶囊不透明度（#110）：数值夹到 0.1–1；旧三档字符串迁移（full→1 / soft→0.9 / faint→0.7）；坏值回 1
+    toggleOpacity: normalizeToggleOpacity(o.toggleOpacity),
   };
 }
 

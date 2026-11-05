@@ -212,8 +212,10 @@ export const en: Messages = {
 
     toggleHeading: 'The small button in the corner',
     toggleIntro:
-      'It sits over the page. If it feels too loud, make it fainter — it turns fully clear as soon as you hover, focus it with the keyboard, or drag it.',
-    toggleOpacityLabel: { full: 'Clear', soft: 'Softer', faint: 'Faintest' },
+      'Opacity is how faint it sits when idle; it turns fully clear as soon as you hover, focus it with the keyboard, or drag it.',
+    toggleOpacityLabel: 'Opacity',
+    toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
+    toggleOpacityError: "Couldn't save the opacity, please try again.",
     toggleHint: 'Only this button. The “Restore” button on a covered page stays as it is.',
 
     shortcutHeading: 'Keyboard shortcut',

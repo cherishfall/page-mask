@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { TOGGLE_OPACITY, TOGGLE_OPACITY_LEVELS, isToggleOpacity } from './toggle-opacity';
+import {
+  DEFAULT_TOGGLE_OPACITY,
+  TOGGLE_OPACITY_MAX,
+  TOGGLE_OPACITY_MIN,
+  normalizeToggleOpacity,
+} from './toggle-opacity';
 
 /** 与 tests/tokens-contrast.test.ts 同一套相对亮度公式 */
 function linear(c: number): number {
@@ -21,33 +26,58 @@ function blend(c: [number, number, number], page: [number, number, number], alph
 const FG: [number, number, number] = [0x1f, 0x23, 0x29]; // --pm-fg-light
 const BG: [number, number, number] = [0xff, 0xff, 0xff]; // --pm-bg-light
 
-describe('胶囊不透明度三档（#102）', () => {
-  it('取值是约定的 100% / 85% / 70%，且只有这三档', () => {
-    expect(TOGGLE_OPACITY_LEVELS).toEqual(['full', 'soft', 'faint']);
-    expect(TOGGLE_OPACITY.full).toBe(1);
-    expect(TOGGLE_OPACITY.soft).toBe(0.85);
-    expect(TOGGLE_OPACITY.faint).toBe(0.7);
+describe('胶囊闲置不透明度（#110 滑杆）', () => {
+  it('区间与默认：0.1–1，默认 1', () => {
+    expect(TOGGLE_OPACITY_MIN).toBe(0.1);
+    expect(TOGGLE_OPACITY_MAX).toBe(1);
+    expect(DEFAULT_TOGGLE_OPACITY).toBe(1);
   });
 
-  it('三档下文字对比度都 ≥4.5（最差页面底色：纯白与纯黑）', () => {
-    for (const level of TOGGLE_OPACITY_LEVELS) {
-      const alpha = TOGGLE_OPACITY[level];
-      let worst = Infinity;
-      // 从纯黑到纯白扫一遍页面底色，取最差
-      for (let v = 0; v <= 255; v += 5) {
-        const page: [number, number, number] = [v, v, v];
-        worst = Math.min(worst, contrast(blend(FG, page, alpha), blend(BG, page, alpha)));
-      }
-      expect(worst, `${level} 的最差文字对比度`).toBeGreaterThanOrEqual(4.5);
+  it('normalize：合法值原样、夹取、四舍五入到 10% 网格', () => {
+    expect(normalizeToggleOpacity(1)).toBe(1);
+    expect(normalizeToggleOpacity(0.1)).toBe(0.1);
+    expect(normalizeToggleOpacity(0.5)).toBe(0.5);
+    expect(normalizeToggleOpacity(0.55)).toBe(0.6); // 10% 网格取整
+    expect(normalizeToggleOpacity(0.04)).toBe(0.1); // 低于下限夹到 0.1
+    expect(normalizeToggleOpacity(1.5)).toBe(1); // 高于上限夹到 1
+    expect(normalizeToggleOpacity(-2)).toBe(0.1);
+  });
+
+  it('normalize：旧三档字符串迁移（旧存储 / 旧导出文件）', () => {
+    expect(normalizeToggleOpacity('full')).toBe(1);
+    expect(normalizeToggleOpacity('soft')).toBe(0.9); // 旧 0.85 归到 10% 网格上的 0.9
+    expect(normalizeToggleOpacity('faint')).toBe(0.7);
+    expect(normalizeToggleOpacity('dim')).toBe(1); // 不认识的字符串回默认
+  });
+
+  it('normalize：非数值 / 缺失回默认 1', () => {
+    expect(normalizeToggleOpacity(null)).toBe(1);
+    expect(normalizeToggleOpacity(undefined)).toBe(1);
+    expect(normalizeToggleOpacity(Number.NaN)).toBe(1);
+    expect(normalizeToggleOpacity('0.3')).toBe(1); // 数字字符串不认（存储层不该出现）
+  });
+
+  it('100% 时文字对比度 ≥4.5（最差页面底色：纯白与纯黑）', () => {
+    let worst = Infinity;
+    for (let v = 0; v <= 255; v += 5) {
+      const page: [number, number, number] = [v, v, v];
+      worst = Math.min(worst, contrast(blend(FG, page, 1), blend(BG, page, 1)));
     }
+    expect(worst).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('只认三个字符串；存储里的坏值回落由 readSettings 负责', () => {
-    expect(isToggleOpacity('full')).toBe(true);
-    expect(isToggleOpacity('soft')).toBe(true);
-    expect(isToggleOpacity('faint')).toBe(true);
-    expect(isToggleOpacity('dim')).toBe(false);
-    expect(isToggleOpacity(0.5)).toBe(false);
-    expect(isToggleOpacity(undefined)).toBe(false);
+  /**
+   * 低档位的例外（#110 定案，不要把「每档 ≥4.5」加回来）：闲置不透明度调的是「闲置可见度」，
+   * 悬停 / 键盘聚焦 / 拖动时回到 100%（那一刻满足对比度），闲置时的低对比是用户主动选择的
+   * 可见度（iOS 辅助触控、OPPO 悬浮球同类）。10% 约 1.2:1 是预期。
+   */
+  it('10% 闲置对比度约 1.2:1——低档位例外，预期就是不达 4.5', () => {
+    let worst = Infinity;
+    for (let v = 0; v <= 255; v += 5) {
+      const page: [number, number, number] = [v, v, v];
+      worst = Math.min(worst, contrast(blend(FG, page, 0.1), blend(BG, page, 0.1)));
+    }
+    expect(worst).toBeLessThan(2);
+    expect(worst).toBeGreaterThan(1);
   });
 });

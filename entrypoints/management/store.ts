@@ -18,7 +18,7 @@ import { originPattern } from '@/core/registration';
 import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
 import { titleIconResetPatch } from '@/core/wizard-logic';
-import type { ToggleOpacity } from '@/core/toggle-opacity';
+import { DEFAULT_TOGGLE_OPACITY, normalizeToggleOpacity } from '@/core/toggle-opacity';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
 import { exportFileName } from '@/core/export-file';
 
@@ -36,8 +36,8 @@ export interface ManagementState {
   defaultIcon: string | null;
   /** 界面语言偏好（#57）：auto 跟随浏览器，zh / en 锁定 */
   uiLanguage: UiLanguage;
-  /** 右下角小胶囊的不透明度（#102）：全局偏好 */
-  toggleOpacity: ToggleOpacity;
+  /** 右下角小胶囊的闲置不透明度（#110）：0.1–1，全局偏好 */
+  toggleOpacity: number;
   /** 输入框草稿：键 = origin，全局默认标题用 DEFAULT_KEY */
   drafts: Record<string, string>;
   /** 当前聚焦的字段 */
@@ -74,7 +74,7 @@ export function createManagementStore() {
     defaultTitle: null,
     defaultIcon: null,
     uiLanguage: 'auto',
-    toggleOpacity: 'full',
+    toggleOpacity: DEFAULT_TOGGLE_OPACITY,
     drafts: {},
     focusedKey: null,
     pendingOrigins: [],
@@ -283,10 +283,11 @@ export function createManagementStore() {
     await storage.putSettings({ uiLanguage: pref });
   }
 
-  /** 胶囊不透明度（#102）：全局偏好，写入后所有已打开的页面随存储变化跟随 */
-  async function setToggleOpacity(level: ToggleOpacity): Promise<void> {
-    await storage.putSettings({ toggleOpacity: level });
-    state.toggleOpacity = level;
+  /** 胶囊闲置不透明度（#110）：全局偏好，写入后所有已打开的页面随存储变化跟随 */
+  async function setToggleOpacity(v: number): Promise<void> {
+    const opacity = normalizeToggleOpacity(v);
+    await storage.putSettings({ toggleOpacity: opacity });
+    state.toggleOpacity = opacity;
   }
 
   /** 请求删除这个网站的设置：只记下目标，确认框由视图打开 */
