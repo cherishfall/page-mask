@@ -68,6 +68,19 @@
 - 截图脚本自身的两个覆盖缺口：`06-dark-popup.png` 没对 popup 单独设 `prefers-color-scheme`，与浅色弹窗同图；菜单展开后没关掉导致 `04-zh-page.png` 与菜单图重复。这两个是复查工具问题，不是产品问题，脚本要修。
 - 其余（菜单项长得不像按钮、快捷键徽章小、危险红字贴底、图标无文字兜底、深色灰块边界偏弱）属既有设计或可忽略，本轮不动。
 
+## 第二轮复查结论（专审第一轮修复，待发 0.7.1）
+
+独立子代理审 `v0.7.0..HEAD`，主会话逐条核对后确认 4 处必修：
+
+1. `releaseMute()` 用 `tabs.query` 的旧 `t.url` 算 `shouldMute`，却用 `tabs.get` 回查静音状态 —— 导航竞态下会解掉刚按新地址设对的静音。改用回查到的 `tab?.url`，两者同一快照。
+2. `releaseMute()` 只在 `resetSite` 调；权限被收回（`permissions.onRemoved`）与整体替换导入（`storage.onChanged` 的 profile 增删）同样让配置消失，睡着 / 失联的标签页会留静音。这两条删除类触发点也补调用（单向、幂等）。
+3. `decideImage()` 在渲染尺寸为 0（未布局 / `display:none`）时仍回退到 `width/height` 属性，等于把 #126 删掉的属性短路从判定函数内部复活；且 `attributeFilter` 没有 `class` / `style`，站点改类名把图显示成大图不会重判。改成「渲染尺寸无效时只有表情线索放行，其余先灰一帧」，`class` / `style` 纳入重判。
+4. `forget()` 没把移除的元素从 `pending` 里删，后台标签页 rAF 被暂停时仍钉着引用；补 `pending.delete()`。
+
+另收口：`pm-tg-box` 的真机断言补 `data-state=off` 与实际计算色；`media-ui.test.ts` 的 group 断言补 `aria-label`；商店材料里 `(As the site is)` / `as-is` 剩词与「0.7.0 待重走」标题统一到 0.7.1。
+
+**判定可收敛、不改**：删自己站点仍能解除静音（有单测）、`shouldMute(undefined)` 的取舍、`forget` 移除又插入的生命周期、`clearKeepMarks` 与 pending 的竞态、`pm-tg-box` 深色对比度（tokens 单测 ≥3 守门）、group 嵌 region 的冗余、文案历史条目。
+
 ## 发版流程
 
 版本号 → `CHANGELOG.md`（中英）→ push → annotated tag（message = 中文 changelog 小节）→
