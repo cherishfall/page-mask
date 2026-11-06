@@ -53,14 +53,28 @@
 3. 打开 Chrome → 地址栏输入 `chrome://extensions` → 打开右上角「开发者模式」
 4. 点「加载已解压的扩展程序」→ 选择项目的 `.output/chrome-mv3` 目录
 
+以后换版本**不要换目录、不要点移除**——照下一节做，已有的网站设置、网站授权、按钮位置都会保留。
+
+### 升级：换版本不丢设置
+
+换新版本时照这三步做，否则原有设置会全部丢失：
+
+1. **覆盖到同一个目录**，不要解压到新文件夹。最省事的是直接用仓库里的 `.output/chrome-mv3`：`npm run build` 会自动更新它。
+2. 回到 `chrome://extensions`，点这张卡片上的**刷新**按钮。
+3. **已经打开的页面再刷新一次**——内容脚本只在页面加载时注入。
+
+原因很简单：设置是按「这个扩展」存的，而开发者模式加载的扩展靠**文件夹位置**认身份。换一个文件夹，浏览器就当成了另一个扩展，设置自然是空的。点「移除」也一样，一定会清空（所有扩展都这样，不是本扩展的毛病）。
+
+**怎么确认身份没变**：`chrome://extensions` → 这张卡片的「详情」→ 看「ID」那串字符，升级前后应当一模一样。
+
+发布到 Chrome 应用商店之后就不用管这些了：商店的自动更新是在原来那个扩展上升级，设置不会丢。
+
 ### 本地自测
 
 1. 按上面的步骤加载后，打开任意一个你想收拾的网站，点工具栏的 PageMask 图标（建议先把它固定到工具栏：拼图图标 → 图钉）
 2. 改完代码重新 `npm run build` 后，回到 `chrome://extensions` 点这个扩展卡片上的**刷新**按钮；**已经打开的页面要再刷新一次**——内容脚本只在页面加载时注入
 3. 想从头再来：「全部网站设置」列表里点该行「⋯」菜单里的「删除这个网站的设置」，或打开该网站的设置页点同名项，或用弹窗最底部的同名入口（都会同时收回访问权限），或直接在 `chrome://extensions` 移除扩展
 4. 出问题时先看两处日志：页面的 DevTools Console（内容脚本的报错会打在这里）、`chrome://extensions` 里本扩展的「服务工作进程」→「检查」
-
-之前装过 0.1.0 的话，对同一个目录点刷新即可，旧设置会保留；如果旧规则看起来不对，删掉这个网站的设置后重新设一次最省事。
 
 ### 使用方法
 
@@ -148,14 +162,28 @@ Requires **Chrome 116 or later**.
 3. Open `chrome://extensions`, enable **Developer mode**
 4. **Load unpacked** → select the project's `.output/chrome-mv3` directory
 
+When a new version comes out, **don't switch folders and don't click Remove** — follow the next section; your site settings, site access and button position all stay.
+
+### Upgrading without losing your settings
+
+Three steps. Skip them and your settings are gone:
+
+1. **Overwrite the same folder** — don't unzip each release into a new one. Easiest: keep loading the repo's `.output/chrome-mv3`, which `npm run build` refreshes in place.
+2. Back in `chrome://extensions`, click the **reload** button on the extension card.
+3. **Reload any open pages** — the content script is only injected when a page loads.
+
+Why: settings belong to "this extension", and an unpacked extension is identified by the folder it was loaded from. A different folder is a different extension, so it starts empty. Clicking **Remove** wipes everything too — that's how Chrome treats every extension, not something specific to PageMask.
+
+**To confirm the identity didn't change**: `chrome://extensions` → **Details** on the card → compare the **ID** string. It should be identical before and after the upgrade.
+
+Once published on the Chrome Web Store this stops mattering: store updates upgrade the same extension in place and keep your settings.
+
 ### Local testing
 
 1. After loading, open any site you want to tidy up and click the PageMask toolbar icon (pin it first if you like: puzzle icon → pin)
 2. After changing code and running `npm run build` again, click the **reload** button on the extension card in `chrome://extensions`; **reload open pages too** — the content script is only injected when a page loads
 3. To start over: click 「删除这个网站的设置」 (Delete this site's settings) in the ⋯ menu of that row in 「全部网站设置」 (All site settings), or on the site's settings page, or at the very bottom of the popup (each also withdraws access), or remove the extension from `chrome://extensions`
 4. When something looks wrong, check two places: the page's DevTools Console (content-script errors land there) and 「服务工作进程」 → 「检查」 (service worker → Inspect) on the extension card
-
-If you had 0.1.0 loaded, just hit reload on the same folder — existing settings are kept. If old rules look off, delete that site's settings and set it up again.
 
 ### How to use
 
