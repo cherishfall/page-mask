@@ -407,15 +407,24 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 标签页静音（#116） ----------
 
   /**
-   * 这个标签页现在该不该静音：只看「有配置 + 清爽态 + 静音网页开关」。
+   * 这个标签页现在该不该静音：「站点权限仍在 + 有配置 + 清爽态 + 静音网页开关」。
    * 没有 "tabs" 权限时读不到未授权站点的 tab.url（Chrome 敏感字段规则）；读不到就当作不该静音，
    * 于是我们留在那个标签页上的静音会被解除——这正是离开该网站时想要的行为。
+   *
+   * 权限是生效前提（#130）：用户在 Chrome 扩展详情页收回站点访问权时，配置并不会被删。
+   * 只看配置的话，permissions.onRemoved 的收尾会空转，标签页继续哑着；地址一变双向对账
+   * 甚至可能把它重新静音回去。权限查不到时宁可当作不该静音，也不越界。
    */
   async function shouldMute(url: string | undefined): Promise<boolean> {
     if (!url) return false;
     let profileOrigin: string;
     try {
       profileOrigin = new URL(url).origin;
+    } catch {
+      return false;
+    }
+    try {
+      if (!(await browser.permissions.contains({ origins: [originPattern(profileOrigin)] }))) return false;
     } catch {
       return false;
     }

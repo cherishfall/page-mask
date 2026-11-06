@@ -1045,6 +1045,50 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.muted.get(siteTabId)).toMatchObject({ reason: 'extension', extensionId: 'another-extension' });
     });
 
+    it('收回站点访问权：配置还在，本扩展设的静音也要解除（#130）', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true, reason: 'extension' });
+      stubs.update.mockClear();
+
+      // Chrome 扩展详情页收回权限：只撤授权，配置留着
+      stubs.granted.delete(pattern(ORIGIN));
+      await stubs.permissions.onRemoved.trigger({ origins: [pattern(ORIGIN)] });
+
+      await eventually(() => expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: false }));
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toHaveProperty(`profile:${ORIGIN}`);
+    });
+
+    it('收回权限后：syncMute / 地址变化都不会把这个标签页重新静音（#130）', async () => {
+      await withMute(true);
+      stubs.granted.delete(pattern(ORIGIN));
+      stubs.update.mockClear();
+
+      expect(await send({ t: 'syncMute' }, muteSender())).toMatchObject({ ok: true });
+      await fakeBrowser.tabs.onUpdated.trigger(
+        siteTabId,
+        { url: `${ORIGIN}/other` },
+        { url: `${ORIGIN}/other` } as never,
+      );
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(stubs.update).not.toHaveBeenCalledWith(siteTabId, { muted: true });
+      expect(stubs.muted.get(siteTabId)).toBeUndefined();
+    });
+
+    it('重新授予权限后：静音按现有对账路径回来（#130）', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      stubs.granted.delete(pattern(ORIGIN));
+      await stubs.permissions.onRemoved.trigger({ origins: [pattern(ORIGIN)] });
+      await eventually(() => expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: false }));
+      stubs.update.mockClear();
+
+      stubs.granted.add(pattern(ORIGIN));
+      expect(await send({ t: 'syncMute' }, muteSender())).toMatchObject({ ok: true });
+      expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: true });
+    });
+
     it('只认标签页里的消息：扩展页面 / 网页不能借这条消息改静音', async () => {
       await withMute(true);
       stubs.update.mockClear();
