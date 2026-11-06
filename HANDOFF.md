@@ -76,6 +76,7 @@
 2. `releaseMute()` 只在 `resetSite` 调；权限被收回（`permissions.onRemoved`）与整体替换导入（`storage.onChanged` 的 profile 增删）同样让配置消失，睡着 / 失联的标签页会留静音。这两条删除类触发点也补调用（单向、幂等）。
 3. `decideImage()` 在渲染尺寸为 0（未布局 / `display:none`）时仍回退到 `width/height` 属性，等于把 #126 删掉的属性短路从判定函数内部复活；且 `attributeFilter` 没有 `class` / `style`，站点改类名把图显示成大图不会重判。改成「渲染尺寸无效时只有表情线索放行，其余先灰一帧」，`class` / `style` 纳入重判。
 4. `forget()` 没把移除的元素从 `pending` 里删，后台标签页 rAF 被暂停时仍钉着引用；补 `pending.delete()`。
+5. **写回归单测时另抓出一个 0.7.0 老 bug**（两轮审查都没报）：`onLoad` 只 `pending.add()`、不调 `schedule()`，所以「图片加载完重新判尺寸」全靠页面恰好还有别的 DOM 变动顺带触发，首屏懒加载的小图标可能一直灰着。补调度 + 回归单测；属第 3 条同一类（尺寸重判不可靠），已记进 #128 评论。
 
 另收口：`pm-tg-box` 的真机断言补 `data-state=off` 与实际计算色；`media-ui.test.ts` 的 group 断言补 `aria-label`；商店材料里 `(As the site is)` / `as-is` 剩词与「0.7.0 待重走」标题统一到 0.7.1。
 

@@ -472,10 +472,12 @@ export function createBackground({ browser }: BackgroundDeps): void {
         .filter((t) => t.id !== undefined)
         .map(async (t) => {
           try {
-            // 与 reconcileMute 一样回查一次：query 的结果可能已经过期，静音状态也一样
+            // 与 reconcileMute 一样回查一次：query 的结果可能已经过期。
+            // 地址也必须取这次回查的（#128）：删站点的瞬间标签页若跳转到另一个配了静音的网站，
+            // tabs.onUpdated 会按新地址设上静音；拿 query 里的旧地址算就会把刚设对的那份解掉。
             const tab = await browser.tabs.get(t.id!);
             if (!mutedByUs(tab?.mutedInfo)) return;
-            if (!(await shouldMute(t.url))) await browser.tabs.update(t.id!, { muted: false });
+            if (!(await shouldMute(tab?.url))) await browser.tabs.update(t.id!, { muted: false });
           } catch {
             // 标签页刚被关掉：没有需要收尾的状态
           }
@@ -655,7 +657,12 @@ export function createBackground({ browser }: BackgroundDeps): void {
   });
   browser.runtime.onStartup.addListener(() => reconcileInBackground('onStartup'));
   browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
-  browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
+  browser.permissions.onRemoved.addListener(() => {
+    void reconcileInBackground('permissions.onRemoved');
+    // 用户在 Chrome 扩展详情页收回站点访问：内容脚本可能已经失联，标签页也可能休眠，
+    // 不会有人再发 syncMute。单向收一次，别留下本扩展设的静音（#128）
+    void releaseMute();
+  });
 
   // 幕布快捷键（#101）：全产品只此一条命令，其他功能一律不加快捷键（ADR-0010）
   browser.commands?.onCommand?.addListener((command) => {
@@ -670,7 +677,12 @@ export function createBackground({ browser }: BackgroundDeps): void {
       // Chrome 省略不存在的一侧；按 == null 判断，兼容给 null 的实现
       ([k, c]) => k.startsWith(PROFILE_PREFIX) && (c.oldValue == null) !== (c.newValue == null),
     );
-    if (lifecycle) reconcileInBackground('storage');
+    if (!lifecycle) return;
+    void reconcileInBackground('storage');
+    // 「整体替换」导入会一次删掉一批站点配置；这些站点已打开的（或休眠的）标签页
+    // 不一定还发得出 syncMute，同样单向收一次（#128）。只在 profile 增删时走，
+    // 普通拨开关不额外遍历标签页。
+    void releaseMute();
   });
 
   /**

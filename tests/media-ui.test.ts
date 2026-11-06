@@ -63,9 +63,15 @@ describe('三个媒体开关的界面一致性（#116）', () => {
     expect(menu).toContain('pm-tg-box');
   });
 
-  it('三处都收成一组；组级说明与逐行说明有视觉分隔（#127）', () => {
+  it('三处都收成一组；组级说明与逐行说明有视觉分隔（#127 / #128）', () => {
+    // 只查 role="group" 字符串没有校验力：三处还要各自给出可读的分组名
+    const labels: Record<string, RegExp> = {
+      弹窗: /role="group"\s+:aria-label="t\.media\.heading"/,
+      '悬浮按钮 ⋯ 菜单': /role="group"\s+:aria-label="t\.media\.menuGroup"/,
+      站点设置页: /role="group"\s+:aria-label="t\.media\.heading"/,
+    };
     for (const [name, src] of SURFACES) {
-      expect(src, `${name} 应当有 role="group"`).toContain('role="group"');
+      expect(src, `${name} 应当有带名字的 role="group"`).toMatch(labels[name]!);
     }
     expect(SURFACES[0][1], '弹窗的组级说明要有细分隔').toMatch(/\.media-hint\s*\{[^}]*border-top/s);
     expect(SURFACES[2][1], '设置页的卡片脚注要有细分隔').toMatch(/\.media-footnote\s*\{[^}]*border-top/s);

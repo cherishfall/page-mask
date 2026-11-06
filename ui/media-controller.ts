@@ -46,17 +46,21 @@ function baseFacts(el: HTMLImageElement): MediaSizeFacts {
 }
 
 /**
- * 始终带上渲染尺寸再判定（#126）：属性写 16×16、却被 CSS 放大到 600px 的图不是小图标，
- * 不能因为「属性小」就短路放行。反过来大图被缩小显示也放行——它在页面上只占那么点地方。
- * 布局还没完成时 rect 是 0×0，shouldKeepMedia 会跳过这组候选、自然退回属性 / 原始尺寸。
+ * 渲染尺寸说了算（#126 / #128）：属性写 16×16、却被 CSS 放大到 600px 的图不是小图标；
+ * 反过来大图被缩小显示也放行——它在页面上只占那么点地方。
+ *
+ * rect 为 0×0（未布局 / display:none / 懒加载占位）时**不回退到属性 / 原始尺寸**：
+ * CSS 随时能覆盖它们，回退等于把删掉的属性短路从判定函数内部复活，大图就露出来了。
+ * 这时只按文字线索放行表情，其余先灰一帧（本来就是「宁可多灰一帧」的设计），
+ * 等 load 或 class / style 变化后重判，小图标会补上标记。
  */
 function decideImage(img: HTMLImageElement): boolean {
+  const facts = baseFacts(img);
   const rect = img.getBoundingClientRect();
-  return shouldKeepMedia({
-    ...baseFacts(img),
-    renderedWidth: rect.width,
-    renderedHeight: rect.height,
-  });
+  if (rect.width > 0 && rect.height > 0) {
+    return shouldKeepMedia({ ...facts, renderedWidth: rect.width, renderedHeight: rect.height });
+  }
+  return shouldKeepMedia({ className: facts.className, alt: facts.alt, src: facts.src });
 }
 
 export function createMediaController(doc: Document): MediaController {
@@ -120,12 +124,18 @@ export function createMediaController(doc: Document): MediaController {
     for (const el of node.querySelectorAll('img, video')) pending.add(el);
   }
 
-  /** 子树被移出文档：当场按原值还原并忘掉它，别让强引用钉住已被信息流替换掉的视频（#126） */
+  /** 子树被移出文档：当场按原值还原并忘掉它，别让强引用钉住已被信息流替换掉的视频（#126 / #128） */
   function forget(node: Node): void {
     if (!(node instanceof Element)) return;
     const videos: HTMLVideoElement[] = [];
+    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') {
+      pending.delete(node); // 后台标签页的 rAF 会被暂停，pending 也是强引用，一并清掉
+    }
     if (node.tagName === 'VIDEO') videos.push(node as HTMLVideoElement);
-    for (const el of node.querySelectorAll('video')) videos.push(el as HTMLVideoElement);
+    for (const el of node.querySelectorAll('img, video')) {
+      pending.delete(el);
+      if (el.tagName === 'VIDEO') videos.push(el as HTMLVideoElement);
+    }
     for (const video of videos) {
       if (!touchedVideos.has(video)) continue;
       const original = originalMuted.get(video);
@@ -142,7 +152,7 @@ export function createMediaController(doc: Document): MediaController {
         for (const n of r.addedNodes) collect(n);
         for (const n of r.removedNodes) forget(n);
       } else if (r.type === 'attributes' && r.target instanceof Element) {
-        // src / srcset 换了（懒加载占位换成真图）：尺寸可能变，重新判定一次
+        // src / srcset 换了（懒加载占位换成真图），或 class / style 改了尺寸：重新判定一次
         if (r.target.tagName === 'IMG') pending.add(r.target);
       }
     }
@@ -158,7 +168,12 @@ export function createMediaController(doc: Document): MediaController {
   function onLoad(e: Event): void {
     if (!wantImages) return;
     const el = e.target as Element | null;
-    if (el?.tagName === 'IMG') pending.add(el); // 图片加载完才知道真实尺寸
+    if (el?.tagName !== 'IMG') return;
+    // 图片加载完才知道真实尺寸：放进待办后必须自己排一帧（#128）。
+    // 0.7.0 这里只 add 不 schedule，重判全靠页面恰好还有别的变动顺带触发，
+    // 首屏那批懒加载小图标因此可能一直灰着。
+    pending.add(el);
+    schedule();
   }
 
   function start(): void {
@@ -168,7 +183,9 @@ export function createMediaController(doc: Document): MediaController {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['src', 'srcset', 'width', 'height'],
+      // class / style 会改变渲染尺寸（隐藏的小图被显示成大图、图标被 CSS 放大），
+      // 也要重判一次（#128）。只在开关打开期间观察，未开启的页面零开销。
+      attributeFilter: ['src', 'srcset', 'width', 'height', 'class', 'style'],
     });
     // 捕获阶段：play / load 都不冒泡，但会经过 document
     doc.addEventListener('play', onPlay, true);

@@ -8,11 +8,17 @@ const pause = vi.fn();
 Object.defineProperty(HTMLMediaElement.prototype, 'pause', { configurable: true, value: pause });
 Object.defineProperty(HTMLMediaElement.prototype, 'paused', { configurable: true, get: () => false });
 
+/** jsdom 没有布局：手动给出渲染尺寸，模拟真实浏览器里已经排好版的图片 */
+function rect(w: number, h: number): DOMRect {
+  return { width: w, height: h, x: 0, y: 0, top: 0, left: 0, right: w, bottom: h, toJSON: () => ({}) } as DOMRect;
+}
+
 function addImg(w: number, h: number, attrs: Record<string, string> = {}): HTMLImageElement {
   const el = document.createElement('img');
   el.setAttribute('width', String(w));
   el.setAttribute('height', String(h));
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  el.getBoundingClientRect = () => rect(w, h);
   document.body.appendChild(el);
   return el;
 }
@@ -62,12 +68,9 @@ describe('小图豁免（#116）', () => {
     c.dispose();
   });
 
-  const rect = (w: number, h: number) =>
-    ({ width: w, height: h, x: 0, y: 0, top: 0, left: 0, right: w, bottom: h, toJSON: () => ({}) }) as DOMRect;
-
   it('属性写着 16×16、被 CSS 放大的图不算小图标（#126：渲染尺寸优先）', () => {
     const enlarged = addImg(16, 16);
-    vi.spyOn(enlarged, 'getBoundingClientRect').mockReturnValue(rect(600, 340));
+    enlarged.getBoundingClientRect = () => rect(600, 340);
     const c = createMediaController(document);
     c.sync({ hideImages: true });
     expect(enlarged.hasAttribute(MEDIA_KEEP_ATTR), '不能被属性尺寸短路放行').toBe(false);
@@ -76,10 +79,35 @@ describe('小图豁免（#116）', () => {
 
   it('大图被 CSS 缩小到图标大小：仍按它实际占的地方放行', () => {
     const shrunk = addImg(900, 600);
-    vi.spyOn(shrunk, 'getBoundingClientRect').mockReturnValue(rect(16, 16));
+    shrunk.getBoundingClientRect = () => rect(16, 16);
     const c = createMediaController(document);
     c.sync({ hideImages: true });
     expect(shrunk.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+    c.dispose();
+  });
+
+  it('还没布局（rect=0）：属性小也先灰一帧，加载后按真实尺寸补上标记（#128）', async () => {
+    const icon = addImg(16, 16);
+    icon.getBoundingClientRect = () => rect(0, 0);
+    const c = createMediaController(document);
+    c.sync({ hideImages: true });
+    expect(icon.hasAttribute(MEDIA_KEEP_ATTR), '不能回退到属性尺寸就放行').toBe(false);
+
+    icon.getBoundingClientRect = () => rect(16, 16);
+    icon.dispatchEvent(new Event('load'));
+    await vi.waitFor(() => expect(icon.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true), { timeout: 500, interval: 5 });
+    c.dispose();
+  });
+
+  it('改 class / style 把隐藏的图显示成大图：重新判定，不沿用旧的放行标记（#128）', async () => {
+    const icon = addImg(16, 16);
+    const c = createMediaController(document);
+    c.sync({ hideImages: true });
+    expect(icon.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+
+    icon.getBoundingClientRect = () => rect(600, 340);
+    icon.setAttribute('class', 'hero-image');
+    await vi.waitFor(() => expect(icon.hasAttribute(MEDIA_KEEP_ATTR)).toBe(false), { timeout: 500, interval: 5 });
     c.dispose();
   });
 

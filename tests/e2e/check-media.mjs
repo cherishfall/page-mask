@@ -176,14 +176,21 @@ async function main() {
       TOGGLE,
     );
     check(flipped === 'false', '勾选就地变成未选中（aria-checked=false）');
-    const offBox = await page.evaluate(
-      (h) =>
-        !!document
-          .querySelector(h)
-          ?.shadowRoot?.querySelector('[data-testid="pm-toggle-media-hideVideos"] .pm-tg-box'),
-      TOGGLE,
+    const offMark = await page.evaluate((h) => {
+      const b = document
+        .querySelector(h)
+        ?.shadowRoot?.querySelector('[data-testid="pm-toggle-media-hideVideos"]');
+      const slot = b?.querySelector('.pm-tg-check');
+      return {
+        state: slot?.getAttribute('data-state') ?? null,
+        hasBox: !!slot?.querySelector('.pm-tg-box'),
+        color: slot ? getComputedStyle(slot).color : null,
+      };
+    }, TOGGLE);
+    check(
+      offMark.state === 'off' && offMark.hasBox && offMark.color && offMark.color !== 'rgba(0, 0, 0, 0)',
+      `未选中项有可见的淡空框，不和菜单里的普通动作项混淆（#127/#128：${JSON.stringify(offMark)}）`,
     );
-    check(offBox, '未选中项也画一个淡空框，不和菜单里的普通动作项混淆（#127）');
     await waitFor(page, '关掉后视频恢复原来的静音状态', () => document.querySelector('#vid').muted === false, [], { timeout: 8000 });
     check(true, '关掉「收起视频」后视频的静音被还原');
     // 拨回来，留给后面的两态边界检查
