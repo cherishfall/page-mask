@@ -62,6 +62,43 @@ describe('小图豁免（#116）', () => {
     c.dispose();
   });
 
+  const rect = (w: number, h: number) =>
+    ({ width: w, height: h, x: 0, y: 0, top: 0, left: 0, right: w, bottom: h, toJSON: () => ({}) }) as DOMRect;
+
+  it('属性写着 16×16、被 CSS 放大的图不算小图标（#126：渲染尺寸优先）', () => {
+    const enlarged = addImg(16, 16);
+    vi.spyOn(enlarged, 'getBoundingClientRect').mockReturnValue(rect(600, 340));
+    const c = createMediaController(document);
+    c.sync({ hideImages: true });
+    expect(enlarged.hasAttribute(MEDIA_KEEP_ATTR), '不能被属性尺寸短路放行').toBe(false);
+    c.dispose();
+  });
+
+  it('大图被 CSS 缩小到图标大小：仍按它实际占的地方放行', () => {
+    const shrunk = addImg(900, 600);
+    vi.spyOn(shrunk, 'getBoundingClientRect').mockReturnValue(rect(16, 16));
+    const c = createMediaController(document);
+    c.sync({ hideImages: true });
+    expect(shrunk.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+    c.dispose();
+  });
+
+  it('只关「收起图片」、保留「收起视频」：豁免标记也要清掉（#126）', () => {
+    const icon = addImg(16, 16);
+    const video = addVideo(false);
+    const c = createMediaController(document);
+    c.sync({ hideImages: true, hideVideos: true });
+    expect(icon.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+
+    c.sync({ hideVideos: true });
+    expect(icon.hasAttribute(MEDIA_KEEP_ATTR), 'observer 还在，但标记不能留在页面上').toBe(false);
+    expect(video.muted, '视频开关没动，仍在生效').toBe(true);
+
+    c.sync({});
+    expect(video.muted).toBe(false);
+    c.dispose();
+  });
+
   it('关掉开关 / 收尾时把标记清干净，不给页面留垃圾属性', () => {
     const icon = addImg(16, 16);
     const c = createMediaController(document);
@@ -137,6 +174,23 @@ describe('视频停播与静音（#116）', () => {
     video.dispatchEvent(new Event('play'));
     expect(pause).toHaveBeenCalled();
     expect(video.muted).toBe(true);
+    c.dispose();
+  });
+
+  it('视频被页面移除又插回：一轮一清，不在已替换的元素上留下哑状态（#126）', async () => {
+    const video = addVideo(false);
+    const c = createMediaController(document);
+    c.sync({ hideVideos: true });
+    expect(video.muted).toBe(true);
+
+    video.remove(); // 信息流 / 轮播把这一格换掉
+    await vi.waitFor(() => expect(video.muted, '移出文档时按原值还原').toBe(false), { timeout: 500, interval: 5 });
+
+    document.body.appendChild(video); // 网站又把同一个元素插回来
+    await vi.waitFor(() => expect(video.muted, '重新插入后按新的一轮重新压住').toBe(true), { timeout: 500, interval: 5 });
+
+    c.sync({});
+    expect(video.muted, '关开关仍能还原到这一轮开始时的值').toBe(false);
     c.dispose();
   });
 

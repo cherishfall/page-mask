@@ -46,14 +46,17 @@ function baseFacts(el: HTMLImageElement): MediaSizeFacts {
 }
 
 /**
- * 先用不需要布局的尺寸判定；定不了再读一次渲染尺寸。
- * 大图被 CSS 缩小显示时也放行——它在页面上确实只占那么点地方，不显眼。
+ * 始终带上渲染尺寸再判定（#126）：属性写 16×16、却被 CSS 放大到 600px 的图不是小图标，
+ * 不能因为「属性小」就短路放行。反过来大图被缩小显示也放行——它在页面上只占那么点地方。
+ * 布局还没完成时 rect 是 0×0，shouldKeepMedia 会跳过这组候选、自然退回属性 / 原始尺寸。
  */
 function decideImage(img: HTMLImageElement): boolean {
-  const base = baseFacts(img);
-  if (shouldKeepMedia(base)) return true;
   const rect = img.getBoundingClientRect();
-  return shouldKeepMedia({ ...base, renderedWidth: rect.width, renderedHeight: rect.height });
+  return shouldKeepMedia({
+    ...baseFacts(img),
+    renderedWidth: rect.width,
+    renderedHeight: rect.height,
+  });
 }
 
 export function createMediaController(doc: Document): MediaController {
@@ -117,10 +120,27 @@ export function createMediaController(doc: Document): MediaController {
     for (const el of node.querySelectorAll('img, video')) pending.add(el);
   }
 
+  /** 子树被移出文档：当场按原值还原并忘掉它，别让强引用钉住已被信息流替换掉的视频（#126） */
+  function forget(node: Node): void {
+    if (!(node instanceof Element)) return;
+    const videos: HTMLVideoElement[] = [];
+    if (node.tagName === 'VIDEO') videos.push(node as HTMLVideoElement);
+    for (const el of node.querySelectorAll('video')) videos.push(el as HTMLVideoElement);
+    for (const video of videos) {
+      if (!touchedVideos.has(video)) continue;
+      const original = originalMuted.get(video);
+      if (original !== undefined) video.muted = original;
+      // 一轮一清：元素若被重新插入，applyVideo 会把它当新元素重新记录这一轮的原值
+      originalMuted.delete(video);
+      touchedVideos.delete(video);
+    }
+  }
+
   function onMutation(records: MutationRecord[]): void {
     for (const r of records) {
       if (r.type === 'childList') {
         for (const n of r.addedNodes) collect(n);
+        for (const n of r.removedNodes) forget(n);
       } else if (r.type === 'attributes' && r.target instanceof Element) {
         // src / srcset 换了（懒加载占位换成真图）：尺寸可能变，重新判定一次
         if (r.target.tagName === 'IMG') pending.add(r.target);
@@ -192,6 +212,7 @@ export function createMediaController(doc: Document): MediaController {
       const nextVideos = flags.hideVideos === true;
       const wasOn = wantImages || wantVideos;
       const isOn = nextImages || nextVideos;
+      const turningImagesOff = wantImages && !nextImages;
       if (wantVideos && !nextVideos) restoreVideos();
       wantImages = nextImages;
       wantVideos = nextVideos;
@@ -200,6 +221,8 @@ export function createMediaController(doc: Document): MediaController {
         clearKeepMarks();
         return;
       }
+      // 只关图片、视频还开着时 observer 不能停，但页面上已打过的豁免标记要清掉（#126）
+      if (turningImagesOff) clearKeepMarks();
       if (!wasOn) start();
       scanExisting();
     },
