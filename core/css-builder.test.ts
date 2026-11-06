@@ -55,6 +55,28 @@ describe('buildDisguiseCss 按页面范围汇总', () => {
   });
 });
 
+describe('buildDisguiseCss 并入媒体灰块（#116）', () => {
+  it('0 条收起规则但开了媒体开关：也要有正式样式，不能返回 null', () => {
+    const css = buildDisguiseCss([], 'https://x.com/', { hideImages: true })!;
+    expect(css).toContain('img:not(');
+    expect(css).toContain('filter: brightness(0)');
+  });
+
+  it('规则 CSS 与媒体 CSS 拼在同一份文本里：swapCss 只需维护一份记录', () => {
+    const css = buildDisguiseCss([baseRule({})], 'https://x.com/', { hideImages: true, hideVideos: true })!;
+    expect(css).toContain('display: none');
+    expect(css).toContain(', video {');
+    expect(css).toContain('@media (prefers-color-scheme: dark)');
+  });
+
+  it('不传 media（向导预览 / 草稿）：不带媒体块，临时还原后看得清页面', () => {
+    const css = buildDisguiseCss([baseRule({})], 'https://x.com/')!;
+    expect(css).not.toContain('filter: brightness(0)');
+    expect(css).not.toContain('@media');
+    expect(css).toContain('display: none');
+  });
+});
+
 describe('maskRulesAt 方案C清单', () => {
   it('只返回当前页面上的遮罩规则', () => {
     const rules = [

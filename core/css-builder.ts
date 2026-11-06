@@ -7,6 +7,7 @@
 import type { HideRule, StrategyId } from './types';
 import { rulesApplicableAt } from './scope';
 import { isSafeSelector } from './validate';
+import { buildMediaCss, type MediaFlags } from './media';
 
 /** 生成 CSS 只需要"藏什么 + 怎么藏"：正式规则与向导草稿共用 */
 export type CssSource = Pick<HideRule, 'candidates' | 'strategy'>;
@@ -52,9 +53,22 @@ export function buildSameGroupOutlineCss(candidates: readonly string[]): string 
   return `${sels.join(', ')} { ${OUTLINE_DECL} }`;
 }
 
-/** 汇总某 URL 上应注入的 CSS 文本（仅 A/B 方案规则）；无则返回 null */
-export function buildDisguiseCss(rules: HideRule[], url: string): string | null {
-  return buildPreviewCss(rulesApplicableAt(rules, url));
+/**
+ * 汇总某 URL 上应注入的正式 CSS 文本：A/B 方案规则 +（#116）按站点开关拼进来的媒体灰块。
+ * 媒体块是确定性常量文本，作为整份文本的一部分走 swapCss 的 prev→next 换入换出，
+ * 后台无状态、注入记录按文档持有的既有设计一点不改。
+ *
+ * media 缺省时只输出规则 CSS：向导预览 / 草稿始终不带媒体块——向导里要临时还原整页，
+ * 用户得看清页面才能点选元素（design.md「进入点选时先临时还原全部规则」）。
+ * 0 条规则但开了媒体开关时也要返回文本，不能返回 null。
+ */
+export function buildDisguiseCss(rules: HideRule[], url: string, media?: MediaFlags): string | null {
+  const parts: string[] = [];
+  const ruleCss = buildPreviewCss(rulesApplicableAt(rules, url));
+  if (ruleCss) parts.push(ruleCss);
+  const mediaCss = media ? buildMediaCss(media) : null;
+  if (mediaCss) parts.push(mediaCss);
+  return parts.length ? parts.join('\n') : null;
 }
 
 /** 某页面上需要覆盖层（方案 C）的规则列表 */

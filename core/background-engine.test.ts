@@ -74,7 +74,20 @@ function stubBrowser() {
   };
   Object.assign(fakeBrowser.permissions, permissions);
   const sendMessage = vi.fn(async (_tabId: number, _msg: unknown): Promise<unknown> => ({ ok: true }));
-  Object.assign(fakeBrowser.tabs, { sendMessage });
+  // #116 标签页静音：保留 fakeBrowser 原有的 tab.url（enableSite 会用），再叠一份 mutedInfo
+  const realGet = fakeBrowser.tabs.get.bind(fakeBrowser.tabs);
+  const muted = new Map<number, { muted: boolean; reason?: string; extensionId?: string }>();
+  const get = vi.fn(async (tabId: number) => ({
+    ...(await realGet(tabId)),
+    mutedInfo: muted.get(tabId) ?? { muted: false },
+  }));
+  const update = vi.fn(async (tabId: number, props: { muted?: boolean }) => {
+    if (typeof props.muted === 'boolean') {
+      muted.set(tabId, { muted: props.muted, reason: 'extension', extensionId: 'test-extension-id' });
+    }
+    return undefined;
+  });
+  Object.assign(fakeBrowser.tabs, { sendMessage, get, update });
   // 快捷键（#101）：fakeBrowser 没有 commands / action，用最小替身记录调用
   const onCommand = fakeEvent<[string]>();
   const commands = { onCommand };
@@ -88,7 +101,7 @@ function stubBrowser() {
   };
   fake.action ??= {};
   Object.assign(fake.action, action);
-  return { scripting, permissions, registered, granted, sendMessage, onCommand, action };
+  return { scripting, permissions, registered, granted, sendMessage, onCommand, action, muted, update };
 }
 
 /** 内容脚本所在文档（后台按 sender 定位文档、判断生效范围） */
@@ -916,6 +929,90 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.sendMessage).not.toHaveBeenCalled();
       expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
       restore();
+    });
+  });
+
+  // ---------- 标签页静音（#116） ----------
+
+  describe('标签页静音（#116）', () => {
+    /** 已配置站点 + 清爽态，按需要打开 / 关闭「网页静音」 */
+    async function withMute(on: boolean, state: 'disguised' | 'original' = 'disguised') {
+      await configure(ORIGIN);
+      const p = disguisedProfile();
+      p.mutePage = on;
+      p.switchState = state;
+      await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: p });
+    }
+
+    const muteSender = () => ({ id: 'test-extension-id', tab: { id: siteTabId }, url: `${ORIGIN}/home` });
+
+    it('清爽态 + 网页静音：用浏览器原生的标签页静音，不需要新权限', async () => {
+      await withMute(true);
+      stubs.update.mockClear();
+      expect(await send({ t: 'syncMute' }, muteSender())).toMatchObject({ ok: true });
+      expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: true });
+    });
+
+    it('切「网站原样」：声音回来（只解除本扩展设的那份静音）', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true, reason: 'extension' });
+
+      await withMute(true, 'original');
+      stubs.update.mockClear();
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: false });
+    });
+
+    it('用户手动静音的标签页：不解除、不覆盖（想临时听一下就听）', async () => {
+      await withMute(false);
+      stubs.muted.set(siteTabId, { muted: true, reason: 'user' });
+      stubs.update.mockClear();
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.update).not.toHaveBeenCalled();
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ reason: 'user' });
+    });
+
+    it('别的扩展 / Chrome 自带「静音网站」设的静音：一律不动', async () => {
+      await withMute(false);
+      stubs.muted.set(siteTabId, { muted: true, reason: 'extension', extensionId: 'another-extension' });
+      stubs.update.mockClear();
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.update).not.toHaveBeenCalled();
+    });
+
+    it('已经静音的标签页：不重复调浏览器（谁设的静音都算）', async () => {
+      await withMute(true);
+      stubs.muted.set(siteTabId, { muted: true, reason: 'user' });
+      stubs.update.mockClear();
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.update).not.toHaveBeenCalled();
+    });
+
+    it('从这个网站跳到别的网站：解除我们留下的静音，别让它一直哑着', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      stubs.update.mockClear();
+
+      await fakeBrowser.tabs.onUpdated.trigger(siteTabId, { url: `${OTHER}/x` }, { url: `${OTHER}/x` } as never);
+
+      await eventually(() => expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: false }));
+    });
+
+    it('删除这个网站的设置：静音随配置一起撤掉', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      stubs.update.mockClear();
+
+      expect(await send({ t: 'resetSite', origin: ORIGIN }, EXT_SENDER)).toMatchObject({ ok: true });
+      expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: false });
+    });
+
+    it('只认标签页里的消息：扩展页面 / 网页不能借这条消息改静音', async () => {
+      await withMute(true);
+      stubs.update.mockClear();
+      expect(await send({ t: 'syncMute' }, EXT_SENDER)).toMatchObject({ ok: false });
+      expect(stubs.update).not.toHaveBeenCalled();
     });
   });
 });

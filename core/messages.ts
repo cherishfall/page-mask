@@ -226,6 +226,17 @@ export interface OpenSettingsRequest {
   section?: 'opacity';
 }
 
+/**
+ * 内容脚本 → 后台：按当前站点配置对账**本标签页**的静音状态（#116）。
+ *
+ * 故意不带方向、不带站点：目标状态由后台按存储与 sender.url 自己算，tabId 只认 sender.tab.id。
+ * 这样内容脚本既不能静音别的标签页，也不会因为缓存 / 时序把静音留在错的状态上。
+ * 触发点：清爽态 / 原样态切换、三个开关变化、删除站点还原、页面加载完成、跨站导航。
+ */
+export interface SyncMuteRequest {
+  t: 'syncMute';
+}
+
 export type BgRequest =
   | EnableSiteRequest
   | ResetSiteRequest
@@ -234,6 +245,7 @@ export type BgRequest =
   | CancelNewSiteRequest
   | CoverPageRequest
   | OpenSettingsRequest
+  | SyncMuteRequest
   | ApplyDisguiseRequest
   | RestoreOriginalRequest
   | DraftCssRequest

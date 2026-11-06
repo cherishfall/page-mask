@@ -56,6 +56,7 @@ import { createCurtainRestoreButton, type CurtainRestoreButton } from './curtain
 import { createPageHost, type PageHost } from './page-host';
 import { showPageNotice } from './page-notice';
 import { createFirstPaintShield } from './first-paint-shield';
+import { createMediaController } from './media-controller';
 
 /** DOM 解析完成（document_start 启动时 body 还不存在） */
 function whenDomReady(ctx: ContentScriptContext): Promise<void> {
@@ -80,6 +81,18 @@ function whenActivated(ctx: ContentScriptContext): { prerendering: boolean; acti
 function warnIfFailed(what: string, res: CssAck): void {
   // 页内没有统一的提示位置；至少不静默吞掉，便于排查（向导预览失败另有可见提示）
   if (!res.ok) console.warn(`[PageMask] ${what}未生效：${res.error ?? '未知原因'}`);
+}
+
+/**
+ * 请后台按当前存储对账本标签页的静音（#116）。消息不带方向与站点，后台只认 sender.tab.id。
+ * 扩展上下文失效 / 标签页刚关掉时静默忽略：静音是浏览器状态，不靠这条消息续命。
+ */
+function requestMuteSync(): void {
+  try {
+    void browser.runtime.sendMessage({ t: 'syncMute' } satisfies BgRequest).catch(() => undefined);
+  } catch {
+    // 更新 / 重载瞬间上下文已失效，新实例起来后会重新对账
+  }
 }
 
 /** 登记在隔离环境 window.__pagemask 上的句柄（entrypoints/content.ts、后台 enableSite 使用） */
@@ -131,6 +144,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const curtain = new CurtainLayer({ createHost: () => createPageHost(ctx, 'curtain') });
   // 必须最先执行：在页面开始解析前挡住首帧
   const shield = createFirstPaintShield(document);
+  const media = createMediaController(document);
   const styles = createDocStyles((m: BgRequest) => browser.runtime.sendMessage(m), takeover);
   const { prerendering, activated } = whenActivated(ctx);
   /** 依赖 DOM / 需要页面已被用户打开的部分（遮罩、体检回写、悬浮按钮）在此之后进行 */
@@ -205,7 +219,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
    */
   function hasSiteSettings(p: SiteProfile): boolean {
-    return p.titleIconSet === true || !!p.disguisedTitle || p.hideRules.length > 0;
+    // #116：只开了媒体开关、没有任何收起项也没改过标题的网站，同样要有页面上的入口
+    return (
+      p.titleIconSet === true ||
+      !!p.disguisedTitle ||
+      p.hideRules.length > 0 ||
+      p.hideImages === true ||
+      p.hideVideos === true ||
+      p.mutePage === true
+    );
   }
 
   function mountToggle(): void {
@@ -397,6 +419,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 排在进行中的状态刷新之后，避免刷新在向导打开后又把正式样式注回去
     await exclusive(async () => {
       warnIfFailed('临时还原', await styles.clearFormal());
+      // 向导里要先看清页面才能选元素：媒体灰块与视频停播一并临时还原，退出后由 refreshState 恢复
+      media.sync({ hideImages: false, hideVideos: false });
       guard.restore();
       clearMasks();
       appliedKey = null; // 退出向导后必须重新应用
@@ -453,6 +477,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function applyAll(): Promise<boolean> {
     if (!profile) return false;
+    // #116：媒体开关的 JS 部分尽早生效（document 已存在，新增元素由 observer 补），
+    // 静音按后台当前存储对账；两者都不依赖 DOMContentLoaded
+    media.sync(profile);
+    requestMuteSync();
     // 先压标题、首屏遮挡换成精确规则（都不等后台往返），再同步正式样式
     // 标题与图标只在「保存过」时生效（#98）：只收起内容的网站不该被改掉标签页。
     // 没保存过时要显式还原——之前可能压过（用户刚在别处清掉了那项设置）
@@ -461,7 +489,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     } else {
       guard.restore();
     }
-    shield.narrow(buildDisguiseCss(profile.hideRules, location.href));
+    // 首屏遮挡用的是同一份正式样式文本：媒体灰块也要在首帧前生效，不能露一帧真图
+    shield.narrow(buildDisguiseCss(profile.hideRules, location.href, profile));
     const ok = await syncFormalStyles();
     shield.release();
     await uiReady;
@@ -477,6 +506,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function restoreAll(): Promise<boolean> {
     healthGen++;
+    // 原样态 = 完全还原：小图标记、视频暂停与静音、标签页静音一并撤掉（只解除本扩展设的那份）
+    media.sync({ hideImages: false, hideVideos: false });
+    requestMuteSync();
     shield.release();
     guard.restore();
     clearMasks();
@@ -682,6 +714,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
   function clearPageUi(): void {
     hideCurtain({ remount: false }); // 先撤幕布再继续（#45；teardown 也走这里）
+    // 站点配置没了（一键清空 / 向导取消）：页面上的媒体效果与标签页静音都不能留
+    media.sync({ hideImages: false, hideVideos: false });
+    requestMuteSync();
     // 控制器登记一并摘掉：profile 都没了就遮不了页，留着登记会让一次性脚本委托到一个遮不了的控制器（#107）
     curtainSlot?.unregister();
     curtainSlot = null;
@@ -847,6 +882,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (refreshTimer) clearTimeout(refreshTimer);
     closeWizard();
     clearPageUi();
+    media.dispose(); // 断 observer、还原改过的 video.muted、清掉小图标记
   }
   ctx.onInvalidated(teardown);
 

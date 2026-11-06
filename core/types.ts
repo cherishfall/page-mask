@@ -117,6 +117,15 @@ export interface SiteProfile {
    * 本机界面状态：写入不刷新 updatedAt（与 floatingBtnPos 同口径）。
    */
   capsuleHidden?: boolean;
+  /**
+   * 收起图片（#116）：清爽态把网页上的图片变成灰块（布局不动、链接可点穿）。
+   * 只有显式 true 才落字段，缺省 = 不收起；真实用户设置，参与 updatedAt 与导入合并。
+   */
+  hideImages?: boolean;
+  /** 收起视频（#116）：灰块 + 暂停 + 静音——画面收起来了就不能再响声音 */
+  hideVideos?: boolean;
+  /** 网页静音（#116）：借浏览器原生的标签页静音，按住整页所有声音；不收起任何画面 */
+  mutePage?: boolean;
   createdAt: number;
   /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */
   updatedAt: number;
