@@ -16,7 +16,7 @@
 | 子票 2 三处界面 + i18n + 术语表 | **已完成、已推送** | 站点设置页卡片 / 弹窗一组三行 / ⋯ 菜单三个勾选项；`compile`、单测 679 项、全套 E2E 841 项全绿 |
 | 子票 3 文档 + ADR-0012 | **已完成、已推送** | `21a3e13`：ADR-0012、`docs/design.md` / `design-ui.md` / `dev/design-116.md` / `dev/DEVLOG.md`、`README.md`、`CHANGELOG.md`（0.7.0 中英）、`CHROMEWEBSTORE.md`、`PRIVACY.md`；顺手修掉 PRIVACY 里废弃的「一键清空」与商店材料的「菜单四项 / 427 项」旧口径 |
 | 发版 0.7.0 | **已完成** | `fd78e75` 版本号 → push → annotated tag `v0.7.0`（中文 changelog 小节为 message）→ `gh release create` 附 0.7.0 zip；发版门禁：compile / 679 单测 / check:docs / check:package（32 文件）/ 全套 E2E 841 项全绿 |
-| 全量复查（含视觉）→ 新 issue → 0.7.x 迭代 | 进行中 | 按 `docs/dev/visual-review.md`：代码 diff 复查 + WCAG / 界面整屏审查 + 真实渲染截图交给「新眼睛」；发现问题开 GitHub issue |
+| 全量复查（含视觉）→ 新 issue → 0.7.x 迭代 | 第一轮审查已完成，待开票修复 | 独立代码复查 + 9 张真实渲染截图交「新眼睛」审一轮（`tmp/review-0.7.0/`）；结论见下节 |
 
 ## 建议顺序
 
@@ -46,6 +46,27 @@
 - 弹窗 `ui/popup/PopupBody.vue` 宽 320，欢迎页直接复用同一组件做示意图；改动会自动反映到首次引导第 2 步。
 - E2E：CfT 157 品牌版 Chrome 忽略 `--load-extension`，权限靠构建产物改 manifest 预授予；`chrome.action.openPopup()` 不授予 activeTab；check-mask 偶发 CDP 超时复跑即过。
 - 仓库 `git stash@{0}` 是 `wip(#116): types+validate 预留字段`，票里明确说**不要当半成品继续用**，按票定稿重做。
+
+## 第一轮复查结论（0.7.0 → 待发 0.7.1）
+
+**代码复查**（独立子代理审 `v0.6.7..v0.7.0` 全量 diff，主会话逐条回源码核对）：
+
+- ✅ 确认为真：`core/background-engine.ts` 的 `releaseMute()` 复用了双向 `reconcileMute()`，删除**任意**站点时会遍历所有标签页，把用户手动取消的静音重新按回去（违反 ADR-0012 的公开承诺）。应改成单向：只在 `mutedByUs && !shouldMute(url)` 时解静音，任何情况都不写 `muted:true`。
+- ✅ 确认为真：`ui/media-controller.ts` 的 `decideImage()` 先用不需布局的属性尺寸短路，导致 `width=16 height=16` 却被 CSS 放大的图片被当成小图标放行；应始终带上渲染尺寸再判定。
+- ✅ 确认为真：只关「收起图片」保留「收起视频」时走 `wasOn && isOn` 分支，不调 `clearKeepMarks()`，页面残留 `data-pm-media-keep`。
+- ✅ 确认为真：`touchedVideos` 是强引用 Set，信息流反复替换 `<video>` 时只增不减（建议级）。
+- ✅ 确认为真：站点设置页媒体三行缺 `role="group"`（`design-ui.md` 自己写了「弹窗 / 设置页收成 group」）；菜单未选中项无可见状态标记（清晰度）。
+- ✅ 确认为真：`CHROMEWEBSTORE.md` §10 写「不遍历标签页、不读网址」，但 `releaseMute` / `tabs.onUpdated` / `shouldMute` 都会 `tabs.query({})` 并读 `tab.url` —— 商店材料失实，必须改。另 §6 写「seven items」却列了 8 项（拖动悬浮按钮后才有第 8 项）。
+- ⚠️ 判定为设计如此、不改：`openWizard` 不解除标签页静音（向导是点选界面，退出后按存储重新对账；ADR 措辞需澄清）；内部注释里的「网页静音」旧词（GLOSSARY 的 Avoid 只管界面用词，i18n 已定稿）。
+- ⚠️ 待人工真机：扩展被停用 / 卸载后 Chrome 是否自动清掉 `reason='extension'` 的标签页静音（扩展无 management 权限，无法自行收尾；用户可在标签页上手动取消）。
+- ❌ 误报，勿改：说明小字对比度（`fg-muted on bg` 浅 4.83 / 深 5.98，`on bg-subtle` 4.51 / 5.16，`tests/tokens-contrast.test.ts` 守门 ≥4.5）；开关点击区（`check-toggle.mjs` / `check-pages.mjs` 有 ≥24 断言，WCAG 2.5.8 另有 spacing 例外）；「按设置 / 原样」叫法（GLOSSARY 明确规定的短名）；英文页残留中文是截图夹具数据。
+
+**视觉审查**（9 张真机截图 `tmp/review-0.7.0/`，独立「新眼睛」只看图）：
+
+- 弹窗与站点设置页的**组级说明**跟最后一行「静音网页」的逐行说明视觉上分不开，容易被读成只解释静音 → 加一条细分隔 / 独立样式。
+- 悬浮菜单三个开关的**未选中项**只有一个空占位，和同菜单里的普通动作项看不出区别 → 在同一 12px 占位里画一个淡的未选中框（文字不位移）。
+- 截图脚本自身的两个覆盖缺口：`06-dark-popup.png` 没对 popup 单独设 `prefers-color-scheme`，与浅色弹窗同图；菜单展开后没关掉导致 `04-zh-page.png` 与菜单图重复。这两个是复查工具问题，不是产品问题，脚本要修。
+- 其余（菜单项长得不像按钮、快捷键徽章小、危险红字贴底、图标无文字兜底、深色灰块边界偏弱）属既有设计或可忽略，本轮不动。
 
 ## 发版流程
 
