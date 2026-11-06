@@ -2,6 +2,17 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.7.0（2026-11-06，#116）：按站点的图片 / 视频 / 声音三个开关
+
+- **产品口径先于代码拍板**：票里正文写「网页静音」、标题写「网站静音」，但术语表里「网站」特指按域名存的那份设置，混用会让人以为这是 Chrome 自带的「静音网站」。开工前定稿为「收起图片 / 收起视频 / 静音网页」，英文 "Hide images" / "Hide videos" / "Mute this page"，并在 `GLOSSARY.md` 登记 Avoid 列。
+- **调研推翻了票里的两个默认**：票里原写「小图标本期不做」，但成熟产品的无图模式都豁免按钮图标与表情——全部变灰反而让页面显得坏了；票里原写菜单用 `menuitemcheckbox`，而现有悬浮菜单刻意不是 `role="menu"`（没有方向键导航），孤立用这个角色违反 WCAG 4.1.2。两处都先回报产品所有者，确认「小图标留原样」「用 `role="switch" + aria-checked`」后才写码。
+- **灰块不是省流量**：`filter: brightness(0) invert(N) !important` + `background-color` 只改观感，请求照发。这条边界写进了界面说明、README、商店材料与 ADR-0012，不夸大；DNR 拦请求被明确否决（新权限 + 安装警告 + 还原不可靠）。
+- **CSS 管不了播放**：`display:none` / `filter` 都不会让 `<video>` 停下来。内容脚本要 `pause()` + `muted = true`，还要在 document 捕获阶段压住 `play`（play 不冒泡但经过 document）。还原只放回改动前的 `muted`，不替网站恢复播放。
+- **静音归属**：`tabs.update({muted})` 不需要 `tabs` 权限；解除前核对 `mutedInfo.reason === 'extension' && extensionId === 本扩展`，不抢用户手动静音、Chrome 自带「静音网站」或其他扩展。`tabs.onUpdated` 初版写成「地址变化或加载完成」都触发，会在未添加网站的页面也唤醒后台，收窄成只认 `changeInfo.url`。
+- **真机抓到一个单测看不见的回归**：`restoreVideos()` 清了「改过的视频」集合却没删「原静音值」WeakMap，于是「开 → 关 → 再开 → 再关」第二次打开时以为已经记过原值，第二次关就再也还原不了。修法是一轮一清、连原值记录一起删，并补两条循环回归单测。**有状态的 DOM 改写必须按「一轮一清」设计**，这是纯函数式的单测最容易漏的一类。
+- **三处界面不许各写一份清单**：`MEDIA_FLAG_KEYS` 是唯一的键 / 顺序来源，`mediaFlagPatch()` 是唯一的写入口径；`tests/media-ui.test.ts` 用源码断言守住三处都用 `v-for`、`t.media[key]`、`role="switch"`。菜单勾选项沿用 `.pm-tg-item`，只多一列固定占位的 12px SVG 勾选标记，点一下不关菜单，可以连着拨几个。
+- **验收**：`compile`、单测 679 项、`check:docs` / `check:package`、全套 E2E 9 个脚本合计 841 项全绿；新增 `tests/e2e/check-media.mjs` 24 项专测三处互通与还原。架构决策见 [ADR-0012](../adr/0012-per-site-media-switches.md)，方案与验收留档见 [design-116.md](./design-116.md)。
+
 ## 0.6.7（2026-11-06，#124）：名字与入口对齐
 
 - **「右下角的小按钮」是描述，不是名字**：这说法从 0.5.x 的「去术语」改造里来（当时把「胶囊」换成了位置描述）。装机反馈「非常不正式」，改成行业通用的**「悬浮按钮」**（Floating button），与内部术语 Floating Toggle 同源。教训：去术语 ≠ 换成一句话描述，名字得是名字。

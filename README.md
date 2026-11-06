@@ -22,6 +22,7 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
+- **收起图片 / 收起视频 / 静音网页**：按网站单独开关，三处都能改（站点设置页、弹窗、悬浮按钮「⋯」菜单）。图片和视频变成灰块，位置不变、链接还能点，按钮上的小图标保持原样；视频还会暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。只在「按你的设置显示」时起作用，切「网站原样」连声音一起还原
 - **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
@@ -80,13 +81,14 @@
 
 1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（第一次会问这一次）
 2. 「收起内容」分两步：在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
-3. 想临时看网站原样，点悬浮按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或悬浮按钮旁边的「⋯」菜单
+3. 想临时看网站原样，点悬浮按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或悬浮按钮旁边的「⋯」菜单；想收起图片 / 视频、或让这个标签页安静，在弹窗底部、悬浮按钮「⋯」菜单、或站点设置页的「图片、视频和声音」里拨开关，三处是同一组设置
 4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题、导出 / 导入、界面语言、不透明度）
 5. 想临时挡住整页，用弹窗或小按钮上的「遮住」；恢复时点页面上的睁眼小按钮
 
 ### 已知限制
 
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
+- 「收起图片 / 收起视频」只是**看起来收起**：图片请求照发，既不省流量，也不代替广告过滤工具。CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 本期不收。「静音网页」是标签页级，离开这个网站会自动恢复声音；用户手动取消静音后扩展不会追着按回去
 - iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
 - 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
 - 幕布只挡眼睛不挡输入：视频全屏、页面里的对话框会盖住幕布；键盘焦点仍在页面里，继续打字仍会改内容；刷新或离开页面后幕布消失
@@ -96,7 +98,7 @@
 
 - **不收集、不上传任何数据**。PageMask 自身不发起任何网络请求，没有统计，没有第三方代码。设置仅存在 `chrome.storage.local`
 - 权限逐项说明：
-  - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态）
+  - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态，以及图片 / 视频 / 声音三个开关）
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
   - `activeTab`：打开弹窗时读取当前标签页的网址，用来判断是哪个网站、是否支持
   - 可选主机权限：只在你点「收起内容」或「标题和图标」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
@@ -131,6 +133,7 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
+- **Hide images / Hide videos / Mute this page**: three independent per-site switches, available in three places (the site's settings page, the popup and the floating button's "⋯" menu). Pictures and videos turn into grey blocks that stay in place with their links still working; small icons on buttons are left alone. Videos also pause and go silent. "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. These apply only with "Shown your way" on — "As the site is" brings the sound back too
 - **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
@@ -189,13 +192,14 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
-3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button
+3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button. To hide pictures/videos or silence the tab, flip the switches at the bottom of the popup, in that 「⋯」 menu, or in the "Pictures, videos & sound" card on the site's settings page — all three are the same set of settings
 4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title, export / import, interface language, opacity)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
 ### Known limitations
 
 - Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
+- "Hide images / Hide videos" only changes **what you see**: image requests still happen, so this is neither a data saver nor an ad blocker. CSS background images, embedded players inside iframes, `<canvas>` and inline SVG are not covered. "Mute this page" is per tab, and sound comes back when you leave that site; if you unmute the tab by hand, the extension won't mute it again straight away
 - Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
 - Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them
 - The curtain blocks sight, not input: fullscreen video and in-page dialogs render above it; keyboard focus stays in the page, so typing still edits content; the curtain disappears on reload or navigation
@@ -205,7 +209,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 
 - **No data collection, no uploads.** PageMask itself makes no network requests; there is no analytics and no third-party code. Settings live only in `chrome.storage.local`
 - Permissions, one by one:
-  - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state) on this device
+  - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state, and the three picture/video/sound switches) on this device
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
   - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
   - Optional host permissions: requested for a single origin only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), used to run the content script and apply your hiding styles and tab title/icon on that site

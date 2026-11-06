@@ -5,6 +5,32 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.7.0] - 2026-11-06
+
+给每个网站加了三个独立开关：收起图片、收起视频、静音网页。三处入口是同一组设置，只在「按你的设置显示」时起作用。
+
+### 中文
+
+#### 新增
+
+- **收起图片**：网页上的图片变成灰块，位置不变、链接还能点，按钮上的小图标与表情保持原样。这是「看起来收起」，图片请求照发，不省流量、不代替广告过滤工具
+- **收起视频**：视频变成灰块，并且暂停、不出声。网站脚本反复调播放也会被按住；切回原样时只把声音放回改动前的状态，不替网站恢复播放
+- **静音网页**：用 Chrome 自带的标签页静音让这个标签页不出声，画面照常，标签页上会出现静音的小喇叭。只解除本扩展设置的那一份静音，不动你手动静音、Chrome 自带的「静音网站」或其他扩展设置的静音
+- **三处入口，同一组设置**：站点设置页新增「图片、视频和声音」卡片（每行一句说明），弹窗底部收成一组三行，悬浮按钮「⋯」菜单新增一组带勾选标记的开关（点一下不关菜单，可以连着拨几个）。改哪一处，另两处和页面效果都跟着变
+- **原样态连声音一起还原**：切「网站原样」会把灰块、视频停播、标签页静音一并还原；切回「按你的设置显示」重新生效。删除这个网站的设置也不会留下哑掉的标签页
+- **不新增权限**：标签页静音走浏览器自己的开关，不需要 `tabs` 权限；没有拦请求、没有新增主机权限。已知边界写进界面说明、README 与商店材料
+
+### English
+
+#### Added
+
+- **Hide images**: pictures turn into grey blocks that stay in place with their links still working; small icons on buttons and emoji are left alone. This changes only what you see — image requests still happen, so it is neither a data saver nor an ad blocker
+- **Hide videos**: videos turn into grey blocks, pause and go silent. Repeated calls to play by the site's own scripts are held back too. Switching back restores the previous sound state rather than resuming playback for the site
+- **Mute this page**: uses Chrome's own tab mute so the tab makes no sound while the picture stays as it is (Chrome shows a muted speaker icon on the tab). PageMask only removes the mute it set itself and leaves your own mute, Chrome's "Mute site" and other extensions' mutes alone
+- **Three places, one set of settings**: a "Pictures, videos & sound" card on the site's settings page (a plain-language note under each switch), a compact three-row group at the bottom of the popup, and a group of ticked switches in the floating button's "⋯" menu (which stays open so you can flip several). Change any one of them and the other two and the page follow
+- **"As the site is" brings the sound back too**: switching to the original view restores the grey blocks, the paused/silenced videos and the tab mute together; switching back applies them again. Deleting a site's settings does not leave a muted tab behind
+- **No new permissions**: tab mute uses the browser's own switch and needs no `tabs` permission; no requests are blocked and no host permission was added. The limits are spelled out in the interface, the README and the store listing
+
 ## [0.6.7] - 2026-11-06
 
 ### 中文
