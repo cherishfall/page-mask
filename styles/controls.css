@@ -43,6 +43,13 @@
   cursor: pointer;
 }
 
+/* 链接做成按钮时字色仍按按钮来（#124）：上面那组用了 :where()（特异性 0），
+ * base.css 的 a { color: accent } 会把它盖掉，扩展页面上的「按钮链接」就成了蓝字。
+ * 这里给足特异性；带 .danger / .primary 的链接不受影响（没有这种用法，也不该有）。 */
+a.button {
+  color: var(--pm-fg);
+}
+
 /* 悬停：底色加深一档；按下：再深一档。两档都保证文字与危险红 ≥4.5 */
 :where(body) :where(button, .button):hover:not(:disabled),
 :where(.pm-btn):hover:not(:disabled) {

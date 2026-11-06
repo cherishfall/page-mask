@@ -17,7 +17,7 @@ import {
   tabIdOf,
 } from './lib/extension.mjs';
 import { fixtureHandler } from './fixtures.mjs';
-import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
+import { clickInShadow, shadowText, waitForShadow, exitWizardByButton } from './lib/shadow.mjs';
 
 const r = createReporter();
 const { check } = r;
@@ -99,8 +99,7 @@ try {
   await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
   await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
   check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === '点选要收起的内容', '向导标题是中文');
-  await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
-  await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
+  await exitWizardByButton(page, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
   // ---------- 切到 English：一切打开着的页面立刻变，不刷新 ----------
@@ -132,16 +131,16 @@ try {
   await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
   await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
   check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Pick what to hide', '向导变英文');
-  await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
-  await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
+  // 内容页此刻在后台：确认框里的「退出」要用真实鼠标点，先把这一页切到前台
+  await page.bringToFront();
+  await exitWizardByButton(page, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
   // 「标题和图标」入口（#81）：单步小表单
   await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editTitle' });
   await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
   check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Title & icon', '标题和图标入口变英文');
-  await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
-  await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
+  await exitWizardByButton(page, WIZARD);
   await page.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, WIZARD);
 
   popup = await openPopup(ext, page);

@@ -1,9 +1,10 @@
 <template>
   <section class="view" aria-labelledby="pm-sites-title">
-    <!-- 标题行右侧给「插件设置」入口：插件设置页有「← 全部网站设置」返回，两页互达（#87 审查第 6 条） -->
+    <!-- 标题行右侧给「插件设置」入口（#124）：与插件设置页的「全部网站设置」同一个控件、
+         同一个位置、同一种次要按钮——两页互为兄弟，入口长相一致 -->
     <div class="sites-head">
       <h2 id="pm-sites-title" class="view-title">{{ t.management.sitesTitle }}</h2>
-      <a class="forward" href="settings.html" data-testid="pm-mgmt-settings-link">{{ t.popup.settings }}</a>
+      <a class="button small" href="settings.html" data-testid="pm-mgmt-settings-link">{{ t.popup.settings }}</a>
     </div>
     <p class="hint">{{ t.management.sitesHint }}</p>
 
@@ -181,20 +182,11 @@ function onRowDelete() {
 <style scoped>
 .sites-head {
   display: flex;
-  align-items: baseline;
+  /* 与右侧按钮居中对齐（#124）：baseline 会让按钮相对标题偏下 */
+  align-items: center;
   justify-content: space-between;
   gap: var(--pm-space-3);
   margin-bottom: var(--pm-space-1);
-}
-
-.forward {
-  flex: none;
-  font-size: var(--pm-font-size-caption);
-  color: var(--pm-fg-muted);
-}
-
-.forward:hover {
-  color: var(--pm-fg);
 }
 
 .view-title {

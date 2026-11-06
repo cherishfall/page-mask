@@ -120,7 +120,7 @@ export const zh = {
     editTitle: '标题和图标',
     coverPage: '遮住这一页',
     /** 右下角的小按钮开关（#112）：标签 + 开关下的一行小字 */
-    showToggle: '右下角的小按钮',
+    showToggle: '悬浮按钮',
     showToggleHint: '关掉后还能从工具栏图标打开 PageMask；遮住整页的快捷键不受影响。',
     /** 删除这个网站的设置（#112）：与站点设置页 / 胶囊菜单同一套文案（core/site-delete.ts） */
     deleting: '正在删除…',
@@ -233,7 +233,7 @@ export const zh = {
     pageTitle: 'PageMask · 插件设置',
     title: '插件设置',
     sub: '这里管的是所有网站共用的一套设置。',
-    back: '← 全部网站设置',
+    back: '全部网站设置',
 
     titleHeading: '默认标题',
     titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住整页时，没单独设过标题的网站也用它。',
@@ -242,12 +242,12 @@ export const zh = {
       `留空就用「${fallback}」（跟随浏览器语言）。标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
 
-    toggleHeading: '右下角的小按钮',
+    toggleHeading: '悬浮按钮',
     toggleIntro: '「不透明度」调的是它闲着的时候有多淡；鼠标移上去、用键盘选中或拖动时，它会立刻变清楚。',
     toggleOpacityLabel: '不透明度',
     toggleOpacityLowHint: '调得太淡会不容易找到；鼠标移上去会变清楚。',
     toggleOpacityError: '不透明度没有存上，请再试一次。',
-    toggleHint: '只影响这颗小按钮，不影响遮住整页后那颗「恢复」。',
+    toggleHint: '只影响这颗悬浮按钮，不影响遮住整页后那颗「恢复」。',
 
     shortcutHeading: '快捷键',
     shortcutIntro: '有人走过来时，不用找鼠标：按一下遮住整页，再按一下恢复。',
@@ -321,7 +321,7 @@ export const zh = {
         ],
       },
       {
-        title: '平时用右下角那颗小按钮',
+        title: '平时用页面上的悬浮按钮',
         text: '在你添加过的网站上，它一直待在右下角：点中间切换「按设置 / 原样」，点眼睛遮住整页，点 ⋯ 进设置。',
         features: [],
       },

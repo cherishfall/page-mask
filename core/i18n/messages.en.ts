@@ -97,7 +97,7 @@ export const en: Messages = {
     editTitle: 'Title & icon',
     coverPage: 'Cover this page',
     /** Show-capsule switch (#112): label + one-line hint under the switch */
-    showToggle: 'The small button in the corner',
+    showToggle: 'Floating button',
     showToggleHint: 'Turn it off and PageMask stays reachable from the toolbar icon; the cover shortcut keeps working.',
     /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
     deleting: 'Deleting…',
@@ -208,7 +208,7 @@ export const en: Messages = {
     pageTitle: 'PageMask · Settings',
     title: 'Settings',
     sub: 'These are shared by every site.',
-    back: '← All site settings',
+    back: 'All site settings',
 
     titleHeading: 'Default title',
     titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own.',
@@ -217,7 +217,7 @@ export const en: Messages = {
       `Leave it empty to use “${fallback}” (follows the browser language). A title can’t be blank, or Chrome shows the address instead.`,
 
 
-    toggleHeading: 'The small button in the corner',
+    toggleHeading: 'Floating button',
     toggleIntro:
       'Opacity is how faint it sits when idle; it turns fully clear as soon as you hover, focus it with the keyboard, or drag it.',
     toggleOpacityLabel: 'Opacity',
@@ -297,8 +297,8 @@ export const en: Messages = {
         ],
       },
       {
-        title: 'The small button in the corner',
-        text: 'On sites you’ve added it stays at the bottom-right: click the middle to switch “Your settings / As is”, click the eye to cover the page, click ⋯ for settings.',
+        title: 'The floating button on the page',
+        text: 'On sites you’ve added, the floating button stays at the bottom-right: click the middle to switch “Your settings / As is”, click the eye to cover the page, click ⋯ for settings.',
         features: [],
       },
     ],

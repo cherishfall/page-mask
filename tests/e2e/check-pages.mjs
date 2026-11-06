@@ -402,7 +402,7 @@ async function main() {
     await coverAndRestore(ext, popup, site, '已添加的网站');
     await footerLandings(ext, browser, site, '已添加的网站');
 
-    // ===================== popup：删除与「右下角的小按钮」开关（#112） =====================
+    // ===================== popup：删除与「悬浮按钮」开关（#112） =====================
     console.log('\n--- popup：删除与胶囊显示开关 ---');
     const HOST1 = new URL(ORIGIN).hostname; // 确认框标题用 hostname（去 www.，不带端口）
     popup = await openPopup(ext, site); // footerLandings 会关面板：重开一个干净的 ready 弹窗
@@ -411,7 +411,7 @@ async function main() {
     const popupHeight = await popup.evaluate(() => document.body.scrollHeight);
     check(popupHeight <= 600, `弹窗高度 ${popupHeight} ≤ 600，无纵向滚动`);
     // 开关默认开；关掉 → 页面胶囊卸下，弹窗里站点四件仍然都在
-    check(!!(await popup.$(tid('pm-popup-capsule'))), 'ready 状态有「右下角的小按钮」开关，默认开');
+    check(!!(await popup.$(tid('pm-popup-capsule'))), 'ready 状态有「悬浮按钮」开关，默认开');
     check((await popup.$eval(tid('pm-popup-capsule'), (e) => e.checked)) === true, '开关默认为「显示」');
     await popup.click(tid('pm-popup-capsule'));
     await waitFor(site, '页面胶囊卸下', (h) => !document.querySelector(h), ['pagemask-toggle'], { timeout: 5000 });
@@ -829,18 +829,41 @@ async function main() {
     m = await browser.newPage();
     await m.goto(`${extOrigin}/management.html`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
+    // 两个入口必须是同一个控件（#124）：先把「全部网站设置」那颗量下来，等下比对
+    const mgmtLinkLook = await m.$eval(tid('pm-mgmt-settings-link'), (a) => {
+      const s = getComputedStyle(a);
+      const r = a.getBoundingClientRect();
+      return { cls: a.className, h: Math.round(r.height), font: s.fontSize, weight: s.fontWeight, border: s.borderTopWidth };
+    });
 
     console.log('\n--- 插件设置页（默认标题、关于） ---');
     await m.goto(`${extOrigin}/settings.html`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-settings-default-title'), { timeout: 5000 });
     await checkCommon(m, '插件设置');
-    const backLink = await m.$eval(tid('pm-settings-back'), (a) => ({
-      text: a.textContent.trim(),
-      href: a.getAttribute('href'),
-    }));
+    const backLink = await m.$eval(tid('pm-settings-sites-link'), (a) => {
+      const s = getComputedStyle(a);
+      const r = a.getBoundingClientRect();
+      return {
+        text: a.textContent.trim(),
+        href: a.getAttribute('href'),
+        cls: a.className,
+        h: Math.round(r.height),
+        font: s.fontSize,
+        weight: s.fontWeight,
+        border: s.borderTopWidth,
+      };
+    });
     check(
-      backLink.text === '← 全部网站设置' && backLink.href === 'management.html#/sites',
-      '左上角有返回「全部网站设置」的轻量链接',
+      backLink.text === '全部网站设置' && backLink.href === 'management.html#/sites',
+      '标题行右侧有回「全部网站设置」的入口',
+    );
+    check(
+      backLink.cls === mgmtLinkLook.cls &&
+        backLink.h === mgmtLinkLook.h &&
+        backLink.font === mgmtLinkLook.font &&
+        backLink.weight === mgmtLinkLook.weight &&
+        Number.parseFloat(backLink.border) > 0,
+      `两页的互跳入口是同一个控件（两处 class=“${backLink.cls}”、高 ${backLink.h} / ${mgmtLinkLook.h}、字号 ${backLink.font}）`,
     );
     const manifest = JSON.parse(fs.readFileSync(ext.manifestPath, 'utf8'));
     check(manifest.options_ui?.page === 'settings.html' && manifest.options_ui?.open_in_tab === true, '插件设置页注册为扩展程序选项，且在标签页里打开');
@@ -954,7 +977,7 @@ async function main() {
     // 用来核对两种异常标记是不是同一套结构（#72）。
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] }));
     await removePermission(ext.control, ORIGIN);
-    await m.click(tid('pm-settings-back'));
+    await m.click(tid('pm-settings-sites-link'));
     await poll(
       async () => (await m.evaluate(() => location.pathname)) === '/management.html' && (await hash()) === '#/sites',
       '点返回链接回到「全部网站设置」',
@@ -1150,7 +1173,7 @@ async function main() {
     await popup.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
     check(!(await popup.$(tid('pm-popup-switch'))) && !!(await popup.$(tid('pm-popup-reauth'))), 'popup 显示「待授权」与「重新授权」，不显示开关');
     // #112：待授权站点页面上本来就没有胶囊，开关先不出现；删除仍可用（删掉待授权站点）
-    check(!(await popup.$(tid('pm-popup-capsule'))), '待授权站点不显示「右下角的小按钮」开关');
+    check(!(await popup.$(tid('pm-popup-capsule'))), '待授权站点不显示「悬浮按钮」开关');
     check(!!(await popup.$(tid('pm-popup-delete'))), '待授权站点仍有「删除这个网站的设置」入口');
     // 「需要允许访问」与「可能失效」是同一套标记：都是 .pm-mark + 圆点在最前，只用颜色区分
     const pendingMark = await popup.$eval(tid('pm-popup-pending-badge'), (e) => ({

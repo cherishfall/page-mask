@@ -62,3 +62,23 @@ export async function clickInShadow(page, hostSelector, innerSelector, { button 
   await page.mouse.click(x, y, { button });
   return { x, y };
 }
+
+/**
+ * 点「退出设置」并确认退出（#123）：这颗按钮每次都先问一次，
+ * 所以「点了就想关掉」的收尾要顺手点掉确认框。要验证确认框内容的用例自己点。
+ */
+export async function exitWizardByButton(page, hostSelector, { timeout = 3000 } = {}) {
+  await clickInShadow(page, hostSelector, '[data-testid="pm-wiz-exit"]');
+  // 确认框是常驻 DOM 的 <dialog>：等它真的 open，别对着一颗关着的框点（点了也不生效）
+  await page.waitForFunction(
+    (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-exit-confirm"]')?.open === true,
+    { timeout },
+    hostSelector,
+  );
+  // 关确认框只是收尾，不是被测行为：用 DOM 点击。鼠标事件在后台标签页里不一定投递
+  // （多标签用例会先 bringToFront 别的页），这里不想让收尾动作受这个影响。
+  await page.evaluate(
+    (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit-yes"]').click(),
+    hostSelector,
+  );
+}

@@ -5,6 +5,30 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.7] - 2026-11-06
+
+### 中文
+
+#### 变更
+
+- **「右下角的小按钮」改叫「悬浮按钮」**：原来那个是位置描述，不像个名字。弹窗开关、插件设置的卡片标题、欢迎页第 3 步同步改（#124）
+- **两个管理页的互跳入口对齐**：都在页面标题行右侧、同一个次要按钮（有边框、深色字），插件设置页顶部不再另放一条「← 全部网站设置」（#124）
+
+#### 修复
+
+- **「插件设置」入口的字色是蓝的**：链接做成按钮时，全局的链接色盖住了按钮文字色；补一条 `a.button` 的字色，现在和旁边的按钮同色（#124）
+
+### English
+
+#### Changed
+
+- **"The small button in the corner" is now "Floating button"**: the old label described where it sits instead of naming it. The popup switch, the settings card and the welcome step all use the new name (#124)
+- **The two management pages now link to each other the same way**: same secondary button in the title row on the right; the settings page no longer has a separate "← All site settings" link at the top (#124)
+
+#### Fixed
+
+- **The "Extension settings" link was blue**: the global link colour overrode the button's text colour when a link is styled as a button; `a.button` now keeps the button colour (#124)
+
 ## [0.6.6] - 2026-11-06
 
 装机复核抓到的两处：面板挤、退出太容易误触。

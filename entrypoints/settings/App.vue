@@ -1,9 +1,14 @@
 <template>
   <div class="shell">
-    <a class="back" href="management.html#/sites" data-testid="pm-settings-back">{{ t.settings.back }}</a>
-
     <header class="masthead">
-      <h1>{{ t.settings.title }}</h1>
+      <!-- 与「全部网站设置」同一个控件、同一个位置（#124）：两页互为兄弟，
+           入口都放在页面标题行的右侧，用同一种次要按钮 -->
+      <div class="masthead-row">
+        <h1>{{ t.settings.title }}</h1>
+        <a class="button small" href="management.html#/sites" data-testid="pm-settings-sites-link">
+          {{ t.settings.back }}
+        </a>
+      </div>
       <p class="sub">{{ t.settings.sub }}</p>
     </header>
 
@@ -420,14 +425,12 @@ function onReplaceClose() {
   padding: 0 var(--pm-space-4) 60px;
 }
 
-.back {
-  display: inline-block;
-  margin-bottom: var(--pm-space-3);
-  font-size: var(--pm-font-size-caption);
-}
-
-.back:hover {
-  text-decoration: underline;
+/* 标题行右侧给「全部网站设置」入口：与「插件设置」按钮同一套次要按钮（#124） */
+.masthead-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-3);
 }
 
 .masthead h1 {

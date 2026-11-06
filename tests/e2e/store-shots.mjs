@@ -420,7 +420,7 @@ try {
   await compose(
     'screenshot-6-curtain',
     `<div style="padding:30px 44px 0">
-      <div class="big">页面右下角的小按钮，与遮住整页后的那颗恢复按钮</div>
+      <div class="big">页面上的悬浮按钮，与遮住整页后的那颗恢复按钮</div>
       <div class="sub">「⋯」菜单就地编辑；遮住后页面上只剩一颗可拖动的睁眼按钮，点一下就恢复</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">

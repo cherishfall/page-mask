@@ -31,7 +31,7 @@ import {
   waitForServiceWorkerIdle,
   evalInContentWorld,
 } from './lib/extension.mjs';
-import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
+import { clickInShadow, exitWizardByButton, shadowText, waitForShadow } from './lib/shadow.mjs';
 import { FIXTURE_TITLE, fixtureHandler } from './fixtures.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -309,7 +309,7 @@ async function main() {
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(true, '点菜单「标题和图标」进单步小表单（#81）');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点菜单没有把开关切掉');
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
+    await exitWizardByButton(page, WIZARD_HOST);
     await waitFor(page, '向导关闭（复位）', (h) => !document.querySelector(h), [WIZARD_HOST]);
     // 退出向导（没改动）＝正式规则重新生效：这张推荐卡继续被收起（#71 起菜单打开的是向导，会临时还原再恢复）
     await waitStyle(page, '退出向导后正式规则重新生效', '.rec-card', 'display', 'none');
@@ -371,7 +371,7 @@ async function main() {
     await hostile.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.blur(), WIZARD_HOST);
     await hostile.keyboard.press('j');
     check((await hostile.evaluate(() => window.__pmKeys)).includes('j'), '对照：焦点不在插件界面时页面照常收到按键');
-    await clickInShadow(hostile, WIZARD_HOST, tid('pm-wiz-exit'));
+    await exitWizardByButton(hostile, WIZARD_HOST);
     // 等上一个向导真正拆完再开下一个：openWizard 在 wizardActive 时会直接返回
     await waitFor(hostile, '向导关闭（准备开下一个）', (h) => !document.querySelector(h), [WIZARD_HOST], { timeout: 5000 });
 
@@ -510,9 +510,7 @@ async function main() {
       'recDisplay=', await page.evaluate(() => getComputedStyle(document.querySelector('.rec-card')).display));
     await waitStyle(page, '预览：推荐卡被移除', '.rec-card', 'display', 'none');
     await stopServiceWorker(ext);
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit'));
-    await waitForShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
-    await clickInShadow(page, WIZARD_HOST, tid('pm-wiz-exit-yes'));
+    await exitWizardByButton(page, WIZARD_HOST);
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
     await waitStyle(page, '放弃后推荐卡重新可见', '.rec-card', 'display', 'none', { not: true, timeout: 3000 });
     await waitStyle(page, '放弃后回到清爽态', '#site-header', 'display', 'none');
@@ -883,8 +881,8 @@ async function main() {
       await sendToTab(ext.control, tab, { t: 'openWizard', mode: 'editContent' });
       await waitForShadow(p, WIZARD_HOST, tid('pm-wiz-heading'));
       const editor = await collect('panel');
-      await clickInShadow(p, WIZARD_HOST, tid('pm-wiz-exit'));
-      await waitFor(p, '向导关闭（没改动，不弹确认）', (h) => !document.querySelector(h), [WIZARD_HOST]);
+      await exitWizardByButton(p, WIZARD_HOST);
+      await waitFor(p, '向导关闭（按钮先问一次，已确认）', (h) => !document.querySelector(h), [WIZARD_HOST]);
       return { ...toggle, ...editor };
     }
 

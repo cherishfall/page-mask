@@ -31,7 +31,7 @@
  */
 import { createReporter, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
-import { clickInShadow, shadowText, waitForShadow } from './lib/shadow.mjs';
+import { clickInShadow, exitWizardByButton, shadowText, waitForShadow } from './lib/shadow.mjs';
 
 const r = createReporter();
 const { check } = r;
@@ -337,7 +337,7 @@ async function main() {
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more-items'));
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
     check(!(await page.$(TOGGLE)), '打开向导时胶囊让位，页面上只有一套界面');
-    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').click(), WIZARD);
+    await exitWizardByButton(page, WIZARD);
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '退出向导后胶囊挂回来');
@@ -355,8 +355,8 @@ async function main() {
     check(!(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wiz-progress"]'), WIZARD)), '单步表单没有进度行');
     const afterMenu = await getProfile(ext.control, ORIGIN);
     check(afterMenu.switchState === 'disguised', `开关没有被菜单点击切掉（${afterMenu.switchState}）`);
-    // 没有改动时退出不弹确认框（编辑已有规则按草稿快照判断）
-    await clickInShadow(page, WIZARD, tid('pm-wiz-exit'));
+    // #123 起「退出设置」每次都先问一次（没改动也要问）
+    await exitWizardByButton(page, WIZARD);
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     // 进向导时胶囊让位；退出后运行时重新挂回来，再继续点菜单
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
@@ -862,8 +862,8 @@ async function main() {
     }));
     check(!wizardState.curtain, '进向导前幕布先撤掉');
     check(wizardState.hit !== 'pagemask-curtain', `向导打开后页面可见（命中 ${wizardState.hit}）`);
-    // 没有选中任何元素，点退出直接关掉向导
-    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-exit"]').click(), WIZARD);
+    // #123 起退出设置每次都先问一次
+    await exitWizardByButton(page, WIZARD);
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
 
     // ---- 遮住期间别的标签页切开关：幕布仍在、标题仍是低调查 ----
