@@ -371,7 +371,7 @@ try {
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(settingsFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">「插件设置」：默认标题与图标、导出 / 导入、界面语言</figcaption>
+         <figcaption class="cap" style="margin-top:10px">「插件设置」：默认标题、不透明度、导出 / 导入、界面语言</figcaption>
        </figure>
      </div>`,
   );

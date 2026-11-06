@@ -5,6 +5,54 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.4] - 2026-11-06
+
+0.6.3 装机复核后的一批界面与交互修缮（#117）：浮层在白底网页上看得见了、工具条整条标题栏能拖、图标不用再自己找图、设置一键直达。
+
+### 中文
+
+#### 修复
+
+- **页内浮层在白底网页上分不出边界**：向导工具条与确认框原来只有一层几乎看不见的阴影，白底上等于没有边界；现在有 1px 描边 + 近 / 中 / 远三层阴影，系统强制颜色模式下也有边（#118）
+
+#### 新增
+
+- **向导工具条的整条标题栏都能拖**：按在标题、进度或空白处都能移动，按钮照常点击；把手可点区从 24 加到 32（触屏 44），图形不变（#119）
+- **小胶囊「⋯」菜单多了「调整不透明度」**：点了直接打开插件设置的不透明度那一栏，滚到卡片、焦点落在滑杆上（#120）
+- **标签页图标改成三选一**：网站原来的图标 / 不显示图标 / 换成内置的 10 个图标——不用再自己找图上传（#121）
+
+#### 变更
+
+- 插件设置里不再有「默认图标」：图标三态之后它没有要解决的问题（#121）
+- **只换标题、不动图标的网站，标签页上会保留网站自己的图标**（#121）
+- 遮住整页时标签页图标固定为空白，不跟着站点设置走；撤掉幕布后换回该站自己选的那一张（#121）
+
+#### 文档
+
+- README 新增「升级：换版本不丢设置」：固定目录覆盖 + 刷新，别卸载（#122）
+
+### English
+
+#### Fixed
+
+- **In-page panels no longer disappear into white pages**: the wizard toolbar and dialog had only a barely visible shadow; they now have a 1px border plus near / mid / far shadows, and keep an edge in forced-colors mode (#118)
+
+#### Added
+
+- **The whole title bar of the wizard toolbar is draggable**: press the title, the step text or empty space to move it — buttons still click normally; the grip's hit area went from 24 to 32 (44 on touch) with the artwork unchanged (#119)
+- **The small button's ⋯ menu gained "Adjust opacity"**: opens the extension settings on the opacity card, scrolls to it and focuses the slider (#120)
+- **Tab icon is now a three-way choice**: the site's own icon / no icon / one of 10 built-in icons — no more hunting for image files (#121)
+
+#### Changed
+
+- The default-icon setting is gone: the three-way choice leaves it nothing to do (#121)
+- **Sites that only change the title now keep the site's own tab icon** (#121)
+- Covering a page always uses a blank tab icon regardless of the site's choice, and restoring brings back the icon that site picked (#121)
+
+#### Docs
+
+- README gained "Upgrading without losing your settings": overwrite the same folder and hit reload, don't remove (#122)
+
 ## [0.6.3] - 2026-11-06
 
 发版后深度审查第二、三轮（#115）：复查上一轮修复本身，10 处跟进 + 1 处毫秒级收口。
