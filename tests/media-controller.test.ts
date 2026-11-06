@@ -105,6 +105,30 @@ describe('视频停播与静音（#116）', () => {
     c.dispose();
   });
 
+  it('反复开关：每一轮关掉都能还原（原值记录不能残留，E2E 抓到的回归）', () => {
+    const video = addVideo(false);
+    const c = createMediaController(document);
+    for (let i = 1; i <= 3; i++) {
+      c.sync({ hideVideos: true });
+      expect(video.muted, `第 ${i} 轮开启`).toBe(true);
+      c.sync({});
+      expect(video.muted, `第 ${i} 轮关掉`).toBe(false);
+    }
+    c.dispose();
+  });
+
+  it('两轮之间网站自己改了静音状态：还原到这一轮开始时的值', () => {
+    const video = addVideo(false);
+    const c = createMediaController(document);
+    c.sync({ hideVideos: true });
+    c.sync({});
+    video.muted = true; // 网站脚本自己把声音关了
+    c.sync({ hideVideos: true });
+    c.sync({});
+    expect(video.muted).toBe(true); // 不硬置 false，也不沿用上一轮的原值
+    c.dispose();
+  });
+
   it('网站脚本再调 play 也被压住（捕获阶段拦 play 事件）', () => {
     const video = addVideo(false);
     const c = createMediaController(document);

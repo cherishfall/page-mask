@@ -76,6 +76,21 @@ export const en: Messages = {
     hiddenNone: 'Nothing set to hide',
   },
 
+  /** Pictures, videos and sound (#116): one set of labels shared by popup / ⋯ menu / site settings */
+  media: {
+    heading: 'Pictures, videos & sound',
+    hideImages: 'Hide images',
+    hideVideos: 'Hide videos',
+    mutePage: 'Mute this page',
+    hideImagesHint: 'Pictures turn into grey blocks. They stay in place and their links still work. Small icons on buttons stay as they are.',
+    hideVideosHint: 'Videos turn into grey blocks, pause, and make no sound.',
+    mutePageHint: 'This tab makes no sound. The page looks the same. Chrome shows a muted speaker icon on the tab.',
+    hint: 'These apply only with ‘Your settings’ on. ‘As is’ brings the sound back too. Images still load in the background — this only changes what you see.',
+    hintShort: 'Only with ‘Your settings’ on. ‘As is’ restores everything.',
+    menuGroup: 'Pictures, videos & sound',
+    saveFailed: "Couldn't save this change. Please try again.",
+  },
+
   popup: {
     loading: 'Reading this page…',
     unsupportedFallback: 'PageMask can’t be used on this page',

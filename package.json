@@ -25,7 +25,7 @@
     "compile": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs && node tests/e2e/check-pages.mjs && node tests/e2e/check-mask.mjs && node tests/e2e/check-wizard.mjs && node tests/e2e/check-edit-rules.mjs && node tests/e2e/check-toggle.mjs && node tests/e2e/check-curtain-state.mjs && node tests/e2e/check-language.mjs",
+    "test:e2e": "wxt build && node tests/e2e/run-e2e.mjs && node tests/e2e/check-pages.mjs && node tests/e2e/check-mask.mjs && node tests/e2e/check-wizard.mjs && node tests/e2e/check-edit-rules.mjs && node tests/e2e/check-toggle.mjs && node tests/e2e/check-curtain-state.mjs && node tests/e2e/check-language.mjs && node tests/e2e/check-media.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "presets": "node scripts/gen-icons.mjs --presets",
     "notices": "node scripts/gen-notices.mjs",

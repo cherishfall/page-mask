@@ -17,10 +17,26 @@
  */
 import type { SiteProfile } from './types';
 
-/** 三个开关的键：界面三处渲染同一组开关时用它，避免各写一份清单 */
+/** 三个开关的键：界面三处渲染同一组开关时用它，避免各写一份清单、漏掉某一个或换了顺序 */
 export const MEDIA_FLAG_KEYS = ['hideImages', 'hideVideos', 'mutePage'] as const;
 export type MediaFlagKey = (typeof MEDIA_FLAG_KEYS)[number];
 export type MediaToggles = Pick<SiteProfile, MediaFlagKey>;
+
+/** 每个开关对应的那句白话说明（站点设置页逐行显示；弹窗只留一行总说明） */
+export const MEDIA_HINT_KEYS = {
+  hideImages: 'hideImagesHint',
+  hideVideos: 'hideVideosHint',
+  mutePage: 'mutePageHint',
+} as const satisfies Record<MediaFlagKey, string>;
+
+/**
+ * 拨动一个开关时只改那一个字段。关掉写 undefined（字段从存储里消失），
+ * 与 sanitizeProfile「显式 true 才落字段」同口径——不留一个要额外解释的 false。
+ * 三处界面 + 内容脚本共用，避免各自写一套。
+ */
+export function mediaFlagPatch(key: MediaFlagKey, on: boolean): Partial<MediaToggles> {
+  return { [key]: on ? true : undefined } as Partial<MediaToggles>;
+}
 
 /** 三个开关里只影响页面媒体的两个（静音由后台单独对账） */
 export type MediaFlags = Pick<SiteProfile, 'hideImages' | 'hideVideos'>;

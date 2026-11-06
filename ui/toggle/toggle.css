@@ -255,7 +255,27 @@
 .pm-tg-item:hover {
   background: var(--pm-bg-subtle);
 }
-/* 分隔线（#56）：日常项 / 按钮位置 / 删除设置三组之间各一条 */
+/* 三个媒体开关（#116）：勾选标记与文字分两栏，标记固定 12px 占位，拨动时文字不位移。
+   外观仍是同一个 .pm-tg-item（同一套底色、字号、圆角、悬停），只多一列勾选 */
+.pm-tg-item.pm-tg-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+}
+.pm-tg-check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 12px;
+  block-size: 12px;
+  color: var(--pm-accent);
+}
+.pm-tg-check svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+/* 分隔线（#56）：改内容 / 图片视频声音 / 按钮位置 / 删除设置四组之间各一条 */
 .pm-tg-sep {
   margin: 3px 0;
   border: 0;

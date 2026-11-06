@@ -270,8 +270,8 @@ async function main() {
     await new Promise((res) => setTimeout(res, 300));
     check(!(await menuOpen(page)), '右键胶囊不会打开菜单（没有右键菜单入口）');
 
-    // ===================== 菜单（#67 / #90）：默认位时三项一条线，拖过之后四项两条线 =====================
-    console.log('\n--- 菜单：默认位时「按钮放回右下角」隐藏，三项一条线 ---');
+    // ===================== 菜单（#67 / #90 / #116）：默认位七项、拖过之后八项，四组三条线 =====================
+    console.log('\n--- 菜单：默认位时「按钮放回右下角」隐藏，四组三条线 ---');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
     const menuShape = await page.evaluate((h) => {
@@ -282,24 +282,34 @@ async function main() {
       menu.appendChild(probe);
       const danger = getComputedStyle(probe).color;
       probe.remove();
-      const items = [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim());
+      // 三个媒体开关多一列勾选标记（空的占位 span），取标签那一列才是用户看到的文字
+      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
+      const items = [...menu.querySelectorAll('.pm-tg-item')].map(label);
       const del = menu.querySelector('[data-testid="pm-toggle-delete"]');
       return {
         items,
         seps: menu.querySelectorAll('.pm-tg-sep').length,
-        order: [...menu.children].map((el) => (el.classList.contains('pm-tg-sep') ? '---' : el.textContent.trim())),
+        order: [...menu.children].map((el) => {
+          if (el.classList.contains('pm-tg-sep')) return '---';
+          if (el.classList.contains('pm-tg-media')) {
+            return [...el.querySelectorAll('.pm-tg-switch')].map(label).join(' | ');
+          }
+          return el.textContent.trim();
+        }),
         deleteColor: del ? getComputedStyle(del).color : '',
         danger,
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
-      `默认位（没存过坐标）时菜单四项，与弹窗同名、收起内容在前（#80/#90/#120，${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') ===
+        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 删除这个网站的设置',
+      `默认位（没存过坐标）时菜单七项，与弹窗同名、收起内容在前（#80/#90/#116/#120，${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 2, `菜单里两条分隔线：改内容的 / 按钮自己的 / 删除设置（实际 ${menuShape.seps} 条）`);
+    check(menuShape.seps === 3, `菜单里三条分隔线：改内容 / 图片视频声音 / 按钮自己 / 删除设置（实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 调整不透明度 | --- | 删除这个网站的设置',
-      `分组顺序：改内容（收起内容在前，#80）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.order.join(' | ') ===
+        '收起内容 | 标题和图标 | --- | 收起图片 | 收起视频 | 静音网页 | --- | 调整不透明度 | --- | 删除这个网站的设置',
+      `分组顺序：改内容（收起内容在前，#80）/ 图片视频声音（#116）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -519,20 +529,22 @@ async function main() {
       `拖到左上角时贴边、不出视口（${Math.round(corner.x)},${Math.round(corner.y)}）`,
     );
 
-    // 按钮放回右下角（#90：坐标已存，菜单这时是四项两条线）
+    // 按钮放回右下角（#90：坐标已存，菜单这时是八项三条线）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     const movedMenu = await page.evaluate((h) => {
       const menu = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]');
+      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
       return {
-        items: [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim()),
+        items: [...menu.querySelectorAll('.pm-tg-item')].map(label),
         seps: menu.querySelectorAll('.pm-tg-sep').length,
       };
     }, TOGGLE);
     check(
-      movedMenu.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
-        movedMenu.seps === 2,
-      `拖过之后菜单五项、两条分隔线（#90/#120，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
+      movedMenu.items.join(' / ') ===
+        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
+        movedMenu.seps === 3,
+      `拖过之后菜单八项、三条分隔线（#90/#116/#120，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
     );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
     const reset = await (async () => {
@@ -567,13 +579,15 @@ async function main() {
     const noRulesMenu = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
+      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
       return {
-        items: [...menu.querySelectorAll('.pm-tg-item')].map((b) => b.textContent.trim()),
+        items: [...menu.querySelectorAll('.pm-tg-item')].map(label),
       };
     }, TOGGLE);
     check(
-      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
-      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
+      noRulesMenu.items.join(' / ') ===
+        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 删除这个网站的设置',
+      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#116/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 

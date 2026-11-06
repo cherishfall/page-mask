@@ -11,6 +11,7 @@
 import { reactive } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage, invalidExportFile, type ImportResult } from '@/core/storage';
+import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } from '@/core/titles';
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile, TabIcon } from '@/core/types';
@@ -243,6 +244,16 @@ export function createManagementStore() {
     }
   }
 
+  /**
+   * 图片、视频、声音三个开关（#116）：按站点记，一次只改拨动的那一个字段。
+   * 关掉时写 undefined（字段消失，不落一个 false），与 sanitizeProfile 的「显式 true 才落字段」同口径。
+   */
+  async function setMedia(origin: string, key: MediaFlagKey, on: boolean): Promise<void> {
+    await storage.updateProfile(origin, (d) => {
+      Object.assign(d, mediaFlagPatch(key, on));
+    });
+  }
+
   /** 换标签页图标三态（#121）：网站原来的 / 不显示 / 内置某个 */
   async function setIcon(origin: string, icon: TabIcon): Promise<void> {
     await storage.updateProfile(origin, (d) => {
@@ -385,6 +396,7 @@ export function createManagementStore() {
     authorize,
     toggleSite,
     updateRules,
+    setMedia,
     setIcon,
     resetTitleIcon,
     setUiLanguage,

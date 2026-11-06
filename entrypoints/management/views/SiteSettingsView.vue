@@ -113,6 +113,31 @@
         <span class="hint">{{ t.common.resetTitleIconHint }}</span>
       </div>
 
+      <!-- 图片、视频和声音（#116）：三个开关按站点记，与弹窗 / 悬浮按钮菜单共用同一份键与文案。
+           每行说明紧跟它解释的那一个开关，卡片底部再把三行共有的边界一次说清 -->
+      <section class="card" aria-labelledby="pm-site-media-heading">
+        <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
+        <div class="media-rows">
+          <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
+            <div class="switch-row media-switch">
+              <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
+              <input
+                :id="`pm-mgmt-media-${key}`"
+                type="checkbox"
+                switch
+                role="switch"
+                :data-testid="`pm-mgmt-media-${key}`"
+                :checked="profile[key] === true"
+                @change="onMediaChange(key, $event)"
+              />
+            </div>
+            <p class="hint">{{ t.media[MEDIA_HINT_KEYS[key]] }}</p>
+          </div>
+        </div>
+        <p class="hint media-footnote">{{ t.media.hint }}</p>
+        <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-mgmt-media-error">{{ mediaError }}</p>
+      </section>
+
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card">
         <h3>{{ t.management.rulesHeading }}</h3>
@@ -195,6 +220,7 @@ import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
+import { MEDIA_FLAG_KEYS, MEDIA_HINT_KEYS, type MediaFlagKey } from '@/core/media';
 import type { HideRule, TabIcon } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
@@ -223,6 +249,8 @@ const titlePlaceholder = computed(() => {
 });
 
 const iconError = ref('');
+/** 三个媒体开关写入失败时的一句话，显示在这张卡里 */
+const mediaError = ref('');
 // 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
 const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
   const p = profile.value;
@@ -246,6 +274,27 @@ async function onIconPick(icon: TabIcon) {
     await store.setIcon(p.origin, icon);
   } catch {
     iconError.value = t.value.management.error.icon;
+  }
+}
+
+/**
+ * 三个媒体开关（#116）：走 store 的原子更新，一次只改拨动的那一个字段。
+ * 写入失败把开关拨回实际状态，并在卡片里给一句话（说明跟着这一组走，不弹窗）。
+ */
+async function onMediaChange(key: MediaFlagKey, e: Event) {
+  const p = profile.value;
+  const input = e.target as HTMLInputElement;
+  if (!p) {
+    input.checked = false;
+    return;
+  }
+  const on = input.checked;
+  mediaError.value = '';
+  try {
+    await store.setMedia(p.origin, key, on);
+  } catch {
+    input.checked = !on;
+    mediaError.value = t.value.media.saveFailed;
   }
 }
 
@@ -346,6 +395,23 @@ async function resetTitleIcon() {
 .row.quick {
   gap: 6px;
   margin-top: -2px;
+}
+
+/* 图片、视频和声音（#116）：三行开关，每行的说明紧跟它解释的那一个；
+   开关本体仍是全局 input[switch]，这里只调排布，不另写一套外观 */
+.media-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-3);
+}
+.media-switch {
+  justify-content: space-between;
+}
+.media-row .hint {
+  margin: var(--pm-space-1) 0 0;
+}
+.media-footnote {
+  margin-bottom: 0;
 }
 
 /* ── 收起项清单 ── */

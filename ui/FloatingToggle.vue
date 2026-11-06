@@ -108,6 +108,38 @@
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
       </button>
+      <!-- 图片、视频和声音（#116）：三个带勾选标记的开关，放在「改内容」与「按钮自己」两组之间。
+           菜单刻意不是 role=menu，所以这里用 role="switch" + aria-checked（读屏能报出开关与开关状态），
+           而不是没有父菜单的 menuitemcheckbox。点一下不关菜单：常要连着拨几个，勾选就地看得见。 -->
+      <hr class="pm-tg-sep" />
+      <div class="pm-tg-media" role="group" :aria-label="t.media.menuGroup" data-testid="pm-toggle-media-group">
+        <button
+          v-for="key in MEDIA_FLAG_KEYS"
+          :key="key"
+          type="button"
+          class="pm-tg-item pm-tg-switch"
+          role="switch"
+          :aria-checked="props.media?.[key] === true ? 'true' : 'false'"
+          :data-testid="`pm-toggle-media-${key}`"
+          @click="onMediaToggle(key)"
+        >
+          <!-- 勾选标记固定占位：拨动时文字不位移。用 SVG 而不是字形，跨平台笔画一致（同 GripIcon 的理由） -->
+          <span class="pm-tg-check" aria-hidden="true">
+            <svg
+              v-if="props.media?.[key] === true"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="2 6.4 4.8 9.2 10 3" />
+            </svg>
+          </span>
+          <span class="pm-tg-switch-label">{{ t.media[key] }}</span>
+        </button>
+      </div>
       <!-- 按钮自己那一组（#120）：先「调整不透明度」，再「放回右下角」。
            分隔线常驻——不透明度这一项一直在；「放回右下角」只在拖过之后才有意义，
            所以 v-if 只包它自己。 -->
@@ -137,6 +169,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
+import { MEDIA_FLAG_KEYS, type MediaFlagKey, type MediaToggles } from '@/core/media';
 import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
@@ -160,6 +193,8 @@ const props = defineProps<{
    * 所以「淡」只在用户不碰它的时候存在。
    */
   opacity?: number;
+  /** 图片、视频、声音三个开关的当前值（#116）：菜单里就地显示勾中状态 */
+  media?: MediaToggles;
   /**
    * 预览模式（#102 / 欢迎页）：静态展示用——不跟随页面定位（position: static）、不响应拖动。
    * 调用方再套一层 inert + aria-hidden，让示意图能看不能点。
@@ -176,6 +211,8 @@ const emit = defineEmits<{
   resetPos: [];
   /** 菜单里的「调整不透明度」：打开插件设置并停在不透明度那一栏（#120） */
   settings: [];
+  /** 菜单里拨动图片 / 视频 / 声音里的某一个（#116）：方向由运行时按当前值算，菜单不关 */
+  mediaChange: [key: MediaFlagKey, on: boolean];
   cover: [];
   /** mini ↔ 全功能互切（#78） */
   setMini: [mini: boolean];
@@ -339,6 +376,14 @@ function toggleMenu() {
 
 function onMenuToggle() {
   menuOpen.value = !!menuEl.value?.matches(':popover-open');
+}
+
+/**
+ * 三个媒体开关（#116）：不关菜单。一次连着拨几个是常态，菜单留着才能看见勾选就地变化；
+ * popover="auto" 只在点外面 / Esc 时关，菜单内点击本来就不会自动关。
+ */
+function onMediaToggle(key: MediaFlagKey) {
+  emit('mediaChange', key, props.media?.[key] !== true);
 }
 
 /** 点菜单项：先关菜单再执行，焦点回到「⋯」 */

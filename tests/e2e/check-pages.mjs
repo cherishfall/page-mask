@@ -12,8 +12,8 @@
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
- *   站点设置页（#41 / #56）：四块标题与页面 ⋯ 菜单同名（标签页标题 / 标签页图标 / 收起的内容 /
- *   删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
+ *   站点设置页（#41 / #56 / #116）：五块标题与页面 ⋯ 菜单同名（标签页标题 / 标签页图标 /
+ *   图片、视频和声音 / 收起的内容 / 删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
  *   人话范围）、删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
  *   页脚「删除这个网站的设置」与二次确认（标题带域名、默认聚焦「取消」、危险按钮实底红）、
  *   0 条规则时不出现「0 项」；列表行上没有删除入口；
@@ -612,7 +612,7 @@ async function main() {
     );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
-    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、收起的内容、删除设置） ---');
+    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、图片视频声音、收起的内容、删除设置） ---');
     await m.click(tid('pm-mgmt-site-link'));
     await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
@@ -620,11 +620,11 @@ async function main() {
     const mgmtSwitch = await findSwitch(m);
     check(mgmtSwitch.node?.name === '按你的设置显示', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
-    // 四块与页面右下角 ⋯ 菜单用同一批名字（#56）
+    // 五块与页面右下角 ⋯ 菜单用同一批名字（#56 / #116）
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
     check(
-      sections.join(' / ') === '标签页标题 / 标签页图标 / 收起的内容 / 删除这个网站的设置',
-      `站点设置页四块标题与菜单同名（${sections.join(' / ')}）`,
+      sections.join(' / ') === '标签页标题 / 标签页图标 / 图片、视频和声音 / 收起的内容 / 删除这个网站的设置',
+      `站点设置页五块标题与菜单同名（${sections.join(' / ')}）`,
     );
     const bodyText = await m.evaluate(() => document.body.innerText);
     check(

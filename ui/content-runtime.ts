@@ -57,6 +57,7 @@ import { createPageHost, type PageHost } from './page-host';
 import { showPageNotice } from './page-notice';
 import { createFirstPaintShield } from './first-paint-shield';
 import { createMediaController } from './media-controller';
+import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 
 /** DOM 解析完成（document_start 启动时 body 还不存在） */
 function whenDomReady(ctx: ContentScriptContext): Promise<void> {
@@ -160,11 +161,18 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     mini: boolean;
     /** 整颗胶囊的不透明度（#102）：闲置值，悬停 / 聚焦 / 拖动时由 CSS 回到 1 */
     opacity: number;
+    /** 三个媒体开关（#116）：菜单里的勾选跟着存储走，别的入口拨了也会即时更新 */
+    hideImages: boolean;
+    hideVideos: boolean;
+    mutePage: boolean;
   }>({
     state: 'original',
     position: null,
     mini: false,
     opacity: 1,
+    hideImages: false,
+    hideVideos: false,
+    mutePage: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -212,6 +220,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.position = profile?.floatingBtnPos ?? null;
     toggleState.mini = profile?.capsuleMini === true;
     toggleState.opacity = settings.toggleOpacity; // 闲置不透明度（#110）：数值由 readSettings 归一化
+    toggleState.hideImages = profile?.hideImages === true;
+    toggleState.hideVideos = profile?.hideVideos === true;
+    toggleState.mutePage = profile?.mutePage === true;
   }
 
   /**
@@ -255,6 +266,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           position: toggleState.position,
           mini: toggleState.mini,
           opacity: toggleState.opacity,
+          media: {
+            hideImages: toggleState.hideImages,
+            hideVideos: toggleState.hideVideos,
+            mutePage: toggleState.mutePage,
+          },
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
@@ -264,6 +280,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           onSettings: handleOpenSettings,
           onCover: handleCover,
           onSetMini: handleSetMini,
+          onMediaChange: handleMediaChange,
           onDelete: handleDeleteRequest,
           onDeleteSite: handleDeleteSite,
         }),
@@ -327,6 +344,29 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       });
     } catch {
       showPageNotice(ctx, t().notice.saveFailed);
+    }
+  }
+
+  /**
+   * 菜单里拨动图片 / 视频 / 声音（#116）：与 mini 切换同一套写法——先就地反映，再按最新存储
+   * 只改这一个字段；写入失败拨回并给一句页内提示。页面效果不在这里做：storage.onChanged →
+   * applyKey 变化 → applyAll / restoreAll 统一重应用，弹窗与站点设置页的拨动走的是同一条路。
+   */
+  async function handleMediaChange(key: MediaFlagKey, on: boolean): Promise<void> {
+    if (!profile || !ctx.isValid) return;
+    const before = profile[key] === true;
+    Object.assign(profile, mediaFlagPatch(key, on));
+    syncToggleState();
+    try {
+      await storage.updateProfile(origin, (p) => {
+        Object.assign(p, mediaFlagPatch(key, on));
+      });
+    } catch {
+      if (profile) {
+        Object.assign(profile, mediaFlagPatch(key, before));
+        syncToggleState();
+      }
+      showPageNotice(ctx, t().media.saveFailed);
     }
   }
 

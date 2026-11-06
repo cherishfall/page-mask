@@ -13,6 +13,8 @@
     :covered="covered"
     :cover-shortcut="coverShortcut"
     :show-toggle="profile?.capsuleHidden !== true"
+    :media="mediaToggles"
+    :media-error="mediaError"
     :delete-error="deleteError"
     @toggle-switch="toggleSwitch"
     @setup="setup"
@@ -20,6 +22,7 @@
     @reauthorize="reauthorize"
     @toggle-curtain="toggleCurtain"
     @toggle-capsule="toggleCapsule"
+    @toggle-media="toggleMedia"
     @delete-site="askDeleteSite"
   />
 
@@ -49,6 +52,7 @@ import { browser } from 'wxt/browser';
 import { t } from '@/ui/i18n';
 import PopupBody from '@/ui/popup/PopupBody.vue';
 import { createPageMaskStorage } from '@/core/storage';
+import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site-delete';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
@@ -83,6 +87,14 @@ const message = computed(() => {
   const errors = t.value.popup.error as Record<string, string | undefined>;
   return errors[code] ?? errors.injectFailed ?? '';
 });
+/** 三个媒体开关写入失败时的一句话（显示在这一组下面，不占用顶部的通用错误位） */
+const mediaError = ref('');
+/** 开关当前值直接由配置投影，不在弹窗里另存一份状态 */
+const mediaToggles = computed(() => ({
+  hideImages: profile.value?.hideImages === true,
+  hideVideos: profile.value?.hideVideos === true,
+  mutePage: profile.value?.mutePage === true,
+}));
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
@@ -380,6 +392,34 @@ async function toggleCapsule(input: HTMLInputElement) {
     else input.checked = !show; // 配置刚好被删（updateProfile 返回 null）：拨回原位
   } catch {
     input.checked = !show; // 写入失败：开关拨回实际状态
+  }
+}
+
+/**
+ * 图片、视频、声音三个开关（#116）：按站点记，一次只改拨动的那一个字段。
+ * 不设忙锁——连续拨动时每次按开关当下的状态写，存储的原子更新落到最后一次的意图；
+ * 写入失败就把开关拨回实际状态，并在这一组下面给一句话，不弹窗、不抢焦点。
+ */
+async function toggleMedia(key: MediaFlagKey, input: HTMLInputElement) {
+  const o = origin.value;
+  if (!o || !profile.value) {
+    input.checked = false;
+    return;
+  }
+  const on = input.checked;
+  mediaError.value = '';
+  try {
+    const updated = await createPageMaskStorage(browser.storage.local).updateProfile(o, (p) => {
+      Object.assign(p, mediaFlagPatch(key, on));
+    });
+    if (updated) profile.value = updated;
+    else {
+      input.checked = !on; // 配置刚好被删：拨回原位
+      mediaError.value = t.value.media.saveFailed;
+    }
+  } catch {
+    input.checked = !on; // 写入失败：拨回实际状态
+    mediaError.value = t.value.media.saveFailed;
   }
 }
 

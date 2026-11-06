@@ -82,6 +82,24 @@
            待授权站点页面上本来就没有胶囊；关掉后下面四件事一件不少，这是隐藏胶囊后的唯一页外入口 -->
       <template v-if="phase === 'ready'">
         <div class="divider" role="presentation"></div>
+        <!-- 图片、视频和声音（#116）：三行收成一组，说明只留一行放在这组下面。
+             与「按你的设置显示」一样只在按设置时起作用；原样时也能先设好，所以不设禁用态 -->
+        <div class="media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
+          <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="switch-row">
+            <label :for="`pm-popup-media-${key}`">{{ t.media[key] }}</label>
+            <input
+              :id="`pm-popup-media-${key}`"
+              type="checkbox"
+              switch
+              role="switch"
+              :data-testid="`pm-popup-media-${key}`"
+              :checked="media?.[key] === true"
+              @change="emit('toggleMedia', key, $event.target as HTMLInputElement)"
+            />
+          </div>
+          <p class="hint media-hint">{{ t.media.hintShort }}</p>
+          <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-popup-media-error">{{ mediaError }}</p>
+        </div>
         <div class="switch-row">
           <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
           <input
@@ -123,6 +141,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { MEDIA_FLAG_KEYS, type MediaFlagKey, type MediaToggles } from '@/core/media';
 import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
 
@@ -148,6 +167,10 @@ const props = defineProps<{
   coverShortcut: string;
   /** 右下角的小按钮在这个网站是否显示（#112：capsuleHidden 的反面）；只在 ready 出现 */
   showToggle?: boolean;
+  /** 图片、视频、声音三个开关的当前值（#116）；欢迎页示意图不传也没关系（new 态不显示这一组） */
+  media?: MediaToggles;
+  /** 三个开关写入失败时的一句话，显示在这一组下面（role=alert） */
+  mediaError?: string;
   /** 删除失败时的一行错误（显示在删除按钮上方，role=alert） */
   deleteError?: string;
 }>();
@@ -160,6 +183,8 @@ const emit = defineEmits<{
   toggleCurtain: [];
   /** 拨动「右下角的小按钮」开关（#112） */
   toggleCapsule: [input: HTMLInputElement];
+  /** 拨动图片 / 视频 / 声音里的某一个开关（#116）：只带键与输入元素，方向由父组件读 checked */
+  toggleMedia: [key: MediaFlagKey, input: HTMLInputElement];
   /** 点了「删除这个网站的设置」：确认框由父组件（entrypoints/popup）打开 */
   deleteSite: [];
 }>();
@@ -264,6 +289,18 @@ const deleteLabel = deleteSiteHeading();
 .divider {
   border-top: 1px solid var(--pm-border);
   margin: calc(var(--pm-space-1) * -1) 0;
+}
+/* 三个媒体开关收成一组（#116）：组内间距比弹窗默认的组件间距小一档，
+   三行读成「一组设置」而不是三个散落的开关；说明与错误都跟着这一组走 */
+.media-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+/* 组内的说明不是 .popup 的直接子元素，字号自己对齐弹窗里其他说明那一档 */
+.media-group .hint {
+  margin: 0;
+  font-size: var(--pm-font-size-body);
 }
 /* 胶囊开关下的说明：一行小字，跟着开关走 */
 .capsule-hint {

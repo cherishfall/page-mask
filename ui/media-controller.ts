@@ -173,6 +173,9 @@ export function createMediaController(doc: Document): MediaController {
     for (const video of touchedVideos) {
       const original = originalMuted.get(video);
       if (original !== undefined) video.muted = original;
+      // 必须连「原值」一起删：否则下次再打开时 applyVideo 以为已经记过，
+      // 既不记原值也不把视频放回 touchedVideos，第二次关就再也还原不了（E2E 抓到的回归）
+      originalMuted.delete(video);
     }
     touchedVideos.clear();
   }
