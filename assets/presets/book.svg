@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- 知识库：摊开的书 + 书脊 V。主体灰，书脊红。 -->
-  <path d="M16 10C13 6.5 8.5 6 4 7.5V25c4.5-1.5 9-1 12 2 3-3 7.5-3.5 12-2V7.5C23.5 6 19 6.5 16 10z" fill="none" stroke="#6B7280" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M16 10v17" fill="none" stroke="#D93025" stroke-width="4" stroke-linecap="round"/>
+  <!-- 知识库：书 + 书脊。中性灰，与彩色图标拉开 -->
+  <path d="M9 5h15v22H11a2 2 0 0 1-2-2z" fill="none" stroke="#5F6368" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M13 5v22" fill="none" stroke="#5F6368" stroke-width="3.5"/>
 </svg>

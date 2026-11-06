@@ -5,6 +5,24 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.5] - 2026-11-06
+
+0.6.4 交付前的「新眼睛」复查抓到的两处，都属于同一条：看着不像一套。
+
+### 中文
+
+#### 修复
+
+- **10 个内置图标改成同一套画法**：统一描边粗细、统一字形框、圆头圆角，只有细节点缀用实心。此前一半是描边、一半是实心，凑成一排不像一套（#121）
+- **图标选中态不再只靠颜色**：选中的那一格右上角多一枚勾选角标，色弱用户也分得出选的是哪一个（WCAG 1.4.1，#121）
+
+### English
+
+#### Fixed
+
+- **The 10 built-in icons now share one drawing system**: same stroke weight, same glyph box, rounded caps and joins, with fills only for small details. Previously half were outlines and half were solid — side by side they didn't read as a set (#121)
+- **The selected icon no longer relies on colour alone**: the chosen tile gets a check badge in its top-right corner, so colour-blind users can still tell which one is picked (WCAG 1.4.1, #121)
+
 ## [0.6.4] - 2026-11-06
 
 0.6.3 装机复核后的一批界面与交互修缮（#117）：浮层在白底网页上看得见了、工具条整条标题栏能拖、图标不用再自己找图、设置一键直达。

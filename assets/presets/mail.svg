@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- 邮件：封口 V。主体橙，折线蓝。 -->
-  <rect x="5" y="7" width="22" height="18" rx="2" fill="none" stroke="#C2410C" stroke-width="4"/>
-  <path d="M7 10l9 7 9-7" fill="none" stroke="#1A73E8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 邮件：信封 + 封口 V。红色 -->
+  <rect x="6" y="9" width="20" height="15" rx="2" fill="none" stroke="#D93025" stroke-width="3.5"/>
+  <path d="M7 11l9 7 9-7" fill="none" stroke="#D93025" stroke-width="3.5" stroke-linejoin="round"/>
 </svg>

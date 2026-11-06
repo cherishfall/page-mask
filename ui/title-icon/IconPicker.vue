@@ -63,6 +63,8 @@
           @change="pickPreset(id)"
         />
         <img :src="PRESET_ICONS[id]" alt="" aria-hidden="true" />
+        <!-- 选中态不只靠颜色（WCAG 1.4.1）：右上角一枚勾选角标 -->
+        <span v-if="selectedPreset === id" class="pm-icon-check" aria-hidden="true"></span>
       </label>
     </div>
   </fieldset>

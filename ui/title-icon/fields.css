@@ -148,6 +148,32 @@
   pointer-events: none;
 }
 
+/* 选中角标（#121 复查）：描边颜色之外还要有个形状线索，否则选中态只靠颜色
+   （WCAG 1.4.1）。角标压在图标的右上角外侧，不遮住图形本身。 */
+.pm-icon-check {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline-end: -2px;
+  inline-size: 13px;
+  block-size: 13px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  /* 一圈底色把角标与图标隔开（选中格底色是 --pm-bg-subtle） */
+  box-shadow: 0 0 0 2px var(--pm-bg-subtle);
+  pointer-events: none;
+}
+.pm-icon-check::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 4.5px;
+  inset-block-start: 2.5px;
+  inline-size: 3px;
+  block-size: 6px;
+  border: solid var(--pm-on-accent);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
 .pm-tif-hint {
   margin: 0;
   font-size: var(--pm-font-size-caption);

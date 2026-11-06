@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- 文档：折角。主体蓝，折角红。 -->
-  <path d="M8 4h11l7 7v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#1A73E8" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M19 4v7h7" fill="none" stroke="#D93025" stroke-width="4" stroke-linejoin="round"/>
+  <!-- 文档：页面 + 折角。统一 3.5 描边、圆头圆角、字形框 5–27 -->
+  <path d="M9 5h9l5 5v17H9z" fill="none" stroke="#1A73E8" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M18 5v5h5" fill="none" stroke="#1A73E8" stroke-width="3.5" stroke-linejoin="round"/>
 </svg>
