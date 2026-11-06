@@ -239,6 +239,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           onEdit: handleEdit,
           onMoreItems: handleMoreItems,
           onResetPos: handleResetPos,
+          onSettings: handleOpenSettings,
           onCover: handleCover,
           onSetMini: handleSetMini,
           onDelete: handleDeleteRequest,
@@ -331,6 +332,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       .sendMessage({ t: 'resetSiteHere' } satisfies BgRequest)
       .catch(() => undefined);
     if (!res?.ok) showPageNotice(ctx, t().notice.deleteFailed);
+  }
+
+  /** 点了「调整不透明度」（#120）：后台开插件设置并停在那张卡；开不起来就在页面上说一句 */
+  async function handleOpenSettings(): Promise<void> {
+    if (!ctx.isValid) return;
+    const res: Ack | undefined = await browser.runtime
+      .sendMessage({ t: 'openSettings', section: 'opacity' } satisfies BgRequest)
+      .catch(() => undefined);
+    if (!res?.ok) showPageNotice(ctx, t().notice.settingsFailed);
   }
 
   // ---------- 方案C 遮罩覆盖层 ----------

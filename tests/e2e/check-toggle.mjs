@@ -293,13 +293,13 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 删除这个网站的设置',
-      `默认位（没存过坐标）时菜单三项，与弹窗同名、收起内容在前（#80/#90，${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+      `默认位（没存过坐标）时菜单四项，与弹窗同名、收起内容在前（#80/#90/#120，${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 1, `菜单里只有一条分隔线（实际 ${menuShape.seps} 条）`);
+    check(menuShape.seps === 2, `菜单里两条分隔线：改内容的 / 按钮自己的 / 删除设置（实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 删除这个网站的设置',
-      `分组顺序：改内容两项（收起内容在前，#80）/ 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.order.join(' | ') === '收起内容 | 标题和图标 | --- | 调整不透明度 | --- | 删除这个网站的设置',
+      `分组顺序：改内容（收起内容在前，#80）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -307,6 +307,28 @@ async function main() {
     );
     await page.keyboard.press('Escape');
     await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
+
+    // #120：菜单「调整不透明度」→ 插件设置的不透明度那张卡（深链 + 焦点）
+    console.log('\n--- 菜单「调整不透明度」直达插件设置 ---');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'), { timeout: 3000 });
+    const settingsOpened = ext.browser.waitForTarget((t) => t.url().includes('/settings.html#opacity'), { timeout: 8000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-opacity'));
+    const settingsTab = await (await settingsOpened).asPage();
+    await settingsTab.waitForFunction(() => document.readyState === 'complete');
+    check(settingsTab.url().endsWith('/settings.html#opacity'), `点「调整不透明度」打开插件设置并带上锚点（${settingsTab.url()}）`);
+    await settingsTab.waitForSelector(tid('pm-settings-opacity'), { timeout: 5000 });
+    const focusedId = await settingsTab.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
+    check(focusedId === 'pm-settings-opacity', `跳过去焦点落在不透明度滑杆上（焦点在 ${focusedId || '无'}）`);
+    const highlighted = await settingsTab.$eval(tid('pm-settings-toggle'), (el) => el.classList.contains('target'));
+    check(highlighted, '落点那张卡有描边高亮（不只靠颜色）');
+    await settingsTab.close();
+    await page.bringToFront();
+    const menuClosed = await page.evaluate(
+      (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'),
+      TOGGLE,
+    );
+    check(menuClosed, '点完菜单已关闭');
 
     // ===================== 菜单「收起内容」：直接进向导（#67 / #77） =====================
     console.log('\n--- 点菜单「收起内容」：打开向导 ---');
@@ -508,8 +530,9 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      movedMenu.items.join(' / ') === '收起内容 / 标题和图标 / 按钮放回右下角 / 删除这个网站的设置' && movedMenu.seps === 2,
-      `拖过之后菜单四项、两条分隔线（#90，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
+      movedMenu.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
+        movedMenu.seps === 2,
+      `拖过之后菜单五项、两条分隔线（#90/#120，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
     );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
     const reset = await (async () => {
@@ -549,8 +572,8 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 删除这个网站的设置',
-      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
+      noRulesMenu.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 

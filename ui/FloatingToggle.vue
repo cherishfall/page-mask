@@ -108,14 +108,16 @@
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
       </button>
-      <!-- 按钮已在默认位（没存过坐标）时「放回右下角」点了没效果：连同前面的分隔线一起不摆（#90）；
-           拖过之后照常出现 -->
-      <template v-if="props.position">
-        <hr class="pm-tg-sep" />
-        <button type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
-          {{ t.toggle.menuResetPos }}
-        </button>
-      </template>
+      <!-- 按钮自己那一组（#120）：先「调整不透明度」，再「放回右下角」。
+           分隔线常驻——不透明度这一项一直在；「放回右下角」只在拖过之后才有意义，
+           所以 v-if 只包它自己。 -->
+      <hr class="pm-tg-sep" />
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-opacity" @click="onMenu('opacity')">
+        {{ t.toggle.menuOpacity }}
+      </button>
+      <button v-if="props.position" type="button" class="pm-tg-item" data-testid="pm-toggle-reset" @click="onMenu('reset')">
+        {{ t.toggle.menuResetPos }}
+      </button>
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item danger" data-testid="pm-toggle-delete" @click="onDelete">
         {{ t.toggle.menuDelete }}
@@ -172,6 +174,8 @@ const emit = defineEmits<{
   /** 菜单里的「收起内容」：进向导选内容（添加与编辑同一扇门，#77） */
   moreItems: [];
   resetPos: [];
+  /** 菜单里的「调整不透明度」：打开插件设置并停在不透明度那一栏（#120） */
+  settings: [];
   cover: [];
   /** mini ↔ 全功能互切（#78） */
   setMini: [mini: boolean];
@@ -338,10 +342,11 @@ function onMenuToggle() {
 }
 
 /** 点菜单项：先关菜单再执行，焦点回到「⋯」 */
-function onMenu(action: 'edit' | 'moreItems' | 'reset') {
+function onMenu(action: 'edit' | 'moreItems' | 'reset' | 'opacity') {
   menuEl.value?.hidePopover();
   if (action === 'edit') emit('edit');
   else if (action === 'moreItems') emit('moreItems');
+  else if (action === 'opacity') emit('settings');
   else {
     dragPos.value = null;
     viewPos.value = null;

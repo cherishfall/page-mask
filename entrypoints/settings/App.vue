@@ -130,8 +130,9 @@
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
         </section>
 
-        <!-- 右下角那颗小按钮（#110）：不透明度滑杆 + 真实胶囊预览 -->
-        <section class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
+        <!-- 右下角那颗小按钮（#110）：不透明度滑杆 + 真实胶囊预览。
+             id="opacity" 是深链锚点（#120）：页面胶囊的「调整不透明度」跳到这一张 -->
+        <section id="opacity" class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
           <h2 id="pm-settings-toggle-heading">{{ t.settings.toggleHeading }}</h2>
           <p class="hint">{{ t.settings.toggleIntro }}</p>
           <div class="toggle-preview" aria-hidden="true" inert>
@@ -384,6 +385,36 @@ async function openShortcutSettings() {
   }
 }
 
+/**
+ * 深链（#120）：页面胶囊的「调整不透明度」打开 settings.html#opacity ——
+ * 滚到那张卡、焦点落在滑杆上、短暂描边高亮。
+ * 高亮用 outline（形状线索）而不是只改颜色，WCAG 1.4.1；reduced-motion 下不做平滑滚动。
+ */
+const HASH_TARGETS: Record<string, string> = { '#opacity': 'opacity' };
+let highlightTimer = 0;
+
+function jumpToHashTarget(): void {
+  const id = HASH_TARGETS[location.hash];
+  if (!id) return;
+  const card = document.getElementById(id);
+  if (!card) return;
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  card.querySelector<HTMLInputElement>('[data-testid="pm-settings-opacity"]')?.focus({ preventScroll: true });
+  card.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+  card.classList.add('target');
+  window.clearTimeout(highlightTimer);
+  highlightTimer = window.setTimeout(() => card.classList.remove('target'), 1600);
+}
+
+// 卡片在 store 载入后才渲染（v-else）：等 loaded 再跳
+watch(
+  () => store.state.loaded,
+  (ok) => {
+    if (ok) void nextTick(jumpToHashTarget);
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   void store.init();
   void refreshShortcut();
@@ -391,8 +422,14 @@ onMounted(() => {
   ensureTogglePreviewStyles();
   // 用户去快捷键页改完再回来：聚焦时重新读一次（Chrome 没有「快捷键变了」的事件）
   window.addEventListener('focus', refreshShortcut);
+  // 设置页已经开着时再点一次菜单项，也要能跳过去（只改 hash 不重新加载文档）
+  window.addEventListener('hashchange', jumpToHashTarget);
 });
-onBeforeUnmount(() => window.removeEventListener('focus', refreshShortcut));
+onBeforeUnmount(() => {
+  window.removeEventListener('focus', refreshShortcut);
+  window.removeEventListener('hashchange', jumpToHashTarget);
+  window.clearTimeout(highlightTimer);
+});
 
 async function onIconChange(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -477,6 +514,14 @@ function onReplaceClose() {
 
 .card {
   margin-top: var(--pm-space-3);
+  /* 深链跳过来时别贴着视口边缘（#120） */
+  scroll-margin-block: 24px;
+}
+
+/* 深链落点：描边是形状线索，不是只靠颜色（WCAG 1.4.1）；1.6 秒后由脚本撤掉 */
+.card.target {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 4px;
 }
 
 .card h2 {

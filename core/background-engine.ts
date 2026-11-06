@@ -206,6 +206,17 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 未添加网站的幕布（#46） ----------
 
   /**
+   * 内容脚本的「调整不透明度」（#120）：打开插件设置并停在不透明度那一栏。
+   * 内容脚本调不到 runtime.openOptionsPage，也不该自己拼扩展页地址；section 只认白名单，
+   * 免得将来有人从这里塞任意 hash 进扩展页。tabs.create 不需要 "tabs" 权限。
+   */
+  async function openSettings(section: unknown): Promise<Ack> {
+    const hash = section === 'opacity' ? '#opacity' : '';
+    await browser.tabs.create({ url: browser.runtime.getURL(`/settings.html${hash}`), active: true });
+    return { ok: true };
+  }
+
+  /**
    * popup 的「遮住本页」：让页面控制器遮，实在没有接收方才注入一次性幕布脚本。
    * 已添加的网站只要内容脚本在线（弹窗的兜底路径会先注入），curtainCover 就有应答，不重复注入（#107）；
    * 未添加的网站里没有任何脚本（ADR-0001：未配置零注入），只能走注入——activeTab 在用户点
@@ -507,6 +518,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
         return fromExtensionPage(sender) ? resetSite(msg.origin) : Promise.resolve(FORBIDDEN);
       case 'resetSiteHere':
         return resetSiteHere(sender);
+      case 'openSettings':
+        // 只接受来自标签页的内容脚本（sender.tab 存在）：这是页面上的胶囊发起的
+        return sender.tab ? openSettings(msg.section) : Promise.resolve(FORBIDDEN);
       case 'reconcile':
         return fromExtensionPage(sender) ? handleReconcile() : Promise.resolve(FORBIDDEN);
       case 'cancelNewSite':

@@ -440,6 +440,7 @@ export const zh = {
     moreAria: '更多操作',
     menuTitle: '标题和图标',
     menuContent: '收起内容',
+    menuOpacity: '调整不透明度',
     menuResetPos: '按钮放回右下角',
     /** mini 与全功能互切的一对图标钮（不进菜单，#78） */
     shrinkAria: '切换成小按钮',
@@ -452,6 +453,7 @@ export const zh = {
   notice: {
     saveFailed: '没能保存这次改动，请稍后再试一次',
     deleteFailed: '没能删除这个网站的设置，请稍后再试一次',
+    settingsFailed: '没能打开插件设置，请稍后再试一次',
   },
 
   /** 遮住整页后那颗「恢复」按钮（ui/curtain-restore） */

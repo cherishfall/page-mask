@@ -216,6 +216,16 @@ export interface CoverPageRequest {
   tabId: number;
 }
 
+/**
+ * 内容脚本 → 后台：打开「插件设置」并停在不透明度那一栏（#120）。
+ * 内容脚本调不到 runtime.openOptionsPage，也不该自己去拼扩展页地址；
+ * section 由后台白名单化，不接受任意 hash。
+ */
+export interface OpenSettingsRequest {
+  t: 'openSettings';
+  section?: 'opacity';
+}
+
 export type BgRequest =
   | EnableSiteRequest
   | ResetSiteRequest
@@ -223,6 +233,7 @@ export type BgRequest =
   | ReconcileRequest
   | CancelNewSiteRequest
   | CoverPageRequest
+  | OpenSettingsRequest
   | ApplyDisguiseRequest
   | RestoreOriginalRequest
   | DraftCssRequest
