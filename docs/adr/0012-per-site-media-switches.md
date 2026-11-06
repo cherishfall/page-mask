@@ -21,7 +21,7 @@
    - 小图豁免：CSS 没法按渲染尺寸选元素，给 ≤32px 或 emoji 的 `img` 打 `data-pm-media-keep`，选择器用 `:not()` 放行。尺寸未知时先灰着，`load` 后重新判定。
    - 视频：扫到 `video` 就 `pause()` + `muted = true`，并在 `document` 捕获阶段拦 `play` 事件（play 不冒泡但经过 document）。不包 `HTMLMediaElement.prototype.play`、不装轮询。还原时按改之前的值放回 `muted`，**不替网站恢复播放**。
 4. **静音走浏览器自己的标签页静音**：`chrome.tabs.update(tabId, { muted })`。目标状态由后台按当前存储与 `sender.tab.id` 算，消息不带方向、不带站点。解除前必须核对 `mutedInfo.reason === 'extension' && extensionId === 本扩展`，不抢用户手动静音、Chrome 自带「静音网站」或其他扩展设的静音。用户手动取消静音后不追着按回去。`tabs.onUpdated` 只在**地址变化**时对账，避免每次页面加载都唤醒后台（零影响铁律）。
-5. **只在「按你的设置显示」时生效**，切「网站原样」把画面、视频静音、标签页静音一起还原；删除这个网站的设置先还原声音再收尾，不留哑掉的标签页。
+5. **只在「按你的设置显示」时生效**，切「原样」把画面、视频静音、标签页静音一起还原；删除这个网站的设置先还原声音再收尾，不留哑掉的标签页。
 6. **三处入口共用一份键与文案**：`MEDIA_FLAG_KEYS` 是唯一的键 / 顺序来源，`mediaFlagPatch()` 是唯一的写入口径；站点设置页、弹窗、悬浮按钮「⋯」菜单都从它渲染。菜单刻意不是 `role="menu"`，所以勾选项用 `role="switch" + aria-checked` + 可见勾选标记，而不是孤立的 `menuitemcheckbox`（WCAG 4.1.2）。
 7. **如实告知边界**：这是「看起来收起，不是不加载」，图片请求照发；背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 本期不收；静音是标签页级而非网站级，离开该网站会自动恢复。边界写进界面说明、README 与商店材料，不夸大。
 

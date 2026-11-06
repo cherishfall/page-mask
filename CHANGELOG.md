@@ -5,6 +5,32 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.7.1] - 2026-11-06
+
+0.7.0 发版后复查的一批收口，都是特定操作顺序下才会碰到的状态还原问题；功能、界面用词与权限都没有变化。
+
+### 中文
+
+#### 修复
+
+- **删掉某个网站的设置，不会把别的标签页重新静音**：此前手动取消过静音的标签页，删除别的网站时不再被按回去；只解除本扩展设置、且按当前设置已经不该继续静音的那一份
+- **收回站点权限、整体导入替换设置时也不留哑掉的标签页**：这两条删除类路径现在和「删除这个网站的设置」一样收尾
+- **小图标判定更稳**：一律按页面上实际显示的尺寸算；还没排好版时宁可先灰一帧，等图片加载完或样式变了再重判，写着小尺寸、实际被放大的大图不会再漏出来
+- **视频被替换、开关反复拨动、播放器在页面里挪位置都能正确还原**：挪位置不再被当成移除，静音不会闪断；关掉开关时放回这一轮开始前的声音状态
+- **图片加载完立刻重判**：懒加载的小图标不再一直灰着，不必等页面上恰好还有别的变动
+- **界面与商店材料的小处收口**：讲整组开关的那句话和每行的说明分开、菜单未选中项也有看得见的空框、三处开关分组让读屏软件认得；商店材料如实写明会读取标签页地址、菜单默认项数与实际一致
+
+### English
+
+#### Fixed
+
+- **Deleting one site's settings no longer re-mutes other tabs**: a tab you had manually unmuted is no longer muted again when you delete a different site. PageMask only removes the mute it set itself when the current settings no longer call for it
+- **No muted tabs left behind** when site permission is revoked or an import replaces all settings; both paths now clean up the same way as deleting a site's settings
+- **Small-icon detection is more reliable**: it always uses the size actually shown on the page. Until an image is laid out it stays grey for a frame, then re-checks after loading or a style change, so a large image declared as 16×16 cannot slip through
+- **Videos restore correctly** when replaced, when switches are flipped repeatedly, and when a player is moved around the page. Moving a player is no longer treated as removal, so sound does not flicker back; turning a switch off restores the sound state from the start of that round
+- **Images are re-checked as soon as they load**: lazy-loaded small icons no longer stay grey until something else happens to change the page
+- **Interface and store-listing polish**: the note about the whole group is separated from the per-switch notes, unselected menu items show a visible empty box, all three switch groups are announced properly by screen readers, and the store listing now states accurately that tab URLs are read and matches the menu's real item count
+
 ## [0.7.0] - 2026-11-06
 
 给每个网站加了三个独立开关：收起图片、收起视频、静音网页。三处入口是同一组设置，只在「按你的设置显示」时起作用。

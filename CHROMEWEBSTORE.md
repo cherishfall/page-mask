@@ -3,12 +3,12 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-06 · 对应构建 **0.7.0**（`.output/page-mask-0.7.0-chrome.zip`）
+> 最后更新：2026-11-06 · 对应构建 **0.7.1**（`.output/page-mask-0.7.1-chrome.zip`）
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.7.0-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.7.0`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.7.0`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.7.1-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.7.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.7.1`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.4.1 改了界面用词，截图 4、6 里的按钮名需要跟上；0.7.0 的弹窗底部与「⋯」菜单各多了三个开关，截图 4、6 也要补）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、全部网站设置、允许访问；「⋯」菜单七项按用途分四组；三个媒体开关在弹窗、菜单、站点设置页三处互通）
@@ -172,12 +172,13 @@ Test steps (no login needed):
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.7.1 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对「⋯」菜单七项四组、弹窗底部三行开关、站点设置页第五张卡，以及第 8 步的标签页静音小喇叭和原样态全还原。自动化已按新文案全量跑过（0.7.1）：单测 687 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测这三个开关（含小图标豁免、视频停播、静音归属、未选中空框、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
+**0.7.1 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对「⋯」菜单七项四组、弹窗底部三行开关、站点设置页第五张卡，以及第 8 步的标签页静音小喇叭和原样态全还原。自动化已按新文案全量跑过（0.7.1，含 #125–#130 修复后重跑）：单测 693 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测这三个开关（含小图标豁免、视频停播、静音归属、未选中空框、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
 
 ## 7. 版本历史
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.7.1 | 2026-11-06 | 0.7.0 发版后复查的收口（#125–#130）：删除站点只单向解除本扩展的静音、收回权限与整体导入替换也不留哑标签页（权限本身也是「该不该静音」的前提）；小图标一律按渲染尺寸判定、加载完立即重判；视频被替换、开关反复拨动、播放器挪位置都能正确还原；界面说明分组、菜单未选中态、读屏分组与商店材料口径。功能与权限不变，详见 `CHANGELOG.md` |
 | 0.7.0 | 2026-11-06 | 按站点的「收起图片 / 收起视频 / 静音网页」三个开关，站点设置页、弹窗、悬浮按钮「⋯」菜单三处同一组设置；图片 / 视频变灰块保布局、小图标留原样，视频还会暂停静音，静音走 Chrome 标签页静音（不需要 `tabs` 权限、只解除本扩展设的那份）；只在「按你的设置显示」时起作用，切原样连声音一起还原。不新增权限、不拦网络请求。详见 `CHANGELOG.md` |
 | 0.6.1 | 2026-11-06 | 第二轮装机反馈：幕布三处入口（胶囊 / 弹窗 / 快捷键）互通且未添加网站可反复遮撤、欢迎页矮窗口改为内容区滚动 + 底栏固定、胶囊收到 WCAG 最小尺寸（高 26）、不透明度改 10%–100% 滑杆（旧三档自动迁移）、胶囊可按网站隐藏（弹窗开关，显示时回右下角 + 全功能）、弹窗补「删除这个网站的设置」、「全部网站设置」列表逐行删除（⋯ 菜单）。详见 `CHANGELOG.md` |
 | 0.6.0 | 2026-11-05 | 第一轮装机复核（装机版，未作为商店版本发布）：幕布快捷键（Ctrl+Shift+X / ⌘+Shift+X）、胶囊不透明度三档（0.6.1 起为滑杆）、只改保存过标题和图标的网站、可恢复网站原标题与图标、向导同类组统一描边、欢迎页改用真实组件、新插件图标。详见 `CHANGELOG.md` |
@@ -197,9 +198,9 @@ Test steps (no login needed):
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：三步设置第 2 步（点选，选中项列成清单）与第 3 步（看效果，逐项编辑 + 在哪些页面收起）并排 |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
-| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ⚠️ 待按 0.7.0 重拍 1280×800：弹窗（按你的设置显示开关、收起内容 / 标题和图标、遮住这一页、底部「图片、视频和声音」三行开关与两个入口），旧图里的按钮名是 0.4.1 之前的 |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ⚠️ 待按 0.7.1 重拍 1280×800：弹窗（按你的设置显示开关、收起内容 / 标题和图标、遮住这一页、底部「图片、视频和声音」三行开关与两个入口），旧图里的按钮名是 0.4.1 之前的 |
 | 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
-| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ⚠️ 待按 0.7.0 重拍 1280×800：悬浮按钮「⋯」菜单七项四组（含三个带勾选标记的开关）+ 遮住整页后的睁眼恢复按钮（悬停显出「恢复」） |
+| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ⚠️ 待按 0.7.1 重拍 1280×800：悬浮按钮「⋯」菜单七项四组（含三个带勾选标记的开关）+ 遮住整页后的睁眼恢复按钮（悬停显出「恢复」） |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
 重新生成：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`）。
@@ -237,14 +238,14 @@ Test steps (no login needed):
 
 ## 11. review-checklist 自查结论
 
-按 `chrome-extensions` skill 的 pre-publish checklist 逐项过了一遍（0.2.0，2026-10-27）。0.4.0 与 0.7.0 的权限集、打包方式都没有变化，结论仍然适用；提交前按 §0 清单对版本号、截图与测试步骤复核一遍即可：
+按 `chrome-extensions` skill 的 pre-publish checklist 逐项过了一遍（0.2.0，2026-10-27）。0.4.0、0.7.0 与 0.7.1 的权限集、打包方式都没有变化，结论仍然适用；提交前按 §0 清单对版本号、截图与测试步骤复核一遍即可：
 
 ### Manifest 与打包
 
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `0.7.0`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `0.7.1`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54 |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
@@ -299,11 +300,11 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 687 项；`npm run test:e2e` 九个脚本合计 842 项断言全绿（含 0.7.0 新增 `check-media.mjs` 25 项）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 693 项；`npm run test:e2e` 九个脚本合计 842 项断言全绿（含 0.7.0 新增 `check-media.mjs` 25 项）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |
 | 卸载干净 | ✅ 卸载删除 storage.local 与动态注册；页面无残留（删除设置这条路径有 E2E） |
 | 资源占用 | ✅ 静止页面内容脚本 2 秒内 0 次 rAF；无 setInterval（单测守门） |
 
-**仍需人工完成**：真实授权弹窗点「允许」的完整路径（品牌版 Chrome）、隐私表单在控制台勾选、提交前的隐私政策 URL 点验、§6 八步真机重走、按 0.7.0 界面重拍截图 4 / 6，以及真实网站明暗底色下灰块观感、中英文界面字长、菜单在矮窗口里的翻转。
+**仍需人工完成**：真实授权弹窗点「允许」的完整路径（品牌版 Chrome）、隐私表单在控制台勾选、提交前的隐私政策 URL 点验、§6 八步真机重走、按 0.7.1 界面重拍截图 4 / 6，以及真实网站明暗底色下灰块观感、中英文界面字长、菜单在矮窗口里的翻转。
