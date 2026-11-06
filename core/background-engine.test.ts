@@ -935,7 +935,7 @@ describe('后台引擎（fakeBrowser）', () => {
   // ---------- 标签页静音（#116） ----------
 
   describe('标签页静音（#116）', () => {
-    /** 已配置站点 + 清爽态，按需要打开 / 关闭「网页静音」 */
+    /** 已配置站点 + 清爽态，按需要打开 / 关闭「静音网页」 */
     async function withMute(on: boolean, state: 'disguised' | 'original' = 'disguised') {
       await configure(ORIGIN);
       const p = disguisedProfile();
@@ -946,7 +946,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
     const muteSender = () => ({ id: 'test-extension-id', tab: { id: siteTabId }, url: `${ORIGIN}/home` });
 
-    it('清爽态 + 网页静音：用浏览器原生的标签页静音，不需要新权限', async () => {
+    it('清爽态 + 静音网页：用浏览器原生的标签页静音，不需要新权限', async () => {
       await withMute(true);
       stubs.update.mockClear();
       expect(await send({ t: 'syncMute' }, muteSender())).toMatchObject({ ok: true });

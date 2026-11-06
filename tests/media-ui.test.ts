@@ -58,6 +58,17 @@ describe('三个媒体开关的界面一致性（#116）', () => {
       /role=["']menuitemcheckbox["']/,
     );
     expect(menu).toContain("emit('mediaChange'");
+    // #127：未选中也要有可见状态，不能只剩一个空占位（和菜单里的普通动作项分不清）
+    expect(menu).toContain('pm-tg-tick');
+    expect(menu).toContain('pm-tg-box');
+  });
+
+  it('三处都收成一组；组级说明与逐行说明有视觉分隔（#127）', () => {
+    for (const [name, src] of SURFACES) {
+      expect(src, `${name} 应当有 role="group"`).toContain('role="group"');
+    }
+    expect(SURFACES[0][1], '弹窗的组级说明要有细分隔').toMatch(/\.media-hint\s*\{[^}]*border-top/s);
+    expect(SURFACES[2][1], '设置页的卡片脚注要有细分隔').toMatch(/\.media-footnote\s*\{[^}]*border-top/s);
   });
 
   it('中英两套文案都有每个开关的标签、说明、组名与失败提示', () => {

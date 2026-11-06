@@ -159,7 +159,7 @@ async function main() {
       const menu = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]');
       return keys.map((k) => {
         const b = menu.querySelector(`[data-testid="pm-toggle-media-${k}"]`);
-        return { role: b?.getAttribute('role'), checked: b?.getAttribute('aria-checked'), mark: !!b?.querySelector('.pm-tg-check svg') };
+        return { role: b?.getAttribute('role'), checked: b?.getAttribute('aria-checked'), mark: !!b?.querySelector('.pm-tg-tick') };
       });
     }, TOGGLE, KEYS);
     check(menuBefore.length === 3 && menuBefore.every((x) => x.role === 'switch'), '菜单里三个勾选项都是 role=switch');
@@ -176,6 +176,14 @@ async function main() {
       TOGGLE,
     );
     check(flipped === 'false', '勾选就地变成未选中（aria-checked=false）');
+    const offBox = await page.evaluate(
+      (h) =>
+        !!document
+          .querySelector(h)
+          ?.shadowRoot?.querySelector('[data-testid="pm-toggle-media-hideVideos"] .pm-tg-box'),
+      TOGGLE,
+    );
+    check(offBox, '未选中项也画一个淡空框，不和菜单里的普通动作项混淆（#127）');
     await waitFor(page, '关掉后视频恢复原来的静音状态', () => document.querySelector('#vid').muted === false, [], { timeout: 8000 });
     check(true, '关掉「收起视频」后视频的静音被还原');
     // 拨回来，留给后面的两态边界检查

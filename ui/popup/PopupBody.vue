@@ -302,6 +302,12 @@ const deleteLabel = deleteSiteHeading();
   margin: 0;
   font-size: var(--pm-font-size-body);
 }
+/* 这句是讲「整组三个开关」的，不是最后一行开关的注脚（#127）：
+   用一条细分隔与上面三行分开，一眼看得出它管的是这一组 */
+.media-group .media-hint {
+  border-top: 1px solid var(--pm-border);
+  padding-top: var(--pm-space-2);
+}
 /* 胶囊开关下的说明：一行小字，跟着开关走 */
 .capsule-hint {
   margin: 0;

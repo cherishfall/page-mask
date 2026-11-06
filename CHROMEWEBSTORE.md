@@ -45,11 +45,11 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 三种收起方式：消失（整块不见，下面的内容往上顶）、留空（看不见了，但位置还占着）、盖住（原位盖一块和背景同色的方块，不改网站自身样式）
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一
-• 图片、视频和声音：按网站单独设置的「收起图片 / 收起视频 / 静音网页」三个开关。图片变成灰块、位置不变、链接还能点，按钮上的小图标保持原样；视频变成灰块并暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。站点设置页、弹窗、悬浮按钮「⋯」菜单三处是同一组设置，只在「按你的设置显示」时起作用，切「网站原样」连声音一起还原
+• 图片、视频和声音：按网站单独设置的「收起图片 / 收起视频 / 静音网页」三个开关。图片变成灰块、位置不变、链接还能点，按钮上的小图标保持原样；视频变成灰块并暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。站点设置页、弹窗、悬浮按钮「⋯」菜单三处是同一组设置，只在「按你的设置显示」时起作用，切「原样」连声音一起还原
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时）；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 • 胶囊可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
-• 每个网站一个开关：点页面上的悬浮按钮，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
+• 每个网站一个开关：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 • 页面内编辑：悬浮按钮的「⋯」菜单可以就地改标签页标题和图标；「编辑收起的内容」打开设置向导的「看效果」，页面上逐行换收起方式、换在哪些页面收起、重新选这一项，删掉的行随保存移除
 • 设置分成两个页面：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言，也是 Chrome 的「扩展程序选项」
 • 删除入口齐全：弹窗最底部和「全部网站设置」每行的「⋯」菜单里都有「删除这个网站的设置」，不必先点进详情页
@@ -88,11 +88,11 @@ FEATURES
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page colour sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
-• Pictures, videos & sound: three per-site switches — "Hide images", "Hide videos" and "Mute this page". Pictures turn into grey blocks that stay in place with their links still working (small icons on buttons are left alone); videos turn into grey blocks, pause and go silent; "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. The same three switches are in the site's settings page, the popup and the small button's "⋯" menu. They apply only with "Shown your way" on; "As the site is" brings the sound back too
+• Pictures, videos & sound: three per-site switches — "Hide images", "Hide videos" and "Mute this page". Pictures turn into grey blocks that stay in place with their links still working (small icons on buttons are left alone); videos turn into grey blocks, pause and go silent; "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. The same three switches are in the site's settings page, the popup and the small button's "⋯" menu. They apply only with "Your settings" on; "As is" brings the sound back too
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over); a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the capsule, the popup and the shortcut all work on the same state — any of them can undo any other
 • A capsule you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
-• One switch per site: the small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
+• One switch per site: the small button at the bottom-right flips between "Your settings" and "As is"; all tabs of that site switch together
 • On-page editing: the small button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
 • Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, default icon, export / import and interface language, and is registered as Chrome's "Options" page
 • Delete is always reachable: the very bottom of the popup and every row's "⋯" menu in "All site settings" both carry "Delete this site's settings" — no need to open the details page first
@@ -156,7 +156,7 @@ What it does: lets the user hide page elements they pick on sites they explicitl
 
 Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that single origin; only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that origin) and inject the hiding styles there.
 
-Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. With the picture/video switches on, the same stylesheet greys out img/video elements (keeping layout and links, leaving small icons alone) and the bundled content script pauses and mutes videos and keeps them paused. "Mute this page" calls chrome.tabs.update({ muted }) — Chrome's own tab mute, no tabs permission — and the extension only unmutes a tab it muted itself (mutedInfo.reason === 'extension' and our extensionId). The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off; switching to "As the site is" restores the grey blocks, video sound and tab mute together.
+Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. With the picture/video switches on, the same stylesheet greys out img/video elements (keeping layout and links, leaving small icons alone) and the bundled content script pauses and mutes videos and keeps them paused. "Mute this page" calls chrome.tabs.update({ muted }) — Chrome's own tab mute, no tabs permission — and the extension only unmutes a tab it muted itself (mutedInfo.reason === 'extension' and our extensionId). The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off; switching to "As is" restores the grey blocks, video sound and tab mute together.
 
 No network requests, no analytics, no remote code, no bundled site rules. Image/video requests are NOT blocked — the grey blocks are purely visual. All data stays in chrome.storage.local.
 
@@ -166,13 +166,13 @@ Test steps (no login needed):
 3. The picked element is hidden with ghost markers; the list on the right lets you change the hide method or remove an item, and the "where it applies" options are in each row's 「调整」 (Adjust). Click 保存 (Save). The element is hidden.
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it ("Reading" / «阅读» when left empty and Chrome's UI language is Chinese).
 5. Click the small button at the bottom-right to switch the site back to as-is: the element reappears and the title reverts.
-6. Click 「⋯」 on the small button. The menu has seven items in four groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「收起图片」 / 「收起视频」 / 「静音网页」 (three on/off switches with a tick; the menu stays open so several can be flipped) | 「调整不透明度」 (opens the opacity setting) / 「按钮放回右下角」 (put the button back at the bottom-right) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission).
+6. Click 「⋯」 on the small button. By default the menu has seven items in four groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「收起图片」 / 「收起视频」 / 「静音网页」 (three on/off switches — checked ones show a tick, unchecked ones a light empty box; the menu stays open so several can be flipped) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, an eighth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that third group.
 7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, 「遮住这一页」 (Cover this page — the whole page is covered and only a small open-eye button remains; click it to restore), a group of three media switches at the bottom, and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Pictures, videos & sound" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title/icon, export / import, interface language).
-8. Media & sound (no new permission): turn on 「收起图片」 (Hide images) in the popup, in that 「⋯」 menu, or in the 「图片、视频和声音」 card on the site's settings page — the three places stay in sync. Pictures become grey blocks, stay in place, keep their links, and small icons stay as they are. 「收起视频」 (Hide videos) also pauses videos and silences them. 「静音网页」 (Mute this page) mutes the tab (Chrome shows a muted speaker icon). Switch the small button back to 「网站原样」 (As the site is): the grey blocks, the video sound and the tab mute are all restored; switching back brings them all into effect again.
+8. Media & sound (no new permission): turn on 「收起图片」 (Hide images) in the popup, in that 「⋯」 menu, or in the 「图片、视频和声音」 card on the site's settings page — the three places stay in sync. Pictures become grey blocks, stay in place, keep their links, and small icons stay as they are. 「收起视频」 (Hide videos) also pauses videos and silences them. 「静音网页」 (Mute this page) mutes the tab (Chrome shows a muted speaker icon). Switch the small button back to 「原样」 (As the site is): the grey blocks, the video sound and the tab mute are all restored; switching back brings them all into effect again.
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.7.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对「⋯」菜单七项四组、弹窗底部三行开关、站点设置页第五张卡，以及第 8 步的标签页静音小喇叭和原样态全还原。自动化已按新文案全量跑过：单测 679 项；E2E 九个脚本合计 841 项断言，其中 `tests/e2e/check-media.mjs` 24 项专测这三个开关（含小图标豁免、视频停播、静音归属、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
+**0.7.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对「⋯」菜单七项四组、弹窗底部三行开关、站点设置页第五张卡，以及第 8 步的标签页静音小喇叭和原样态全还原。自动化已按新文案全量跑过（0.7.1）：单测 687 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测这三个开关（含小图标豁免、视频停播、静音归属、未选中空框、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
 
 ## 7. 版本历史
 
@@ -230,9 +230,9 @@ Test steps (no login needed):
 | 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
 | 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。0.7.0 的三个开关里，灰块同样是一份用户样式表；内容脚本只在开关打开期间暂停 / 静音页面上的 `<video>`，并把小图标标成豁免。不改网页原有 DOM、不发请求、不注入远程代码。 |
 | 三个新开关会拦网络请求吗？ | 不会。灰块是 `scripting.insertCSS` 的用户样式表，图片 / 视频请求照发，因此也不省流量、不挡广告；扩展没有 `declarativeNetRequest` 权限，也没有拦截任何请求的代码。 |
-| 为什么能静音标签页却没申请 `tabs` 权限？ | `chrome.tabs.update(tabId, { muted })` 改的是 Chrome 自己的标签页静音状态，按官方文档不需要 `tabs` 权限（`tabs` 权限主要用于读 `url` / `title` / `favIconUrl`）。扩展只用 `sender.tab.id` 定位发起消息的标签页，不遍历标签页、不读网址。静音状态由浏览器记在标签页上，不写进扩展存储；解除前核对 `mutedInfo.reason === 'extension' && extensionId === 本扩展`，不动用户手动静音、Chrome 自带「静音网站」或其他扩展设置的静音。 |
+| 为什么能静音标签页却没申请 `tabs` 权限？ | `chrome.tabs.update(tabId, { muted })` 改的是 Chrome 自己的标签页静音状态，按官方文档不需要 `tabs` 权限（`tabs` 权限主要用于 `tabs.query` 读 `url` / `title` / `favIconUrl` 等敏感字段）。内容脚本发来的消息用 `sender.tab.id` 定位当前标签页；只在删除某个网站的设置、或标签页换地址时，才用 `tabs.query({})` 与浏览器给出的标签页信息做一次静音对账，网址只用于当场查本机 `chrome.storage.local` 里的配置，不持久化、不上传、不按网址建画像。**删除站点这一步只解除本扩展设的、按当前配置已不该静音的那一份，不会把用户手动取消的静音按回去**（#125）。静音状态由浏览器记在标签页上，不写进扩展存储；解除前核对 `mutedInfo.reason === 'extension' && extensionId === 本扩展`，不动用户手动静音、Chrome 自带「静音网站」或其他扩展设置的静音。 |
 | 会不会收集浏览记录？ | 不收集。网站地址存在本机 `chrome.storage.local`（用户配置的一部分），不上传、不同步（没用 `storage.sync`）。 |
-| 为什么能改标签页标题/图标？ | 这是产品功能之一（`document.title` + `link[rel=icon]`），只对用户已添加、且该网站开关打开（「按你的设置显示」）的网站生效；切回「网站原样」或卸载后立刻还原。 |
+| 为什么能改标签页标题/图标？ | 这是产品功能之一（`document.title` + `link[rel=icon]`），只对用户已添加、且该网站开关打开（「按你的设置显示」）的网站生效；切回「原样」或卸载后立刻还原。 |
 | 关闭扩展后页面会残留样式吗？ | 不会：切回原样、「删除这个网站的设置」、卸载都会撤掉注入的样式；E2E 覆盖了「删除设置后已打开页面立即恢复原样」。 |
 
 ## 11. review-checklist 自查结论
@@ -299,7 +299,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 679 项；`npm run test:e2e` 九个脚本合计 841 项断言全绿（含 0.7.0 新增 `check-media.mjs` 24 项）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 687 项；`npm run test:e2e` 九个脚本合计 842 项断言全绿（含 0.7.0 新增 `check-media.mjs` 25 项）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |

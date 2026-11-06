@@ -22,9 +22,9 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
-- **收起图片 / 收起视频 / 静音网页**：按网站单独开关，三处都能改（站点设置页、弹窗、悬浮按钮「⋯」菜单）。图片和视频变成灰块，位置不变、链接还能点，按钮上的小图标保持原样；视频还会暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。只在「按你的设置显示」时起作用，切「网站原样」连声音一起还原
+- **收起图片 / 收起视频 / 静音网页**：按网站单独开关，三处都能改（站点设置页、弹窗、悬浮按钮「⋯」菜单）。图片和视频变成灰块，位置不变、链接还能点，按钮上的小图标保持原样；视频还会暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。只在「按你的设置显示」时起作用，切「原样」连声音一起还原
 - **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
-- **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
+- **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
 - **幕布**：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住，再点一下回到刚才的样子；遮住后页面上是一颗睁眼的小按钮，可以拖动，鼠标移上去显出「恢复」。没添加过的网站也能用；也可以按快捷键（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）——胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 - **胶囊可调可藏**：不透明度滑杆（10%–100%，调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方可以在弹窗里按网站把它关掉，再打开时回到右下角、完整形态
@@ -133,9 +133,9 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
-- **Hide images / Hide videos / Mute this page**: three independent per-site switches, available in three places (the site's settings page, the popup and the floating button's "⋯" menu). Pictures and videos turn into grey blocks that stay in place with their links still working; small icons on buttons are left alone. Videos also pause and go silent. "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. These apply only with "Shown your way" on — "As the site is" brings the sound back too
+- **Hide images / Hide videos / Mute this page**: three independent per-site switches, available in three places (the site's settings page, the popup and the floating button's "⋯" menu). Pictures and videos turn into grey blocks that stay in place with their links still working; small icons on buttons are left alone. Videos also pause and go silent. "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. These apply only with "Your settings" on — "As is" brings the sound back too
 - **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
-- **One switch per site**: a small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
+- **One switch per site**: a small button at the bottom-right flips between "Your settings" and "As is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
 - **Curtain**: the "Cover this page / Restore this page" switch in the popup covers the whole page and the tab title, then takes you straight back. After covering, a small open-eye button remains — draggable, and hovering it reveals the word "Restore". It works on sites you have not added too. There is also a shortcut (Ctrl+Shift+X by default, ⌘+Shift+X on Mac) — the capsule, the popup and the shortcut share one state, so any of them can undo any other
 - **A capsule you can tune or hide**: an opacity slider (10%–100% — how faint it sits when idle is your call; it turns clear the moment you touch it). If it feels intrusive, hide it per site from the popup; showing it again puts it back at the bottom-right in full form

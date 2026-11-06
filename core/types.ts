@@ -124,7 +124,7 @@ export interface SiteProfile {
   hideImages?: boolean;
   /** 收起视频（#116）：灰块 + 暂停 + 静音——画面收起来了就不能再响声音 */
   hideVideos?: boolean;
-  /** 网页静音（#116）：借浏览器原生的标签页静音，按住整页所有声音；不收起任何画面 */
+  /** 静音网页（#116）：借浏览器原生的标签页静音，按住整页所有声音；不收起任何画面 */
   mutePage?: boolean;
   createdAt: number;
   /** 用户修改时间：只在用户改动设置时刷新（体检回写、按钮坐标不刷新），合并导入据此取较新一方 */

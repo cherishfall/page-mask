@@ -275,6 +275,11 @@
   inline-size: 12px;
   block-size: 12px;
 }
+/* 未选中态画一个淡的空框（#127）：与同菜单里的普通动作项区分开，
+   用 --pm-border-control（对背景 ≥3:1，符合 WCAG 1.4.11），不用透明度压到看不见 */
+.pm-tg-check[data-state='off'] {
+  color: var(--pm-border-control);
+}
 /* 分隔线（#56）：改内容 / 图片视频声音 / 按钮位置 / 删除设置四组之间各一条 */
 .pm-tg-sep {
   margin: 3px 0;

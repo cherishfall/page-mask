@@ -123,10 +123,13 @@
           :data-testid="`pm-toggle-media-${key}`"
           @click="onMediaToggle(key)"
         >
-          <!-- 勾选标记固定占位：拨动时文字不位移。用 SVG 而不是字形，跨平台笔画一致（同 GripIcon 的理由） -->
-          <span class="pm-tg-check" aria-hidden="true">
+          <!-- 勾选标记固定占位：拨动时文字不位移。用 SVG 而不是字形，跨平台笔画一致（同 GripIcon 的理由）。
+               未选中也画一个淡的空框（#127）：菜单里同时有「收起内容」这类普通动作，空占位会让人分不清
+               这一行到底是不是开关；两态共用同一个 12px 槽位，不另造一种开关外观 -->
+          <span class="pm-tg-check" :data-state="props.media?.[key] === true ? 'on' : 'off'" aria-hidden="true">
             <svg
               v-if="props.media?.[key] === true"
+              class="pm-tg-tick"
               viewBox="0 0 12 12"
               fill="none"
               stroke="currentColor"
@@ -135,6 +138,9 @@
               stroke-linejoin="round"
             >
               <polyline points="2 6.4 4.8 9.2 10 3" />
+            </svg>
+            <svg v-else class="pm-tg-box" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="1.1" y="1.1" width="9.8" height="9.8" rx="2" />
             </svg>
           </span>
           <span class="pm-tg-switch-label">{{ t.media[key] }}</span>

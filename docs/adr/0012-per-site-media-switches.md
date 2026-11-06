@@ -40,5 +40,6 @@
 - `core/types.ts` / `validate.ts` / `apply-key.ts` 三处必须同时加字段，否则拨开关不会即时生效；这条已写进 `HANDOFF.md` 硬约束。
 - 内容脚本多一个只在开关打开期间存在的 `MutationObserver`；未开启的页面与未添加的网站没有任何新增开销。
 - 标签页静音是**会话级、标签页级**：用户手动取消后扩展不追回，直到下次拨开关 / 切两态 / 换地址才重新按设置来。
-- 三个开关的还原路径分散在 `applyAll` / `restoreAll` / `clearPageUi` / `openWizard` / `teardown` 五处，任一处漏掉都会留下痕迹；`tests/e2e/check-media.mjs` 用真机覆盖「原样全还原 → 切回来全生效」。
+- 画面与视频的还原路径分散在 `applyAll` / `restoreAll` / `clearPageUi` / `openWizard` / `teardown` 五处，任一处漏掉都会留下灰块或停播的视频；`tests/e2e/check-media.mjs` 用真机覆盖「原样全还原 → 切回来全生效」。**标签页静音是例外，且是刻意的**：`openWizard` 只临时还原画面与视频，不解除标签页静音——向导是点选界面，用户在这里不需要听声音，退出后由 `applyAll` 按存储重新对账即可，不会永久残留。
+- 删除某个网站的设置时只做**单向**解除静音（#125）：`releaseMute()` 绝不写 `muted:true`，否则删除站点 B 会把站点 A 上用户手动取消的静音按回去。
 - 真机 E2E 抓到一个实现回归：视频还原时清了「改过的视频」集合却没删「原静音值」记录，导致「开 → 关 → 再开 → 再关」第二次还原失效。修法见 `ui/media-controller.ts` 的 `restoreVideos()`，并补了循环回归单测——这条说明媒体这类有状态的 DOM 改写必须按「一轮一清」设计。

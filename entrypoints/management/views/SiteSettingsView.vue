@@ -117,7 +117,7 @@
            每行说明紧跟它解释的那一个开关，卡片底部再把三行共有的边界一次说清 -->
       <section class="card" aria-labelledby="pm-site-media-heading">
         <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
-        <div class="media-rows">
+        <div class="media-rows" role="group" :aria-label="t.media.heading">
           <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
             <div class="switch-row media-switch">
               <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
@@ -410,8 +410,11 @@ async function resetTitleIcon() {
 .media-row .hint {
   margin: var(--pm-space-1) 0 0;
 }
+/* 卡片底部这句讲整组三个开关，不是最后一行开关的注脚（#127）：细分隔把它与逐行说明分开 */
 .media-footnote {
   margin-bottom: 0;
+  border-top: 1px solid var(--pm-border);
+  padding-top: var(--pm-space-2);
 }
 
 /* ── 收起项清单 ── */

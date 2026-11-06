@@ -4,7 +4,7 @@
 当前版本：**`0.7.0`**（tag `v0.7.0`，release 已发布，附 `.output/page-mask-0.7.0-chrome.zip`），分支 `master`。
 子票 1 `b261615`、子票 2 `633baad`、子票 3 `21a3e13`、版本提交 `fd78e75` 均已推送。
 下一步：**发版后的全面深度审查（含视觉审查）**，发现问题开新 issue、修完 patch +1 再发版，循环到收敛。
-本批目标：实现 issue#116「按站点收起图片 / 收起视频 / 网页静音」→ 发版 `0.7.0` → 全量复查并迭代到收敛。
+本批目标：实现 issue#116「按站点收起图片 / 收起视频 / 静音网页」→ 发版 `0.7.0` → 全量复查并迭代到收敛。
 
 ## 状态表
 
@@ -57,7 +57,7 @@
 - ✅ 确认为真：`touchedVideos` 是强引用 Set，信息流反复替换 `<video>` 时只增不减（建议级）。
 - ✅ 确认为真：站点设置页媒体三行缺 `role="group"`（`design-ui.md` 自己写了「弹窗 / 设置页收成 group」）；菜单未选中项无可见状态标记（清晰度）。
 - ✅ 确认为真：`CHROMEWEBSTORE.md` §10 写「不遍历标签页、不读网址」，但 `releaseMute` / `tabs.onUpdated` / `shouldMute` 都会 `tabs.query({})` 并读 `tab.url` —— 商店材料失实，必须改。另 §6 写「seven items」却列了 8 项（拖动悬浮按钮后才有第 8 项）。
-- ⚠️ 判定为设计如此、不改：`openWizard` 不解除标签页静音（向导是点选界面，退出后按存储重新对账；ADR 措辞需澄清）；内部注释里的「网页静音」旧词（GLOSSARY 的 Avoid 只管界面用词，i18n 已定稿）。
+- ⚠️ 判定为设计如此、不改：`openWizard` 不解除标签页静音（向导是点选界面，退出后按存储重新对账；ADR-0012 已补一句说明）。内部注释 / 过程文档里的「网页静音」旧词顺手扫成定稿叫法（GLOSSARY 的 Avoid 列与讲这段历史的记录保留原词）。
 - ⚠️ 待人工真机：扩展被停用 / 卸载后 Chrome 是否自动清掉 `reason='extension'` 的标签页静音（扩展无 management 权限，无法自行收尾；用户可在标签页上手动取消）。
 - ❌ 误报，勿改：说明小字对比度（`fg-muted on bg` 浅 4.83 / 深 5.98，`on bg-subtle` 4.51 / 5.16，`tests/tokens-contrast.test.ts` 守门 ≥4.5）；开关点击区（`check-toggle.mjs` / `check-pages.mjs` 有 ≥24 断言，WCAG 2.5.8 另有 spacing 例外）；「按设置 / 原样」叫法（GLOSSARY 明确规定的短名）；英文页残留中文是截图夹具数据。
 

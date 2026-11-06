@@ -217,7 +217,7 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
     ...(v.capsuleMini === true ? { capsuleMini: true as const } : {}),
     // 不显示胶囊（#111）同口径：只有显式 true 才落字段，缺省 = 显示
     ...(v.capsuleHidden === true ? { capsuleHidden: true as const } : {}),
-    // 图片 / 视频 / 网页静音（#116）：同口径，只有显式 true 才落字段，坏值一律当作没开
+    // 图片 / 视频 / 静音网页（#116）：同口径，只有显式 true 才落字段，坏值一律当作没开
     ...(v.hideImages === true ? { hideImages: true as const } : {}),
     ...(v.hideVideos === true ? { hideVideos: true as const } : {}),
     ...(v.mutePage === true ? { mutePage: true as const } : {}),
