@@ -10,6 +10,36 @@ import { DEFAULT_TOGGLE_OPACITY } from './toggle-opacity';
 /** 收起方案：A 彻底移除 / B 原地留白 / C 遮罩覆盖（界面用词见 core/i18n 的 common.strategy） */
 export type StrategyId = 'remove' | 'blank' | 'mask';
 
+/**
+ * 内置图标（#121）：只存编号，图片本体在 core/icon-presets.ts（构建前由 scripts/gen-icons.mjs 生成）。
+ * 顺序就是界面网格里的顺序。
+ */
+export const ICON_PRESET_IDS = [
+  'doc',
+  'sheet',
+  'mail',
+  'cal',
+  'code',
+  'meet',
+  'chat',
+  'drive',
+  'book',
+  'chart',
+] as const;
+export type IconPresetId = (typeof ICON_PRESET_IDS)[number];
+
+export function isIconPresetId(v: unknown): v is IconPresetId {
+  return typeof v === 'string' && (ICON_PRESET_IDS as readonly string[]).includes(v);
+}
+
+/**
+ * 标签页图标三态（#121）：
+ * - site：网站原来的图标——完全不接管 `<link rel="icon">`；
+ * - none：不显示——写一张全透明图，标签页图标位留空；
+ * - preset：换成内置的某个图标，只存编号。
+ */
+export type TabIcon = { kind: 'site' } | { kind: 'none' } | { kind: 'preset'; id: IconPresetId };
+
 /** 站点开关两态：伪装态 / 原样态 */
 export type SwitchState = 'disguised' | 'original';
 
@@ -69,13 +99,13 @@ export interface SiteProfile {
   /**
    * 这个网站保存过「标题和图标」（#98）：清爽态只有它为 true 时才改标题与图标。
    * 没保存过的网站一律保持原样——只收起内容不等于要改标签页。
-   * 缺省（旧数据）按 `!!(disguisedTitle || faviconDataUrl)` 推导：只有那条流程会写这两个字段。
+   * 缺省（旧数据）按 `!!disguisedTitle` 推导：只有那条流程会写这个字段。
    */
   titleIconSet?: boolean;
   /** 伪装标题；null = 用全局设置，全局也没设置时按界面语言取默认（core/titles.ts：「阅读」/ "Reading"） */
   disguisedTitle: string | null;
-  /** 伪装图标 data URL；null = 默认全透明图标（标签页上图标位显示为空白） */
-  faviconDataUrl: string | null;
+  /** 标签页图标：网站原来的 / 不显示 / 内置某个（#121） */
+  icon: TabIcon;
   hideRules: HideRule[];
   /** 悬浮按钮记住的位置（#84：x 表贴边侧、y 为顶边）；null = 默认右下角 */
   floatingBtnPos: ButtonPos | null;
@@ -102,11 +132,6 @@ export interface GlobalSettings {
    */
   defaultTitle: string | null;
   /**
-   * 全局默认标签页图标（data URL）；null = 用内置的 1×1 全透明图标。
-   * 与 defaultTitle 同口径：预填「标题和图标」、以及遮住整页时使用（core/icon.ts 的 effectiveIcon）。
-   */
-  defaultIconDataUrl: string | null;
-  /**
    * 没添加过的网站（一次性脚本）上「遮住」按钮记住的位置（视口坐标）；null = 默认右下角。
    * 这是本机界面状态（屏幕相关），与站点配置的 floatingBtnPos 同一口径：
    * 导入时保留本机的值，不被导入文件覆盖。
@@ -126,7 +151,6 @@ export interface GlobalSettings {
 
 export const DEFAULT_SETTINGS: GlobalSettings = {
   defaultTitle: null,
-  defaultIconDataUrl: null,
   curtainBtnPos: null,
   uiLanguage: 'auto',
   toggleOpacity: DEFAULT_TOGGLE_OPACITY,
@@ -154,7 +178,7 @@ export function createEmptyProfile(origin: string, now = Date.now()): SiteProfil
     origin,
     switchState: 'original',
     disguisedTitle: null,
-    faviconDataUrl: null,
+    icon: { kind: 'site' },
     hideRules: [],
     floatingBtnPos: null,
     createdAt: now,

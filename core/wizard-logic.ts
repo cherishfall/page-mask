@@ -4,7 +4,7 @@
  */
 import { DEFAULT_TITLE_EN } from './titles';
 import { t } from './i18n';
-import type { HideRule, Scope, ScopePattern, StrategyId } from './types';
+import type { HideRule, Scope, ScopePattern, StrategyId, TabIcon } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -108,17 +108,17 @@ export interface TitleOnlyPatch {
   /** 点过保存就是「设置过」(#98)：清爽态从此按这里的标题与图标显示，与输入框是否改过无关 */
   titleIconSet: true;
   disguisedTitle: string;
-  faviconDataUrl: string | null;
+  icon: TabIcon;
   switchState: 'disguised' | 'original';
 }
 
 /**
  * 「标题和图标」的保存：只写标题 / 图标 / 开关，不碰已有的收起规则（新站点本来就没有规则，
- * 保存后就是合法的「0 条规则」站点配置）。图标没上传就写 null（回到透明 / 全局默认图标）。
+ * 保存后就是合法的「0 条规则」站点配置）。
  */
 export function titleOnlyPatch(input: {
   title: unknown;
-  icon: string | null;
+  icon: TabIcon;
   fallbackTitle: unknown;
   /** 已添加网站保持它现在的开关状态（不顺手打开清爽）；新站点不给 = 清爽 */
   keepState?: 'disguised' | 'original';
@@ -126,7 +126,7 @@ export function titleOnlyPatch(input: {
   return {
     titleIconSet: true,
     disguisedTitle: titleFromInput(input.title, input.fallbackTitle),
-    faviconDataUrl: input.icon || null,
+    icon: input.icon,
     switchState: input.keepState ?? 'disguised',
   };
 }
@@ -138,11 +138,11 @@ export function titleOnlyPatch(input: {
 export interface TitleIconResetPatch {
   titleIconSet: false;
   disguisedTitle: null;
-  faviconDataUrl: null;
+  icon: TabIcon;
 }
 
 export function titleIconResetPatch(): TitleIconResetPatch {
-  return { titleIconSet: false, disguisedTitle: null, faviconDataUrl: null };
+  return { titleIconSet: false, disguisedTitle: null, icon: { kind: 'site' } };
 }
 
 // ---------- 选择集（顺序 = 序号牌编号） ----------

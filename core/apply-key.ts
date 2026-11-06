@@ -10,21 +10,22 @@ import type { GlobalSettings, SiteProfile } from './types';
 
 export function applyKey(
   profile: SiteProfile,
-  settings: Pick<GlobalSettings, 'defaultTitle' | 'defaultIconDataUrl'>,
+  settings: Pick<GlobalSettings, 'defaultTitle'>,
   url: string,
 ): string {
+  // 图标三态（#121）摊成扁平字符串：对象不能直接进键（引用不同会让键恒变）
+  const icon = profile.icon.kind + ':' + (profile.icon.kind === 'preset' ? profile.icon.id : '');
   return JSON.stringify([
     url,
     profile.switchState,
     // 「保存过标题和图标」变了也要重应用：从没设过 → 设过（标题突然生效），反向亦然（#98）
     profile.titleIconSet === true,
     profile.disguisedTitle,
-    profile.faviconDataUrl,
+    icon,
     // 「不显示胶囊」变了胶囊要从页面上消失 / 回来（#111）：它改的是按钮的存在性，
     // 响应式更新救不了——键里不计入的话 refreshState 会在「键没变」处提前返回，跳过 mountToggle
     profile.capsuleHidden === true,
     settings.defaultTitle,
-    settings.defaultIconDataUrl,
     profile.hideRules.map(({ lastHealth: _h, lastHealthAt: _t, ...rest }) => rest),
   ]);
 }

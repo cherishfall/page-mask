@@ -110,7 +110,6 @@ describe('站点配置 CRUD', () => {
     await store.putSettings({ defaultTitle: '新建标签页' }); // 0.2.0 用户主动选的快捷标题
     expect(area.data.get(SETTINGS_KEY)).toEqual({
       defaultTitle: '新建标签页',
-      defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
       toggleOpacity: 1,
@@ -119,7 +118,6 @@ describe('站点配置 CRUD', () => {
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
     expect((await store.exportBundle()).settings).toEqual({
       defaultTitle: '新建标签页',
-      defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
       toggleOpacity: 1,
@@ -214,18 +212,18 @@ describe('原子更新（S2：不丢更新）', () => {
     expect(got.updatedAt).toBe(100);
   });
 
-  it('写入前统一校验：危险候选与远程图标不会落库', async () => {
+  it('写入前统一校验：危险候选与不认识的图标编号不会落库', async () => {
     const store = createPageMaskStorage(memoryArea());
     const got = await store.updateProfile(
       'https://x.com',
       (p) => {
         p.hideRules.push(rule('r1', { candidates: ['x{} body{background:url(https://a)}', '#ok'] }));
-        p.faviconDataUrl = 'https://evil.example/icon.png';
+        p.icon = { kind: 'preset', id: 'unknown' } as unknown as typeof p.icon;
       },
       { create: true },
     );
     expect(got!.hideRules[0]!.candidates).toEqual(['#ok']);
-    expect(got!.faviconDataUrl).toBeNull();
+    expect(got!.icon).toEqual({ kind: 'none' });
   });
 });
 
@@ -238,7 +236,7 @@ describe('导出/导入', () => {
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1);
     expect(bundle.profiles).toHaveLength(1);
-    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
   });
 
   it('非法文件报人话错误（用"导出文件"一词）', async () => {
@@ -354,19 +352,19 @@ describe('导出/导入', () => {
     expect((await s2.getSettings()).defaultTitle).toBe('导入标题');
   });
 
-  it('导入时剔除危险候选与远程图标', async () => {
+  it('导入时剔除危险候选与不认识的图标', async () => {
     const store = createPageMaskStorage(memoryArea());
     await store.importBundle(
       bundleOf([
         {
           ...createEmptyProfile('https://a.com'),
-          faviconDataUrl: 'https://evil.example/x.png',
+          icon: { kind: 'preset', id: 'unknown' },
           hideRules: [rule('r1', { candidates: ['a;b', '@import url(x)', '.ok'] }), rule('r2', { candidates: ['a{'] })],
         },
       ]),
     );
     const got = (await store.getProfile('https://a.com'))!;
-    expect(got.faviconDataUrl).toBeNull();
+    expect(got.icon).toEqual({ kind: 'none' });
     expect(got.hideRules.map((r) => [r.id, r.candidates])).toEqual([['r1', ['.ok']]]);
   });
 });
@@ -388,7 +386,6 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
     await store.putSettings({ defaultTitle: '周报' });
     expect(await store.getSettings()).toEqual({
       defaultTitle: '周报',
-      defaultIconDataUrl: null,
       curtainBtnPos: { x: 24, y: 560 },
       uiLanguage: 'auto',
       toggleOpacity: 1,
@@ -442,82 +439,76 @@ describe('mergeProfiles 字段级取舍', () => {
 });
 
 describe('插件设置随导出 / 导入（#55）', () => {
-  const ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
-
   it('导出带插件设置与"导出时的插件版本号"，格式版本仍是 1', async () => {
     const store = createPageMaskStorage(memoryArea());
     await store.updateProfile('https://x.com', () => false, { create: true });
-    await store.putSettings({ defaultTitle: '周报', defaultIconDataUrl: ICON });
+    await store.putSettings({ defaultTitle: '周报' });
 
     const bundle = await store.exportBundle('0.4.0');
 
     expect(bundle.app).toBe('pagemask');
     expect(bundle.formatVersion).toBe(1); // 老字段不变
     expect(bundle.appVersion).toBe('0.4.0');
-    expect(bundle.settings).toEqual({ defaultTitle: '周报', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(bundle.settings).toEqual({ defaultTitle: '周报', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
     expect(bundle.profiles).toHaveLength(1);
   });
 
   it('老文件（没有插件设置字段）仍能导入：只导网站，本机插件设置原样保留，两种模式都不报错', async () => {
     const area = memoryArea();
-    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: ICON, settingsVersion: 2 });
+    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', settingsVersion: 2 });
     const store = createPageMaskStorage(area);
     const oldFile = bundleOf([createEmptyProfile('https://a.com')]); // 0.1.0 / 0.2.0 之前的形状，没有 settings
 
     const merged = await store.importBundle(oldFile, 'merge');
     expect(merged.added).toBe(1);
-    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
 
     const replaced = await store.importBundle(bundleOf([createEmptyProfile('https://b.com')]), 'replace');
     expect(replaced.removed).toBe(1);
-    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: ICON, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
   });
 
-  it('整体替换采用文件里的默认标题与默认图标；合并时本地已设置过的保留', async () => {
+  it('整体替换采用文件里的默认标题；合并时本地已设置过的保留', async () => {
     const file = bundleOf([createEmptyProfile('https://a.com')], {
-      settings: { defaultTitle: '导入标题', defaultIconDataUrl: ICON, curtainBtnPos: null },
+      settings: { defaultTitle: '导入标题', curtainBtnPos: null },
     });
 
     const replaced = createPageMaskStorage(memoryArea());
     await replaced.importBundle(file, 'replace');
-    expect((await replaced.getSettings()).defaultIconDataUrl).toBe(ICON);
     expect((await replaced.getSettings()).defaultTitle).toBe('导入标题');
 
     const withLocal = memoryArea();
-    withLocal.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: null, settingsVersion: 2 });
+    withLocal.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', settingsVersion: 2 });
     const merged = createPageMaskStorage(withLocal);
     await merged.importBundle(file, 'merge');
-    expect(await merged.getSettings()).toEqual({ defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(await merged.getSettings()).toEqual({ defaultTitle: '本机标题', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
   });
 
-  it('文件里的插件设置缺字段 / 不合法时按默认值处理（不报错、不写进存储坏图）', async () => {
+  it('文件里的插件设置缺字段时按默认值处理（不报错）', async () => {
     const store = createPageMaskStorage(memoryArea());
     await store.importBundle(
-      bundleOf([createEmptyProfile('https://a.com')], {
-        settings: { defaultTitle: '导入标题', defaultIconDataUrl: 'https://evil.example/x.png' },
-      }),
+      bundleOf([createEmptyProfile('https://a.com')], { settings: {} }),
       'replace',
     );
-    expect(await store.getSettings()).toEqual({ defaultTitle: '导入标题', defaultIconDataUrl: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
+    expect(await store.getSettings()).toEqual({ defaultTitle: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
   });
 
   it('导入不覆盖本机的按钮坐标（网站级 floatingBtnPos 与全局 curtainBtnPos）', async () => {
     const area = memoryArea();
     seed(area, { ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 5, y: 6 } });
-    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', defaultIconDataUrl: null, curtainBtnPos: { x: 10, y: 20 }, settingsVersion: 2 });
+    area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', curtainBtnPos: { x: 10, y: 20 }, settingsVersion: 2 });
     const store = createPageMaskStorage(area);
 
     for (const mode of ['merge', 'replace'] as const) {
       await store.importBundle(
         bundleOf(
           [{ ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 900, y: 900 } }],
-          { settings: { defaultTitle: '导入标题', defaultIconDataUrl: ICON, curtainBtnPos: { x: 800, y: 700 } } },
+          { settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 800, y: 700 } } },
         ),
         mode,
       );
       expect((await store.getProfile('https://keep.com'))!.floatingBtnPos).toEqual({ x: 5, y: 6 });
       expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 10, y: 20 });
     }
-    expect((await store.getSettings()).defaultIconDataUrl).toBe(ICON);
   });
 });

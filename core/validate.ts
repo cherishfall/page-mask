@@ -4,7 +4,7 @@
  *
  * - 候选选择器：必须是单个合法选择器；块外不得出现 { } ; @、注释、顶层逗号，
  *   括号与引号必须闭合，再交给浏览器解析器做语法检测（无 DOM 的上下文只做词法检查）
- * - 标签页图标：只收 data:image/（png/jpeg/gif/webp/ico）且限大小；不收 svg
+ * - 标签页图标：三态白名单（site / none / preset + 已知编号），旧的上传字段一律丢掉
  * - origin：必须等于 normalizeOrigin 的结果（因此只能是 http/https）
  * - 生效范围 / 收起方案：白名单
  * - 全局设置：按 schema 读取，类型不对用默认值
@@ -15,6 +15,7 @@ import { normalizeToggleOpacity } from './toggle-opacity';
 import { t } from './i18n';
 import {
   DEFAULT_SETTINGS,
+  isIconPresetId,
   type GlobalSettings,
   type HideRule,
   type Scope,
@@ -22,12 +23,10 @@ import {
   type SiteProfile,
   type StrategyId,
   type SwitchState,
+  type TabIcon,
 } from './types';
 
 export const MAX_SELECTOR_LENGTH = 1000;
-/** 图标文件上限 256KB；base64 膨胀约 4/3，加上前缀约 35 万字符 */
-export const MAX_FAVICON_BYTES = 256 * 1024;
-export const MAX_FAVICON_DATA_URL_LENGTH = Math.ceil((MAX_FAVICON_BYTES * 4) / 3) + 64;
 
 export const STRATEGY_IDS: readonly StrategyId[] = ['remove', 'blank', 'mask'];
 const SWITCH_STATES: readonly SwitchState[] = ['disguised', 'original'];
@@ -97,11 +96,16 @@ export function isSafeSelector(selector: unknown, probe: SelectorProbe = default
   return probe(selector.trim());
 }
 
-const FAVICON_DATA_URL_RE = /^data:image\/(?:png|jpeg|gif|webp|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/]+={0,2}$/;
-
-/** 标签页图标只收本地图片的 data URL（不发起任何网络请求），且限大小 */
-export function isSafeFaviconDataUrl(v: unknown): v is string {
-  return typeof v === 'string' && v.length <= MAX_FAVICON_DATA_URL_LENGTH && FAVICON_DATA_URL_RE.test(v);
+/**
+ * 标签页图标三态（#121）：只认白名单。
+ * 不做旧数据兼容：缺失 / 畸形 → none（保持「不显示图标」的观感，不突然露出网站图标）；
+ * preset 的编号不认识 → none。旧字段 faviconDataUrl 作为未知字段丢掉。
+ */
+export function sanitizeTabIcon(v: unknown): TabIcon {
+  if (!isObject(v)) return { kind: 'none' };
+  if (v.kind === 'site') return { kind: 'site' };
+  if (v.kind === 'preset' && isIconPresetId(v.id)) return { kind: 'preset', id: v.id };
+  return { kind: 'none' };
 }
 
 /** origin 必须已是规范形式（只有 http/https，无路径、无默认端口） */
@@ -174,7 +178,7 @@ export interface SanitizedProfile {
 
 /**
  * 校验并返回干净的站点配置副本；身份字段（版本、origin、规则列表）不合法时返回 null。
- * 次要字段不合法时回落到安全默认值（例如远程图标 → 无图标）。
+ * 次要字段不合法时回落到安全默认值（例如图标三态缺失 → 不显示图标）。
  */
 export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelectorProbe): SanitizedProfile | null {
   if (!isObject(v)) return null;
@@ -196,18 +200,17 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
   }
   const pos = v.floatingBtnPos;
   const disguisedTitle = typeof v.disguisedTitle === 'string' ? v.disguisedTitle : null;
-  const faviconDataUrl = isSafeFaviconDataUrl(v.faviconDataUrl) ? v.faviconDataUrl : null;
-  // 「保存过标题和图标」(#98)：显式值优先；旧数据按「有标题或有图标」推导——
-  // 只有「标题和图标」那条流程会写这两个字段，所以这个推断对 0.5.x 的存量是准确的
-  const titleIconSet =
-    v.titleIconSet === true ? true : v.titleIconSet === false ? false : !!(disguisedTitle || faviconDataUrl);
+  const icon = sanitizeTabIcon(v.icon);
+  // 「保存过标题和图标」(#98)：显式值优先；旧数据按「有标题」推导——
+  // 只有「标题和图标」那条流程会写这个字段，所以这个推断对 0.5.x 的存量是准确的
+  const titleIconSet = v.titleIconSet === true ? true : v.titleIconSet === false ? false : !!disguisedTitle;
   const profile: SiteProfile = {
     formatVersion: 1,
     origin,
     switchState: (SWITCH_STATES as readonly unknown[]).includes(v.switchState) ? (v.switchState as SwitchState) : 'original',
     titleIconSet,
     disguisedTitle,
-    faviconDataUrl,
+    icon,
     hideRules,
     floatingBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
     // mini 形态是本机界面偏好（与 floatingBtnPos 同口径）：只有显式 true 才落字段，缺省即全功能
@@ -230,7 +233,6 @@ export function readSettings(v: unknown): GlobalSettings {
   return {
     defaultTitle:
       typeof o.defaultTitle === 'string' && o.defaultTitle.trim() ? o.defaultTitle : DEFAULT_SETTINGS.defaultTitle,
-    defaultIconDataUrl: isSafeFaviconDataUrl(o.defaultIconDataUrl) ? o.defaultIconDataUrl : null,
     curtainBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
     // 界面语言偏好（#57）：坏值 / 旧数据一律回到 auto
     uiLanguage: isUiLanguage(o.uiLanguage) ? o.uiLanguage : DEFAULT_SETTINGS.uiLanguage,

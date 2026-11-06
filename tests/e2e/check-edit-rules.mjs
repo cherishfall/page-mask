@@ -87,7 +87,7 @@ const profileOf = (rules) => ({
   origin: ORIGIN,
   switchState: 'disguised',
   disguisedTitle: null,
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: rules,
   floatingBtnPos: null,
   createdAt: now,

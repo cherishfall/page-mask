@@ -82,7 +82,7 @@ async function run(): Promise<void> {
     { createCurtainRestoreButton },
     { curtainTitle },
     { fromExtensionPage },
-    { effectiveIcon },
+    { TRANSPARENT_PNG },
     { registerCurtainController },
   ] = await Promise.all([
     import('wxt/browser'),
@@ -138,8 +138,9 @@ async function run(): Promise<void> {
         storage.getProfile(origin).catch(() => null),
         storage.getSettings().catch(() => null),
       ]);
-      // 图标三层：站点自己的 > 插件默认 > 内置透明（#55）
-      guard.apply(curtainTitle(profile, settings), effectiveIcon(profile ?? { faviconDataUrl: null }, settings));
+      // 遮住时固定空白图标（#121）：不能按站点配置取图标，否则选「网站原来的图标」
+      // 或预置图标的站点一遮住就露出真图标
+      guard.apply(curtainTitle(profile, settings), TRANSPARENT_PNG);
       // 读存储的间隙里登记处可能换了人（内容脚本让位接管，#107）：那就不再铺层——
       // CurtainLayer.show() 的孤儿清扫会把新登记者的层一起摘掉，赢家自己会遮
       if (w.__pagemaskCurtain?.controller !== controller) return;

@@ -92,46 +92,16 @@
         </p>
       </section>
 
-      <!-- 标签页图标 -->
+      <!-- 标签页图标（#121）：三态选择器，与向导共用同一个组件 -->
       <section class="card">
         <h3>{{ t.management.iconHeading }}</h3>
         <p class="hint">{{ t.management.iconIntro }}</p>
-        <div class="row">
-          <span class="row-label">{{ t.management.currentIcon }}</span>
-          <img
-            v-if="profile.faviconDataUrl"
-            class="favicon"
-            :src="profile.faviconDataUrl"
-            :alt="t.management.currentIconAlt"
-            data-testid="pm-mgmt-favicon"
-          />
-          <span v-else class="hint" data-testid="pm-mgmt-favicon-empty">
-            {{ store.state.defaultIcon ? t.management.iconUnsetDefault : t.management.iconUnsetBlank }}
-          </span>
-          <label class="button file-button">
-            {{ iconBusy ? t.common.processing : profile.faviconDataUrl ? t.common.replaceIcon : t.common.uploadIcon }}
-            <input
-              type="file"
-              data-testid="pm-mgmt-icon-input"
-              :accept="ICON_SOURCE_TYPES.join(',')"
-              aria-describedby="pm-site-icon-hint"
-              :disabled="iconBusy"
-              @change="onIconChange"
-            />
-          </label>
-          <button
-            v-if="profile.faviconDataUrl"
-            type="button"
-            class="ghost danger"
-            data-testid="pm-mgmt-icon-clear"
-            @click="clearIcon"
-          >
-            {{ t.common.clearIcon }}
-          </button>
-        </div>
-        <p id="pm-site-icon-hint" class="hint">
-          {{ t.management.iconHint }}
-        </p>
+        <IconPicker
+          :model-value="profile.icon"
+          id-prefix="pm-mgmt"
+          hide-legend
+          @update:model-value="onIconPick"
+        />
         <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
       </section>
 
@@ -221,17 +191,16 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
-import type { HideRule } from '@/core/types';
+import type { HideRule, TabIcon } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
+import IconPicker from '@/ui/title-icon/IconPicker.vue';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
-import { fileToIconDataUrl } from '../tab-icon';
 
 /** 路由参数是网站的 host（`#/sites/<host>`），在名单里找不到就显示「没有这个网站的设置」 */
 const props = defineProps<{ host?: string }>();
@@ -253,7 +222,6 @@ const titlePlaceholder = computed(() => {
   return (store.state.drafts[DEFAULT_KEY] ?? '').trim() || store.languageDefaultTitle;
 });
 
-const iconBusy = ref(false);
 const iconError = ref('');
 // 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
 const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
@@ -269,35 +237,15 @@ function removeRule(rule: HideRule) {
   remove(profile.value?.hideRules ?? [], rule.id);
 }
 
-async function onIconChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = ''; // 清空，之后再选同一个文件也会触发 change
+/** 换标签页图标三态（#121）：网站原来的 / 不显示 / 内置某个 */
+async function onIconPick(icon: TabIcon) {
   const p = profile.value;
-  if (!file || !p) return;
-  iconBusy.value = true;
+  if (!p) return;
   iconError.value = '';
   try {
-    const res = await fileToIconDataUrl(file);
-    if (!res.ok) {
-      iconError.value = res.error;
-      return;
-    }
-    await store.setIcon(p.origin, res.dataUrl);
+    await store.setIcon(p.origin, icon);
   } catch {
-    iconError.value = t.value.errors.iconSave;
-  } finally {
-    iconBusy.value = false;
-  }
-}
-
-async function clearIcon() {
-  if (!profile.value) return;
-  iconError.value = '';
-  try {
-    await store.setIcon(profile.value.origin, null);
-  } catch {
-    iconError.value = t.value.errors.iconClear;
+    iconError.value = t.value.management.error.icon;
   }
 }
 
@@ -380,11 +328,6 @@ async function resetTitleIcon() {
   margin: var(--pm-space-2) 0;
 }
 
-.row-label {
-  min-width: 96px;
-  color: var(--pm-fg);
-}
-
 /* 回退出口（#99）：不是卡片标题下的字段，单独一行，和上下两张卡都留出距离 */
 .title-reset {
   margin: var(--pm-space-2) 0 var(--pm-space-3);
@@ -403,14 +346,6 @@ async function resetTitleIcon() {
 .row.quick {
   gap: 6px;
   margin-top: -2px;
-}
-
-.favicon {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--pm-border);
-  border-radius: 4px;
-  background: var(--pm-bg-subtle);
 }
 
 /* ── 收起项清单 ── */

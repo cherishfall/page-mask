@@ -47,14 +47,11 @@ function profileOf(origin: string, over: Partial<SiteProfile> = {}): SiteProfile
 
 const settingsOf = (defaultTitle: string | null) => ({
   defaultTitle,
-  defaultIconDataUrl: null,
   curtainBtnPos: null,
   uiLanguage: 'auto',
   toggleOpacity: 1,
   settingsVersion: 2,
 });
-
-const ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 async function seed(origins: string[], defaultTitle: string | null = null) {
   const data: Record<string, unknown> = { settings: settingsOf(defaultTitle) };
@@ -170,29 +167,26 @@ describe('管理页 store', () => {
     expect(store.state.pendingOrigins).toEqual([A]);
   });
 
-  it('插件默认图标：写入全局设置、清空回到内置透明图标', async () => {
-    await seed([], null);
+  it('标签页图标三态：写入站点配置并标记「设置过」', async () => {
+    await seed([A]);
     const store = createManagementStore();
     await store.reload();
-    expect(store.state.defaultIcon).toBeNull();
 
-    await store.setDefaultIcon(ICON);
-    expect(store.state.defaultIcon).toBe(ICON);
-    expect((await fakeBrowser.storage.local.get('settings')).settings).toEqual({
-      ...settingsOf(null),
-      defaultIconDataUrl: ICON,
-    });
+    await store.setIcon(A, { kind: 'preset', id: 'doc' });
+    await store.reload();
+    const withPreset = store.state.profiles.find((p) => p.origin === A)!;
+    expect(withPreset.icon).toEqual({ kind: 'preset', id: 'doc' });
+    expect(withPreset.titleIconSet).toBe(true);
 
-    await store.setDefaultIcon(null);
-    expect(store.state.defaultIcon).toBeNull();
-    expect((await fakeBrowser.storage.local.get('settings')).settings).toEqual(settingsOf(null));
+    await store.setIcon(A, { kind: 'site' });
+    await store.reload();
+    expect(store.state.profiles.find((p) => p.origin === A)!.icon).toEqual({ kind: 'site' });
   });
 
   it('导出：文件名带版本与本机时间到秒，文件里含网站配置、插件设置与版本号', async () => {
     await seed([A], null);
     const store = createManagementStore();
     await store.reload();
-    await store.setDefaultIcon(ICON);
     Object.assign(fakeBrowser.runtime, { getManifest: () => ({ version: '0.4.0' }) });
 
     const blobs: Blob[] = [];
@@ -219,7 +213,7 @@ describe('管理页 store', () => {
     const bundle = JSON.parse(await blobs[0]!.text());
     expect(bundle.formatVersion).toBe(1); // 老字段不变
     expect(bundle.appVersion).toBe('0.4.0');
-    expect(bundle.settings.defaultIconDataUrl).toBe(ICON);
+    expect(bundle.settings).toEqual({ defaultTitle: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
     expect(bundle.profiles.map((p: SiteProfile) => p.origin)).toEqual([A]);
   });
 

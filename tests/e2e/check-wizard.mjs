@@ -8,7 +8,7 @@
  *   「标题和图标」单步小表单；没有「首次设置」模式，新网站与老网站同一条路
  * - 底栏只放按钮（说明文字不进操作栏）；退出是文字按钮「退出设置」；「上一步」写清退回去做什么；
  *   退出确认的两个按钮同一次级（继续设置 = 次按钮，退出 = 红字红边的次按钮）
- * - 标题和图标（单步）：默认标题已填、快捷标题、上传图标后标签页标题 / 图标实时跟着变；
+ * - 标题和图标（单步）：默认标题已填、快捷标题、选预置图标后标签页标题 / 图标实时跟着变；
  *   保存 0 条收起设置的清爽态配置、向导关闭、页面上仍然显示小胶囊（有设置就显示，#67），
  *   列表里能看到它；关掉向导后有一句轻提示说明标签页名字已经换了（#53）
  * - 新网站取消：确认框说明已选内容不保存、标签页会变回原来的名字；退出后完全还原、授权收回（#81）
@@ -49,11 +49,6 @@ const { check } = r;
 const HOST = 'pagemask-wizard';
 const TOGGLE = 'pagemask-toggle';
 const NOTICE = 'pagemask-notice';
-/** 1×1 PNG：上传图标用，不需要临时文件 */
-const ICON_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=',
-  'base64',
-);
 const tid = (id) => `[data-testid="${id}"]`;
 const C1 = '.card:nth-child(1)';
 const C2 = '.card:nth-child(2)';
@@ -306,7 +301,7 @@ async function main() {
       origin: ORIGIN,
       switchState: 'original',
       disguisedTitle: null,
-      faviconDataUrl: null,
+      icon: { kind: 'none' },
       // 老站点：已有 1 条规则，但范围只含一个不存在的页面——
       // #77 起向导会把「本页适用的旧规则」铺成草稿，这条不该被铺进来；保存时验证它原样不动
       hideRules: [
@@ -1182,29 +1177,25 @@ async function main() {
     await waitFor(pageOnly, '快捷标题「阅读」实时生效', () => document.title === '阅读');
     check((await inputValue(pageOnly, 'pm-wiz-title-input')) === '阅读', '快捷标题一键填入输入框');
 
-    // 图标：上传后标签页图标立刻跟着变（可以不传）
-    check(await shadowExists(pageOnly, HOST, tid('pm-wiz-icon-empty')), '没传图标时显示空图标位');
-    await pageOnly.evaluate(
-      (h, b64) => {
-        const bin = atob(b64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-icon-input"]');
-        const dt = new DataTransfer();
-        dt.items.add(new File([bytes], 'icon.png', { type: 'image/png' }));
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-      },
-      HOST,
-      ICON_PNG.toString('base64'),
+    // 图标三态（#121）：点「换成别的图标」→ 选一个预置图标，标签页图标立刻跟着变
+    check(await shadowExists(pageOnly, HOST, tid('pm-wiz-icon-kind-site')), '表单里有「网站原来的图标」选项');
+    check(await shadowExists(pageOnly, HOST, tid('pm-wiz-icon-kind-none')), '表单里有「不显示图标」选项');
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-icon-kind-preset'));
+    await waitForShadow(pageOnly, HOST, tid('pm-wiz-icon-preset-doc'));
+    check(
+      (await pageOnly.evaluate(
+        (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-wiz-icon-preset-"]').length,
+        HOST,
+      )) === 10,
+      '选「换成别的图标」后展开 10 个预置图标',
     );
-    await waitForShadow(pageOnly, HOST, tid('pm-wiz-icon-preview'));
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-icon-preset-doc'));
     await waitFor(
       pageOnly,
-      '上传图标后标签页图标立刻跟着变',
+      '选预置图标后标签页图标立刻跟着变',
       () => (document.querySelector('link[rel~="icon"]')?.getAttribute('href') ?? '').startsWith('data:image/png'),
     );
-    check(true, '上传图标：图标预览出现，标签页 favicon 实时换成上传的图标');
+    check(true, '选预置图标：标签页 favicon 实时换掉');
 
     // 换回要保存的标题再保存
     await pageOnly.evaluate((h) => {
@@ -1237,8 +1228,10 @@ async function main() {
       onlyProfile?.hideRules.length === 0 &&
         onlyProfile.disguisedTitle === '只看标题' &&
         onlyProfile.switchState === 'disguised' &&
-        onlyProfile.titleIconSet === true,
-      `保存 0 条收起设置 + 标题，站点进入清爽态，并标记「设置过标题和图标」（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState, titleIconSet: onlyProfile.titleIconSet })}）`,
+        onlyProfile.titleIconSet === true &&
+        onlyProfile.icon?.kind === 'preset' &&
+        onlyProfile.icon.id === 'doc',
+      `保存 0 条收起设置 + 标题 + 预置图标，站点进入清爽态（${JSON.stringify(onlyProfile && { rules: onlyProfile.hideRules.length, title: onlyProfile.disguisedTitle, state: onlyProfile.switchState, titleIconSet: onlyProfile.titleIconSet, icon: onlyProfile.icon })}）`,
     );
     await waitFor(pageOnly, '标签页保持保存后的标题', () => document.title === '只看标题');
     // 有设置就显示（#67）：只改过标题的网站页面上也要有小胶囊，否则用户下次想改只能靠记住工具栏图标
@@ -1281,8 +1274,10 @@ async function main() {
     await waitFor(pageOnly, '标签页回到网站原来的标题', () => document.title === 'Acme 书房 · 向导测试');
     const afterReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
     check(
-      afterReset?.titleIconSet === false && afterReset.disguisedTitle === null && afterReset.faviconDataUrl === null,
-      `恢复后配置回到「没设置过」（${JSON.stringify(afterReset && { title: afterReset.disguisedTitle, icon: afterReset.faviconDataUrl, titleIconSet: afterReset.titleIconSet })}）`,
+      afterReset?.titleIconSet === false &&
+        afterReset.disguisedTitle === null &&
+        afterReset.icon?.kind === 'site',
+      `恢复后配置回到「没设置过」（${JSON.stringify(afterReset && { title: afterReset.disguisedTitle, icon: afterReset.icon, titleIconSet: afterReset.titleIconSet })}）`,
     );
     check(afterReset?.hideRules.length === 0, '恢复不产生也不删除收起规则');
     await waitFor(pageOnly, '什么都没设置后胶囊也撤掉', (h) => !document.querySelector(h), [TOGGLE]);

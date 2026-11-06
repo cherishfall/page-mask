@@ -31,7 +31,7 @@ import { browser } from 'wxt/browser';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
-import { effectiveIcon } from '@/core/icon';
+import { iconHref, TRANSPARENT_PNG } from '@/core/icon';
 import { curtainRestoreAction, curtainTitle } from '@/core/curtain';
 import { countPageHits, probeRules, runHealthCheck } from '@/core/health';
 import { rulesApplicableAt } from '@/core/scope';
@@ -42,7 +42,7 @@ import { TAKEOVER_EVENT, hostShieldPresent } from '@/core/host-shield';
 import { fromExtensionPage } from '@/core/messages';
 import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/messages';
 import { DEFAULT_SETTINGS } from '@/core/types';
-import type { GlobalSettings, SiteProfile } from '@/core/types';
+import type { GlobalSettings, SiteProfile, TabIcon } from '@/core/types';
 import FloatingToggle from './FloatingToggle.vue';
 import WizardApp from './wizard/WizardApp.vue';
 // 站点的展示名：与管理页列表 / 站点设置页同一个规则（去 www.、中文域名转回 Unicode）
@@ -205,7 +205,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
    */
   function hasSiteSettings(p: SiteProfile): boolean {
-    return p.titleIconSet === true || !!p.disguisedTitle || !!p.faviconDataUrl || p.hideRules.length > 0;
+    return p.titleIconSet === true || !!p.disguisedTitle || p.hideRules.length > 0;
   }
 
   function mountToggle(): void {
@@ -406,9 +406,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
     ensureHostShield();
     wizardHost = createPageHost(ctx, 'wizard');
-    // 标题输入框的默认值按「站点 > 全局 > 界面语言」取，图标没传时用会实际生效的那张
+    // 标题输入框的默认值按「站点 > 全局 > 界面语言」取
     const fallbackTitle = effectiveTitle(profile ?? { disguisedTitle: null }, settings);
-    const fallbackIcon = effectiveIcon({ faviconDataUrl: null }, settings);
     wizardApp = createApp(WizardApp, {
       mode,
       url: pageUrl,
@@ -418,15 +417,13 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       hasProfile: !!profile,
       titleIconSet: profile?.titleIconSet === true,
       initialTitle: fallbackTitle,
-      initialIcon: profile?.faviconDataUrl ?? null,
-      fallbackIcon,
+      initialIcon: profile?.icon ?? { kind: 'site' },
       initialState: profile?.switchState ?? 'disguised',
-      hasDefaultIcon: !!settings.defaultIconDataUrl,
       // 实时预览标题 / 图标：直接压到当前标签页（guard 在标题表单第一次调用时快照真实标题），
       // 退出向导后由 refreshState → applyAll / restoreAll / clearPageUi 还原
-      previewDisguise: (title: string, icon: string | null) => {
+      previewDisguise: (title: string, icon: TabIcon) => {
         if (!ctx.isValid) return;
-        guard.apply(title, icon ?? fallbackIcon);
+        guard.apply(title, iconHref(icon));
       },
       // 预览样式同样按本文档记录（SW 回收后点「放弃」也能撤掉）
       setDraft: (css: string | null) => styles.setDraft(css),
@@ -460,7 +457,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 标题与图标只在「保存过」时生效（#98）：只收起内容的网站不该被改掉标签页。
     // 没保存过时要显式还原——之前可能压过（用户刚在别处清掉了那项设置）
     if (profile.titleIconSet === true) {
-      guard.apply(effectiveTitle(profile, settings), effectiveIcon(profile, settings));
+      guard.apply(effectiveTitle(profile, settings), iconHref(profile.icon));
     } else {
       guard.restore();
     }
@@ -498,7 +495,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 幕布开着时重新压住标题与覆盖层（applyAll / restoreAll 里的 guard 调用会把幕布的标题盖掉） */
   function reassertCurtain(): void {
     if (!curtain.active || !profile) return;
-    guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
+    // 幕布一律固定空白图标（#121）：profile.icon 可能是「网站原来的图标」或预置图标，
+    // 走到 iconHref 就会在遮住时露出真图标 / 自定义图标，等于自己拆自己的台
+    guard.apply(curtainTitle(profile, settings), TRANSPARENT_PNG);
     curtain.reassert();
   }
 
@@ -534,7 +533,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     curtain.show();
     mountCurtainButton();
     unmountToggle();
-    guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
+    // 遮住时固定空白图标（#121）：任何站点配置里的真图标都不能露出来
+    guard.apply(curtainTitle(profile, settings), TRANSPARENT_PNG);
   }
 
   /**
@@ -552,7 +552,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     unmountCurtainButton();
     curtain.hide();
     if (entry && curtainRestoreAction(entry) === 'disguise' && profile) {
-      guard.apply(curtainTitle(profile, settings), effectiveIcon(profile, settings));
+      // 回到清爽态：标题与图标都换回该站自己选的那一态（「网站原来的图标」= 不接管，
+      // iconHref 返回 null，guard 会把站点自己的 link 放回来；#121）
+      guard.apply(curtainTitle(profile, settings), iconHref(profile.icon));
     } else {
       guard.restore();
     }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 聊天：左下尾巴的气泡 + 三个点。主体紫，点红。 -->
+  <path d="M8 5h16a4 4 0 0 1 4 4v9a4 4 0 0 1-4 4H15l-7 6v-6H8a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4z" fill="none" stroke="#A142F4" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="11" cy="13.5" r="2" fill="#D93025"/>
+  <circle cx="16" cy="13.5" r="2" fill="#D93025"/>
+  <circle cx="21" cy="13.5" r="2" fill="#D93025"/>
+</svg>

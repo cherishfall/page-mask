@@ -34,7 +34,7 @@
             <!-- 链接与「⋯」是兄弟不是嵌套（#113：链接里套按钮不合法、读屏混乱）；
                  行尾 › 仍是「进详情」的提示，⋯ 在它右边管删除 -->
             <a class="site-link" :href="siteHash(siteHostOf(p.origin))" data-testid="pm-mgmt-site-link">
-              <img v-if="p.faviconDataUrl" class="favicon" :src="p.faviconDataUrl" alt="" />
+              <img v-if="p.icon.kind === 'preset'" class="favicon" :src="PRESET_ICONS[p.icon.id]" alt="" />
               <span v-else class="favicon initial" aria-hidden="true">{{ initialOf(p.origin) }}</span>
               <span class="site-text">
                 <span class="site-host">{{ siteLabelOf(p.origin) }}</span>
@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
+import { PRESET_ICONS } from '@/core/icon-presets';
 import type { SiteProfile } from '@/core/types';
 import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';

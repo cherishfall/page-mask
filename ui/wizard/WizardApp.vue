@@ -56,10 +56,9 @@
         <div class="pm-wiz-step1">
           <TitleIconFields
             v-model:title="titleInput"
-            v-model:icon="iconDataUrl"
+            v-model:icon="iconData"
             id-prefix="pm-wiz"
             :title-hint="t.wizard.titleHint(initialTitle)"
-            :icon-hint="hasDefaultIcon ? t.wizard.iconHintWithDefault : t.wizard.iconHintNoDefault"
           />
           <!-- 回退出口（#99）：保存过才出现。不是删除，所以不用危险色，也不进底栏 -->
           <div v-if="props.titleIconSet" class="pm-wiz-reset" data-testid="pm-wiz-title-reset-row">
@@ -421,7 +420,7 @@ import { generateCandidates, selectorHitsElement } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
 import { scopeHumanLabel } from '@/core/scope';
 import { isSafeSelector } from '@/core/validate';
-import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId } from '@/core/types';
+import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId, type TabIcon } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, buildSameGroupOutlineCss, STRATEGY_ORDER } from '@/core/css-builder';
 import { isOwnUiNode } from '@/core/host-shield';
@@ -503,16 +502,12 @@ const props = defineProps<{
   titleIconSet: boolean;
   /** 标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
   initialTitle: string;
-  /** 站点现有的图标（新站点为 null） */
-  initialIcon: string | null;
-  /** 站点没有自己的图标时实际会用的那张（插件默认图标或透明图标） */
-  fallbackIcon: string;
-  /** 插件设置里是否有默认图标，只影响标题表单的说明文字 */
-  hasDefaultIcon: boolean;
+  /** 站点现有的图标（新站点默认「网站原来的图标」） */
+  initialIcon: TabIcon;
   /** 站点现在的开关状态：「标题和图标」保存时保持原状（新站点不传语义由 hasProfile 决定） */
   initialState: SiteProfile['switchState'];
   /** 把标题 / 图标实时压到当前标签页上（退出时由内容脚本运行时还原） */
-  previewDisguise: (title: string, icon: string | null) => void;
+  previewDisguise: (title: string, icon: TabIcon) => void;
   /** 设置本文档的预览样式（null = 清除）；由内容脚本运行时按文档记录注入状态（core/doc-styles.ts） */
   setDraft: (css: string | null) => Promise<CssAck>;
 }>();
@@ -525,7 +520,7 @@ const initialIds = (props.initialRules ?? []).map((r) => r.id);
 /** 点了「重新选这一项」之后，下一次点页面就替换这一条（不新增） */
 let pendingReplace: Draft | null = null;
 const titleInput = ref(props.initialTitle);
-const iconDataUrl = ref<string | null>(props.initialIcon);
+const iconData = ref<TabIcon>(props.initialIcon);
 /** 选择集（有序，顺序 = 序号）；元素本身不做响应式代理 */
 const selEls = shallowRef<Element[]>([]);
 const lastSel = shallowRef<Element | null>(null);
@@ -640,7 +635,7 @@ const previewCount = computed(() => {
 });
 
 // 第 1 步的实时预览：改标题 / 换图标时立刻压到标签页上（不点保存也能看到）
-watch([titleInput, iconDataUrl], () => {
+watch([titleInput, iconData], () => {
   if (phase.value === 'title') pushTitlePreview();
 });
 
@@ -757,10 +752,19 @@ function draftSignature(): string {
   );
 }
 
+/**
+ * 图标三态是否相同（#121）：对象引用每次读取都可能不同，必须按 kind + id 比值，
+ * 否则每次打开向导都会被判成「改过」。
+ */
+function sameIcon(a: TabIcon, b: TabIcon): boolean {
+  if (a.kind !== b.kind) return false;
+  return a.kind !== 'preset' || (b.kind === 'preset' && a.id === b.id);
+}
+
 /** 有没有还没保存的东西：标题表单看标题 / 图标是否动过，「收起内容」看草稿或选择有没有变 */
 function isDirty(): boolean {
   if (phase.value === 'title') {
-    return titleInput.value.trim() !== props.initialTitle.trim() || iconDataUrl.value !== props.initialIcon;
+    return titleInput.value.trim() !== props.initialTitle.trim() || !sameIcon(iconData.value, props.initialIcon);
   }
   if (baselineDrafts !== null && draftSignature() !== baselineDrafts) return true;
   // 还没进过看效果的新选（草稿未建）：选择集里有旧草稿之外的元素就是改过
@@ -821,7 +825,7 @@ function enterPick() {
 
 /** 把标题 / 图标实时压到当前标签页（标题表单专用；退出时由内容脚本运行时还原） */
 function pushTitlePreview() {
-  props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconDataUrl.value || props.fallbackIcon);
+  props.previewDisguise(titleFromInput(titleInput.value, props.initialTitle), iconData.value);
 }
 
 // ---------- 草稿起点（#69 / #81 无首次模式） ----------
@@ -1128,7 +1132,7 @@ async function saveTitleOnly() {
     const origin = new URL(props.url).origin;
     const patch = titleOnlyPatch({
       title: titleInput.value,
-      icon: iconDataUrl.value,
+      icon: iconData.value,
       fallbackTitle: props.initialTitle,
       // 已添加的网站保持它现在的开关状态：改标题不该顺手打开清爽（#77）
       keepState: props.hasProfile ? props.initialState : undefined,

@@ -10,11 +10,12 @@
  *  - 一秒内写到上限即熔断，之后不再写 DOM（页面停在网站自己的标题上）并 console.warn 留证。
  *    熔断不被重复的 apply() 重置（上层每次存储变化都会调它），只有 restore() 后重新进入、
  *    或目标标题 / 图标真的变了才解封。
+ * #121：`apply(title, icon)` 的 icon 为 null 表示**不接管图标**——不插我们的 link、不动站点的
+ *  link；restore 时也因此不还原图标（没动过就不该动）。从接管切到不接管时，我们那张要删掉、
+ * 快照里的站点 link 放回去，网站自己的图标立刻回来。
  */
 
 export { effectiveTitle } from './titles';
-
-import { TRANSPARENT_PNG } from './icon';
 
 const ICON_SELECTOR = 'link[rel~="icon"]';
 /** 熔断窗口：这段时间内写入次数到上限就彻底停手 */
@@ -56,9 +57,12 @@ export class TitleFaviconGuard {
   private snapshot: Snapshot | null = null;
   private active = false;
   private wantedTitle = '';
-  private wantedIcon = '';
+  /** 要写的图标 href；null = 不接管图标（保留网站原来的 `<link rel="icon">`） */
+  private wantedIcon: string | null = null;
   /** 我们插入的那一张图标（区分站点自己的图标声明）；存在期间原地复用，不删不重建 */
   private ownLink: HTMLLinkElement | null = null;
+  /** 是否动过图标：没动过时 restore 不碰站点的 link（站点可能在伪装期间自己换过图标） */
+  private iconTouched = false;
   /** 窗口内的写入时刻（含进入伪装态的第一笔） */
   private forceTimes: number[] = [];
   private cancelPending: (() => void) | null = null;
@@ -90,9 +94,11 @@ export class TitleFaviconGuard {
     return this.active;
   }
 
-  /** 进入伪装态。title 为最终展示文字；iconDataUrl 为空时用中性透明图标 */
-  apply(title: string, iconDataUrl: string | null): void {
-    const icon = iconDataUrl || TRANSPARENT_PNG;
+  /**
+   * 进入伪装态。title 为最终展示文字；icon 为要写的图标 href，
+   * **null = 不接管图标**（保留网站原来的图标，含它自己后来换的那张）。
+   */
+  apply(title: string, icon: string | null): void {
     if (!this.active) {
       this.wantedTitle = title;
       this.wantedIcon = icon;
@@ -112,26 +118,30 @@ export class TitleFaviconGuard {
     this.force();
   }
 
-  /** 回到原样态：标题、图标一并还原 */
+  /** 回到原样态：标题一定还原；图标只在动过时还原 */
   restore(): void {
     if (!this.active) return;
     this.stopObserving();
     this.active = false;
     this.resetLimit();
     const snap = this.snapshot;
+    const iconTouched = this.iconTouched;
     this.snapshot = null;
     this.ownLink = null;
+    this.iconTouched = false;
     if (!snap) return;
     this.doc.title = snap.title;
+    // 从没接管过图标：站点现在的图标可能就是它自己换的，别拿旧快照盖回去
+    if (!iconTouched) return;
     for (const link of this.doc.querySelectorAll(ICON_SELECTOR)) link.remove();
     const parent = this.doc.head ?? this.doc.documentElement;
     for (const link of snap.iconLinks) parent.appendChild(link);
   }
 
   /** 伪装参数变更（改标题/图标）时直接生效 */
-  update(title: string, iconDataUrl: string | null): void {
+  update(title: string, icon: string | null): void {
     if (!this.active) return;
-    this.apply(title, iconDataUrl);
+    this.apply(title, icon);
   }
 
   private takeSnapshot(): Snapshot {
@@ -157,8 +167,13 @@ export class TitleFaviconGuard {
   /**
    * 图标同步：已有我们那张就原地改 href，没有才插入；站点图标只在挡路时移除。
    * 一切都对得上时不动 DOM（每次补刀都重建 favicon 会让标签栏反复重绘）。
+   * wantedIcon 为 null = 不接管：站点自己换图标时完全不拦（#121）。
    */
   private syncIcon(): void {
+    if (this.wantedIcon === null) {
+      this.releaseIcon();
+      return;
+    }
     const head = this.doc.head;
     // document_start 时 <head> 可能还没解析出来：先不插图标（Chrome 只认 head 里的图标声明），
     // 观察器会在 head 出现时再补上。
@@ -166,18 +181,35 @@ export class TitleFaviconGuard {
     const links = Array.from(this.doc.querySelectorAll(ICON_SELECTOR));
     if (this.ownLink && !this.ownLink.isConnected) this.ownLink = null;
     if (!this.ownLink) {
+      // 接管这一刻的站点图标进快照：从「网站原来的图标」切过来时，restore 要能放回去
+      if (this.snapshot) this.snapshot.iconLinks = links.map((l) => l.cloneNode(false) as Element);
       for (const link of links) link.remove();
       const link = this.doc.createElement('link');
       link.setAttribute('rel', 'icon');
       link.setAttribute('href', this.wantedIcon);
       head.appendChild(link);
       this.ownLink = link;
+      this.iconTouched = true;
       return;
     }
     const own = this.ownLink;
     for (const link of links) if (link !== own) link.remove();
     if (own.getAttribute('href') !== this.wantedIcon) own.setAttribute('href', this.wantedIcon);
     if (own.parentElement !== head) head.appendChild(own);
+    this.iconTouched = true;
+  }
+
+  /**
+   * 从「接管」切回「不接管」：删掉我们那张，把快照里的站点 link 放回去。
+   * 没接管过时什么都不做（站点自己的 link 一直在那儿）。
+   */
+  private releaseIcon(): void {
+    if (!this.iconTouched) return;
+    for (const link of this.doc.querySelectorAll(ICON_SELECTOR)) link.remove();
+    this.ownLink = null;
+    const parent = this.doc.head ?? this.doc.documentElement;
+    for (const link of this.snapshot?.iconLinks ?? []) parent.appendChild(link);
+    this.iconTouched = false;
   }
 
   /**
@@ -273,6 +305,8 @@ export class TitleFaviconGuard {
   }
 
   private iconDiverged(): boolean {
+    // 不接管图标：站点怎么换都不算「被改回去了」
+    if (this.wantedIcon === null) return false;
     if (!this.doc.head) return false; // 还没有 head，图标无处可放，等 head 出现
     const links = Array.from(this.doc.querySelectorAll(ICON_SELECTOR));
     if (links.length !== 1) return true;

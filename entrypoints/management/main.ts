@@ -1,5 +1,7 @@
 import { createApp } from 'vue';
 import '@/styles/base.css';
+// 图标三态选择器（ui/title-icon/IconPicker.vue）与管理页共用这份样式（向导在 shadow 里另行注入）
+import '@/ui/title-icon/fields.css';
 import { initUiLanguage } from '@/ui/i18n';
 import App from './App.vue';
 

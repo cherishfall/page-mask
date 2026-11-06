@@ -190,24 +190,24 @@ describe('标题空值兜底（design.md：标题永不为空白）', () => {
 describe('「标题和图标」保存 0 条规则（#81）', () => {
   it('写入标题、图标与开关状态，不产生任何收起规则', () => {
     const profile = createEmptyProfile('https://example.test');
-    Object.assign(profile, titleOnlyPatch({ title: '工作笔记', icon: null, fallbackTitle: '阅读' }));
+    Object.assign(profile, titleOnlyPatch({ title: '工作笔记', icon: { kind: 'none' }, fallbackTitle: '阅读' }));
     // 已添加的网站：改标题不切换开关状态（#77）
-    expect(titleOnlyPatch({ title: 'x', icon: null, fallbackTitle: '阅读', keepState: 'original' }).switchState).toBe('original');
+    expect(titleOnlyPatch({ title: 'x', icon: { kind: 'site' }, fallbackTitle: '阅读', keepState: 'original' }).switchState).toBe('original');
     // 站点还没有配置：保存即建站，进入清爽态（#81）
-    expect(titleOnlyPatch({ title: 'x', icon: null, fallbackTitle: '阅读' }).switchState).toBe('disguised');
+    expect(titleOnlyPatch({ title: 'x', icon: { kind: 'site' }, fallbackTitle: '阅读' }).switchState).toBe('disguised');
     expect(profile.hideRules).toEqual([]);
     expect(profile.disguisedTitle).toBe('工作笔记');
-    expect(profile.faviconDataUrl).toBeNull();
+    expect(profile.icon).toEqual({ kind: 'none' });
     expect(profile.switchState).toBe('disguised');
     // 点过保存 = 设置过（#98）：从此清爽态才改这个网站的标题与图标
     expect(profile.titleIconSet).toBe(true);
   });
-  it('标题留空用兜底值；上传的图标原样保留', () => {
-    const patch = titleOnlyPatch({ title: '   ', icon: 'data:image/png;base64,AAA', fallbackTitle: '阅读' });
+  it('标题留空用兜底值；选中的图标原样保留', () => {
+    const patch = titleOnlyPatch({ title: '   ', icon: { kind: 'preset', id: 'doc' }, fallbackTitle: '阅读' });
     expect(patch).toEqual({
       titleIconSet: true,
       disguisedTitle: '阅读',
-      faviconDataUrl: 'data:image/png;base64,AAA',
+      icon: { kind: 'preset', id: 'doc' },
       switchState: 'disguised',
     });
   });
@@ -217,7 +217,7 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
     profile.switchState = 'disguised';
     profile.titleIconSet = true;
     profile.disguisedTitle = '阅读';
-    profile.faviconDataUrl = 'data:image/png;base64,AAA';
+    profile.icon = { kind: 'preset', id: 'doc' };
     profile.floatingBtnPos = { x: 12, y: 34 };
     profile.hideRules = [
       { id: 'r1', elementName: '横幅', candidates: ['#b'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false, createdAt: 1 },
@@ -227,7 +227,7 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
 
     expect(profile.titleIconSet).toBe(false);
     expect(profile.disguisedTitle).toBeNull();
-    expect(profile.faviconDataUrl).toBeNull();
+    expect(profile.icon).toEqual({ kind: 'site' });
     // 其余设置原封不动
     expect(profile.hideRules.map((r) => r.id)).toEqual(['r1']);
     expect(profile.switchState).toBe('disguised');
@@ -481,7 +481,7 @@ describe('0 条规则保存后的轻提示（#53）', () => {
     expect(zeroRuleSavedNotice('工作笔记')).toBe('已保存，标签页名字换成「工作笔记」了');
   });
   it('标题取的是兜底后的值（输入留空时也一样）', () => {
-    const patch = titleOnlyPatch({ title: '  ', icon: null, fallbackTitle: '阅读' });
+    const patch = titleOnlyPatch({ title: '  ', icon: { kind: 'none' }, fallbackTitle: '阅读' });
     expect(zeroRuleSavedNotice(patch.disguisedTitle)).toBe('已保存，标签页名字换成「阅读」了');
   });
 });

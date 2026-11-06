@@ -46,10 +46,6 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 /** 面板自身的内容高度（px）：Chrome 弹窗上限 600，超了就要滚动 */
 const popupHeight = (page) => page.$eval('main.popup', (m) => m.getBoundingClientRect().height);
 
-/** 1×1 的合法 PNG（标签页图标上传用，走真实的解码 → 缩放 → 编码） */
-const PNG_1PX =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-
 // 与 styles/tokens.css 原始色值一致
 const TOKENS = {
   light: { fg: 'rgb(31, 35, 41)', bg: 'rgb(255, 255, 255)', bgSubtle: 'rgb(246, 247, 249)' },
@@ -81,7 +77,7 @@ const profileOf = (origin, over = {}) => ({
   origin,
   switchState: 'original',
   disguisedTitle: null,
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [rule('r1', '页头', ['#site-header']), rule('r2', '侧栏', ['#side'])],
   floatingBtnPos: null,
   createdAt: now,
@@ -653,18 +649,16 @@ async function main() {
     // 回退出口（#99）：保存过标题和图标之后才出现
     check(!!(await m.$(tid('pm-mgmt-title-reset'))), '站点设置页出现「恢复网站原来的标题和图标」');
 
-    // 标签页图标：上传 → 预览，清除 → 回到「未设置」（真实的解码、缩放与编码）
-    const iconPng = path.join(tmp, 'icon.png');
-    fs.writeFileSync(iconPng, Buffer.from(PNG_1PX, 'base64'));
-    await (await m.$(tid('pm-mgmt-icon-input'))).uploadFile(iconPng);
-    await poll(
-      async () => String((await getProfile(ext.control, ORIGIN)).faviconDataUrl).startsWith('data:image/png'),
-      '上传图标后写入 PNG data URL',
-    );
-    check(!!(await m.waitForSelector(tid('pm-mgmt-favicon'), { timeout: 3000 })), '上传后显示图标预览');
-    await m.click(tid('pm-mgmt-icon-clear'));
-    await poll(async () => (await getProfile(ext.control, ORIGIN)).faviconDataUrl === null, '清除图标后回到默认透明图标');
-    check(!!(await m.waitForSelector(tid('pm-mgmt-favicon-empty'), { timeout: 3000 })), '清除后显示「未设置」');
+    // 标签页图标三态（#121）：选「换成别的图标」→ 点一个预置图标；再切回「网站原来的图标」
+    await m.click(tid('pm-mgmt-icon-kind-preset'));
+    await m.waitForSelector(tid('pm-mgmt-icon-preset-doc'), { timeout: 3000 });
+    await m.click(tid('pm-mgmt-icon-preset-doc'));
+    await poll(async () => {
+      const icon = (await getProfile(ext.control, ORIGIN)).icon;
+      return icon?.kind === 'preset' && icon.id === 'doc';
+    }, '选预置图标后写入站点配置（preset:doc）');
+    await m.click(tid('pm-mgmt-icon-kind-site'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).icon?.kind === 'site', '切回网站原来的图标');
 
     // 收起项清单：名称 + 收起方式 + 人话范围
     check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '收起的内容按行列出（2 行）');
@@ -836,7 +830,7 @@ async function main() {
     await m.goto(`${extOrigin}/management.html`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
 
-    console.log('\n--- 插件设置页（默认标题、默认图标、关于） ---');
+    console.log('\n--- 插件设置页（默认标题、关于） ---');
     await m.goto(`${extOrigin}/settings.html`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-settings-default-title'), { timeout: 5000 });
     await checkCommon(m, '插件设置');

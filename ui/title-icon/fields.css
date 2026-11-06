@@ -1,8 +1,8 @@
 /*
- * 标签页标题与图标表单（ui/title-icon/TitleIconFields.vue）的样式。
- * 向导第 1 步与页面 ⋯ 菜单的小面板是同一份表单，样式也就只有这一份：
- * 两处各自把这份样式表与自己的样式一起注入 shadow（ui/wizard/wizard-styles.ts、
- * ui/toggle/toggle-styles.ts），组件本身不重复写 CSS。
+ * 标签页标题与图标表单（ui/title-icon/TitleIconFields.vue）与图标三态选择器
+ * （ui/title-icon/IconPicker.vue）的样式。向导第 1 步、页面小面板与站点设置页
+ * 是同一份表单，样式也就只有这一份：前两处把这份样式表与自己的样式一起注入 shadow
+ * （ui/wizard/wizard-styles.ts），管理页在 main.ts 里全局引入。
  * 颜色只用 tokens 里对比度已验证的组合，跟随 .pm-root 的 color-scheme 明暗切换。
  */
 
@@ -56,37 +56,83 @@
 .pm-tif-icon-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--pm-space-2);
+  align-items: flex-start;
   margin-top: var(--pm-space-1);
 }
 
-.pm-tif-icon-preview,
-.pm-tif-icon-empty {
-  flex: none;
-  inline-size: 32px;
-  block-size: 32px;
+/* ── 图标三态（#121）── */
+
+.pm-icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.pm-icon-picker-legend {
+  padding: 0;
+  font-size: var(--pm-font-size-caption);
+  color: var(--pm-fg-muted);
+}
+
+/* 外面已经有「标签页图标」标题时只留给读屏（fieldset 的可及名称） */
+.pm-icon-picker-legend-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pm-icon-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-icon-choice label {
+  padding: 3px 8px 3px 6px; /* 与圆点的间距 + 上下命中区补偿 */
+  margin: -3px 0;
+  cursor: pointer;
+}
+
+.pm-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: var(--pm-space-1);
+}
+
+/* 每格 36×36（WCAG 命中区 ≥24），里面是 32×32 的图标；选中态靠描边，不靠颜色单独表达。
+   10 格 + 间距 = 378px，常见的表单宽度里能排成一行，窄处自动换行。 */
+.pm-icon-tile {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
   box-sizing: border-box;
-  border: 1px solid var(--pm-border-control);
-  border-radius: 4px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pm-icon-tile:hover {
   background: var(--pm-bg-subtle);
 }
-/* 还没传图标：占位框里画一条斜线，表示「这里是空的」 */
-.pm-tif-icon-empty {
-  border-style: dashed;
-  background:
-    linear-gradient(to top right, transparent calc(50% - 1px), var(--pm-border-control) 50%, transparent calc(50% + 1px)),
-    var(--pm-bg-subtle);
+.pm-icon-tile.on {
+  border-color: var(--pm-accent);
+  background: var(--pm-bg-subtle);
 }
-
-/* 表单里的按钮用 .pm-btn（styles/controls.css），这里只保留文件选择框的铺满布局 */
-
-/* 文件选择框铺满整个按钮：点击落在原生 input 上，键盘也能触发 */
-.pm-tif-file {
-  position: relative;
-  overflow: hidden;
+.pm-icon-tile:has(input:focus-visible) {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
 }
-.pm-tif-file input[type='file'] {
+.pm-icon-tile input {
   position: absolute;
   inset: 0;
   margin: 0;
@@ -94,6 +140,12 @@
   block-size: 100%;
   opacity: 0;
   cursor: pointer;
+}
+.pm-icon-tile img {
+  display: block;
+  inline-size: 32px;
+  block-size: 32px;
+  pointer-events: none;
 }
 
 .pm-tif-hint {

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 表格：网格。主体绿，表头与两条分隔线蓝。 -->
+  <rect x="6" y="4" width="20" height="24" rx="2" fill="none" stroke="#188038" stroke-width="4"/>
+  <path d="M8 13h16M13 13v13M21 13v13" fill="none" stroke="#1A73E8" stroke-width="4" stroke-linecap="round"/>
+</svg>

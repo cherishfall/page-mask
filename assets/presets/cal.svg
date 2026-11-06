@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 日历：两个装订凸起。主体玫红，凸起靛蓝。 -->
+  <rect x="5" y="10" width="22" height="18" rx="2" fill="none" stroke="#D81B60" stroke-width="4"/>
+  <path d="M11 4v7M21 4v7" fill="none" stroke="#5C6BC0" stroke-width="4" stroke-linecap="round"/>
+</svg>

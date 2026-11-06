@@ -45,7 +45,7 @@ async function main() {
       origin: ORIGIN,
       switchState: 'original',
       disguisedTitle: null,
-      faviconDataUrl: null,
+      icon: { kind: 'none' },
       // 有设置就挂胶囊（#67）：这条规则不命中任何元素，只为让悬浮按钮出现
       hideRules: [
         {

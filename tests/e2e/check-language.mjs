@@ -34,7 +34,7 @@ const profileOf = (o) => ({
   origin: o,
   switchState: 'disguised',
   disguisedTitle: 'Reading later',
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [
     {
       id: 'r-ad',

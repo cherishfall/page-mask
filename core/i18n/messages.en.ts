@@ -22,10 +22,6 @@ export const en: Messages = {
     gotIt: 'Got it',
     loading: 'Loading…',
     opening: 'Opening…',
-    processing: 'Working…',
-    uploadIcon: 'Upload icon',
-    replaceIcon: 'Replace icon',
-    clearIcon: 'Clear icon',
     resetTitleIcon: 'Use the site’s own title and icon',
     shortcutBlocked: 'This page can’t be covered',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
@@ -154,12 +150,23 @@ export const en: Messages = {
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome shows the address instead.`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'When the “Shown your way” switch at the top is on, this site’s tab uses this image.',
-    currentIcon: 'Current icon',
-    currentIconAlt: 'Current tab icon',
-    iconUnsetDefault: 'Not set: uses the default icon from Settings',
-    iconUnsetBlank: 'Not set: the tab shows no icon',
-    iconHint: 'PNG, JPG, GIF, WebP or ICO, up to 5MB. It’s scaled down to 32×32.',
+    iconIntro: 'When the “Shown your way” switch at the top is on, this site’s tab uses the icon you pick here.',
+    iconSite: "The site's own icon",
+    iconNone: 'No icon',
+    iconPreset: 'Use a different icon',
+    iconPickLabel: 'Pick an icon',
+    iconPresets: {
+      doc: 'Document',
+      sheet: 'Spreadsheet',
+      mail: 'Mail',
+      cal: 'Calendar',
+      code: 'Code',
+      meet: 'Meeting',
+      chat: 'Chat',
+      drive: 'Drive',
+      book: 'Knowledge base',
+      chart: 'Report',
+    },
 
     rulesHeading: 'Hidden items',
     rulesEmpty: 'Nothing is hidden yet.',
@@ -180,6 +187,7 @@ export const en: Messages = {
       auth: 'Access wasn’t granted and your site settings are kept. Click again when needed and choose “Allow”',
       toggle: 'Couldn’t switch how the site is shown. Please try again',
       rules: 'Couldn’t save this change. Please try again',
+      icon: 'Couldn’t save the icon. Please try again',
       reset: 'Couldn’t delete this site’s settings. Please try again',
     },
 
@@ -208,14 +216,6 @@ export const en: Messages = {
     titleFootnote: (fallback: string) =>
       `Leave it empty to use “${fallback}” (follows the browser language). A title can’t be blank, or Chrome shows the address instead.`,
 
-    iconHeading: 'Default icon',
-    iconIntro:
-      'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no icon of its own.',
-    currentIcon: 'Current default icon',
-    currentIconAlt: 'Current default icon',
-    iconUnset: 'Not set: the tab shows no icon',
-    iconHint:
-      'PNG, JPG, GIF, WebP or ICO, up to 5MB. It’s scaled down to 32×32. A site’s own icon wins; with neither, the tab shows no icon.',
 
     toggleHeading: 'The small button in the corner',
     toggleIntro:
@@ -264,7 +264,7 @@ export const en: Messages = {
       removed: (n: number, rules: number, list: string) =>
         `${n} of them are not in the file and will be dropped (${rules} hidden items): ${list}`,
       incoming: (sites: number, rules: number) => `Becomes the file’s ${sites} sites and ${rules} hidden items`,
-      settings: 'The settings here (default title and icon) are replaced by the file’s too',
+      settings: 'The settings here (the default title) are replaced by the file’s too',
       irreversible: 'This can’t be undone. If unsure, cancel first and use “Export all settings” for a copy',
       confirm: 'Replace',
     },
@@ -314,8 +314,6 @@ export const en: Messages = {
     progress: (index: number, total: number) => `Step ${index} of ${total}`,
     titleHint: (fallback: string) =>
       `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome would show the address instead.`,
-    iconHintWithDefault: 'An icon is optional. Without one, the default icon from Settings is used.',
-    iconHintNoDefault: 'An icon is optional. Without one, the tab shows no icon.',
     pickLead: [
       'Click something on the page to pick it.',
       'Click it again to unpick. You can pick several in a row.',
@@ -411,7 +409,6 @@ export const en: Messages = {
     shrinkAria: 'Switch to the mini button',
     expandAria: 'Switch to the full button',
     menuDelete: 'Delete this site’s settings',
-    iconAlt: 'Icon that will show in the tab',
   },
 
   notice: {
@@ -433,12 +430,5 @@ export const en: Messages = {
     invalidOrigin: (origin: string) => `Invalid site address: ${origin}`,
     importFailed: (reason: string) => `Import failed: ${reason}`,
     importFailedGeneric: 'Import failed: it couldn’t be completed. Please try again',
-    iconType: 'Only PNG, JPG, GIF, WebP or ICO images work',
-    iconTooLarge: 'That image is too large (over 5MB). Pick a smaller one',
-    iconDecode: 'That image can’t be opened. Try a PNG or JPG',
-    iconEncode: 'The image couldn’t be processed. Try another one',
-    iconSave: 'Couldn’t save the icon. Try again',
-    iconClear: 'Couldn’t clear the icon. Try again',
-    iconProcess: 'Couldn’t process this icon. Try again',
   },
 };

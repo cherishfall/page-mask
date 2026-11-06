@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 会议：摄像机 + 播放三角。主体青，三角红。 -->
+  <rect x="4" y="9" width="17" height="15" rx="3" fill="none" stroke="#00897B" stroke-width="4"/>
+  <path d="M21 15l7-4v11l-7-4z" fill="#00897B"/>
+  <path d="M10 12.5l6.5 3.5-6.5 3.5z" fill="#D93025"/>
+</svg>

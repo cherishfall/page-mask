@@ -112,7 +112,7 @@ describe('TitleFaviconGuard（jsdom）', () => {
 
   it('伪装：标题改写、站点图标被替换为一张', () => {
     const guard = new TitleFaviconGuard(doc);
-    guard.apply('新建标签页', null);
+    guard.apply('新建标签页', TRANSPARENT_PNG);
     expect(doc.title).toBe('新建标签页');
     const icons = doc.querySelectorAll('link[rel~="icon"]');
     expect(icons).toHaveLength(1);
@@ -150,7 +150,7 @@ describe('TitleFaviconGuard（jsdom）', () => {
     early.documentElement.replaceChildren(); // 解析刚开始：只有 <html>，没有 <head>
     const guard = new TitleFaviconGuard(early);
 
-    expect(() => guard.apply('新建标签页', null)).not.toThrow();
+    expect(() => guard.apply('新建标签页', TRANSPARENT_PNG)).not.toThrow();
 
     // 模拟解析器随后插入 <head><title>站点标题</title><link rel=icon></head>
     const head = early.createElement('head');
@@ -266,6 +266,59 @@ describe('TitleFaviconGuard（jsdom）', () => {
     expect(doc.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe('data:image/png;base64,CUSTOM');
   });
 
+  it('site：不接管图标——只改标题，网站原来的 <link rel=icon> 一动不动', () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('阅读', null);
+    expect(doc.title).toBe('阅读');
+    const icons = doc.querySelectorAll(ICONS);
+    expect(icons).toHaveLength(1);
+    expect(icons[0]?.getAttribute('href')).toBe('https://site.com/favicon.ico');
+    guard.restore();
+    expect(doc.title).toBe('原站点标题');
+    expect(doc.querySelectorAll(ICONS)).toHaveLength(1);
+    expect(doc.querySelector(ICONS)?.getAttribute('href')).toBe('https://site.com/favicon.ico');
+  });
+
+  it('none：变空白——写一张全透明图，网站原来的图标被换掉', () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('阅读', TRANSPARENT_PNG);
+    const icons = doc.querySelectorAll(ICONS);
+    expect(icons).toHaveLength(1);
+    expect(icons[0]?.getAttribute('href')).toBe(TRANSPARENT_PNG);
+    guard.restore();
+    expect(doc.querySelector(ICONS)?.getAttribute('href')).toBe('https://site.com/favicon.ico');
+  });
+
+  it('从 none 切回 site：删掉我们那张，网站原来的图标回来', () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('阅读', TRANSPARENT_PNG);
+    expect(doc.querySelector(ICONS)?.getAttribute('href')).toBe(TRANSPARENT_PNG);
+
+    // 用户在设置里改回「网站原来的图标」：不用退出伪装态，站点图标立刻回来
+    guard.update('阅读', null);
+    const icons = doc.querySelectorAll(ICONS);
+    expect(icons).toHaveLength(1);
+    expect(icons[0]?.getAttribute('href')).toBe('https://site.com/favicon.ico');
+
+    guard.restore();
+    expect(doc.querySelector(ICONS)?.getAttribute('href')).toBe('https://site.com/favicon.ico');
+  });
+
+  it('site 模式下网站自己换图标（SPA）：我们不去抢回', async () => {
+    const guard = new TitleFaviconGuard(doc);
+    guard.apply('阅读', null);
+    const next = doc.createElement('link');
+    next.rel = 'icon';
+    next.href = 'https://site.com/new.ico';
+    doc.head.appendChild(next);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(Array.from(doc.querySelectorAll(ICONS)).map((l) => l.getAttribute('href'))).toEqual([
+      'https://site.com/favicon.ico',
+      'https://site.com/new.ico',
+    ]);
+    guard.restore();
+  });
+
   describe('会反抗的网站（#49）', () => {
     /** 装一个"永不放弃"的站点标题守卫，并用假时钟驱动插件 */
     function setupFight(maxForcesPerSecond: number) {
@@ -361,7 +414,7 @@ describe('TitleFaviconGuard（jsdom）', () => {
         now: clock.now,
         setTimer: clock.setTimer,
       });
-      guard.apply('阅读', null);
+      guard.apply('阅读', TRANSPARENT_PNG);
       const ours = doc.querySelector(ICONS)!;
       expect(ours).not.toBeNull();
 
@@ -391,12 +444,12 @@ describe('TitleFaviconGuard（jsdom）', () => {
 
     it('图标没有真的不一致时不动 DOM：重复 apply 不删不插', () => {
       const guard = new TitleFaviconGuard(doc);
-      guard.apply('阅读', null);
+      guard.apply('阅读', TRANSPARENT_PNG);
       const ours = doc.querySelector(ICONS);
       const append = vi.spyOn(doc.head, 'appendChild');
       const remove = vi.spyOn(Element.prototype, 'remove');
-      guard.apply('阅读', null); // 每次存储变化都会重复调用
-      guard.apply('阅读', TRANSPARENT_PNG); // 显式传默认图标，等价于空
+      guard.apply('阅读', TRANSPARENT_PNG); // 每次存储变化都会重复调用
+      guard.apply('阅读', TRANSPARENT_PNG);
       expect(append).not.toHaveBeenCalled();
       expect(remove).not.toHaveBeenCalled();
       expect(doc.querySelector(ICONS)).toBe(ours);

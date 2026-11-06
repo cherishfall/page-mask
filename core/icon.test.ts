@@ -1,67 +1,96 @@
 import { describe, expect, it } from 'vitest';
-import { checkIconSource, containRect, effectiveIcon, ICON_ERROR, ICON_SIZE, MAX_ICON_SOURCE_BYTES, TRANSPARENT_PNG } from './icon';
+// @ts-ignore 项目不装 @types/node；vitest 跑在 Node 里，node:zlib 可用
+import { inflateSync } from 'node:zlib';
+import { iconHref, TRANSPARENT_PNG } from './icon';
+import { PRESET_ICONS } from './icon-presets';
+import { ICON_PRESET_IDS } from './types';
 
-describe('checkIconSource', () => {
-  it('接受常见图片格式且不超过 5MB', () => {
-    expect(checkIconSource({ type: 'image/png', size: 2 * 1024 * 1024 })).toBeNull();
-    expect(checkIconSource({ type: 'image/jpeg', size: MAX_ICON_SOURCE_BYTES })).toBeNull();
-    expect(checkIconSource({ type: 'image/x-icon', size: 1000 })).toBeNull();
-  });
-  it('超过 5MB 用人话提示', () => {
-    expect(checkIconSource({ type: 'image/png', size: MAX_ICON_SOURCE_BYTES + 1 })).toBe(ICON_ERROR.tooLarge);
-  });
-  it('拒绝 SVG 等其它类型', () => {
-    expect(checkIconSource({ type: 'image/svg+xml', size: 100 })).toBe(ICON_ERROR.type);
-    expect(checkIconSource({ type: '', size: 100 })).toBe(ICON_ERROR.type);
-  });
-});
-
-describe('containRect', () => {
-  it('正方形铺满', () => {
-    expect(containRect(512, 512)).toEqual({ dx: 0, dy: 0, dw: ICON_SIZE, dh: ICON_SIZE });
-  });
-  it('横图等比缩放、上下居中留白', () => {
-    expect(containRect(200, 100, 32)).toEqual({ dx: 0, dy: 8, dw: 32, dh: 16 });
-  });
-  it('竖图等比缩放、左右居中留白', () => {
-    expect(containRect(100, 400, 32)).toEqual({ dx: 12, dy: 0, dw: 8, dh: 32 });
-  });
-  it('小图放大到画布', () => {
-    expect(containRect(16, 16, 32)).toEqual({ dx: 0, dy: 0, dw: 32, dh: 32 });
-  });
-  it('极端长条至少保留 1 像素', () => {
-    expect(containRect(10000, 1, 32)).toEqual({ dx: 0, dy: 15, dw: 32, dh: 1 });
-  });
-  it('非法尺寸返回 null', () => {
-    expect(containRect(0, 10)).toBeNull();
-    expect(containRect(10, Number.NaN)).toBeNull();
-    expect(containRect(Infinity, 10)).toBeNull();
-  });
-});
-
-describe('effectiveIcon：站点自己的图标 > 插件默认图标 > 内置透明图标', () => {
-  const SITE_ICON = 'data:image/png;base64,SITE';
-  const DEFAULT_ICON = 'data:image/png;base64,DEFAULT';
-
-  it('三层依次兜底', () => {
-    expect(effectiveIcon({ faviconDataUrl: SITE_ICON }, { defaultIconDataUrl: DEFAULT_ICON })).toBe(SITE_ICON);
-    expect(effectiveIcon({ faviconDataUrl: null }, { defaultIconDataUrl: DEFAULT_ICON })).toBe(DEFAULT_ICON);
-    expect(effectiveIcon({ faviconDataUrl: null }, { defaultIconDataUrl: null })).toBe(TRANSPARENT_PNG);
-  });
-
-  it('站点自己设过图标时，改插件默认图标不影响它；没设过的跟着变', () => {
-    const settings = { defaultIconDataUrl: 'data:image/png;base64,OLD' };
-    const withOwn = { faviconDataUrl: SITE_ICON };
-    const withoutOwn = { faviconDataUrl: null };
-    expect(effectiveIcon(withOwn, settings)).toBe(SITE_ICON);
-    expect(effectiveIcon(withoutOwn, settings)).not.toBe(effectiveIcon(withoutOwn, { defaultIconDataUrl: DEFAULT_ICON }));
-  });
-
-  it('坏数据不会漏进标签页：非字符串 / 空串都按没设置处理', () => {
-    for (const bad of [undefined, 42, '', {}, null]) {
-      expect(effectiveIcon({ faviconDataUrl: bad }, { defaultIconDataUrl: bad })).toBe(TRANSPARENT_PNG);
+/**
+ * 最小 PNG 解码：只支持本项目图标用到的 8 位 RGBA、非隔行格式。
+ * 拼接全部 IDAT → zlib 解压 → 按行去掉 filter（仅 None/Sub/Up）→ RGBA 像素。
+ */
+function decodeRgbaPng(dataUrl: string): { width: number; height: number; pixels: Uint8Array } {
+  const bin = atob(dataUrl.replace(/^data:image\/png;base64,/, ''));
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  const view = new DataView(bytes.buffer);
+  expect(Array.from(bytes.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  let width = 0;
+  let height = 0;
+  const idat: number[] = [];
+  for (let off = 8; off < bytes.length; ) {
+    const len = view.getUint32(off);
+    const type = String.fromCharCode(...bytes.slice(off + 4, off + 8));
+    const data = bytes.slice(off + 8, off + 8 + len);
+    if (type === 'IHDR') {
+      width = view.getUint32(off + 8);
+      height = view.getUint32(off + 12);
+      expect([data[8], data[9], data[12]]).toEqual([8, 6, 0]); // 8 位深、RGBA、非隔行
+    } else if (type === 'IDAT') idat.push(...data);
+    off += 12 + len;
+  }
+  const raw = new Uint8Array(inflateSync(Uint8Array.from(idat)));
+  const stride = width * 4;
+  const pixels = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    for (let x = 0; x < stride; x++) {
+      const v = raw[y * (stride + 1) + 1 + x]!;
+      const left = x >= 4 ? pixels[y * stride + x - 4]! : 0;
+      const up = y > 0 ? pixels[(y - 1) * stride + x]! : 0;
+      const upLeft = y > 0 && x >= 4 ? pixels[(y - 1) * stride + x - 4]! : 0;
+      if (filter === 0) pixels[y * stride + x] = v;
+      else if (filter === 1) pixels[y * stride + x] = (v + left) & 255;
+      else if (filter === 2) pixels[y * stride + x] = (v + up) & 255;
+      else if (filter === 3) pixels[y * stride + x] = (v + ((left + up) >> 1)) & 255;
+      else if (filter === 4) {
+        // Paeth
+        const p = left + up - upLeft;
+        const pa = Math.abs(p - left);
+        const pb = Math.abs(p - up);
+        const pc = Math.abs(p - upLeft);
+        const pred = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+        pixels[y * stride + x] = (v + pred) & 255;
+      } else throw new Error(`测试解码器不支持 PNG filter ${filter}`);
     }
-    expect(effectiveIcon({ faviconDataUrl: '' }, null)).toBe(TRANSPARENT_PNG);
-    expect(effectiveIcon({ faviconDataUrl: '' }, undefined)).toBe(TRANSPARENT_PNG);
+  }
+  return { width, height, pixels };
+}
+
+describe('不显示图标用的 TRANSPARENT_PNG', () => {
+  it('解码后每个像素 alpha=0（真正全透明，不是半透明色块）', () => {
+    const { width, height, pixels } = decodeRgbaPng(TRANSPARENT_PNG);
+    expect(width * height).toBeGreaterThan(0);
+    expect(pixels).toHaveLength(width * height * 4);
+    for (let i = 3; i < pixels.length; i += 4) expect(pixels[i]).toBe(0);
+  });
+});
+
+describe('iconHref：三态 → <link rel=icon> 的 href', () => {
+  it('site = 不接管（null）', () => {
+    expect(iconHref({ kind: 'site' })).toBeNull();
+  });
+
+  it('none = 全透明 PNG（图标位留空）', () => {
+    expect(iconHref({ kind: 'none' })).toBe(TRANSPARENT_PNG);
+  });
+
+  it('preset = 对应的内置图标 data URL', () => {
+    for (const id of ICON_PRESET_IDS) {
+      expect(iconHref({ kind: 'preset', id })).toBe(PRESET_ICONS[id]);
+      expect(PRESET_ICONS[id].startsWith('data:image/png;base64,')).toBe(true);
+    }
+    // 10 个题材各不相同，没有漏生成 / 复制粘贴
+    expect(new Set(Object.values(PRESET_ICONS)).size).toBe(ICON_PRESET_IDS.length);
+  });
+
+  it('内置图标就是 32×32 的 RGBA PNG（16px 标签栏按 2 倍屏取用）', () => {
+    for (const id of ICON_PRESET_IDS) {
+      const { width, height, pixels } = decodeRgbaPng(PRESET_ICONS[id]);
+      expect([width, height]).toEqual([32, 32]);
+      // 不是全透明：至少有一个不透明像素
+      let opaque = 0;
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i]! > 0) opaque++;
+      expect(opaque).toBeGreaterThan(0);
+    }
   });
 });

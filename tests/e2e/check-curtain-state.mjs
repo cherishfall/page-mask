@@ -30,6 +30,7 @@ const WIZARD = 'pagemask-wizard';
 const tid = (id) => `[data-testid="${id}"]`;
 
 const pageHtml = () => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Acme 阅读</title>
+<link rel="icon" href="/site-icon.png">
 <style>body{margin:0;background:#ffffff;font:14px system-ui}
 #content{min-height:900px;padding:24px}
 .ad{height:60px;margin:12px 16px;background:#fc0}</style></head><body>
@@ -48,7 +49,7 @@ const profileOf = (origin) => ({
   origin,
   switchState: 'disguised',
   disguisedTitle: '低调阅读',
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [
     {
       id: 'r-ad',
@@ -250,6 +251,28 @@ async function main() {
     check(shape.hosts === 1 && shape.buttons === 1, `第二次 coverPage 不叠加（hosts=${shape.hosts}, buttons=${shape.buttons}）`);
     await safeSend(ext.control, await tabId(), { t: 'curtainDismiss' });
     await waitFor(page, 'coverPage 场景撤幕布', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+
+    // ===================== 图标三态 × 幕布（#121） =====================
+    console.log('\n--- 图标三态：网站原图标不被接管；遮住固定空白；撤掉后回来 ---');
+    const iconHrefNow = () =>
+      page.evaluate(() => document.querySelector('link[rel~="icon"]')?.getAttribute('href') ?? null);
+    await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), icon: { kind: 'site' } });
+    await sendToBackground(ext.control, { t: 'enableSite', origin: ORIGIN, tabId: await tabId() });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    const siteIcon = await iconHrefNow();
+    check(siteIcon === '/site-icon.png', `「网站原来的图标」不接管站点图标（实际 ${siteIcon}）`);
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
+    const coveredIcon = await iconHrefNow();
+    check(
+      typeof coveredIcon === 'string' && coveredIcon.startsWith('data:image/png'),
+      `遮住时图标固定为空白图，不露出网站真图标（${String(coveredIcon).slice(0, 30)}…）`,
+    );
+    reply = await safeSend(ext.control, await tabId(), { t: 'curtainDismiss' });
+    await waitFor(page, '撤幕布（图标三态）', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
+    const restoredIcon = await iconHrefNow();
+    check(restoredIcon === '/site-icon.png', `撤掉后网站自己的图标回来（实际 ${restoredIcon}）`);
 
     // ===================== 已添加网站 + 幕布期间胶囊不渲染（#50 不回归） =====================
     console.log('\n--- 回归：遮住期间胶囊卸掉、三入口互通不改变既有口径 ---');

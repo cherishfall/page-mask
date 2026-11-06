@@ -60,7 +60,7 @@ async function main() {
           origin,
           switchState: 'original',
           disguisedTitle: null,
-          faviconDataUrl: null,
+          icon: { kind: 'none' },
           hideRules: [],
           floatingBtnPos: null,
           createdAt: now,

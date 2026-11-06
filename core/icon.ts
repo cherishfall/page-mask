@@ -1,92 +1,37 @@
 /**
- * 标签页图标：上传管线（#26）+ 默认图标的三层生效顺序（#55）。纯函数，canvas 绘制在管理页里做。
+ * 标签页图标三态（#121）：纯逻辑，图片本体放在 core/icon-presets.ts。
  *
- * 上传流程：检查原图（类型、≤5MB）→ createImageBitmap 解码 → 按 containRect 画进 32×32 透明画布 →
- * canvas.toDataURL('image/png') → 检查结果 < 20KB 且通过 core/validate 的 isSafeFaviconDataUrl。
- * 32×32 是 Chrome 在 2 倍屏上画 16px 标签页图标用的尺寸；PNG 最坏（随机噪点）约 4KB 原始像素，
- * base64 后也远低于 20KB。
+ * 三种取值各自对应「要不要接管 `<link rel="icon">`」：
+ * - site：完全不接管，网站自己的图标（含 SPA 换页时改的那张）保持原样；
+ * - none：写一张 1×1 真正全透明的 PNG，图标位留空；
+ * - preset：写内置图标的 data URL。
+ *
+ * 图标是页面里的 `<link href>`，必须是 data URL：不能指向扩展包内资源
+ * （那需要 web_accessible_resources，等于让任何站点都能探测到扩展）。
  */
-import { t } from './i18n';
+import type { TabIcon } from './types';
+import { PRESET_ICONS } from './icon-presets';
 
 /**
- * 默认图标：1×1 真正全透明 PNG（RGBA 全 0，单测解码校验）。图片能正常加载，Chrome 就照常
- * 显示它——全透明即标签页图标位留空（不会变成地球；地球只在没有图标或加载失败时出现）。
+ * 不显示图标用的 1×1 真正全透明 PNG（RGBA 全 0，单测解码校验）。图片能正常加载，
+ * Chrome 就照常显示它——全透明即标签页图标位留空（不会变成地球；地球只在没有图标或加载失败时出现）。
  * 不使用、也不复刻任何浏览器自带图标。
  */
 export const TRANSPARENT_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 /**
- * 实际使用的标签页图标，三层顺序：站点自己设的 > 插件设置里的默认图标 > 内置透明图标。
- * 参数做运行时类型检查：存储里的旧数据 / 坏数据可能不是字符串。
+ * 三态 → 实际要写进 `<link rel="icon">` 的 href。
+ * 返回 null 表示**不接管**图标（网站原来的图标）；调用方必须据此跳过图标相关的 DOM 操作。
  */
-export function effectiveIcon(
-  profile: { faviconDataUrl: unknown },
-  settings: { defaultIconDataUrl?: unknown } | null | undefined,
-): string {
-  if (nonBlank(profile.faviconDataUrl)) return profile.faviconDataUrl;
-  if (nonBlank(settings?.defaultIconDataUrl)) return settings.defaultIconDataUrl;
-  return TRANSPARENT_PNG;
-}
-
-function nonBlank(v: unknown): v is string {
-  return typeof v === 'string' && v !== '';
-}
-
-/** 原图上限：5MB（超过多半是照片原图，提示用户换小一点的图） */
-export const MAX_ICON_SOURCE_BYTES = 5 * 1024 * 1024;
-/** 压缩后的边长（像素） */
-export const ICON_SIZE = 32;
-/** 压缩结果 data URL 的长度上限（字符），远小于 validate 的 256KB 上限 */
-export const MAX_ICON_DATA_URL_LENGTH = 20 * 1024;
-/** 允许上传的原图类型（与文件选择框的 accept 一致） */
-export const ICON_SOURCE_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'image/x-icon',
-  'image/vnd.microsoft.icon',
-] as const;
-
-/**
- * 给用户看的图标错误（按当前界面语言，core/i18n）。用 getter 而不是常量字符串：
- * 语言切换后取到的就是新语言的那句，调用方不必自己重新拼。
- */
-export const ICON_ERROR = {
-  get type(): string {
-    return t().errors.iconType;
-  },
-  get tooLarge(): string {
-    return t().errors.iconTooLarge;
-  },
-  get decode(): string {
-    return t().errors.iconDecode;
-  },
-  get encode(): string {
-    return t().errors.iconEncode;
-  },
-};
-
-/** 检查原图；通过返回 null，否则返回给用户看的话 */
-export function checkIconSource(file: { size: number; type: string }): string | null {
-  if (!(ICON_SOURCE_TYPES as readonly string[]).includes(file.type)) return ICON_ERROR.type;
-  if (file.size > MAX_ICON_SOURCE_BYTES) return ICON_ERROR.tooLarge;
-  return null;
-}
-
-/**
- * 把 w×h 的原图等比缩放、居中放进 size×size 的正方形（不裁切，留白处透明）。
- * 返回 drawImage 的目标矩形；原图尺寸非法时返回 null。
- */
-export function containRect(
-  w: number,
-  h: number,
-  size: number = ICON_SIZE,
-): { dx: number; dy: number; dw: number; dh: number } | null {
-  if (!(w > 0 && h > 0 && size > 0) || !Number.isFinite(w) || !Number.isFinite(h)) return null;
-  const scale = Math.min(size / w, size / h);
-  const dw = Math.max(1, Math.round(w * scale));
-  const dh = Math.max(1, Math.round(h * scale));
-  return { dx: Math.floor((size - dw) / 2), dy: Math.floor((size - dh) / 2), dw, dh };
+export function iconHref(icon: TabIcon): string | null {
+  switch (icon.kind) {
+    case 'site':
+      return null;
+    case 'preset':
+      return PRESET_ICONS[icon.id] ?? TRANSPARENT_PNG;
+    case 'none':
+    default:
+      return TRANSPARENT_PNG;
+  }
 }

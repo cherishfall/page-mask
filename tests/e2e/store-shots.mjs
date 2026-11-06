@@ -115,7 +115,7 @@ const demoProfile = (overrides = {}) => ({
   origin: ORIGIN,
   switchState: 'disguised',
   disguisedTitle: '阅读',
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [
     rule('r_header', '页头导航', '#site-header'),
     rule('r_promo', '示例会员横幅', '#promo'),
@@ -327,7 +327,7 @@ try {
             origin: o,
             switchState: 'disguised',
             disguisedTitle: t,
-            faviconDataUrl: null,
+            icon: { kind: 'none' },
             hideRules: rules,
             floatingBtnPos: null,
             createdAt: stamp,

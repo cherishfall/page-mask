@@ -1,20 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   isLexicallySafeSelector,
-  isSafeFaviconDataUrl,
   isSafeSelector,
   readStoredSettings,
   toStoredSettings,
   isValidOrigin,
   isValidScope,
   isValidStrategy,
-  MAX_FAVICON_DATA_URL_LENGTH,
   readSettings,
   sanitizeProfile,
+  sanitizeTabIcon,
 } from './validate';
 import { createEmptyProfile } from './types';
-
-const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
 describe('候选选择器校验（表格驱动）', () => {
   const rejected: [string, unknown][] = [
@@ -62,14 +59,8 @@ describe('候选选择器校验（表格驱动）', () => {
   });
 });
 
-describe('图标、origin、范围、方案校验（表格驱动）', () => {
+describe('origin、范围、方案校验（表格驱动）', () => {
   const cases: [string, () => boolean, boolean][] = [
-    ['png data URL', () => isSafeFaviconDataUrl(PNG), true],
-    ['远程图标 https', () => isSafeFaviconDataUrl('https://evil.example/x.png'), false],
-    ['远程图标 //', () => isSafeFaviconDataUrl('//evil.example/x.png'), false],
-    ['svg data URL', () => isSafeFaviconDataUrl('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='), false],
-    ['非图片 data URL', () => isSafeFaviconDataUrl('data:text/html;base64,PGI+'), false],
-    ['超大图标', () => isSafeFaviconDataUrl(`data:image/png;base64,${'A'.repeat(MAX_FAVICON_DATA_URL_LENGTH)}`), false],
     ['javascript: origin', () => isValidOrigin('javascript:alert(1)'), false],
     ['ftp origin', () => isValidOrigin('ftp://x.com'), false],
     ['带路径的 origin', () => isValidOrigin('https://x.com/a'), false],
@@ -129,7 +120,7 @@ describe('sanitizeProfile', () => {
     const res = sanitizeProfile({
       ...createEmptyProfile('https://a.com'),
       switchState: 'weird',
-      faviconDataUrl: 'https://evil.example/x.png',
+      icon: 'weird',
       floatingBtnPos: { x: 'a', y: 1 },
       hideRules: [
         { id: 'r1', elementName: 'x', candidates: ['#ok'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false, createdAt: 1 },
@@ -138,27 +129,55 @@ describe('sanitizeProfile', () => {
       ],
     })!;
     expect(res.profile.switchState).toBe('original');
-    expect(res.profile.faviconDataUrl).toBeNull();
+    expect(res.profile.icon).toEqual({ kind: 'none' });
     expect(res.profile.floatingBtnPos).toBeNull();
     expect(res.profile.hideRules.map((r) => r.id)).toEqual(['r1']);
     expect(res.droppedRules).toBe(2);
   });
 
-  it('「保存过标题和图标」（#98）：显式值优先，旧数据按有没有标题 / 图标推导', () => {
+  it('「保存过标题和图标」（#98）：显式值优先，旧数据按有没有标题推导', () => {
     const empty = createEmptyProfile('https://a.com');
     const derive = (over: Record<string, unknown>) => sanitizeProfile({ ...empty, ...over })!.profile.titleIconSet;
 
     // 0.5.x 存量：只设过收起规则的网站没有一个标题 / 图标 → 没设置过
     expect(derive({ hideRules: [] })).toBe(false);
-    // 存量里设过标题或图标的网站 → 设置过（只有那条流程会写这两个字段）
+    // 存量里设过标题的网站 → 设置过（只有那条流程会写标题字段）
     expect(derive({ disguisedTitle: '阅读' })).toBe(true);
-    expect(derive({ faviconDataUrl: PNG })).toBe(true);
     // 显式 false 覆盖推导结果：用户点了「恢复网站原来的标题和图标」后，值清空但字段留下 false
     expect(derive({ disguisedTitle: '阅读', titleIconSet: false })).toBe(false);
     // 显式 true：保存时输入框清空（标题回落默认）也算设置过
     expect(derive({ titleIconSet: true })).toBe(true);
     // 坏类型按推导走，不炸
     expect(derive({ disguisedTitle: '阅读', titleIconSet: 'yes' })).toBe(true);
+  });
+});
+
+describe('sanitizeTabIcon（#121：三态白名单）', () => {
+  it('三种合法值原样保留', () => {
+    expect(sanitizeTabIcon({ kind: 'site' })).toEqual({ kind: 'site' });
+    expect(sanitizeTabIcon({ kind: 'none' })).toEqual({ kind: 'none' });
+    expect(sanitizeTabIcon({ kind: 'preset', id: 'doc' })).toEqual({ kind: 'preset', id: 'doc' });
+  });
+
+  it('缺失 / 畸形 / 不认识的编号 → 不显示图标（旧数据观感不变）', () => {
+    for (const bad of [undefined, null, 42, 'site', [], {}, { kind: 'preset' }]) {
+      expect(sanitizeTabIcon(bad)).toEqual({ kind: 'none' });
+    }
+    expect(sanitizeTabIcon({ kind: 'preset', id: 'unknown' })).toEqual({ kind: 'none' });
+    expect(sanitizeTabIcon({ kind: 'preset', id: 7 })).toEqual({ kind: 'none' });
+  });
+
+  it('旧的上传字段 faviconDataUrl 被当未知字段丢掉', () => {
+    const raw: Record<string, unknown> = { ...createEmptyProfile('https://a.com') };
+    delete raw.icon; // 旧数据没有新字段
+    raw.faviconDataUrl = 'data:image/png;base64,AAAA';
+    const res = sanitizeProfile(raw)!;
+    expect(res.profile.icon).toEqual({ kind: 'none' });
+    expect('faviconDataUrl' in res.profile).toBe(false);
+  });
+
+  it('新建站点默认「网站原来的图标」', () => {
+    expect(createEmptyProfile('https://a.com').icon).toEqual({ kind: 'site' });
   });
 });
 
@@ -204,7 +223,6 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
     const stored = toStoredSettings({ defaultTitle: '新建标签页' });
     expect(stored).toEqual({
       defaultTitle: '新建标签页',
-      defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
       toggleOpacity: 1,
@@ -212,7 +230,6 @@ describe('readStoredSettings / toStoredSettings（0.1.0 迁移）', () => {
     });
     expect(readStoredSettings(stored)).toEqual({
       defaultTitle: '新建标签页',
-      defaultIconDataUrl: null,
       curtainBtnPos: null,
       uiLanguage: 'auto',
       toggleOpacity: 1,

@@ -21,8 +21,8 @@
 - **保存前预览**：每个元素都能单独换收起方式，满意再保存
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
-- **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三层顺序——网站自己设的 > 插件默认图标 > 透明（不显示）。网站自己改标题时会被自动改回
-- **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、默认图标、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
+- **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
+- **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面右下角的小按钮，就在「按你的设置显示」和「网站原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
 - **幕布**：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住，再点一下回到刚才的样子；遮住后页面上是一颗睁眼的小按钮，可以拖动，鼠标移上去显出「恢复」。没添加过的网站也能用；也可以按快捷键（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）——胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
@@ -81,7 +81,7 @@
 1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（第一次会问这一次）
 2. 「收起内容」分两步：在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
 3. 想临时看网站原样，点页面右下角的小按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或小按钮旁边的「⋯」菜单
-4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题与图标、导出 / 导入、界面语言）
+4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题、导出 / 导入、界面语言、不透明度）
 5. 想临时挡住整页，用弹窗或小按钮上的「遮住」；恢复时点页面上的睁眼小按钮
 
 ### 已知限制
@@ -130,8 +130,8 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Preview before saving**: change the hiding method per element, then save
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
-- **Tab title & icon**: set a tab title (default "Reading") and icon per site; icons follow a three-layer order — the site's own icon > the default icon in Settings > transparent (nothing shown). If the site rewrites its title, it is changed back automatically
-- **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, default icon, export / import, interface language and version info, and is registered as Chrome's "Options" page
+- **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
+- **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Shown your way" and "As the site is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
 - **Curtain**: the "Cover this page / Restore this page" switch in the popup covers the whole page and the tab title, then takes you straight back. After covering, a small open-eye button remains — draggable, and hovering it reveals the word "Restore". It works on sites you have not added too. There is also a shortcut (Ctrl+Shift+X by default, ⌘+Shift+X on Mac) — the capsule, the popup and the shortcut share one state, so any of them can undo any other
@@ -190,7 +190,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
 3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button
-4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title and icon, export / import, interface language)
+4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title, export / import, interface language, opacity)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
 ### Known limitations

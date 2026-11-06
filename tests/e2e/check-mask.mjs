@@ -77,7 +77,7 @@ const profileOf = (origin) => ({
   origin,
   switchState: 'disguised',
   disguisedTitle: null,
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [
     maskRule('m1', '后加载推广', ['.late-ad']),
     maskRule('m2', '滚动容器推广', ['.inner-ad']),

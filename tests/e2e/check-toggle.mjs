@@ -75,7 +75,7 @@ const profileOf = (origin) => ({
   origin,
   switchState: 'disguised',
   disguisedTitle: '低调阅读', // 幕布用例断言标题时用固定值，不依赖浏览器界面语言
-  faviconDataUrl: null,
+  icon: { kind: 'none' },
   hideRules: [
     {
       id: 'r-ad',
@@ -591,7 +591,7 @@ async function main() {
     // 三样全空才不挂（#98：还要把「保存过标题和图标」的标记一起清掉，否则仍算有设置）
     await patchProfile(ext.control, ORIGIN, {
       disguisedTitle: null,
-      faviconDataUrl: null,
+      icon: { kind: 'none' },
       titleIconSet: false,
       hideRules: [],
     });

@@ -94,7 +94,7 @@ function seedProfile(origin) {
     // 本脚本后半段要验证标题补刀 / SPA 翻页后重新压标题，需要一个会改标题的站点
     titleIconSet: true,
     disguisedTitle: null,
-    faviconDataUrl: null,
+    icon: { kind: 'none' },
     hideRules: [
       {
         id: 'r_e2e_header',

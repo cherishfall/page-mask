@@ -13,7 +13,7 @@ import { browser } from 'wxt/browser';
 import { createPageMaskStorage, invalidExportFile, type ImportResult } from '@/core/storage';
 import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } from '@/core/titles';
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
-import type { HideRule, SiteProfile } from '@/core/types';
+import type { HideRule, SiteProfile, TabIcon } from '@/core/types';
 import { originPattern } from '@/core/registration';
 import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
@@ -32,8 +32,6 @@ export interface ManagementState {
   loaded: boolean;
   /** 存储里的全局默认标题（null = 跟随界面语言默认） */
   defaultTitle: string | null;
-  /** 存储里的全局默认标签页图标（null = 内置透明图标） */
-  defaultIcon: string | null;
   /** 界面语言偏好（#57）：auto 跟随浏览器，zh / en 锁定 */
   uiLanguage: UiLanguage;
   /** 右下角小胶囊的闲置不透明度（#110）：0.1–1，全局偏好 */
@@ -72,7 +70,6 @@ export function createManagementStore() {
     profiles: [],
     loaded: false,
     defaultTitle: null,
-    defaultIcon: null,
     uiLanguage: 'auto',
     toggleOpacity: DEFAULT_TOGGLE_OPACITY,
     drafts: {},
@@ -110,7 +107,6 @@ export function createManagementStore() {
     state.drafts = syncDrafts(state.drafts, stored, isEditing);
     state.profiles = list;
     state.defaultTitle = settings.defaultTitle;
-    state.defaultIcon = settings.defaultIconDataUrl;
     state.uiLanguage = settings.uiLanguage;
     state.toggleOpacity = settings.toggleOpacity;
     state.pendingOrigins = list.filter((_, i) => !granted[i]).map((p) => p.origin);
@@ -247,19 +243,13 @@ export function createManagementStore() {
     }
   }
 
-  /** 换 / 清除标签页图标：null = 回到默认的全透明图标（标签页上图标位留空） */
-  async function setIcon(origin: string, dataUrl: string | null): Promise<void> {
+  /** 换标签页图标三态（#121）：网站原来的 / 不显示 / 内置某个 */
+  async function setIcon(origin: string, icon: TabIcon): Promise<void> {
     await storage.updateProfile(origin, (d) => {
-      d.faviconDataUrl = dataUrl;
-      // 传过图标 = 设置过标题和图标（#98），标题跟着用默认值
+      d.icon = icon;
+      // 动过图标 = 设置过标题和图标（#98），标题跟着用默认值
       d.titleIconSet = true;
     });
-  }
-
-  /** 换 / 清除插件默认图标：null = 回到内置的全透明图标（#55） */
-  async function setDefaultIcon(dataUrl: string | null): Promise<void> {
-    await storage.putSettings({ defaultIconDataUrl: dataUrl });
-    state.defaultIcon = dataUrl;
   }
 
   /**
@@ -396,7 +386,6 @@ export function createManagementStore() {
     toggleSite,
     updateRules,
     setIcon,
-    setDefaultIcon,
     resetTitleIcon,
     setUiLanguage,
     setToggleOpacity,

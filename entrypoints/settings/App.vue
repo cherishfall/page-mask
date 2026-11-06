@@ -91,45 +91,6 @@
           </p>
         </section>
 
-        <!-- 默认图标 -->
-        <section class="card" aria-labelledby="pm-settings-icon-heading">
-          <h2 id="pm-settings-icon-heading">{{ t.settings.iconHeading }}</h2>
-          <p class="hint">{{ t.settings.iconIntro }}</p>
-          <div class="row">
-            <span class="row-label">{{ t.settings.currentIcon }}</span>
-            <img
-              v-if="store.state.defaultIcon"
-              class="favicon"
-              :src="store.state.defaultIcon"
-              :alt="t.settings.currentIconAlt"
-              data-testid="pm-settings-default-icon"
-            />
-            <span v-else class="hint" data-testid="pm-settings-default-icon-empty">{{ t.settings.iconUnset }}</span>
-            <label class="button file-button">
-              {{ iconBusy ? t.common.processing : store.state.defaultIcon ? t.common.replaceIcon : t.common.uploadIcon }}
-              <input
-                type="file"
-                data-testid="pm-settings-icon-input"
-                :accept="ICON_SOURCE_TYPES.join(',')"
-                aria-describedby="pm-settings-icon-hint"
-                :disabled="iconBusy"
-                @change="onIconChange"
-              />
-            </label>
-            <button
-              v-if="store.state.defaultIcon"
-              type="button"
-              class="ghost danger"
-              data-testid="pm-settings-icon-clear"
-              @click="clearIcon"
-            >
-              {{ t.common.clearIcon }}
-            </button>
-          </div>
-          <p id="pm-settings-icon-hint" class="hint">{{ t.settings.iconHint }}</p>
-          <p v-if="iconError" class="hint error" role="alert" data-testid="pm-settings-icon-error">{{ iconError }}</p>
-        </section>
-
         <!-- 右下角那颗小按钮（#110）：不透明度滑杆 + 真实胶囊预览。
              id="opacity" 是深链锚点（#120）：页面胶囊的「调整不透明度」跳到这一张 -->
         <section id="opacity" class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
@@ -291,7 +252,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { browser } from 'wxt/browser';
-import { ICON_SOURCE_TYPES } from '@/core/icon';
 import { localeName } from '@/core/i18n';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import FloatingToggle from '@/ui/FloatingToggle.vue';
@@ -300,7 +260,6 @@ import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { locale, t } from '@/ui/i18n';
 import { siteLabelOf } from '../management/site';
 import { DEFAULT_KEY, managementStore as store } from '../management/store';
-import { fileToIconDataUrl } from '../management/tab-icon';
 
 /**
  * 界面语言（#57）：单选绑定的是存储里的偏好。切换即写入全局设置，
@@ -318,8 +277,6 @@ const ISSUES_URL = 'https://github.com/cherishfall/page-mask/issues';
 const version = browser.runtime.getManifest().version;
 
 const replaceDialog = ref<HTMLDialogElement | null>(null);
-const iconBusy = ref(false);
-const iconError = ref('');
 
 /**
  * 快捷键（#101）：显示 Chrome 里**当前实际绑定**的值（用户改过就显示改后的），
@@ -431,35 +388,6 @@ onBeforeUnmount(() => {
   window.clearTimeout(highlightTimer);
 });
 
-async function onIconChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = ''; // 清空，之后再选同一个文件也会触发 change
-  if (!file) return;
-  iconBusy.value = true;
-  iconError.value = '';
-  try {
-    const res = await fileToIconDataUrl(file);
-    if (!res.ok) {
-      iconError.value = res.error;
-      return;
-    }
-    await store.setDefaultIcon(res.dataUrl);
-  } catch {
-    iconError.value = t.value.errors.iconSave;
-  } finally {
-    iconBusy.value = false;
-  }
-}
-
-async function clearIcon() {
-  iconError.value = '';
-  try {
-    await store.setDefaultIcon(null);
-  } catch {
-    iconError.value = t.value.errors.iconClear;
-  }
-}
 
 async function onImport(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -604,14 +532,6 @@ function onReplaceClose() {
 .row.quick {
   gap: 6px;
   margin-top: -2px;
-}
-
-.favicon {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--pm-border);
-  border-radius: 4px;
-  background: var(--pm-bg-subtle);
 }
 
 .import-mode {

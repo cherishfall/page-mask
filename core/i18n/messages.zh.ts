@@ -5,7 +5,7 @@
  * 写法约定：
  * - 纯文字写成字符串；带数字 / 名字的写成函数（例如 `staleCount(n)`），中英各自处理语序与单复数
  * - 键按界面分组（common / popup / management / settings / onboarding / wizard / editor / toggle /
- *   notice / curtain / errors）。`common` 放跨界面共用的几个词（保存 / 取消 / 上传图标…），
+ *   notice / curtain / errors）。`common` 放跨界面共用的几个词（保存 / 取消 / 关闭…），
  *   避免同一个词在四个界面各写一份、改一处漏三处
  * - 界面用词以 GLOSSARY.md 为准：「收起项」「按设置 / 原样」「遮住」…
  * - 本文件是键集合的**基准**：`Messages = typeof zh`，messages.en.ts 必须一一对应
@@ -29,10 +29,6 @@ export const zh = {
     gotIt: '知道了',
     loading: '正在读取…',
     opening: '正在打开…',
-    processing: '正在处理…',
-    uploadIcon: '上传图标',
-    replaceIcon: '换一张图标',
-    clearIcon: '清除图标',
     /** 回退出口（#99）：两处同名同物，动作说清结果、不叫「重置」 */
     resetTitleIcon: '恢复网站原来的标题和图标',
     /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
@@ -176,12 +172,23 @@ export const zh = {
       `停止输入后自动保存。留空就用「${fallback}」——标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
     iconHeading: '标签页图标',
-    iconIntro: '上面的「按你的设置显示」开关打开时，标签页用这张图当图标。',
-    currentIcon: '当前图标',
-    currentIconAlt: '当前的标签页图标',
-    iconUnsetDefault: '没设置：用插件设置里的默认图标',
-    iconUnsetBlank: '没设置：标签页上不显示图标',
-    iconHint: '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。',
+    iconIntro: '上面的「按你的设置显示」开关打开时，标签页用这里选的图标。',
+    iconSite: '网站原来的图标',
+    iconNone: '不显示图标',
+    iconPreset: '换成别的图标',
+    iconPickLabel: '选一个图标',
+    iconPresets: {
+      doc: '文档',
+      sheet: '表格',
+      mail: '邮件',
+      cal: '日历',
+      code: '代码',
+      meet: '会议',
+      chat: '聊天',
+      drive: '云盘',
+      book: '知识库',
+      chart: '报表',
+    },
 
     rulesHeading: '收起的内容',
     rulesEmpty: '还没有收起任何内容。',
@@ -203,6 +210,7 @@ export const zh = {
       auth: '没有拿到访问权限，网站设置还留着；需要时再点一次并选「允许」',
       toggle: '没能切换显示方式，请稍后再试一次',
       rules: '没能保存这次改动，请稍后再试一次',
+      icon: '没能保存图标，请稍后再试一次',
       reset: '没能删除这个网站的设置，请稍后再试一次',
     },
 
@@ -233,13 +241,6 @@ export const zh = {
     titleFootnote: (fallback: string) =>
       `留空就用「${fallback}」（跟随浏览器语言）。标题不能留成空白，空白时 Chrome 会改成显示网址。`,
 
-    iconHeading: '默认图标',
-    iconIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住整页时，没单独设过图标的网站也用它。',
-    currentIcon: '当前默认图标',
-    currentIconAlt: '当前的默认图标',
-    iconUnset: '没设置：标签页上不显示图标',
-    iconHint:
-      '支持 PNG、JPG、GIF、WebP、ICO，最大 5MB，会自动缩成 32×32。网站自己设的图标优先；网站和这里都没设时，标签页上不显示图标。',
 
     toggleHeading: '右下角的小按钮',
     toggleIntro: '「不透明度」调的是它闲着的时候有多淡；鼠标移上去、用键盘选中或拖动时，它会立刻变清楚。',
@@ -286,7 +287,7 @@ export const zh = {
       removed: (n: number, rules: number, list: string) =>
         `其中 ${n} 个网站在文件里没有，本机不再保留（共 ${rules} 项收起设置）：${list}`,
       incoming: (sites: number, rules: number) => `换成文件里的 ${sites} 个网站、${rules} 项收起设置`,
-      settings: '插件设置（默认标题、默认图标）也会换成文件里的',
+      settings: '插件设置（默认标题）也会换成文件里的',
       irreversible: '这一步不能撤销。不放心的话先取消，用「导出全部设置」留一份',
       confirm: '确认替换',
     },
@@ -337,8 +338,6 @@ export const zh = {
     progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
     titleHint: (fallback: string) =>
       `上面写什么，标签页就显示什么，现在就能看到。留空就用「${fallback}」——标题不能留成空白，空白时 Chrome 会改成显示网址。`,
-    iconHintWithDefault: '图标可以不传。不传的话，用插件设置里的默认图标。',
-    iconHintNoDefault: '图标可以不传。不传的话，标签页上不显示图标。',
     /** 选内容这一步的说明：一行一件事 */
     pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消选中。可以连着选好几个。', '选中的都列在下面，随时可以取消。'],
     adjustGroup: '调整选中的那一项',
@@ -446,7 +445,6 @@ export const zh = {
     shrinkAria: '切换成小按钮',
     expandAria: '切换成完整按钮',
     menuDelete: '删除这个网站的设置',
-    iconAlt: '将要显示在标签页上的图标',
   },
 
   /** 页内轻提示（ui/page-notice） */
@@ -462,7 +460,7 @@ export const zh = {
     restore: '恢复',
   },
 
-  /** 出错时给用户看的话（core 里的导出、导入、图标处理等） */
+  /** 出错时给用户看的话（core 里的导出、导入等） */
   errors: {
     invalidExportFile: '这个文件不是 PageMask 导出的设置文件',
     newerImport: '这个文件来自更新版本的 PageMask，先升级 PageMask 再导入',
@@ -471,13 +469,6 @@ export const zh = {
     invalidOrigin: (origin: string) => `网站地址不对：${origin}`,
     importFailed: (reason: string) => `导入失败：${reason}`,
     importFailedGeneric: '导入失败：这次没能完成，请稍后再试一次',
-    iconType: '只支持 PNG、JPG、GIF、WebP、ICO 格式的图片',
-    iconTooLarge: '图片太大了（超过 5MB），换一张小一点的',
-    iconDecode: '这张图片打不开，换一张 PNG 或 JPG 试试',
-    iconEncode: '图片处理失败，换一张试试',
-    iconSave: '没能保存图标，再试一次',
-    iconClear: '没能清除图标，再试一次',
-    iconProcess: '没能处理这张图标，再试一次',
   },
 };
 
