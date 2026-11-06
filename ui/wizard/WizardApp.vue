@@ -12,17 +12,24 @@
       aria-labelledby="pm-wiz-title"
       data-testid="pm-wizard-toolbar"
     >
-      <div class="pm-wiz-head">
+      <!-- 整条标题栏可拖（#119）：桌面客户端的惯例——按在标题文字、进度或空白处都能挪；
+           按钮（退出设置，以及将来的其它控件）按 NO_DRAG_SELECTOR 排除。把手只保留键盘路径。 -->
+      <div
+        class="pm-wiz-head"
+        :class="{ dragging }"
+        @pointerdown="onHeadDown"
+        @pointermove="onHeadMove"
+        @pointerup="endDrag"
+        @pointercancel="endDrag"
+        @lostpointercapture="endDrag"
+        @dragstart.prevent
+      >
         <button
           type="button"
           class="pm-wiz-handle"
-          :class="{ dragging }"
           :aria-label="t.wizard.dragAria"
           :title="t.wizard.dragTitle"
           data-testid="pm-wiz-drag"
-          @pointerdown="onHandleDown"
-          @pointermove="onHandleMove"
-          @lostpointercapture="dragging = false"
           @keydown="onHandleKey"
         >
           <GripIcon />
@@ -1667,6 +1674,13 @@ function removeDraft(d: Draft) {
 
 // ---------- 工具条拖动（modern-web-guidance「drag」） ----------
 
+/**
+ * 标题栏里这些元素自己处理指针事件，按在它们上面不算拖动（#119）。
+ * 把手必须放行：它是键盘入口，也是 E2E 的拖动入口。
+ */
+const NO_DRAG_SELECTOR =
+  'button:not(.pm-wiz-handle), a, input, select, textarea, label, [contenteditable="true"], [data-no-drag]';
+
 let grabOffset = { x: 0, y: 0 };
 
 function moveToolbar(left: number, top: number) {
@@ -1679,17 +1693,28 @@ function moveToolbar(left: number, top: number) {
   );
 }
 
-function onHandleDown(e: PointerEvent) {
+function onHeadDown(e: PointerEvent) {
   if (e.button !== 0 || !toolbarEl.value) return;
+  // 退出设置等按钮照常响应；只有空白处、标题、进度这些「不是控件」的地方才开始拖
+  if ((e.target as Element | null)?.closest(NO_DRAG_SELECTOR)) return;
+  // 不选中标题文字，也不触发原生拖拽
+  e.preventDefault();
   const r = toolbarEl.value.getBoundingClientRect();
   grabOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
   (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 }
 
-function onHandleMove(e: PointerEvent) {
+function onHeadMove(e: PointerEvent) {
   if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) return;
   dragging.value = true;
   moveToolbar(e.clientX - grabOffset.x, e.clientY - grabOffset.y);
+}
+
+/** 结束拖动：pointerup / pointercancel / lostpointercapture 三条路径都走这里，幂等 */
+function endDrag(e: PointerEvent) {
+  const head = e.currentTarget as HTMLElement;
+  if (head.hasPointerCapture(e.pointerId)) head.releasePointerCapture(e.pointerId);
+  dragging.value = false;
 }
 
 function onHandleKey(e: KeyboardEvent) {
@@ -1703,6 +1728,11 @@ function onHandleKey(e: KeyboardEvent) {
 function reclampToolbar() {
   if (tbPos.value) moveToolbar(tbPos.value.left, tbPos.value.top);
 }
+
+/** 两步之间切换时工具条高度会变（#119）：拖动过的位置要重新夹回可视区 */
+watch(phase, () => {
+  void nextTick(reclampToolbar);
+});
 
 // ---------- 保存（#53：点保存就是最后一下，不再弹第二个确认框） ----------
 

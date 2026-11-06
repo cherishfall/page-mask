@@ -1015,6 +1015,19 @@ async function main() {
     const t3 = await shadowRect(page, tid('pm-wizard-toolbar'));
     check(t3.x > t2.x + 10 && t3.y > t2.y + 10, `方向键移动工具条（→ ${Math.round(t3.x)},${Math.round(t3.y)}）`);
 
+    // #119：整条标题栏都能拖——从标题文字按下同样有效（按钮不参与拖动）
+    const headRect = await shadowRect(page, tid('pm-wiz-heading'));
+    const t4a = await shadowRect(page, tid('pm-wizard-toolbar'));
+    await page.mouse.move(headRect.x + headRect.w / 2, headRect.y + headRect.h / 2);
+    await page.mouse.down();
+    await page.mouse.move(headRect.x + headRect.w / 2 + 40, headRect.y + headRect.h / 2 + 30, { steps: 5 });
+    await page.mouse.up();
+    const t4b = await shadowRect(page, tid('pm-wizard-toolbar'));
+    check(
+      Math.abs(t4b.x - (t4a.x + 40)) < 2 && Math.abs(t4b.y - (t4a.y + 30)) < 2,
+      `从标题文字也能拖动整条工具条（${Math.round(t4a.x)},${Math.round(t4a.y)} → ${Math.round(t4b.x)},${Math.round(t4b.y)}）`,
+    );
+
     // 选择阶段 Esc：有选择 → 确认；确认框上 Esc = 继续设置；再确认退出
     await page.keyboard.press('Escape');
     await waitFor(page, '选择阶段 Esc 弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });

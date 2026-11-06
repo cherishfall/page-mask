@@ -26,17 +26,33 @@
   color: var(--pm-fg);
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
-  padding: var(--pm-space-2) var(--pm-space-3) var(--pm-space-3);
+  /* 内边距挪到标题栏上（#119）：顶部那圈空隙也进拖动命中区，视觉不变 */
+  padding: 0 0 var(--pm-space-3);
 }
 /* 拖动过：改用左上角坐标定位（由脚本夹紧在可视区内） */
 .pm-wiz-toolbar.moved {
   bottom: auto;
   transform: none;
 }
+/* 整条标题栏可拖（#119）：桌面客户端的惯例——按在标题文字、进度或空白处都能挪；
+   按钮照常是按钮。grab 是这颗浮层唯一的非文字可发现性线索。 */
 .pm-wiz-head {
   display: flex;
   align-items: center;
   gap: var(--pm-space-2);
+  padding: var(--pm-space-2) var(--pm-space-3);
+  cursor: grab;
+  /* 触摸时按标题栏是拖动，不是滚页面 */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.pm-wiz-head.dragging {
+  cursor: grabbing;
+}
+/* 按钮不显示抓手；把手自己仍用 grab（它的样式在后面，特异性更高） */
+.pm-wiz-head > button:not(.pm-wiz-handle) {
+  cursor: pointer;
 }
 .pm-wiz-headtext {
   display: flex;
@@ -47,8 +63,9 @@
 }
 .pm-wiz-handle {
   flex: none;
-  inline-size: 24px;
-  block-size: 24px;
+  /* 命中区 32（#119）：24 刚好卡在 WCAG 下限，抓着费劲；图形仍是 10×16，不跟着放大 */
+  inline-size: 32px;
+  block-size: 32px;
   padding: 0;
   border: 0;
   border-radius: var(--pm-radius-control);
@@ -62,7 +79,9 @@
 .pm-wiz-handle:hover {
   background: var(--pm-bg-subtle);
 }
-.pm-wiz-handle.dragging {
+/* 拖动中：光标停在把手（最内层）上时也要是「抓取中」，不能回退成 grab */
+.pm-wiz-head.dragging,
+.pm-wiz-head.dragging .pm-wiz-handle {
   cursor: grabbing;
 }
 /* 把手图形：与胶囊同一枚六点图标（ui/GripIcon.vue，#83）——此前这里用 ⠿ 字符，
@@ -614,8 +633,9 @@ button.pm-wiz-badge {
 }
 
 @media (pointer: coarse) {
+  /* 触屏：命中区 44（#119），图形不放大 */
   .pm-wiz-handle {
-    inline-size: 40px;
-    block-size: 40px;
+    inline-size: 44px;
+    block-size: 44px;
   }
 }
