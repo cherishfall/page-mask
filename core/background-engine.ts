@@ -453,7 +453,13 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
   }
 
-  /** 删除站点 / 收回权限后：把本扩展留在所有标签页上的静音解掉，别留下哑掉的标签页 */
+  /**
+   * 删除站点 / 收回权限后：把本扩展留在所有标签页上的静音解掉，别留下哑掉的标签页。
+   *
+   * **只做单向解除，绝不写 muted:true**。这里不能复用 reconcileMute()——那是双向对账，
+   * 会把「用户在标签页上手动取消的静音」按回去：删的是站点 B，却把站点 A 的标签页重新静音，
+   * 用户完全没碰 A。按 ADR-0012 的承诺，重新静音只该发生在用户拨开关 / 切两态 / 换地址时。
+   */
   async function releaseMute(): Promise<void> {
     let tabs: Browser.tabs.Tab[] = [];
     try {
@@ -461,7 +467,20 @@ export function createBackground({ browser }: BackgroundDeps): void {
     } catch {
       return;
     }
-    await Promise.allSettled(tabs.filter((t) => t.id !== undefined).map((t) => reconcileMute(t.id!, t.url)));
+    await Promise.allSettled(
+      tabs
+        .filter((t) => t.id !== undefined)
+        .map(async (t) => {
+          try {
+            // 与 reconcileMute 一样回查一次：query 的结果可能已经过期，静音状态也一样
+            const tab = await browser.tabs.get(t.id!);
+            if (!mutedByUs(tab?.mutedInfo)) return;
+            if (!(await shouldMute(t.url))) await browser.tabs.update(t.id!, { muted: false });
+          } catch {
+            // 标签页刚被关掉：没有需要收尾的状态
+          }
+        }),
+    );
   }
 
   // ---------- 隐藏样式（按文档） ----------

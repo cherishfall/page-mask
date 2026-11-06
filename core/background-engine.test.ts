@@ -1008,6 +1008,43 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.update).toHaveBeenCalledWith(siteTabId, { muted: false });
     });
 
+    it('删别的网站时：用户手动取消的静音不许被按回去（#125，releaseMute 必须单向）', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      // 用户在标签页上点了 Chrome 的小喇叭：现在是 muted=false / reason=user
+      stubs.muted.set(siteTabId, { muted: false, reason: 'user' });
+      stubs.update.mockClear();
+
+      expect(await send({ t: 'resetSite', origin: OTHER }, EXT_SENDER)).toMatchObject({ ok: true });
+
+      // 删的是别的网站，A 的设置还在，但「手动取消」是用户当下的意思，不该被追着按回去
+      expect(stubs.update).not.toHaveBeenCalledWith(siteTabId, { muted: true });
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: false, reason: 'user' });
+    });
+
+    it('删别的网站时：另一个网站上本扩展设的静音保持不动', async () => {
+      await withMute(true);
+      await send({ t: 'syncMute' }, muteSender());
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true, reason: 'extension' });
+      stubs.update.mockClear();
+
+      await send({ t: 'resetSite', origin: OTHER }, EXT_SENDER);
+
+      expect(stubs.update).not.toHaveBeenCalledWith(siteTabId, { muted: false });
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true });
+    });
+
+    it('删站点时：别人 / Chrome 自带 / 用户手动设的静音一律不动', async () => {
+      await withMute(false);
+      stubs.muted.set(siteTabId, { muted: true, reason: 'extension', extensionId: 'another-extension' });
+      stubs.update.mockClear();
+
+      await send({ t: 'resetSite', origin: ORIGIN }, EXT_SENDER);
+
+      expect(stubs.update).not.toHaveBeenCalled();
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ reason: 'extension', extensionId: 'another-extension' });
+    });
+
     it('只认标签页里的消息：扩展页面 / 网页不能借这条消息改静音', async () => {
       await withMute(true);
       stubs.update.mockClear();
