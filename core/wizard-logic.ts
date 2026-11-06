@@ -433,11 +433,13 @@ export function clampToViewport(
   pos: { left: number; top: number },
   size: { width: number; height: number },
   viewport: { width: number; height: number },
+  /** 与视口边缘至少留这么多（#123：拖到边上时面板贴死，读起来局促） */
+  inset = 0,
 ): { left: number; top: number } {
-  const maxLeft = Math.max(0, viewport.width - size.width);
-  const maxTop = Math.max(0, viewport.height - size.height);
+  const maxLeft = Math.max(inset, viewport.width - size.width - inset);
+  const maxTop = Math.max(inset, viewport.height - size.height - inset);
   return {
-    left: Math.max(0, Math.min(pos.left, maxLeft)),
-    top: Math.max(0, Math.min(pos.top, maxTop)),
+    left: Math.max(inset, Math.min(pos.left, maxLeft)),
+    top: Math.max(inset, Math.min(pos.top, maxTop)),
   };
 }

@@ -20,7 +20,9 @@
   transform: translateX(-50%);
   box-sizing: border-box;
   width: max-content;
-  max-width: min(560px, calc(100vw - 2 * var(--pm-space-4)));
+  /* 720 宽（#123）：装机反馈「看效果」那一屏太窄——清单有 名字 / 范围 / 调整 / ✕ 四列，
+     560 装不下，文字被挤成两三行。窄屏仍然两侧各留 16 */
+  max-width: min(720px, calc(100vw - 2 * var(--pm-space-4)));
   pointer-events: auto;
   background: var(--pm-bg);
   color: var(--pm-fg);
@@ -28,8 +30,10 @@
   border: 1px solid var(--pm-border-overlay);
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
-  /* 内边距挪到标题栏上（#119）：顶部那圈空隙也进拖动命中区，视觉不变 */
-  padding: 0 0 var(--pm-space-3);
+  /* 内边距挪到标题栏上（#119）：顶部那圈空隙也进拖动命中区，视觉不变。
+     但左右内边距必须留在工具条上（#123 复查）：正文贴着面板边缘、文字顶到边上，
+     正是上批把它们一起挪走造成的——标题栏用负边距自己撑到最外，正文这层留 12 */
+  padding: 0 var(--pm-space-4) var(--pm-space-3);
 }
 /* 拖动过：改用左上角坐标定位（由脚本夹紧在可视区内） */
 .pm-wiz-toolbar.moved {
@@ -42,7 +46,9 @@
   display: flex;
   align-items: center;
   gap: var(--pm-space-2);
-  padding: var(--pm-space-2) var(--pm-space-3);
+  /* 负边距把标题栏撑到面板最外：拖动命中区含到边缘，正文仍由工具条的 12 兜住（#123） */
+  margin-inline: calc(-1 * var(--pm-space-4));
+  padding: var(--pm-space-2) var(--pm-space-4);
   cursor: grab;
   /* 触摸时按标题栏是拖动，不是滚页面 */
   touch-action: none;

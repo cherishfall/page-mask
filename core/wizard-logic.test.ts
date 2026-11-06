@@ -326,6 +326,14 @@ describe('clampToViewport 工具条拖动 / 方向键移动后仍在可视区（
   it('窗口比工具条还小时贴左上，不出现负数', () => {
     expect(clampToViewport({ left: 10, top: 10 }, size, { width: 300, height: 50 })).toEqual({ left: 0, top: 0 });
   });
+  // #123：拖到边上时与视口边缘留 inset，不贴死
+  it('给了 inset 时四边都留出距离', () => {
+    expect(clampToViewport({ left: -50, top: -10 }, size, vp, 16)).toEqual({ left: 16, top: 16 });
+    expect(clampToViewport({ left: 900, top: 790 }, size, vp, 16)).toEqual({ left: 584, top: 684 });
+  });
+  it('inset 下窗口比工具条还小也不出现负数', () => {
+    expect(clampToViewport({ left: 5, top: 5 }, size, { width: 300, height: 50 }, 16)).toEqual({ left: 16, top: 16 });
+  });
 });
 
 describe('预览这一步的「同类一起（N）」：数量实时算（#53）', () => {

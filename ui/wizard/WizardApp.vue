@@ -44,7 +44,7 @@
           class="pm-btn small"
           :aria-label="t.wizard.exit"
           data-testid="pm-wiz-exit"
-          @click="requestExit"
+          @click="requestExit(true)"
         >
           {{ t.wizard.exit }}
         </button>
@@ -484,6 +484,8 @@ let draftKeySeq = 0;
 
 /** 方向键每次移动工具条的距离 */
 const KEY_STEP = 16;
+/** 拖到边上时与视口边缘保持的距离（#123，与 CSS 里窄屏留的 16 一致） */
+const TOOLBAR_INSET = 16;
 const ARROW_DIRS: Record<string, readonly [number, number]> = {
   ArrowLeft: [-1, 0],
   ArrowRight: [1, 0],
@@ -612,6 +614,8 @@ const progressText = computed(() => {
   return t.value.wizard.progress(index, total);
 });
 const exitBody = computed(() => {
+  // 按钮点进来时可能什么都没有改（#123）：如实说明为什么要问这一次
+  if (!isDirty()) return t.value.wizard.exitBodyNoChanges;
   // 「收起内容」草稿里有多少项就提示多少；「标题和图标」没有清单，只说标题与图标不保存
   return previewCount.value > 0 ? t.value.wizard.exitBodySelected(previewCount.value) : t.value.wizard.exitBodyPlain;
 });
@@ -727,8 +731,13 @@ function onKeyDown(e: KeyboardEvent) {
 
 // ---------- 退出 ----------
 
-function requestExit() {
-  if (!isDirty()) {
+/**
+ * 请求退出（#123）：
+ * - 点「退出设置」按钮一律先问一次——这颗按钮挨着可拖动的标题栏，误触一次就白干；
+ * - Esc 只在真有未保存的东西时才问（Esc 是有意按的，没必要每次都拦）。
+ */
+function requestExit(always = false) {
+  if (!always && !isDirty()) {
     void finish(false);
     return;
   }
@@ -1694,6 +1703,8 @@ function moveToolbar(left: number, top: number) {
     { left, top },
     { width: tb.offsetWidth, height: tb.offsetHeight },
     { width: window.innerWidth, height: window.innerHeight },
+    // 拖到边上时至少留 16（#123）：贴死视口边缘看着局促，也容易让人以为被截断
+    TOOLBAR_INSET,
   );
 }
 

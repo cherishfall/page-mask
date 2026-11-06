@@ -5,6 +5,32 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.6.6] - 2026-11-06
+
+装机复核抓到的两处：面板挤、退出太容易误触。
+
+### 中文
+
+#### 修复
+
+- **「看效果」那一屏太挤**：面板最大宽度 560 → 720，正文字号不变但一行放得下「名字 / 范围 / 调整 / ✕」；左右内边距恢复到 16——上批把内边距挪到标题栏时**连左右一起挪走了**，文字会顶到面板边缘（#123）
+- **拖动工具条不再贴死视口边缘**：四边至少留 16，视觉上不再是「被截断」（#123）
+
+#### 变更
+
+- **「退出设置」按钮每次都先问一次**：0.6.4 起整条标题栏可拖，按在按钮上不拖动、松手就是一次点击，误触一次这次选的内容全没；现在无论有没有改动都会确认，没改动时说明「这次还没有未保存的改动」。Esc 仍然只在真有未保存内容时才问（#123）
+
+### English
+
+#### Fixed
+
+- **The "see how it looks" panel was cramped**: max width 560 → 720 so the four columns (name / scope / adjust / remove) fit on one line, and the body's horizontal padding is back to 16 — the previous release moved the padding onto the title bar and took the left/right padding with it, so text ran to the panel edge (#123)
+- **Dragging the toolbar no longer pins it to the viewport edge**: it keeps a 16px gap on all sides (#123)
+
+#### Changed
+
+- **"Exit setup" now always asks once**: since 0.6.4 the whole title bar is draggable, so a slightly-off press lands as a click and throws away the current picks; the confirmation now appears whether or not anything changed, and says so plainly when nothing is unsaved. Esc still only asks when there is unsaved work (#123)
+
 ## [0.6.5] - 2026-11-06
 
 0.6.4 交付前的「新眼睛」复查抓到的两处，都属于同一条：看着不像一套。

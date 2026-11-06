@@ -372,6 +372,7 @@ export const en: Messages = {
       'The items you removed are still in your settings. After you exit, the tab goes back to its real name and the page to its original look.',
     exitBodyPlain:
       'The title and icon you changed won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.',
+    exitBodyNoChanges: 'Nothing here is unsaved yet — exiting won’t change your current settings.',
     exitStay: 'Keep setting up',
     exitConfirm: 'Exit',
     notSavedTitle: 'Not saved',

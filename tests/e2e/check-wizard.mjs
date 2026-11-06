@@ -349,6 +349,30 @@ async function main() {
     const vh = await page.evaluate(() => innerHeight);
     check(tb.y > vh / 2 && tb.y + tb.h <= vh, `工具条默认在底部，不挡页面顶部导航（top=${Math.round(tb.y)}，视口高 ${vh}）`);
 
+    // #123：刚打开、什么都没改，点「退出设置」也先问一次（按钮挨着拖动区，误触要拦一下）
+    await clickInShadow(page, HOST, tid('pm-wiz-exit'));
+    await waitFor(
+      page,
+      '没改动时点退出也弹确认',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const plainBody = await page.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText,
+      HOST,
+    );
+    check(plainBody.includes('没有未保存的改动'), `什么都没改时如实说明还要问这一次（${plainBody.replace(/\s+/g, ' ').slice(0, 40)}…）`);
+    await clickInShadow(page, HOST, tid('pm-wiz-exit-no'));
+    await waitFor(
+      page,
+      '「继续设置」关掉确认框',
+      (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    check(await shadowExists(page, HOST, tid('pm-wiz-exit')), '选了「继续设置」之后向导还在');
+
     // ===================== 第 2 步重排（#52）：说明分行、按用途分组、0 项出口 =====================
     console.log('\n--- 选内容：说明分行、按钮分组、0 项时前进禁用 ---');
     const leadLines = await shadowTexts(page, `${tid('pm-wiz-pick-lead')} li`);
@@ -901,8 +925,16 @@ async function main() {
     check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 0, '删到 0 项：回到点选阶段，没有序号牌');
     await waitVisible(page, '删到 0 项：活动栏恢复', '#promo');
 
-    // 没有已选内容时「取消」直接退出
+    // 没有已选内容时点「退出设置」：先确认一次，再退出（#123）
     await clickInShadow(page, HOST, tid('pm-wiz-exit'));
+    await waitFor(
+      page,
+      '退出前先确认',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await clickInShadow(page, HOST, tid('pm-wiz-exit-yes'));
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
     check(await visible(page, '#promo'), '退出不保存：预览样式全部撤掉');
 
@@ -1003,7 +1035,10 @@ async function main() {
     await page.mouse.move(1, 1, { steps: 5 });
     await page.mouse.up();
     const t2 = await shadowRect(page, tid('pm-wizard-toolbar'));
-    check(t2.x >= 0 && t2.y >= 0 && t2.x < 1 && t2.y < 1, `拖出左上角时贴边，不出可视区（${Math.round(t2.x)},${Math.round(t2.y)}）`);
+    check(
+      t2.x >= 16 && t2.y >= 16 && t2.x < 17 && t2.y < 17,
+      `拖出左上角时留 16 的边，不出可视区（${Math.round(t2.x)},${Math.round(t2.y)}）`,
+    );
     await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-drag"]').focus(), HOST);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
@@ -1259,6 +1294,14 @@ async function main() {
     check((await progressOf(pageOnly)) === '第 1 步 / 共 2 步', `「收起内容」从点选开始（${await progressOf(pageOnly)}）`);
     check(!(await shadowExists(pageOnly, HOST, tid('pm-wiz-drafts-empty'))), '不把空清单摆给用户看');
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit'));
+    await waitFor(
+      pageOnly,
+      '退出前先确认（没有已选内容）',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-exit-yes'));
     await waitFor(pageOnly, '向导关闭（没有已选内容）', (h) => !document.querySelector(h), [HOST]);
     check(true, '这个入口打开的向导可以正常退出');
 
