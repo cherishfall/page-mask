@@ -108,8 +108,16 @@
   /* 浮层阴影 / 对话框遮罩用的半透明色（非文字、非控件边界，不参与对比度门槛） */
   --pm-shadow-color-light: rgb(0 0 0 / 0.12);
   --pm-shadow-color-dark: rgb(0 0 0 / 0.5);
-  --pm-ring-color-light: rgb(0 0 0 / 0.06);
-  --pm-ring-color-dark: rgb(255 255 255 / 0.08);
+  /* 浮层描边与近/远两层阴影（#118）。此前浮层只靠一圈 6% 黑的环分开，白底上 1.14:1、
+     深色 1.28:1，等于没有边界——现在改成真实 1px 描边（浅 1.69:1 / 深 1.92:1）
+     + 近/中/远三层阴影。浮层外框是装饰性边界（面板里的控件另有 --pm-border-control 3.25:1），
+     按 WCAG 1.4.11 不设 3:1 门槛。 */
+  --pm-border-overlay-light: rgb(0 0 0 / 0.22);
+  --pm-border-overlay-dark: rgb(255 255 255 / 0.2);
+  --pm-shadow-near-light: rgb(0 0 0 / 0.06);
+  --pm-shadow-near-dark: rgb(0 0 0 / 0.45);
+  --pm-shadow-far-light: rgb(0 0 0 / 0.06);
+  --pm-shadow-far-dark: rgb(0 0 0 / 0.5);
   --pm-backdrop-light: rgb(0 0 0 / 0.32);
   --pm-backdrop-dark: rgb(0 0 0 / 0.56);
 
@@ -134,11 +142,19 @@
   --pm-success: var(--pm-success-light);
   --pm-on-success: var(--pm-on-success-light);
   --pm-shadow-color: var(--pm-shadow-color-light);
-  --pm-ring-color: var(--pm-ring-color-light);
+  --pm-shadow-near: var(--pm-shadow-near-light);
+  --pm-shadow-far: var(--pm-shadow-far-light);
+  --pm-border-overlay: var(--pm-border-overlay-light);
   --pm-backdrop: var(--pm-backdrop-light);
 
-  /* 浮层：实底卡片 + 阴影 + 1px 细环（不再用深色玻璃） */
-  --pm-shadow-overlay: 0 8px 24px var(--pm-shadow-color), 0 0 0 1px var(--pm-ring-color);
+  /* 浮层：实底卡片 + 三层阴影（#118）。
+   * 原「0 0 0 1px 6% 环」在白底上只有 1.14:1，等于没有边界；边界改由浮层自己的
+   * border: 1px solid var(--pm-border-overlay) 表达——forced-colors 下阴影会被丢弃，
+   * 只有 border 留得住。 */
+  --pm-shadow-overlay:
+    0 1px 2px var(--pm-shadow-near),
+    0 6px 16px var(--pm-shadow-color),
+    0 16px 32px var(--pm-shadow-far);
 
   /* ── 排版：字号阶梯 12 / 13 / 15 / 20（不再使用 11px），行高 1.5 ──
    * 用 px 而不是 rem：页内 UI 不能受网页根字号影响 */
@@ -201,7 +217,9 @@
     --pm-success: var(--pm-success-dark);
     --pm-on-success: var(--pm-on-success-dark);
     --pm-shadow-color: var(--pm-shadow-color-dark);
-    --pm-ring-color: var(--pm-ring-color-dark);
+    --pm-shadow-near: var(--pm-shadow-near-dark);
+    --pm-shadow-far: var(--pm-shadow-far-dark);
+    --pm-border-overlay: var(--pm-border-overlay-dark);
     --pm-backdrop: var(--pm-backdrop-dark);
   }
 }
@@ -230,7 +248,9 @@
     --pm-success: light-dark(var(--pm-success-light), var(--pm-success-dark));
     --pm-on-success: light-dark(var(--pm-on-success-light), var(--pm-on-success-dark));
     --pm-shadow-color: light-dark(var(--pm-shadow-color-light), var(--pm-shadow-color-dark));
-    --pm-ring-color: light-dark(var(--pm-ring-color-light), var(--pm-ring-color-dark));
+    --pm-shadow-near: light-dark(var(--pm-shadow-near-light), var(--pm-shadow-near-dark));
+    --pm-shadow-far: light-dark(var(--pm-shadow-far-light), var(--pm-shadow-far-dark));
+    --pm-border-overlay: light-dark(var(--pm-border-overlay-light), var(--pm-border-overlay-dark));
     --pm-backdrop: light-dark(var(--pm-backdrop-light), var(--pm-backdrop-dark));
   }
 }
@@ -253,6 +273,12 @@
     --pm-bg-control-active: Canvas;
     --pm-border: CanvasText;
     --pm-border-control: CanvasText;
+    /* #118：此模式下浏览器丢弃 box-shadow，浮层边界只剩 border —— 必须给它一个系统色，
+       否则面板底（Canvas）与页面底同色，等于没有边 */
+    --pm-border-overlay: CanvasText;
+    --pm-shadow-color: transparent;
+    --pm-shadow-near: transparent;
+    --pm-shadow-far: transparent;
     --pm-danger: CanvasText;
     --pm-danger-active: CanvasText;
     --pm-on-danger: Canvas;

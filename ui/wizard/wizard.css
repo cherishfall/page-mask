@@ -24,6 +24,8 @@
   pointer-events: auto;
   background: var(--pm-bg);
   color: var(--pm-fg);
+  /* 白面压白底网页时要有一圈看得见的边（#118）：只靠阴影在纯白上是糊的 */
+  border: 1px solid var(--pm-border-overlay);
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
   /* 内边距挪到标题栏上（#119）：顶部那圈空隙也进拖动命中区，视觉不变 */
@@ -599,7 +601,8 @@ button.pm-wiz-badge {
   pointer-events: auto;
   background: var(--pm-bg);
   color: var(--pm-fg);
-  border: 0;
+  /* #118：与工具条同一套浮层边界，别再写 border: 0 */
+  border: 1px solid var(--pm-border-overlay);
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
   padding: var(--pm-space-4);

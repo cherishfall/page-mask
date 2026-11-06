@@ -336,7 +336,7 @@
   - `--pm-fg: light-dark(#1f2329, #e5e7eb)`；`--pm-fg-muted: light-dark(#6b7280, #9aa0a6)`（白底 4.83、#f6f7f9 底 4.51、深底 5.98）
   - `--pm-bg: light-dark(#ffffff, #1f2329)`；`--pm-bg-subtle: light-dark(#f6f7f9, #2a2e35)`；`--pm-border: light-dark(#d1d5db, #3f444c)`；输入框和控件边界用 `#8a8f98`（3.25:1，满足 1.4.11）
   - 危险 `#b91c1c`（6.47）；警告 / 失效 `#c2410c`（序号牌也用它，5.18）；成功 `#15803d`（5.02）
-  - 页内浮层统一用 `--pm-bg` 实底卡片 + 阴影 `0 8px 24px rgb(0 0 0 / .12), 0 0 0 1px rgb(0 0 0 / .06)`，不再混用深色玻璃
+  - 页内浮层统一用 `--pm-bg` 实底卡片 + 阴影 `0 8px 24px rgb(0 0 0 / .12), 0 0 0 1px rgb(0 0 0 / .06)`，不再混用深色玻璃（**#118 起改为三层阴影 + `--pm-border-overlay` 真实描边，见 `docs/design-ui.md`「浮层边界与投影」**）
   - 加上 `@media (forced-colors: active)` 兜底（`color`）：边框改用 `CanvasText`，选中态改用 `Highlight`
 - **字号阶梯**（`system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`，行高 1.5）：12（辅助说明，最小值，**不再用 11px**）/ 13（正文、控件）/ 15（卡片标题，600）/ 20（页面标题，600）。数字用 `font-variant-numeric: tabular-nums`。
 - **间距**：4 的倍数：4 / 8 / 12 / 16 / 24 / 32。卡片内边距 16，组件间距 12，页面边距 24。
