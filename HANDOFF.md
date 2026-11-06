@@ -1,9 +1,9 @@
 # 交接 / 工作前沿（0.7.x 批次）
 
-最后更新：2026-11-06 20:55
-当前版本：**`0.7.1` 待发版**（`package.json` 已改 `0.7.1`，`.output/page-mask-0.7.1-chrome.zip` 已生成；tag / release 未建）。分支 `master`，`origin/master` = `58a4f20`。
+最后更新：2026-11-06 21:00
+当前版本：**`0.7.1`**（tag `v0.7.1`，release 已发布，附 `.output/page-mask-0.7.1-chrome.zip`），分支 `master`，`origin/master` = `6c60d26`。
 `0.7.0` 已发布（tag `v0.7.0` + release + zip），issue#116 已关；复查票 #125–#130 逐票提交并立即推送、全部关闭。
-下一步：第四轮独立审查只核 #130 修复本身；确认无新问题后 `chore(release): 0.7.1` → push → annotated tag `v0.7.1` → release 附 zip → 回填本文件。
+下一步：代码侧已判定收敛，只剩**真机人工路径**（见下节），提交商店前由产品所有者完成。
 本批目标：实现 issue#116「按站点收起图片 / 收起视频 / 静音网页」→ 发版 `0.7.0` → 全量复查并迭代到收敛 → 发版 `0.7.1`。
 
 ## 状态表
@@ -17,13 +17,13 @@
 | 子票 3 文档 + ADR-0012 | **已完成、已推送** | `21a3e13`：ADR-0012、`docs/design.md` / `design-ui.md` / `dev/design-116.md` / `dev/DEVLOG.md`、`README.md`、`CHANGELOG.md`（0.7.0 中英）、`CHROMEWEBSTORE.md`、`PRIVACY.md`；顺手修掉 PRIVACY 里废弃的「一键清空」与商店材料的「菜单四项 / 427 项」旧口径 |
 | 发版 0.7.0 | **已完成** | `fd78e75` 版本号 → push → annotated tag `v0.7.0`（中文 changelog 小节为 message）→ `gh release create` 附 0.7.0 zip；发版门禁：compile / 679 单测 / check:docs / check:package（32 文件）/ 全套 E2E 841 项全绿 |
 | 全量复查（含视觉）→ 新 issue → 0.7.x 迭代 | **三轮复查完成，#125–#130 全部关闭** | 独立代码复查 + 9 张真实渲染截图交「新眼睛」审（`tmp/review-0.7.0/`）；逐轮结论见下 |
-| 发版 0.7.1 | **待完成** | 版本号 / CHANGELOG / 商店材料已改待提交；693 单测、842 项 E2E 断言、check:docs / check:package 全绿；tag 与 release 未建 |
+| 发版 0.7.1 | **已完成** | `6c60d26` 版本号 + 双语 CHANGELOG + 商店材料 → push → annotated tag `v0.7.1`（中文 changelog 小节为 message）→ release 附 0.7.1 zip；发版门禁：compile / 693 单测 / check:docs / check:package（32 文件）/ 全套 E2E 842 项断言全绿 |
 
 ## 建议顺序
 
-1. `0.7.0` 发版与三轮复查（#125–#130）已逐票提交、立即推送并关票；`origin/master` = `58a4f20`。
-2. 只剩收口：第四轮独立审查复核 #130 修复本身 → 若只剩建议级 / 人工项，发 `0.7.1` 并回填本文件。
-3. 之后剩下的都是**真机人工路径**（见下节），不是代码遗留问题；提交商店前由产品所有者完成。
+1. `0.7.0` 发版、三轮复查（#125–#130）与 `0.7.1` 发版已全部落地、逐票推送；`origin/master` = `6c60d26`。
+2. 代码侧已收敛：三轮独立审查 + 主会话对最后一处修复的逐条核对，门禁全绿（693 单测 / 842 项 E2E 断言）。
+3. 剩下的是**真机人工路径**（见下节），不是代码遗留问题；提交商店前由产品所有者完成。
 
 ## 硬约束（别踩）
 
@@ -91,6 +91,16 @@
 - ✅ 已核对无误：`releaseMute()` 用同一次 `tabs.get()` 取地址与静音状态、`resetSite` / `permissions.onRemoved` / profile 增删三条删除类路径、小图 rect=0 不回退属性尺寸、`onLoad` 自己排帧、`forget()` 清 pending、`restoreVideos()` 一轮一清、#125 的单向承诺。
 - **#129（#128 关闭后自查）**：`childList` 里「把节点挪位置」原先先 `collect` 后 `forget`，刚排进 `pending` 的元素被抹掉。第一版改成「同一条记录里两个列表都出现的节点视为移动」，回归单测立刻抓出 jsdom 会把移动拆成两条记录、静音被还原一帧；最终改成 `forget()` 用 `node.isConnected` 判断——还在文档里就只重判、不还原、不删这一轮的原值记录。补回归单测盯住 `muted` 的赋值序列（只断言最终值看不出闪一帧）。
 - 判定不改：`openWizard` 不解除标签页静音（ADR-0012 已写明）、`shouldMute(undefined)` 取舍、说明小字对比度、菜单项外观、`pm-tg-box` 深色对比度、group 嵌 region 的冗余、文案历史条目。
+
+## 第四轮收口判定（复核 #130 修复本身）
+
+独立复核者已派发，主会话同步按源码 + 测试逐条核对；按已完成的门禁判定**未发现新的功能性问题，代码侧可收敛**：
+
+- `releaseMute()` 本身未改，仍是「`mutedByUs && !shouldMute` 才写 `muted:false`」，#125 的单向承诺不变；删别的网站时另一个网站上本扩展设的静音保持不动、用户手动取消的静音不被按回去，后台 80 项单测全过。
+- 正常已授权路径：测试夹具默认授予 origin，`permissions.contains` 为真；693 单测与 842 项 E2E 断言（含 `check-media.mjs` 的静音归属、原样态还原）全绿。
+- 非 http(s) / 读不到地址：`shouldMute(undefined)` 提前返回 false；`file://`、`chrome-extension://` 拼出的 pattern 若让 `permissions.contains` 抛错，被 catch 成「不该静音」，不会越界。
+- 竞态：`permissions.onRemoved` 与 `resetSite()` 可能同时触发 `releaseMute()`，两者都单向且幂等；`resetSite()` 内部先撤权、再删配置，storage 变化还会再收一次尾。
+- 同类排查：CSS 注入与内容脚本注册本就由 `reconcile()` 按站点权限对账，静音是唯一「不随配置消失、由浏览器记在标签页上」的状态，现已把权限算进判定。
 
 ## 待人工真机（不属于代码遗留问题，提交商店前完成）
 
