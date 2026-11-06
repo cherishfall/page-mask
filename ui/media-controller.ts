@@ -127,6 +127,11 @@ export function createMediaController(doc: Document): MediaController {
   /** 子树被移出文档：当场按原值还原并忘掉它，别让强引用钉住已被信息流替换掉的视频（#126 / #128） */
   function forget(node: Node): void {
     if (!(node instanceof Element)) return;
+    // 还在文档里 = 只是「挪了个位置」，不是移除（#129）。DOM 既可能把 appendChild 一个已有
+    // 节点的「移除 + 插入」合进一条 childList 记录，也可能拆成两条，靠记录怎么排判断不可靠；
+    // isConnected 才是准的。移动时别还原静音、别删这一轮的原值记录，也别把它从 pending 里
+    // 抹掉——换容器后渲染尺寸可能变，仍要重判一次。
+    if (node.isConnected) return;
     const videos: HTMLVideoElement[] = [];
     if (node.tagName === 'IMG' || node.tagName === 'VIDEO') {
       pending.delete(node); // 后台标签页的 rAF 会被暂停，pending 也是强引用，一并清掉
@@ -149,8 +154,10 @@ export function createMediaController(doc: Document): MediaController {
   function onMutation(records: MutationRecord[]): void {
     for (const r of records) {
       if (r.type === 'childList') {
-        for (const n of r.addedNodes) collect(n);
+        // 先忘掉真移除的、再收新增的：removedNodes 里若有「只是挪位置」的节点，forget() 会
+        // 按 isConnected 自己放行，这里再 collect 一次让它按新容器重判（#129）。
         for (const n of r.removedNodes) forget(n);
+        for (const n of r.addedNodes) collect(n);
       } else if (r.type === 'attributes' && r.target instanceof Element) {
         // src / srcset 换了（懒加载占位换成真图），或 class / style 改了尺寸：重新判定一次
         if (r.target.tagName === 'IMG') pending.add(r.target);

@@ -222,6 +222,36 @@ describe('视频停播与静音（#116）', () => {
     c.dispose();
   });
 
+  it('同一个视频在页面里挪位置：静音不闪断，关开关仍能还原（#129）', async () => {
+    const video = addVideo(false);
+    const c = createMediaController(document);
+    c.sync({ hideVideos: true });
+    expect(video.muted).toBe(true);
+
+    // 盯住 muted 的赋值：移动不是移除，中途不该出现「先还原、下一帧再压回去」这一下
+    let value = video.muted;
+    let unMuted = 0;
+    Object.defineProperty(video, 'muted', {
+      configurable: true,
+      get: () => value,
+      set: (next: boolean) => {
+        if (value && !next) unMuted += 1;
+        value = next;
+      },
+    });
+
+    // appendChild 一个已在文档里的节点：既有 removed 也有 added 记录（浏览器常合成一条，
+    // jsdom 会拆成两条），两种排法都不许把它当成真移除
+    document.body.appendChild(video);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(video.muted, '移动后仍然是被压住的状态').toBe(true);
+    expect(unMuted, '移动不等于移除，不该把静音还原一帧').toBe(0);
+
+    c.sync({});
+    expect(video.muted, '关开关仍能还原到这一轮开始时的值').toBe(false);
+    c.dispose();
+  });
+
   it('dispose 会还原静音并停止后续监听', () => {
     const video = addVideo(false);
     const c = createMediaController(document);
