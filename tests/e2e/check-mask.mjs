@@ -199,16 +199,55 @@ async function main() {
     }, MASK_HOST);
     check(radius.includes('12px'), `遮罩跟随被遮元素的圆角（${radius.join(', ')}）`);
 
+    // 「跟手」的语义 = 滚动后遮罩追上来，而不是留在原地。0.8.0 审查轮把固定两帧改成语义化等待：
+    // 固定两帧是掷骰子——scroll 事件与 rAF 的先后差一帧、或页面不在前台时 rAF 停摆
+    // （#95 记过的坑），历次发版门禁反复被它绊。3 秒内追上算过；完全不跟手（回归）仍会超时。
+    // 注意：waitFor 的断言跑在浏览器里，coverage 是 Node 侧函数，必须内联不能闭包引用
+    await page.bringToFront();
     await page.evaluate(() => window.scrollBy(0, 150));
-    await twoFrames(page);
-    const covScroll = await page.evaluate(coverage, '.late-ad', MASK_HOST);
-    check(covScroll !== null && covScroll <= 1, `页面滚动后两帧内遮罩跟手（偏差 ${covScroll}px）`);
+    await waitFor(
+      page,
+      '页面滚动后遮罩跟手',
+      (h, sel) => {
+        const el = document.querySelector(sel);
+        const boxes = document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-pm-mask]') ?? [];
+        if (!el || boxes.length === 0) return false;
+        const e = el.getBoundingClientRect();
+        let best = Infinity;
+        for (const b of boxes) {
+          const m = b.getBoundingClientRect();
+          if (m.width === 0) continue;
+          best = Math.min(best, Math.max(Math.abs(m.left - e.left), Math.abs(m.top - e.top), Math.abs(m.right - e.right), Math.abs(m.bottom - e.bottom)));
+        }
+        return best !== Infinity && best <= 1;
+      },
+      [MASK_HOST, '.late-ad'],
+      { timeout: 3000 },
+    );
+    check(true, '页面滚动后遮罩跟手（3 秒内追上，偏差 ≤1px）');
     await page.evaluate(() => {
       document.getElementById('scroller').scrollTop = 80;
     });
-    await twoFrames(page);
-    const covInner = await page.evaluate(coverage, '.inner-ad', MASK_HOST);
-    check(covInner !== null && covInner <= 1, `页面里的滚动容器滚动后两帧内遮罩跟手（偏差 ${covInner}px）`);
+    await waitFor(
+      page,
+      '页面里的滚动容器滚动后遮罩跟手',
+      (h, sel) => {
+        const el = document.querySelector(sel);
+        const boxes = document.querySelector(h)?.shadowRoot?.querySelectorAll('[data-pm-mask]') ?? [];
+        if (!el || boxes.length === 0) return false;
+        const e = el.getBoundingClientRect();
+        let best = Infinity;
+        for (const b of boxes) {
+          const m = b.getBoundingClientRect();
+          if (m.width === 0) continue;
+          best = Math.min(best, Math.max(Math.abs(m.left - e.left), Math.abs(m.top - e.top), Math.abs(m.right - e.right), Math.abs(m.bottom - e.bottom)));
+        }
+        return best !== Infinity && best <= 1;
+      },
+      [MASK_HOST, '.inner-ad'],
+      { timeout: 3000 },
+    );
+    check(true, '页面里的滚动容器滚动后遮罩跟手（3 秒内追上，偏差 ≤1px）');
 
     const before = await boxCount(page);
     await page.evaluate(() => document.querySelector('.late-ad').remove());
