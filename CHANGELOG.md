@@ -5,6 +5,28 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.1] - 2026-11-07
+
+0.8.0 发版后独立代码审查的收口，都是特定操作顺序下才会碰到的状态问题；功能与权限没有变化。
+
+### 中文
+
+#### 修复
+
+- **放行过的视频被信息流移出文档后不再被钉住**：内部记录会随元素移出页面一并清掉；同一个视频再插回来按新一轮算，超出去过的点击窗口后自动播放重新被压制（补回归单测）
+- **快速连按遮住 / 恢复不再留下哑掉的标签页**：同一标签页的静音写入改为按消息到达顺序串行执行，连发时最终状态 = 最后一条消息的方向（补三连发回归单测）
+- **扩展更新 / 重载瞬间不再残留静音**：上一个实例在幕布静音中失效时它的解除消息发不出去；新实例启动时补一次单向解除（只解除本扩展设的那份）
+- 测试稳定性：滚动跟手断言由固定两帧改为「3 秒内追上」，不再因 scroll 事件与动画帧的先后抖动而误报
+
+### English
+
+#### Fixed
+
+- **A video you unblocked is no longer pinned after the feed removes it**: the internal record is cleared together with the element leaving the page; if the same video element comes back it starts a new round, and autoplay is held again once your click window has passed (regression test added)
+- **Rapid cover / restore no longer leaves a muted tab behind**: mute writes for one tab now run serially in message order, so the final state always matches the last message (regression test added)
+- **No mute residue across extension updates / reloads**: when the previous instance dies under the curtain its unmute message dies with it; the new instance releases any leftover of ours when it starts
+- Test stability: the scroll-follow assertion now waits up to 3 seconds instead of a fixed two frames, so it no longer misfires on scroll-event / animation-frame jitter
+
 ## [0.8.0] - 2026-11-07
 
 按网站的「图片和视频变灰」一个开关取代 0.7.x 的三个开关；遮住整页时连声音一起按住。旧设置自动迁移，不新增任何权限。
