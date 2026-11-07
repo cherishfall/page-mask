@@ -118,10 +118,20 @@ async function run(): Promise<void> {
   /** 进行中的遮住流程：同批到来的第二次注入复用同一次，不铺第二层 */
   let pending: Promise<void> | null = null;
 
+  /** 幕布静音（0.8.0，ADR-0013）：遮住即静音本标签页，恢复 / 页面卸载即还原；发不出去就静默（后台兜底） */
+  function sendCurtainMute(muted: boolean): void {
+    try {
+      void browser.runtime.sendMessage({ t: 'curtainMute', muted }).catch(() => undefined);
+    } catch {
+      // 扩展失联瞬间：后台 onUpdated 兜底按导航状态收尾
+    }
+  }
+
   function dismiss(): void {
     if (!layer.active) return;
     button?.destroy();
     button = null;
+    sendCurtainMute(false);
     layer.hide();
     guard.restore();
     void styles.syncShield(false);
@@ -145,6 +155,7 @@ async function run(): Promise<void> {
       // CurtainLayer.show() 的孤儿清扫会把新登记者的层一起摘掉，赢家自己会遮
       if (w.__pagemaskCurtain?.controller !== controller) return;
       layer.show();
+      sendCurtainMute(true); // 遮住即静音本标签页（0.8.0）：与已添加站点的幕布同一语义
       const root = layer.root;
       if (!root) return;
       button = createCurtainRestoreButton({
@@ -176,6 +187,11 @@ async function run(): Promise<void> {
   };
   registerCurtainController('oneshot', controller);
   w.__pagemaskCurtainPending = false;
+
+  // 整页跳转 / 刷新 / 关标签页：幕布随文档消失，声音跟着还原（后台 onUpdated 兜底覆盖脚本被杀的路径）
+  window.addEventListener('pagehide', () => {
+    if (layer.active) sendCurtainMute(false);
+  });
 
   // 查询 / 遮住 / 撤掉 / 切换（#107）：只应答自己登记的控制器。内容脚本让位接管登记处之后，
   // 应答归内容脚本自己的监听——两个监听器都动手的话，同一条 toggle 会各跑一遍（遮上又立刻

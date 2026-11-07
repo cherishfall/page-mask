@@ -55,24 +55,22 @@ describe('buildDisguiseCss 按页面范围汇总', () => {
   });
 });
 
-describe('buildDisguiseCss 并入媒体灰块（#116）', () => {
+describe('buildDisguiseCss 并入媒体灰度（0.8.0，#131）', () => {
   it('0 条收起规则但开了媒体开关：也要有正式样式，不能返回 null', () => {
-    const css = buildDisguiseCss([], 'https://x.com/', { hideImages: true })!;
+    const css = buildDisguiseCss([], 'https://x.com/', { mediaGray: true })!;
     expect(css).toContain('img:not(');
-    expect(css).toContain('filter: brightness(0)');
+    expect(css).toContain('filter: grayscale(1)');
   });
 
   it('规则 CSS 与媒体 CSS 拼在同一份文本里：swapCss 只需维护一份记录', () => {
-    const css = buildDisguiseCss([baseRule({})], 'https://x.com/', { hideImages: true, hideVideos: true })!;
+    const css = buildDisguiseCss([baseRule({})], 'https://x.com/', { mediaGray: true })!;
     expect(css).toContain('display: none');
     expect(css).toContain(', video {');
-    expect(css).toContain('@media (prefers-color-scheme: dark)');
   });
 
   it('不传 media（向导预览 / 草稿）：不带媒体块，临时还原后看得清页面', () => {
     const css = buildDisguiseCss([baseRule({})], 'https://x.com/')!;
-    expect(css).not.toContain('filter: brightness(0)');
-    expect(css).not.toContain('@media');
+    expect(css).not.toContain('grayscale');
     expect(css).toContain('display: none');
   });
 });

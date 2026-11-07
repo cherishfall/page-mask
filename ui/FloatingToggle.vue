@@ -65,6 +65,35 @@
       </svg>
     </button>
 
+    <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮，全功能与 mini 形态都有。
+         与「遮住」同等待遇的一点就生效：按下去立刻变灰 / 还原（按站点记忆，页面效果由
+         storage → applyAll 统一重应用）。按下状态用实心 / 描边两态 + aria-pressed，
+         不只靠颜色（WCAG 1.4.1）；点一下不弹任何面板，再点一下还原 -->
+    <button
+      type="button"
+      class="pm-tg-cover pm-tg-media"
+      :aria-pressed="mediaOn ? 'true' : 'false'"
+      :title="t.media.mediaTitle"
+      data-testid="pm-toggle-media"
+      @click="emit('mediaChange', 'mediaGray', !mediaOn)"
+    >
+      <svg
+        class="pm-tg-media-icon"
+        :data-state="mediaOn ? 'on' : 'off'"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <circle cx="9" cy="9" r="2" />
+        <polyline points="21 15 16 10 5 21" />
+      </svg>
+    </button>
+
     <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
     <button
       v-if="!mini"
@@ -108,47 +137,9 @@
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
       </button>
-      <!-- 图片、视频和声音（#116）：三个带勾选标记的开关，放在「改内容」与「按钮自己」两组之间。
-           菜单刻意不是 role=menu，所以这里用 role="switch" + aria-checked（读屏能报出开关与开关状态），
-           而不是没有父菜单的 menuitemcheckbox。点一下不关菜单：常要连着拨几个，勾选就地看得见。 -->
-      <hr class="pm-tg-sep" />
-      <div class="pm-tg-media" role="group" :aria-label="t.media.menuGroup" data-testid="pm-toggle-media-group">
-        <button
-          v-for="key in MEDIA_FLAG_KEYS"
-          :key="key"
-          type="button"
-          class="pm-tg-item pm-tg-switch"
-          role="switch"
-          :aria-checked="props.media?.[key] === true ? 'true' : 'false'"
-          :data-testid="`pm-toggle-media-${key}`"
-          @click="onMediaToggle(key)"
-        >
-          <!-- 勾选标记固定占位：拨动时文字不位移。用 SVG 而不是字形，跨平台笔画一致（同 GripIcon 的理由）。
-               未选中也画一个淡的空框（#127）：菜单里同时有「收起内容」这类普通动作，空占位会让人分不清
-               这一行到底是不是开关；两态共用同一个 12px 槽位，不另造一种开关外观 -->
-          <span class="pm-tg-check" :data-state="props.media?.[key] === true ? 'on' : 'off'" aria-hidden="true">
-            <svg
-              v-if="props.media?.[key] === true"
-              class="pm-tg-tick"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="2 6.4 4.8 9.2 10 3" />
-            </svg>
-            <svg v-else class="pm-tg-box" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
-              <rect x="1.1" y="1.1" width="9.8" height="9.8" rx="2" />
-            </svg>
-          </span>
-          <span class="pm-tg-switch-label">{{ t.media[key] }}</span>
-        </button>
-      </div>
       <!-- 按钮自己那一组（#120）：先「调整不透明度」，再「放回右下角」。
            分隔线常驻——不透明度这一项一直在；「放回右下角」只在拖过之后才有意义，
-           所以 v-if 只包它自己。 -->
+           所以 v-if 只包它自己。媒体开关（0.8.0）搬到了胶囊本体上的「媒体」钮，菜单里不再重复。 -->
       <hr class="pm-tg-sep" />
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-opacity" @click="onMenu('opacity')">
         {{ t.toggle.menuOpacity }}
@@ -175,7 +166,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
-import { MEDIA_FLAG_KEYS, type MediaFlagKey, type MediaToggles } from '@/core/media';
+import { type MediaFlagKey, type MediaToggles } from '@/core/media';
 import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
@@ -190,7 +181,7 @@ const KEY_STEP = 15;
 const props = defineProps<{
   state: SiteProfile['switchState'];
   position: { x: number; y: number } | null;
-  /** mini 形态（#78）：状态圆点 + 遮住 + 展开，没有文字、菜单与把手；按站点记忆 */
+  /** mini 形态（#78）：状态圆点 + 遮住 + 媒体 + 展开，没有文字、菜单与把手；按站点记忆 */
   mini: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
@@ -199,7 +190,7 @@ const props = defineProps<{
    * 所以「淡」只在用户不碰它的时候存在。
    */
   opacity?: number;
-  /** 图片、视频、声音三个开关的当前值（#116）：菜单里就地显示勾中状态 */
+  /** 「图片和视频变灰」的当前值（0.8.0）：媒体钮就地显示按下状态 */
   media?: MediaToggles;
   /**
    * 预览模式（#102 / 欢迎页）：静态展示用——不跟随页面定位（position: static）、不响应拖动。
@@ -217,7 +208,7 @@ const emit = defineEmits<{
   resetPos: [];
   /** 菜单里的「调整不透明度」：打开插件设置并停在不透明度那一栏（#120） */
   settings: [];
-  /** 菜单里拨动图片 / 视频 / 声音里的某一个（#116）：方向由运行时按当前值算，菜单不关 */
+  /** 媒体钮被点下（0.8.0）：方向由运行时按当前值算（按键 = 切换） */
   mediaChange: [key: MediaFlagKey, on: boolean];
   cover: [];
   /** mini ↔ 全功能互切（#78） */
@@ -384,13 +375,8 @@ function onMenuToggle() {
   menuOpen.value = !!menuEl.value?.matches(':popover-open');
 }
 
-/**
- * 三个媒体开关（#116）：不关菜单。一次连着拨几个是常态，菜单留着才能看见勾选就地变化；
- * popover="auto" 只在点外面 / Esc 时关，菜单内点击本来就不会自动关。
- */
-function onMediaToggle(key: MediaFlagKey) {
-  emit('mediaChange', key, props.media?.[key] !== true);
-}
+/** 「图片和视频变灰」的按下状态（0.8.0）：媒体钮的实心 / 描边与 aria-pressed 跟着它走 */
+const mediaOn = computed(() => props.media?.mediaGray === true);
 
 /** 点菜单项：先关菜单再执行，焦点回到「⋯」 */
 function onMenu(action: 'edit' | 'moreItems' | 'reset' | 'opacity') {

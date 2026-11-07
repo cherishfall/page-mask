@@ -227,14 +227,15 @@ export interface OpenSettingsRequest {
 }
 
 /**
- * 内容脚本 → 后台：按当前站点配置对账**本标签页**的静音状态（#116）。
- *
- * 故意不带方向、不带站点：目标状态由后台按存储与 sender.url 自己算，tabId 只认 sender.tab.id。
- * 这样内容脚本既不能静音别的标签页，也不会因为缓存 / 时序把静音留在错的状态上。
- * 触发点：清爽态 / 原样态切换、三个开关变化、删除站点还原、页面加载完成、跨站导航。
+ * 内容脚本 / 一次性脚本 → 后台：幕布的标签页静音（0.8.0，#131，ADR-0013）。
+ * 遮住即静音当前标签页，恢复（或刷新 / 离开页面）即还原。
+ * 方向由消息带上，但后台**只认 sender.tab.id**：内容脚本只能静音 / 解除自己所在的标签页，
+ * 不能碰别的标签页；解除时后台还要核对这份静音确实是本扩展设的（mutedByUs），
+ * 用户手动静音、Chrome 自带的「静音网站」、别的扩展一律不碰。
  */
-export interface SyncMuteRequest {
-  t: 'syncMute';
+export interface CurtainMuteRequest {
+  t: 'curtainMute';
+  muted: boolean;
 }
 
 export type BgRequest =
@@ -245,7 +246,7 @@ export type BgRequest =
   | CancelNewSiteRequest
   | CoverPageRequest
   | OpenSettingsRequest
-  | SyncMuteRequest
+  | CurtainMuteRequest
   | ApplyDisguiseRequest
   | RestoreOriginalRequest
   | DraftCssRequest

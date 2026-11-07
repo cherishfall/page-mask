@@ -87,13 +87,11 @@ const message = computed(() => {
   const errors = t.value.popup.error as Record<string, string | undefined>;
   return errors[code] ?? errors.injectFailed ?? '';
 });
-/** 三个媒体开关写入失败时的一句话（显示在这一组下面，不占用顶部的通用错误位） */
+/** 媒体开关写入失败时的一句话（显示在这一组下面，不占用顶部的通用错误位） */
 const mediaError = ref('');
 /** 开关当前值直接由配置投影，不在弹窗里另存一份状态 */
 const mediaToggles = computed(() => ({
-  hideImages: profile.value?.hideImages === true,
-  hideVideos: profile.value?.hideVideos === true,
-  mutePage: profile.value?.mutePage === true,
+  mediaGray: profile.value?.mediaGray === true,
 }));
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));

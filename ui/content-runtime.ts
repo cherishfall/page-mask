@@ -85,14 +85,15 @@ function warnIfFailed(what: string, res: CssAck): void {
 }
 
 /**
- * 请后台按当前存储对账本标签页的静音（#116）。消息不带方向与站点，后台只认 sender.tab.id。
- * 扩展上下文失效 / 标签页刚关掉时静默忽略：静音是浏览器状态，不靠这条消息续命。
+ * 幕布静音（0.8.0，#131，ADR-0013）：遮住即静音本标签页，恢复 / 页面卸载即还原。
+ * 后台只认 sender.tab.id 并核对静音归属（只解本扩展设的那份）；消息发不出去
+ * （扩展失联 / 标签页正关闭）就静默忽略，后台的 onUpdated 兜底会收尾。
  */
-function requestMuteSync(): void {
+function sendCurtainMute(muted: boolean): void {
   try {
-    void browser.runtime.sendMessage({ t: 'syncMute' } satisfies BgRequest).catch(() => undefined);
+    void browser.runtime.sendMessage({ t: 'curtainMute', muted } satisfies BgRequest).catch(() => undefined);
   } catch {
-    // 更新 / 重载瞬间上下文已失效，新实例起来后会重新对账
+    // 更新 / 重载瞬间上下文已失效：后台兜底会按导航状态收尾
   }
 }
 
@@ -161,18 +162,14 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     mini: boolean;
     /** 整颗胶囊的不透明度（#102）：闲置值，悬停 / 聚焦 / 拖动时由 CSS 回到 1 */
     opacity: number;
-    /** 三个媒体开关（#116）：菜单里的勾选跟着存储走，别的入口拨了也会即时更新 */
-    hideImages: boolean;
-    hideVideos: boolean;
-    mutePage: boolean;
+    /** 图片和视频变灰（0.8.0）：胶囊媒体钮的按下状态跟着存储走，别的入口拨了也会即时更新 */
+    mediaGray: boolean;
   }>({
     state: 'original',
     position: null,
     mini: false,
     opacity: 1,
-    hideImages: false,
-    hideVideos: false,
-    mutePage: false,
+    mediaGray: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -220,9 +217,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.position = profile?.floatingBtnPos ?? null;
     toggleState.mini = profile?.capsuleMini === true;
     toggleState.opacity = settings.toggleOpacity; // 闲置不透明度（#110）：数值由 readSettings 归一化
-    toggleState.hideImages = profile?.hideImages === true;
-    toggleState.hideVideos = profile?.hideVideos === true;
-    toggleState.mutePage = profile?.mutePage === true;
+    toggleState.mediaGray = profile?.mediaGray === true;
   }
 
   /**
@@ -230,14 +225,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
    */
   function hasSiteSettings(p: SiteProfile): boolean {
-    // #116：只开了媒体开关、没有任何收起项也没改过标题的网站，同样要有页面上的入口
+    // 只开了媒体变灰、没有任何收起项也没改过标题的网站，同样要有页面上的入口（#116 起）
     return (
       p.titleIconSet === true ||
       !!p.disguisedTitle ||
       p.hideRules.length > 0 ||
-      p.hideImages === true ||
-      p.hideVideos === true ||
-      p.mutePage === true
+      p.mediaGray === true
     );
   }
 
@@ -267,9 +260,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           mini: toggleState.mini,
           opacity: toggleState.opacity,
           media: {
-            hideImages: toggleState.hideImages,
-            hideVideos: toggleState.hideVideos,
-            mutePage: toggleState.mutePage,
+            mediaGray: toggleState.mediaGray,
           },
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
@@ -348,9 +339,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   }
 
   /**
-   * 菜单里拨动图片 / 视频 / 声音（#116）：与 mini 切换同一套写法——先就地反映，再按最新存储
-   * 只改这一个字段；写入失败拨回并给一句页内提示。页面效果不在这里做：storage.onChanged →
-   * applyKey 变化 → applyAll / restoreAll 统一重应用，弹窗与站点设置页的拨动走的是同一条路。
+   * 胶囊媒体钮 / 各处开关拨动「图片和视频变灰」：与 mini 切换同一套写法——先就地反映，
+   * 再按最新存储只改这一个字段；写入失败拨回并给一句页内提示。页面效果不在这里做：
+   * storage.onChanged → applyKey 变化 → applyAll / restoreAll 统一重应用，
+   * 弹窗与站点设置页的拨动走的是同一条路。
    */
   async function handleMediaChange(key: MediaFlagKey, on: boolean): Promise<void> {
     if (!profile || !ctx.isValid) return;
@@ -459,8 +451,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 排在进行中的状态刷新之后，避免刷新在向导打开后又把正式样式注回去
     await exclusive(async () => {
       warnIfFailed('临时还原', await styles.clearFormal());
-      // 向导里要先看清页面才能选元素：媒体灰块与视频停播一并临时还原，退出后由 refreshState 恢复
-      media.sync({ hideImages: false, hideVideos: false });
+      // 向导里要先看清页面才能选元素：媒体灰度一并临时还原，退出后由 refreshState 恢复
+      media.sync({ mediaGray: false });
       guard.restore();
       clearMasks();
       appliedKey = null; // 退出向导后必须重新应用
@@ -517,10 +509,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function applyAll(): Promise<boolean> {
     if (!profile) return false;
-    // #116：媒体开关的 JS 部分尽早生效（document 已存在，新增元素由 observer 补），
-    // 静音按后台当前存储对账；两者都不依赖 DOMContentLoaded
+    // 媒体变灰的 JS 部分尽早生效（document 已存在，新增元素由 observer 补），不依赖 DOMContentLoaded
     media.sync(profile);
-    requestMuteSync();
     // 先压标题、首屏遮挡换成精确规则（都不等后台往返），再同步正式样式
     // 标题与图标只在「保存过」时生效（#98）：只收起内容的网站不该被改掉标签页。
     // 没保存过时要显式还原——之前可能压过（用户刚在别处清掉了那项设置）
@@ -529,7 +519,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     } else {
       guard.restore();
     }
-    // 首屏遮挡用的是同一份正式样式文本：媒体灰块也要在首帧前生效，不能露一帧真图
+    // 首屏遮挡用的是同一份正式样式文本：媒体灰度也要在首帧前生效，不能露一帧真图
     shield.narrow(buildDisguiseCss(profile.hideRules, location.href, profile));
     const ok = await syncFormalStyles();
     shield.release();
@@ -546,9 +536,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function restoreAll(): Promise<boolean> {
     healthGen++;
-    // 原样态 = 完全还原：小图标记、视频暂停与静音、标签页静音一并撤掉（只解除本扩展设的那份）
-    media.sync({ hideImages: false, hideVideos: false });
-    requestMuteSync();
+    // 原样态 = 完全还原：小图标记、按停的视频状态一并撤掉（不替网站恢复播放）
+    media.sync({ mediaGray: false });
     shield.release();
     guard.restore();
     clearMasks();
@@ -603,6 +592,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     curtainEntryState = profile.switchState;
     ensureHostShield();
     curtain.show();
+    // 遮住即静音本标签页（0.8.0，ADR-0013）：应急遮蔽眼耳一起按住；恢复时由 hideCurtain 还原
+    sendCurtainMute(true);
     mountCurtainButton();
     unmountToggle();
     // 遮住时固定空白图标（#121）：任何站点配置里的真图标都不能露出来
@@ -621,6 +612,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (!curtain.active) return;
     const entry = curtainEntryState;
     curtainEntryState = null;
+    // 幕布撤掉，本标签页的声音一并还原（0.8.0）：只解除本扩展设的那份（后台核对归属）；
+    // 用户自己静音的标签页这里写了也不会被解除
+    sendCurtainMute(false);
     unmountCurtainButton();
     curtain.hide();
     if (entry && curtainRestoreAction(entry) === 'disguise' && profile) {
@@ -754,9 +748,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 撤掉页面上的一切痕迹（不含向导；样式另行移除） */
   function clearPageUi(): void {
     hideCurtain({ remount: false }); // 先撤幕布再继续（#45；teardown 也走这里）
-    // 站点配置没了（一键清空 / 向导取消）：页面上的媒体效果与标签页静音都不能留
-    media.sync({ hideImages: false, hideVideos: false });
-    requestMuteSync();
+    // 站点配置没了（一键清空 / 向导取消）：页面上的媒体效果不能留
+    media.sync({ mediaGray: false });
     // 控制器登记一并摘掉：profile 都没了就遮不了页，留着登记会让一次性脚本委托到一个遮不了的控制器（#107）
     curtainSlot?.unregister();
     curtainSlot = null;
@@ -899,7 +892,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     });
     // bfcache 恢复：样式随文档一起被保存，但期间存储可能变了（另一个页面切了开关、改了规则），按新状态增删
     ctx.addEventListener(window, 'pageshow', (e) => {
-      if (ctx.isValid && (e as PageTransitionEvent).persisted) void scheduleRefresh({ force: true });
+      if (!ctx.isValid || !(e as PageTransitionEvent).persisted) return;
+      // 幕布随文档一起被冻进缓存、pagehide 时声音已还原：恢复后重新按住（幕布还开着就该哑着）
+      if (curtain.active) sendCurtainMute(true);
+      void scheduleRefresh({ force: true });
+    });
+    // 整页跳转 / 刷新 / 关标签页：幕布随之消失，声音跟着还原（0.8.0）。后台 onUpdated 兜底
+    // 覆盖内容脚本没机会发消息的路径（被杀、失联）
+    ctx.addEventListener(window, 'pagehide', () => {
+      if (curtain.active) sendCurtainMute(false);
     });
     // 页面重新可见时核对一次扩展是否已失联（失联本身没有事件；读 isValid 即触发收尾）
     ctx.addEventListener(document, 'visibilitychange', () => void ctx.isValid);
@@ -922,7 +923,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (refreshTimer) clearTimeout(refreshTimer);
     closeWizard();
     clearPageUi();
-    media.dispose(); // 断 observer、还原改过的 video.muted、清掉小图标记
+    media.dispose(); // 断 observer 与监听、清掉小图标记（媒体层不写任何声音状态）
   }
   ctx.onInvalidated(teardown);
 

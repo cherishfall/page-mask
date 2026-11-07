@@ -170,8 +170,18 @@
   inline-size: 13px;
   block-size: 13px;
 }
+/* 媒体钮（0.8.0，#131）：「图片和视频变灰」的快捷开关，与「遮住」同规格的 13 盒。
+   按下状态用实心 / 描边两态表达（像收藏书签的实心态），不只靠颜色（WCAG 1.4.1），
+   aria-pressed 同步给读屏 */
+.pm-tg-media-icon {
+  inline-size: 13px;
+  block-size: 13px;
+}
+.pm-tg-media-icon[data-state='on'] {
+  fill: currentColor;
+}
 
-/* 触屏：三个图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
+/* 触屏：图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
 @media (forced-colors: active) {
   .pm-tg {
     opacity: 1 !important;
@@ -181,6 +191,7 @@
 @media (pointer: coarse) {
   .pm-tg-grip,
   .pm-tg-cover,
+  .pm-tg-media,
   .pm-tg-more {
     min-inline-size: var(--pm-control-lg);
     min-block-size: var(--pm-control-lg);

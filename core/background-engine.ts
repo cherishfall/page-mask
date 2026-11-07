@@ -371,8 +371,6 @@ export function createBackground({ browser }: BackgroundDeps): void {
       // 未注册过时忽略
     }
     await storage.deleteProfile(origin);
-    // 静音是标签页级状态，不会随配置一起消失；删完配置再统一对账一次，只解除本扩展设的那份
-    await releaseMute();
     return { ok: true };
   }
 
@@ -404,33 +402,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return { ok: true };
   }
 
-  // ---------- 标签页静音（#116） ----------
-
-  /**
-   * 这个标签页现在该不该静音：「站点权限仍在 + 有配置 + 清爽态 + 静音网页开关」。
-   * 没有 "tabs" 权限时读不到未授权站点的 tab.url（Chrome 敏感字段规则）；读不到就当作不该静音，
-   * 于是我们留在那个标签页上的静音会被解除——这正是离开该网站时想要的行为。
-   *
-   * 权限是生效前提（#130）：用户在 Chrome 扩展详情页收回站点访问权时，配置并不会被删。
-   * 只看配置的话，permissions.onRemoved 的收尾会空转，标签页继续哑着；地址一变双向对账
-   * 甚至可能把它重新静音回去。权限查不到时宁可当作不该静音，也不越界。
-   */
-  async function shouldMute(url: string | undefined): Promise<boolean> {
-    if (!url) return false;
-    let profileOrigin: string;
-    try {
-      profileOrigin = new URL(url).origin;
-    } catch {
-      return false;
-    }
-    try {
-      if (!(await browser.permissions.contains({ origins: [originPattern(profileOrigin)] }))) return false;
-    } catch {
-      return false;
-    }
-    const profile = await storage.getProfile(profileOrigin);
-    return !!profile && profile.switchState === 'disguised' && profile.mutePage === true;
-  }
+  // ---------- 幕布静音（0.8.0，#131，ADR-0013） ----------
 
   /**
    * 只解除「确实是本扩展静音的」标签页：Chrome 46+ 的 MutedInfo 提供 reason 与 extensionId
@@ -440,10 +412,14 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return !!info?.muted && info.reason === 'extension' && info.extensionId === browser.runtime.id;
   }
 
-  /** 按当前存储与这个标签页的实际地址对账一次；幂等，SW 随时被唤醒重算都安全 */
-  async function reconcileMute(tabId: number, url: string | undefined): Promise<Ack> {
+  /**
+   * 幕布的标签页静音：遮住即静音 sender 所在的标签页，恢复（或刷新 / 离开页面）即还原。
+   * 方向由消息带，tabId 只认 sender——内容脚本 / 一次性脚本只能动自己所在的标签页。
+   * 幂等：已静音就不再写；解除只认 mutedByUs，不碰用户手动静音的那份。
+   * 静音只随幕布生灭（不进存储、不按站点对账），0.7.x 的整套站点静音对账机制已删除。
+   */
+  async function setCurtainMute(tabId: number, muted: boolean): Promise<Ack> {
     try {
-      const want = await shouldMute(url);
       let tab: Browser.tabs.Tab | undefined;
       try {
         tab = await browser.tabs.get(tabId);
@@ -451,7 +427,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
         return { ok: false, error: 'tab gone' }; // 标签页刚被关掉
       }
       const info = tab?.mutedInfo;
-      if (want) {
+      if (muted) {
+        // 已被任何人静音（含用户手动 / Chrome「静音网站」）就不重复写：解除时只解自己的那份
         if (!info?.muted) await browser.tabs.update(tabId, { muted: true });
       } else if (mutedByUs(info)) {
         await browser.tabs.update(tabId, { muted: false });
@@ -463,35 +440,20 @@ export function createBackground({ browser }: BackgroundDeps): void {
   }
 
   /**
-   * 删除站点 / 收回权限后：把本扩展留在所有标签页上的静音解掉，别留下哑掉的标签页。
-   *
-   * **只做单向解除，绝不写 muted:true**。这里不能复用 reconcileMute()——那是双向对账，
-   * 会把「用户在标签页上手动取消的静音」按回去：删的是站点 B，却把站点 A 的标签页重新静音，
-   * 用户完全没碰 A。按 ADR-0012 的承诺，重新静音只该发生在用户拨开关 / 切两态 / 换地址时。
+   * 兜底：幕布开着时整页跳转 / 刷新，若内容脚本没来得及（或没能）发解除消息，
+   * 导航开始时把本扩展设的那份静音解掉——静音跟幕布生灭，不能跟着 URL 走进下一个页面。
+   * 只在文档真正开始加载时触发（status === 'loading'）：SPA 站内换址不发 loading，
+   * 幕布还开着、静音保持。任何导航都会到这里，先回查再动手，绝大多数标签页是无操作。
    */
-  async function releaseMute(): Promise<void> {
-    let tabs: Browser.tabs.Tab[] = [];
-    try {
-      tabs = await browser.tabs.query({});
-    } catch {
-      return;
-    }
-    await Promise.allSettled(
-      tabs
-        .filter((t) => t.id !== undefined)
-        .map(async (t) => {
-          try {
-            // 与 reconcileMute 一样回查一次：query 的结果可能已经过期。
-            // 地址也必须取这次回查的（#128）：删站点的瞬间标签页若跳转到另一个配了静音的网站，
-            // tabs.onUpdated 会按新地址设上静音；拿 query 里的旧地址算就会把刚设对的那份解掉。
-            const tab = await browser.tabs.get(t.id!);
-            if (!mutedByUs(tab?.mutedInfo)) return;
-            if (!(await shouldMute(tab?.url))) await browser.tabs.update(t.id!, { muted: false });
-          } catch {
-            // 标签页刚被关掉：没有需要收尾的状态
-          }
-        }),
-    );
+  function releaseCurtainMuteOnNavigation(tabId: number): Promise<void> {
+    return (async () => {
+      try {
+        const tab = await browser.tabs.get(tabId);
+        if (mutedByUs(tab?.mutedInfo)) await browser.tabs.update(tabId, { muted: false });
+      } catch {
+        // 标签页刚被关掉：没有需要收尾的状态
+      }
+    })();
   }
 
   // ---------- 隐藏样式（按文档） ----------
@@ -614,11 +576,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
       case 'openSettings':
         // 只接受来自标签页的内容脚本（sender.tab 存在）：这是页面上的胶囊发起的
         return sender.tab ? openSettings(msg.section) : Promise.resolve(FORBIDDEN);
-      case 'syncMute':
-        // 只接受来自标签页的内容脚本；tabId 只认 sender，目标方向由后台按存储算
+      case 'curtainMute':
+        // 幕布静音（0.8.0）：只接受来自标签页的脚本（内容脚本 / 一次性脚本），tabId 只认 sender
         return sender.tab?.id === undefined
           ? Promise.resolve({ ok: false, error: 'no sender tab' } satisfies Ack)
-          : reconcileMute(sender.tab.id, sender.url);
+          : setCurtainMute(sender.tab.id, msg.muted === true);
       case 'reconcile':
         return fromExtensionPage(sender) ? handleReconcile() : Promise.resolve(FORBIDDEN);
       case 'cancelNewSite':
@@ -666,12 +628,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
   });
   browser.runtime.onStartup.addListener(() => reconcileInBackground('onStartup'));
   browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
-  browser.permissions.onRemoved.addListener(() => {
-    void reconcileInBackground('permissions.onRemoved');
-    // 用户在 Chrome 扩展详情页收回站点访问：内容脚本可能已经失联，标签页也可能休眠，
-    // 不会有人再发 syncMute。单向收一次，别留下本扩展设的静音（#128）
-    void releaseMute();
-  });
+  browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
 
   // 幕布快捷键（#101）：全产品只此一条命令，其他功能一律不加快捷键（ADR-0010）
   browser.commands?.onCommand?.addListener((command) => {
@@ -688,21 +645,15 @@ export function createBackground({ browser }: BackgroundDeps): void {
     );
     if (!lifecycle) return;
     void reconcileInBackground('storage');
-    // 「整体替换」导入会一次删掉一批站点配置；这些站点已打开的（或休眠的）标签页
-    // 不一定还发得出 syncMute，同样单向收一次（#128）。只在 profile 增删时走，
-    // 普通拨开关不额外遍历标签页。
-    void releaseMute();
   });
 
   /**
-   * 标签页静音按站点设置，却作用在标签页上：跨站导航后要重新对账，离开这个网站就解除。
-   * 只在**地址真的变了**时做——不给没添加过的网站的每次页面加载都添一次后台往返（零影响铁律）。
-   * 刷新时 Chrome 保留标签页静音；万一被清掉，新文档的内容脚本起来后会再发一次 syncMute。
-   * 刻意不监听 mutedInfo 变化：那会追着用户手动取消静音按回去（想临时听一下应该能听），
-   * 也会让扩展刚设上的静音再触发一轮自己的事件。
+   * 幕布静音的兜底（0.8.0，ADR-0013）：正常路径由内容脚本的 pagehide 发解除消息；
+   * 内容脚本被杀 / 失联时，文档重新开始加载（status === 'loading'）在这里补一次单向解除。
+   * 刻意不监听 mutedInfo 变化：那会追着用户手动取消静音按回去（想临时听一下应该能听）。
    */
-  browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (!changeInfo.url) return;
-    void reconcileMute(tabId, tab?.url);
+  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status !== 'loading') return;
+    void releaseCurtainMuteOnNavigation(tabId);
   });
 }

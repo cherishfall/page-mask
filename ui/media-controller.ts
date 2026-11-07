@@ -1,23 +1,33 @@
 /**
- * 内容脚本侧：媒体收起的两件 CSS 管不了的事（#116）。
+ * 内容脚本侧：媒体变灰的两件 CSS 管不了的事（0.8.0，#131，ADR-0013）。
  *
- * 1. 小图豁免：纯 CSS 没法按「渲染尺寸」选元素，所以只在「收起图片」打开期间，给 ≤32px 的
+ * 1. 小图豁免：纯 CSS 没法按「渲染尺寸」选元素，所以只在「图片和视频变灰」打开期间，给 ≤32px 的
  *    图标 / 表情打一个 data-pm-media-keep 属性，core/media.ts 的选择器据此放行。
  *    默认先全灰、小图确认后再放行——宁可多灰一帧，也不让大图露出来（首屏防闪优先）。
- * 2. 视频停播 + 静音：display:none / filter 都不会暂停播放（调研已核实），藏了画面还响声音
- *    比不藏更糟。扫到 video 就 pause + muted，并在 document 的捕获阶段拦 play 事件
- *    （play 不冒泡，但捕获阶段经过 document）——站点脚本反复调 play 也会被压住。
- *    不装定时器、不包 HTMLMediaElement.prototype.play：不和站点死守播放的脚本对着抢，
- *    每次 play 事件就地压一次，代价是两次同步赋值。
+ * 2. 视频自动播放压制：灰度管不住「动」。站点脚本自己让视频播起来的（X 刷信息流的自动播放）
+ *    一律按停；**用户点了视频区域就把那一个视频放行**，正常播放、画面保持灰度——
+ *    「不显眼」要压的是没人看的自动播放，不该拦住主动想看的视频。
+ *    **不写任何 muted、不碰 <audio>**：音量归播放器自己的按钮与 Chrome 右键静音（ADR-0013）。
  *
- * 生命周期：只有开关打开时才挂 MutationObserver 与两个 document 监听；关掉就断开、
- * 清掉标记、把改过的 video.muted 还原（不替站点恢复播放，原样态把画面还回去即可）。
+ * 「用户点了」的判定：document 捕获阶段记录最近一次意图事件（pointerdown / 键盘 Enter、空格，
+ * 键盘用户点不到播放钮也能放行），play 事件到来时看它是否落在视频本身或其三层祖先内、
+ * 且在 10 秒内——播放按钮通常是视频元素的兄弟节点（X 的播放器覆盖层），只看视频内部会误拦。
+ * 放行按文档生命周期记忆，本次页面里这个视频之后随便播。
+ *
+ * 生命周期：只有开关打开时才挂 MutationObserver 与三个 document 监听；关掉就断开、清掉标记。
+ * 被按停的视频不替网站恢复播放（切回原样后用户自己点播放，0.7.x 同款语义）。
  * 增量扫描按 rAF 分批，读写分两阶段，避免和站点框架互相触发重排。
  */
 import { MEDIA_KEEP_ATTR, shouldKeepMedia, type MediaFlags, type MediaSizeFacts } from '@/core/media';
 
 /** 每帧最多处理多少个新增节点：无限滚动一次插几百张图时不堵主线程 */
 const BATCH = 60;
+
+/** 意图事件还有效的窗口：点了播放钮后站点可能要缓冲几秒才真正 play */
+const INTENT_WINDOW_MS = 10_000;
+
+/** 视频向上找几层祖先来匹配「点的是播放器这块区域」：X 的播放钮与 video 隔两层左右 */
+const ANCESTOR_DEPTH = 3;
 
 export interface MediaController {
   /** 按当前站点开关同步（幂等，重复调用不会重复挂监听） */
@@ -63,34 +73,50 @@ function decideImage(img: HTMLImageElement): boolean {
   return shouldKeepMedia({ className: facts.className, alt: facts.alt, src: facts.src });
 }
 
+/** 最近一次用户意图事件：放行判定的唯一依据 */
+interface IntentMark {
+  target: EventTarget | null;
+  at: number;
+}
+
+/** 意图事件是否落在 video 的「播放器区域」内（视频本身、内部，或三层祖先以内） */
+function intentCoversVideo(intent: IntentMark, video: HTMLVideoElement): boolean {
+  const target = intent.target;
+  if (!(target instanceof Element)) return false;
+  if (video.contains(target)) return true;
+  let ancestor: HTMLElement | null = video.parentElement;
+  for (let depth = 0; depth < ANCESTOR_DEPTH && ancestor; depth++) {
+    if (ancestor.contains(target)) return true;
+    ancestor = ancestor.parentElement;
+  }
+  return false;
+}
+
 export function createMediaController(doc: Document): MediaController {
-  let wantImages = false;
-  let wantVideos = false;
+  let wantMedia = false;
   let disposed = false;
   let observer: MutationObserver | null = null;
   let frame = 0;
   const pending = new Set<Element>();
-  /** 改过 muted 的视频，还原时按改之前的值放回去（站点本来静音的不能被我们打开声音） */
-  const originalMuted = new WeakMap<HTMLVideoElement, boolean>();
-  const touchedVideos = new Set<HTMLVideoElement>();
+  /** 已被用户放行的视频：本次文档生命周期内不再压制 */
+  const allowed = new Set<HTMLVideoElement>();
+  /** 最近一次意图事件：pointerdown / Enter / 空格，捕获阶段记录 */
+  let lastIntent: IntentMark | null = null;
 
+  /** 非用户意图的播放就地按停（站点脚本反复调 play 也一样，每次 play 事件压一次）；
+   *  已放行的视频不再管——重扫（挪位置、新插入）也不得把用户正在看的视频按停 */
   function applyVideo(video: HTMLVideoElement): void {
-    if (!wantVideos) return;
-    if (!originalMuted.has(video)) {
-      originalMuted.set(video, video.muted);
-      touchedVideos.add(video);
-    }
-    if (!video.muted) video.muted = true;
+    if (allowed.has(video)) return;
     if (!video.paused) video.pause();
   }
 
-  /** 一批元素两阶段处理：先只读判定（含 rect），再统一写属性 / 停播，避免读写交替触发重排 */
+  /** 一批元素两阶段处理：先只读判定（含 rect），再统一写属性 / 按停，避免读写交替触发重排 */
   function processBatch(elements: Element[]): void {
     const images: [HTMLImageElement, boolean][] = [];
     const videos: HTMLVideoElement[] = [];
     for (const el of elements) {
       if (!el.isConnected) continue;
-      if (el.tagName === 'IMG' && wantImages) {
+      if (el.tagName === 'IMG' && wantMedia) {
         const img = el as HTMLImageElement;
         images.push([img, decideImage(img)]);
       } else if (el.tagName === 'VIDEO') {
@@ -124,31 +150,14 @@ export function createMediaController(doc: Document): MediaController {
     for (const el of node.querySelectorAll('img, video')) pending.add(el);
   }
 
-  /** 子树被移出文档：当场按原值还原并忘掉它，别让强引用钉住已被信息流替换掉的视频（#126 / #128） */
+  /** 子树被移出文档：只把它从待办里放掉，别让强引用钉住已被信息流替换掉的元素（#126 / #128）。
+   *  挪位置（isConnected 仍真）不当移除：换容器后渲染尺寸可能变，仍要重判一次（#129）。
+   *  0.8.0 起没有要还原的声音状态，这里不再需要任何「原值账目」。 */
   function forget(node: Node): void {
     if (!(node instanceof Element)) return;
-    // 还在文档里 = 只是「挪了个位置」，不是移除（#129）。DOM 既可能把 appendChild 一个已有
-    // 节点的「移除 + 插入」合进一条 childList 记录，也可能拆成两条，靠记录怎么排判断不可靠；
-    // isConnected 才是准的。移动时别还原静音、别删这一轮的原值记录，也别把它从 pending 里
-    // 抹掉——换容器后渲染尺寸可能变，仍要重判一次。
     if (node.isConnected) return;
-    const videos: HTMLVideoElement[] = [];
-    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') {
-      pending.delete(node); // 后台标签页的 rAF 会被暂停，pending 也是强引用，一并清掉
-    }
-    if (node.tagName === 'VIDEO') videos.push(node as HTMLVideoElement);
-    for (const el of node.querySelectorAll('img, video')) {
-      pending.delete(el);
-      if (el.tagName === 'VIDEO') videos.push(el as HTMLVideoElement);
-    }
-    for (const video of videos) {
-      if (!touchedVideos.has(video)) continue;
-      const original = originalMuted.get(video);
-      if (original !== undefined) video.muted = original;
-      // 一轮一清：元素若被重新插入，applyVideo 会把它当新元素重新记录这一轮的原值
-      originalMuted.delete(video);
-      touchedVideos.delete(video);
-    }
+    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') pending.delete(node);
+    for (const el of node.querySelectorAll('img, video')) pending.delete(el);
   }
 
   function onMutation(records: MutationRecord[]): void {
@@ -167,13 +176,30 @@ export function createMediaController(doc: Document): MediaController {
   }
 
   function onPlay(e: Event): void {
-    if (!wantVideos) return;
+    if (!wantMedia) return;
     const el = e.target as Element | null;
-    if (el?.tagName === 'VIDEO') applyVideo(el as HTMLVideoElement);
+    if (el?.tagName !== 'VIDEO') return;
+    const video = el as HTMLVideoElement;
+    if (allowed.has(video)) return;
+    // 用户意图在窗口期内、且点的是这个视频的播放器区域：放行，此后不再管它
+    if (lastIntent && Date.now() - lastIntent.at <= INTENT_WINDOW_MS && intentCoversVideo(lastIntent, video)) {
+      allowed.add(video);
+      return;
+    }
+    applyVideo(video);
+  }
+
+  function onIntent(e: Event): void {
+    // 键盘可达性（WCAG 2.1.1）：Enter / 空格触发的播放同样算用户意图；其余按键不记账
+    if (e.type === 'keydown') {
+      const key = (e as KeyboardEvent).key;
+      if (key !== 'Enter' && key !== ' ') return;
+    }
+    lastIntent = { target: e.target, at: Date.now() };
   }
 
   function onLoad(e: Event): void {
-    if (!wantImages) return;
+    if (!wantMedia) return;
     const el = e.target as Element | null;
     if (el?.tagName !== 'IMG') return;
     // 图片加载完才知道真实尺寸：放进待办后必须自己排一帧（#128）。
@@ -194,9 +220,11 @@ export function createMediaController(doc: Document): MediaController {
       // 也要重判一次（#128）。只在开关打开期间观察，未开启的页面零开销。
       attributeFilter: ['src', 'srcset', 'width', 'height', 'class', 'style'],
     });
-    // 捕获阶段：play / load 都不冒泡，但会经过 document
+    // 捕获阶段：play / load 不冒泡，但会经过 document；意图事件要抢在站点脚本前面记账
     doc.addEventListener('play', onPlay, true);
     doc.addEventListener('load', onLoad, true);
+    doc.addEventListener('pointerdown', onIntent, true);
+    doc.addEventListener('keydown', onIntent, true);
   }
 
   function stop(): void {
@@ -207,56 +235,45 @@ export function createMediaController(doc: Document): MediaController {
     pending.clear();
     doc.removeEventListener('play', onPlay, true);
     doc.removeEventListener('load', onLoad, true);
+    doc.removeEventListener('pointerdown', onIntent, true);
+    doc.removeEventListener('keydown', onIntent, true);
   }
 
   function clearKeepMarks(): void {
     for (const el of doc.querySelectorAll(`img[${MEDIA_KEEP_ATTR}]`)) el.removeAttribute(MEDIA_KEEP_ATTR);
   }
 
-  function restoreVideos(): void {
-    for (const video of touchedVideos) {
-      const original = originalMuted.get(video);
-      if (original !== undefined) video.muted = original;
-      // 必须连「原值」一起删：否则下次再打开时 applyVideo 以为已经记过，
-      // 既不记原值也不把视频放回 touchedVideos，第二次关就再也还原不了（E2E 抓到的回归）
-      originalMuted.delete(video);
-    }
-    touchedVideos.clear();
-  }
-
   function scanExisting(): void {
-    // 首帧不等 rAF：document_start 时页面上已有的 img / video 当场压住
+    // 首帧不等 rAF：document_start 时页面上已有的 img / video 当场处理（播放中的视频按停）
     processBatch(Array.from(doc.querySelectorAll('img, video')));
   }
 
   return {
     sync(flags: MediaFlags): void {
       if (disposed) return;
-      const nextImages = flags.hideImages === true;
-      const nextVideos = flags.hideVideos === true;
-      const wasOn = wantImages || wantVideos;
-      const isOn = nextImages || nextVideos;
-      const turningImagesOff = wantImages && !nextImages;
-      if (wantVideos && !nextVideos) restoreVideos();
-      wantImages = nextImages;
-      wantVideos = nextVideos;
-      if (!isOn) {
+      const next = flags.mediaGray === true;
+      if (next === wantMedia) return;
+      wantMedia = next;
+      if (!wantMedia) {
+        // 关掉：断监听、清标记。放行集合一并清掉；正在播的视频让它继续播，
+        // 被我们按停的不替网站恢复播放（用户自己点播放，ADR-0013）
         stop();
         clearKeepMarks();
+        allowed.clear();
+        lastIntent = null;
         return;
       }
-      // 只关图片、视频还开着时 observer 不能停，但页面上已打过的豁免标记要清掉（#126）
-      if (turningImagesOff) clearKeepMarks();
-      if (!wasOn) start();
+      allowed.clear();
+      lastIntent = null;
+      start();
       scanExisting();
     },
     dispose(): void {
       if (disposed) return;
-      restoreVideos();
-      wantImages = false;
-      wantVideos = false;
+      wantMedia = false;
       stop();
       clearKeepMarks();
+      allowed.clear();
       disposed = true;
     },
   };

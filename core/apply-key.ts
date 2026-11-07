@@ -25,11 +25,9 @@ export function applyKey(
     // 「不显示胶囊」变了胶囊要从页面上消失 / 回来（#111）：它改的是按钮的存在性，
     // 响应式更新救不了——键里不计入的话 refreshState 会在「键没变」处提前返回，跳过 mountToggle
     profile.capsuleHidden === true,
-    // 三个媒体开关（#116）改的是页面效果与标签页静音，键里不计入就会在「键没变」处提前返回，
-    // 拨了开关页面不重应用、静音也不重新对账
-    profile.hideImages === true,
-    profile.hideVideos === true,
-    profile.mutePage === true,
+    // 图片和视频变灰（0.8.0）改的是页面效果，键里不计入就会在「键没变」处提前返回，
+    // 拨了开关页面不重应用
+    profile.mediaGray === true,
     settings.defaultTitle,
     profile.hideRules.map(({ lastHealth: _h, lastHealthAt: _t, ...rest }) => rest),
   ]);

@@ -187,13 +187,13 @@ async function main() {
     for (const b of hitBoxes) {
       check(b.w >= 24 && b.h >= 24, `${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 24×24`);
     }
-    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 164（不再有 170×32）
+    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 189（0.8.0 加了「媒体」钮，#131）
     const fullPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
       Math.abs(fullPill.h - 26) <= 1,
       `全功能胶囊高 ${fullPill.h.toFixed(1)} ≈ 26（可点区 24 + 上下边框）`,
     );
-    check(fullPill.w >= 150 && fullPill.w <= 168, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 164（≤168，没删文字也没删段）`);
+    check(fullPill.w >= 175 && fullPill.w <= 196, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 189（≤196，没删文字也没删段）`);
     const pillFont = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       let min = Infinity;
@@ -282,8 +282,8 @@ async function main() {
       menu.appendChild(probe);
       const danger = getComputedStyle(probe).color;
       probe.remove();
-      // 三个媒体开关多一列勾选标记（空的占位 span），取标签那一列才是用户看到的文字
-      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
+      // 三个媒体开关（0.7.x）已退场：媒体开关在胶囊本体的「媒体」钮上，菜单回到「改内容 / 按钮自己 / 删除」三组
+      const label = (b) => b.textContent.trim();
       const items = [...menu.querySelectorAll('.pm-tg-item')].map(label);
       const del = menu.querySelector('[data-testid="pm-toggle-delete"]');
       return {
@@ -291,9 +291,6 @@ async function main() {
         seps: menu.querySelectorAll('.pm-tg-sep').length,
         order: [...menu.children].map((el) => {
           if (el.classList.contains('pm-tg-sep')) return '---';
-          if (el.classList.contains('pm-tg-media')) {
-            return [...el.querySelectorAll('.pm-tg-switch')].map(label).join(' | ');
-          }
           return el.textContent.trim();
         }),
         deleteColor: del ? getComputedStyle(del).color : '',
@@ -301,15 +298,14 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') ===
-        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 删除这个网站的设置',
-      `默认位（没存过坐标）时菜单七项，与弹窗同名、收起内容在前（#80/#90/#116/#120，${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+      `默认位（没存过坐标）时菜单四项，媒体开关在胶囊媒体钮上不再进菜单（#131，${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 3, `菜单里三条分隔线：改内容 / 图片视频声音 / 按钮自己 / 删除设置（实际 ${menuShape.seps} 条）`);
+    check(menuShape.seps === 2, `菜单里两条分隔线：改内容 / 按钮自己 / 删除设置（0.8.0 媒体组退场，实际 ${menuShape.seps} 条）`);
     check(
       menuShape.order.join(' | ') ===
-        '收起内容 | 标题和图标 | --- | 收起图片 | 收起视频 | 静音网页 | --- | 调整不透明度 | --- | 删除这个网站的设置',
-      `分组顺序：改内容（收起内容在前，#80）/ 图片视频声音（#116）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
+        '收起内容 | 标题和图标 | --- | 调整不透明度 | --- | 删除这个网站的设置',
+      `分组顺序：改内容（收起内容在前，#80）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -534,7 +530,7 @@ async function main() {
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     const movedMenu = await page.evaluate((h) => {
       const menu = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]');
-      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
+      const label = (b) => b.textContent.trim();
       return {
         items: [...menu.querySelectorAll('.pm-tg-item')].map(label),
         seps: menu.querySelectorAll('.pm-tg-sep').length,
@@ -542,9 +538,9 @@ async function main() {
     }, TOGGLE);
     check(
       movedMenu.items.join(' / ') ===
-        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
-        movedMenu.seps === 3,
-      `拖过之后菜单八项、三条分隔线（#90/#116/#120，${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
+        '收起内容 / 标题和图标 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
+        movedMenu.seps === 2,
+      `拖过之后菜单五项、两条分隔线（媒体开关在胶囊媒体钮上，#131；${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
     );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
     const reset = await (async () => {
@@ -579,15 +575,15 @@ async function main() {
     const noRulesMenu = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       const menu = sr.querySelector('[data-testid="pm-toggle-menu"]');
-      const label = (b) => (b.querySelector('.pm-tg-switch-label') ?? b).textContent.trim();
+      const label = (b) => b.textContent.trim();
       return {
         items: [...menu.querySelectorAll('.pm-tg-item')].map(label),
       };
     }, TOGGLE);
     check(
       noRulesMenu.items.join(' / ') ===
-        '收起内容 / 标题和图标 / 收起图片 / 收起视频 / 静音网页 / 调整不透明度 / 删除这个网站的设置',
-      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#116/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
+        '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 
@@ -940,10 +936,10 @@ async function main() {
     check(!miniShape.grip && !miniShape.more, 'mini 没有把手与菜单');
     check(miniShape.cover, 'mini 保留遮住（急用一步直达，#78）');
     check((await getProfile(ext.control, ORIGIN)).capsuleMini === true, 'mini 记在站点配置里');
-    // mini 同样收到最小壳（#109）：高 26，宽约 76
+    // mini 同样收到最小壳（#109）：高 26，宽约 99（0.8.0 mini 也加了「媒体」钮，#131）
     const miniPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(Math.abs(miniPill.h - 26) <= 1, `mini 胶囊高 ${miniPill.h.toFixed(1)} ≈ 26`);
-    check(miniPill.w >= 70 && miniPill.w <= 82, `mini 胶囊宽 ${Math.round(miniPill.w)} 收到约 76`);
+    check(miniPill.w >= 90 && miniPill.w <= 106, `mini 胶囊宽 ${Math.round(miniPill.w)} 收到约 99`);
 
     // mini 上点圆点 = 照常切换两态（切回清爽，后面的用例要）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));

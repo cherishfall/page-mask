@@ -241,7 +241,7 @@ describe('管理页 store', () => {
     expect(await fakeBrowser.storage.local.get(`profile:${A}`)).toHaveProperty(`profile:${A}`);
   });
 
-  it('三个媒体开关：一次只改拨动的那一个字段，关掉字段消失，其他设置不动（#116）', async () => {
+  it('媒体开关：mediaGray 一次拨动即改，关掉字段消失，其他设置不动（#131）', async () => {
     await seed([A]);
     const store = createManagementStore();
     await store.reload();
@@ -249,22 +249,14 @@ describe('管理页 store', () => {
       (await fakeBrowser.storage.local.get(`profile:${A}`))[`profile:${A}`] as SiteProfile;
     const before = await read();
 
-    await store.setMedia(A, 'hideImages', true);
-    const withImages = await read();
-    expect(withImages.hideImages).toBe(true);
-    expect(withImages.hideVideos).toBeUndefined();
-    expect(withImages.mutePage).toBeUndefined();
-    expect(withImages.hideRules).toEqual(before.hideRules); // 不覆盖别处刚改过的收起项
-    expect(withImages.updatedAt).toBeGreaterThan(before.updatedAt); // 真实用户设置，参与导入合并
+    await store.setMedia(A, 'mediaGray', true);
+    const withGray = await read();
+    expect(withGray.mediaGray).toBe(true);
+    expect(withGray.hideRules).toEqual(before.hideRules); // 不覆盖别处刚改过的收起项
+    expect(withGray.updatedAt).toBeGreaterThan(before.updatedAt); // 真实用户设置，参与导入合并
 
-    await store.setMedia(A, 'mutePage', true);
-    const withMute = await read();
-    expect(withMute.hideImages).toBe(true); // 前一个开关没被冲掉
-    expect(withMute.mutePage).toBe(true);
-
-    await store.setMedia(A, 'hideImages', false);
+    await store.setMedia(A, 'mediaGray', false);
     const turnedOff = await read();
-    expect('hideImages' in turnedOff).toBe(false); // 关掉 = 字段消失，不落 false
-    expect(turnedOff.mutePage).toBe(true);
+    expect('mediaGray' in turnedOff).toBe(false); // 关掉 = 字段消失，不落 false
   });
 });

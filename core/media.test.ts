@@ -1,49 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { buildMediaCss, MEDIA_KEEP_ATTR, SMALL_MEDIA_MAX_PX, shouldKeepMedia } from './media';
 
-describe('buildMediaCss 灰块样式（#116）', () => {
-  it('两个开关都没开 / 缺省：没有样式（旧数据、原样态都不注入）', () => {
+describe('buildMediaCss 灰度样式（0.8.0，#131）', () => {
+  it('开关没开 / 缺省：没有样式（旧数据、原样态都不注入）', () => {
     expect(buildMediaCss({})).toBeNull();
-    expect(buildMediaCss({ hideImages: false, hideVideos: false })).toBeNull();
+    expect(buildMediaCss({ mediaGray: false })).toBeNull();
   });
 
-  it('只收图片：选择器放行小图标记与 emoji，不碰 video', () => {
-    const css = buildMediaCss({ hideImages: true })!;
+  it('打开：img（放行小图标记与 emoji）与 video 一条规则，grayscale 去色', () => {
+    const css = buildMediaCss({ mediaGray: true })!;
     expect(css).toContain(`img:not([${MEDIA_KEEP_ATTR}])`);
     expect(css).toContain('[class*="emoji" i]');
     expect(css).toContain('[alt*="emoji" i]');
     expect(css).toContain('[src*="emoji" i]');
-    expect(css).not.toContain(', video {');
-    expect(css).not.toContain('video {');
-  });
-
-  it('只收视频：只对 video 生效', () => {
-    const css = buildMediaCss({ hideVideos: true })!;
-    expect(css).toContain('video {');
-    expect(css).not.toContain('img:');
-  });
-
-  it('两个都开：同一选择器列表，明暗两套灰度', () => {
-    const css = buildMediaCss({ hideImages: true, hideVideos: true })!;
-    expect(css).toContain(`img:not([${MEDIA_KEEP_ATTR}])`);
     expect(css).toContain(', video {');
-    expect(css).toContain('@media (prefers-color-scheme: dark)');
-    expect(css).toContain('invert(0.82)');
-    expect(css).toContain('invert(0.23)');
+    expect(css).toContain('filter: grayscale(1) !important;');
   });
 
-  it('灰块保布局、可点穿：不加 display / visibility / pointer-events，只用 filter + 背景色补透明区', () => {
-    const css = buildMediaCss({ hideImages: true, hideVideos: true })!;
+  it('灰度保布局、可点穿：不加 display / visibility / pointer-events，也不再需要明暗两套灰度', () => {
+    const css = buildMediaCss({ mediaGray: true })!;
     expect(css).not.toContain('display:');
     expect(css).not.toContain('visibility:');
     expect(css).not.toContain('pointer-events:');
-    expect(css).toContain('background-color: #d1d1d1 !important;');
-    expect(css).toContain('filter: brightness(0) invert(0.82) !important;');
-  });
-
-  it('只有显式 true 才生效：false / 缺省都不生成对应选择器', () => {
-    expect(buildMediaCss({ hideImages: false, hideVideos: true })).not.toContain('img:');
-    expect(buildMediaCss({ hideImages: true, hideVideos: false })).not.toContain('video {');
+    expect(css).not.toContain('background-color:');
+    expect(css).not.toContain('brightness');
+    expect(css).not.toContain('@media');
   });
 });
 

@@ -620,10 +620,10 @@ async function main() {
     const mgmtSwitch = await findSwitch(m);
     check(mgmtSwitch.node?.name === '按你的设置显示', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
-    // 五块与页面右下角 ⋯ 菜单用同一批名字（#56 / #116）
+    // 五块与页面右下角 ⋯ 菜单用同一批名字（#56；媒体卡 0.8.0 改名「图片和视频」，#131）
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
     check(
-      sections.join(' / ') === '标签页标题 / 标签页图标 / 图片、视频和声音 / 收起的内容 / 删除这个网站的设置',
+      sections.join(' / ') === '标签页标题 / 标签页图标 / 图片和视频 / 收起的内容 / 删除这个网站的设置',
       `站点设置页五块标题与菜单同名（${sections.join(' / ')}）`,
     );
     const bodyText = await m.evaluate(() => document.body.innerText);

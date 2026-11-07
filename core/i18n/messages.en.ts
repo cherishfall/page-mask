@@ -76,18 +76,16 @@ export const en: Messages = {
     hiddenNone: 'Nothing set to hide',
   },
 
-  /** Pictures, videos and sound (#116): one set of labels shared by popup / ⋯ menu / site settings */
+  /** Pictures & videos gray (0.8.0, #131): one set of labels shared by the capsule media button / popup / site settings */
   media: {
-    heading: 'Pictures, videos & sound',
-    hideImages: 'Hide images',
-    hideVideos: 'Hide videos',
-    mutePage: 'Mute this page',
-    hideImagesHint: 'Pictures turn into grey blocks. They stay in place and their links still work. Small icons on buttons stay as they are.',
-    hideVideosHint: 'Videos turn into grey blocks, pause, and make no sound.',
-    mutePageHint: 'This tab makes no sound. The page looks the same. Chrome shows a muted speaker icon on the tab.',
-    hint: 'These apply only with ‘Your settings’ on. ‘As is’ brings the sound back too. Images still load in the background — this only changes what you see.',
-    hintShort: 'Only with ‘Your settings’ on. ‘As is’ restores everything.',
-    menuGroup: 'Pictures, videos & sound',
+    heading: 'Pictures & videos',
+    mediaGray: 'Turn pictures & videos gray',
+    mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are held; click a video to watch it.',
+    /** Site settings card footnote: state the limits plainly, including that images still load */
+    hint: 'Only with ‘Your settings’ on. ‘As is’ brings the color back. Images still load in the background — this only removes the color.',
+    hintShort: 'Only with ‘Your settings’ on. ‘As is’ brings the color back.',
+    /** Hover / screen-reader label for the capsule media button */
+    mediaTitle: 'Turn pictures & videos gray',
     saveFailed: "Couldn't save this change. Please try again.",
   },
 
