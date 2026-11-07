@@ -543,7 +543,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   async function restoreAll(): Promise<boolean> {
     healthGen++;
     if (!profile) return false;
-    // 原样态 = 定制（收起的内容 + 标签页标题图标）还原；灰度独立于两态（0.8.3，#133）：
+    // 原样态 = 定制（收起的内容 + 标签页标题图标）还原；灰度独立于两态（0.8.3）：
     // mediaGray 开着就继续生效，媒体控制器按配置同步而不是关掉
     media.sync(profile);
     // 原样态的正式样式里可能仍有灰度块：首帧防闪同样要压住，等正式样式落地后再撤
@@ -551,6 +551,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     guard.restore();
     clearMasks();
     const ok = await syncFormalStyles();
+    shield.release(); // 与 applyAll 对称：正式样式落地即撤首帧遮挡，别靠 1.5s 兜底超时（#133）
     await uiReady;
     if (disposed || wizardActive) return ok;
     // 幕布开着时 guard.restore() 刚把真实标题放了出来：重新压住标题与覆盖层（#45）

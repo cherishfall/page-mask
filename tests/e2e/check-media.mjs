@@ -240,7 +240,7 @@ async function main() {
     await page.bringToFront();
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main')); // 胶囊主按钮切到原样
     await poll(async () => (await getProfile(control, ORIGIN)).switchState === 'original', '切到「网站原样」');
-    // 灰度独立于两态（0.8.3，#133）：原样态下灰度照常生效、小图标照常豁免、压制照常工作
+    // 灰度独立于两态（0.8.3）：原样态下灰度照常生效、小图标照常豁免、压制照常工作
     await waitFor(page, '原样态灰度仍在', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     const originalState = await mediaState(page);
     check(grayed(originalState.bigFilter) && originalState.iconKept, '原样态：定制还原，灰度与小图标豁免照常');

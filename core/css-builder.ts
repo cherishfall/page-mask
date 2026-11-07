@@ -55,7 +55,7 @@ export function buildSameGroupOutlineCss(candidates: readonly string[]): string 
 
 /**
  * 汇总某 URL 上应注入的正式 CSS 文本：A/B 方案规则 +（0.8.0）媒体灰度块。
- * 0.8.3 起两者的生效条件分开（#133）：
+ * 0.8.3 起两者的生效条件分开：
  * - 规则 CSS 只在清爽态输出（主开关 = 「收起的内容 + 标签页标题和图标」这组定制的总闸）；
  * - 媒体灰度独立于两态：mediaGray 开着就输出，原样态下也生效（胶囊媒体钮任何时候按下都有可见反应）。
  * 整份文本作为一部分走 swapCss 的 prev→next 换入换出，后台无状态、注入记录按文档持有的既有设计一点不改。

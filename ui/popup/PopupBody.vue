@@ -297,7 +297,7 @@ const deleteLabel = deleteSiteHeading();
   line-height: 16px;
 }
 /* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体，16 盒、随文字色。
-   媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3，#133） */
+   媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3） */
 .popup-action-icon,
 .popup-row-icon {
   inline-size: 16px;

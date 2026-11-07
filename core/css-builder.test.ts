@@ -63,7 +63,7 @@ describe('buildDisguiseCss 按页面范围与两态汇总（0.8.3）', () => {
     const css = buildDisguiseCss(profileOf({ hideRules: [baseRule({})], switchState: 'original' }), 'https://x.com/');
     expect(css).toBeNull();
   });
-  it('灰度独立于两态（#133）：原样态 mediaGray 开着也输出媒体块', () => {
+  it('灰度独立于两态：原样态 mediaGray 开着也输出媒体块', () => {
     const css = buildDisguiseCss(profileOf({ switchState: 'original', mediaGray: true }), 'https://x.com/')!;
     expect(css).toContain('img:not(');
     expect(css).toContain('filter: grayscale(1)');
