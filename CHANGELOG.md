@@ -5,6 +5,22 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.4] - 2026-11-08
+
+0.8.3 独立代码审查的收口（一条轻微项）：功能与权限没有变化。
+
+### 中文
+
+#### 修复
+
+- **原样态+灰度的首帧遮挡按时撤掉**：切「原样」时首帧遮挡会换成灰度样式文本，之前落地后没显式撤、靠 1.5 秒兜底超时——极端情况下刷新后立刻进向导，向导里页面会先发灰再突然恢复。现在与清爽态路径对称，正式样式落地即撤
+
+### English
+
+#### Fixed
+
+- **The first-paint shield is released on time in "As is" + gray**: switching to "As is" swaps the shield to the gray stylesheet text, but it was never explicitly released — it relied on a 1.5s fallback. In the worst case, opening the wizard right after a reload showed a gray-tinted page that suddenly regained color. Now symmetric with the "Your settings" path: the shield is released as soon as the formal styles land
+
 ## [0.8.3] - 2026-11-08
 
 产品结构修正：「图片和视频变灰」成为完全独立的开关，不再被「按你的设置显示 / 原样」总开关管辖（ADR-0014）。
