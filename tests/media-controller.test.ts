@@ -293,6 +293,25 @@ describe('自动播放压制与点击放行（0.8.0，ADR-0013）', () => {
     c.dispose();
   });
 
+  it('放行过的视频随容器子树被移出：放行记录同样清掉（forget 的子树分支）', async () => {
+    const video = mountVideo();
+    const c = createMediaController(document);
+    c.sync({ mediaGray: true });
+    pause.mockClear();
+    tap(video);
+    video.dispatchEvent(new Event('play'));
+    expect(pause).not.toHaveBeenCalled();
+
+    video.closest('section')?.remove(); // 信息流把整棵卡片子树换掉
+    await new Promise((r) => setTimeout(r, 30));
+    vi.mocked(Date.now).mockReturnValue(1_000_000 + 20_000);
+    document.body.appendChild(video); // 同一个元素又被插回来
+    pause.mockClear();
+    video.dispatchEvent(new Event('play'));
+    expect(pause, '子树移除同样清掉放行记录，重插后重新压制').toHaveBeenCalled();
+    c.dispose();
+  });
+
   it('同一个视频在页面里挪位置：不影响压制与放行状态（#129 场景的新语义）', async () => {
     const video = mountVideo();
     const c = createMediaController(document);

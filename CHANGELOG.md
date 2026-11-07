@@ -5,6 +5,26 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.2] - 2026-11-07
+
+0.8.1 修复复查的收尾（无必修项，三条建议全落）：功能与权限没有变化。
+
+### 中文
+
+#### 修复
+
+- **扩展更新后的静音清扫覆盖未配置的站点**：一次性幕布页不在内容脚本重注入范围内，它的残留静音之前要等到下一次导航才解除；现在更新 / 重载时对所有标签页清扫一遍（只解除本扩展设的那份）
+- **放行记录随容器子树移出也清掉**：信息流把整张卡片换掉时，卡片里放行过的视频同样不再被内部记录钉住（补子树分支的回归单测）
+- **幕布静音的导航兜底与遮 / 撤消息确认共用同一条队列**（补交错回归单测）
+
+### English
+
+#### Fixed
+
+- **The update-time mute sweep now covers unconfigured sites**: a one-shot curtain page is not in the content-script reinjection range, so its leftover mute used to wait for the next navigation; updates and reloads now sweep every tab (only the extension's own mute is removed)
+- **Allow records clear with the subtree**: when a feed swaps out a whole card, a video the user unblocked inside it is no longer pinned by the internal record (regression test for the subtree branch added)
+- **Regression tests for the navigation fallback sharing the same per-tab queue** as cover / restore messages
+
 ## [0.8.1] - 2026-11-07
 
 0.8.0 发版后独立代码审查的收口，都是特定操作顺序下才会碰到的状态问题；功能与权限没有变化。

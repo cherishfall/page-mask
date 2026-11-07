@@ -478,6 +478,19 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return next;
   }
 
+  /** 扩展更新 / 重载后的静音清扫：所有标签页逐个走解除（只动 mutedByUs 的那份） */
+  async function releaseAllCurtainMutes(): Promise<void> {
+    let tabs: Browser.tabs.Tab[];
+    try {
+      tabs = await browser.tabs.query({});
+    } catch {
+      return;
+    }
+    for (const t of tabs) {
+      if (t.id !== undefined) void releaseCurtainMuteOnNavigation(t.id);
+    }
+  }
+
   // ---------- 隐藏样式（按文档） ----------
 
   /**
@@ -641,6 +654,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
       reconcile()
         .then(reinjectOpenTabs)
         .catch((e: unknown) => console.warn('[PageMask] 更新后对账 / 重新注入失败', e));
+      // 幕布静音清扫（审查轮二）：重注入只覆盖已配置站点，未配置站点的一次性幕布页不在其中，
+      // 旧实例的解除消息又发不出去。扩展重载后幕布本身已死，任何本扩展设的静音都是残留——
+      // 全部标签页过一遍，只解除 mutedByUs 的那份（走每标签页队列，避免与迟到的消息交错）
+      void releaseAllCurtainMutes();
     } else {
       reconcileInBackground(`onInstalled:${details.reason}`);
     }

@@ -1037,5 +1037,29 @@ describe('后台引擎（fakeBrowser）', () => {
       ]);
       expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true });
     });
+
+    it('导航兜底与遮 / 撤消息共用同一条每标签页队列：不交错（审查轮二）', async () => {
+      stubs.update.mockClear();
+      // 消息先、导航兜底后：兜底解除落在最后，最终有声
+      const msg = send({ t: 'curtainMute', muted: true }, tabSender());
+      const nav = fakeBrowser.tabs.onUpdated.trigger(siteTabId, { status: 'loading' }, {} as never);
+      await Promise.all([msg, nav]);
+      await eventually(() => expect(stubs.update).toHaveBeenLastCalledWith(siteTabId, { muted: false }));
+
+      // 导航兜底先、遮住后：最终静音（兜底只解本扩展设的那份，不拦后来的遮住）
+      const nav2 = fakeBrowser.tabs.onUpdated.trigger(siteTabId, { status: 'loading' }, {} as never);
+      const msg2 = send({ t: 'curtainMute', muted: true }, tabSender());
+      await Promise.all([nav2, msg2]);
+      await eventually(() => expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true }));
+    });
+
+    it('扩展更新后清扫全部残留静音：未配置站点的一次性幕布页也在其中（审查轮二）', async () => {
+      await send({ t: 'curtainMute', muted: true }, tabSender());
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true });
+      stubs.update.mockClear();
+
+      await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update', previousVersion: '0.8.0' } as never);
+      await eventually(() => expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: false }));
+    });
   });
 });
