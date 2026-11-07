@@ -1011,5 +1011,31 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(await send({ t: 'curtainMute', muted: true }, EXT_SENDER)).toMatchObject({ ok: false });
       expect(stubs.update).not.toHaveBeenCalled();
     });
+
+    it('遮 / 撤连发不交错：最终状态 = 最后一条消息的方向（审查轮：每标签页串行）', async () => {
+      stubs.update.mockClear();
+      // 同时发出、不互相等待：遮 → 撤。若两条消息的 check-then-act 交错，
+      // 解除会读到静音落地前的旧快照而空过，留下哑标签页
+      await Promise.all([
+        send({ t: 'curtainMute', muted: true }, tabSender()),
+        send({ t: 'curtainMute', muted: false }, tabSender()),
+      ]);
+      expect(stubs.update).toHaveBeenLastCalledWith(siteTabId, { muted: false });
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: false });
+
+      await Promise.all([
+        send({ t: 'curtainMute', muted: false }, tabSender()),
+        send({ t: 'curtainMute', muted: true }, tabSender()),
+        send({ t: 'curtainMute', muted: false }, tabSender()),
+      ]);
+      expect(stubs.update).toHaveBeenLastCalledWith(siteTabId, { muted: false });
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: false });
+
+      await Promise.all([
+        send({ t: 'curtainMute', muted: false }, tabSender()),
+        send({ t: 'curtainMute', muted: true }, tabSender()),
+      ]);
+      expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true });
+    });
   });
 });

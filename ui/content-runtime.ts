@@ -144,6 +144,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   });
   // 幕布（#45）：页面内的临时状态，只活在本实例里——不写存储、刷新 / 整页跳转即消失
   const curtain = new CurtainLayer({ createHost: () => createPageHost(ctx, 'curtain') });
+  // 扩展更新 / 重载的静音收尾兜底（审查轮 #3）：上一个实例若在幕布静音中失效，它的解除消息
+  // 随上下文一起死、发不出去，标签页会带着本扩展的静音进入新文档。本文档刚开始，
+  // 自己还没有任何幕布，此时标签页上若有本扩展的静音就是残留——补一次单向解除
+  // （后台核对归属，只解本扩展那份）。接管一次性脚本的遮住时会再重新静音，
+  // 顺序由后台的每标签页队列保证（后进队的后写）。
+  sendCurtainMute(false);
   // 必须最先执行：在页面开始解析前挡住首帧
   const shield = createFirstPaintShield(document);
   const media = createMediaController(document);

@@ -404,6 +404,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   // ---------- 幕布静音（0.8.0，#131，ADR-0013） ----------
 
+  /** 每个标签页一条静音写入队列：遮 / 撤两条消息的 check-then-act 不许交错（审查轮 #2），
+   *  后进队的后写，最终状态 = 最后一条消息的方向 */
+  const muteChains = new Map<number, Promise<unknown>>();
+
   /**
    * 只解除「确实是本扩展静音的」标签页：Chrome 46+ 的 MutedInfo 提供 reason 与 extensionId
    * （官方 tabs API）。用户手动静音、Chrome 自带的「静音网站」、别的扩展设的静音一律不碰。
@@ -416,27 +420,37 @@ export function createBackground({ browser }: BackgroundDeps): void {
    * 幕布的标签页静音：遮住即静音 sender 所在的标签页，恢复（或刷新 / 离开页面）即还原。
    * 方向由消息带，tabId 只认 sender——内容脚本 / 一次性脚本只能动自己所在的标签页。
    * 幂等：已静音就不再写；解除只认 mutedByUs，不碰用户手动静音的那份。
-   * 静音只随幕布生灭（不进存储、不按站点对账），0.7.x 的整套站点静音对账机制已删除。
+   * 同一标签页的操作按消息到达顺序串行执行：遮 → 撤连发时各自都要 tabs.get 再决定写不写，
+   * 并发交错会让解除读到静音落地前的旧快照而空过，留下哑标签页（审查轮 #2）。
    */
-  async function setCurtainMute(tabId: number, muted: boolean): Promise<Ack> {
-    try {
-      let tab: Browser.tabs.Tab | undefined;
+  function setCurtainMute(tabId: number, muted: boolean): Promise<Ack> {
+    const run = async (): Promise<Ack> => {
       try {
-        tab = await browser.tabs.get(tabId);
-      } catch {
-        return { ok: false, error: 'tab gone' }; // 标签页刚被关掉
+        let tab: Browser.tabs.Tab | undefined;
+        try {
+          tab = await browser.tabs.get(tabId);
+        } catch {
+          return { ok: false, error: 'tab gone' }; // 标签页刚被关掉
+        }
+        const info = tab?.mutedInfo;
+        if (muted) {
+          // 已被任何人静音（含用户手动 / Chrome「静音网站」）就不重复写：解除时只解自己的那份
+          if (!info?.muted) await browser.tabs.update(tabId, { muted: true });
+        } else if (mutedByUs(info)) {
+          await browser.tabs.update(tabId, { muted: false });
+        }
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: String(e) };
       }
-      const info = tab?.mutedInfo;
-      if (muted) {
-        // 已被任何人静音（含用户手动 / Chrome「静音网站」）就不重复写：解除时只解自己的那份
-        if (!info?.muted) await browser.tabs.update(tabId, { muted: true });
-      } else if (mutedByUs(info)) {
-        await browser.tabs.update(tabId, { muted: false });
-      }
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: String(e) };
-    }
+    };
+    const prev = muteChains.get(tabId) ?? Promise.resolve();
+    const next = prev.then(run, run);
+    muteChains.set(
+      tabId,
+      next.catch(() => undefined),
+    );
+    return next;
   }
 
   /**
@@ -444,16 +458,24 @@ export function createBackground({ browser }: BackgroundDeps): void {
    * 导航开始时把本扩展设的那份静音解掉——静音跟幕布生灭，不能跟着 URL 走进下一个页面。
    * 只在文档真正开始加载时触发（status === 'loading'）：SPA 站内换址不发 loading，
    * 幕布还开着、静音保持。任何导航都会到这里，先回查再动手，绝大多数标签页是无操作。
+   * 与遮 / 撤消息共用同一条每标签页队列，避免兜底解除与用户刚发的遮住交错。
    */
   function releaseCurtainMuteOnNavigation(tabId: number): Promise<void> {
-    return (async () => {
+    const run = async (): Promise<void> => {
       try {
         const tab = await browser.tabs.get(tabId);
         if (mutedByUs(tab?.mutedInfo)) await browser.tabs.update(tabId, { muted: false });
       } catch {
         // 标签页刚被关掉：没有需要收尾的状态
       }
-    })();
+    };
+    const prev = muteChains.get(tabId) ?? Promise.resolve();
+    const next = prev.then(run, run);
+    muteChains.set(
+      tabId,
+      next.catch(() => undefined),
+    );
+    return next;
   }
 
   // ---------- 隐藏样式（按文档） ----------
