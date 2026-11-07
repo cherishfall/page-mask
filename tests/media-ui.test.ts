@@ -55,14 +55,16 @@ describe('媒体开关的界面一致性（0.8.0，#131）', () => {
     expect(toggle, '不能出现没有父菜单的 menuitemcheckbox').not.toMatch(/role=["']menuitemcheckbox["']/);
   });
 
-  it('弹窗与站点设置页的开关收成带名字的组；说明有视觉分隔（#127 / #128 同款）', () => {
+  it('弹窗与站点设置页的开关收成带名字的组；卡片脚注有视觉分隔（#127 / #128 同款）', () => {
     for (const [name, src] of [
       ['弹窗', SURFACES[0][1]],
       ['站点设置页', SURFACES[2][1]],
     ] as const) {
       expect(src, `${name} 应当有带名字的 role="group"`).toMatch(/role="group"\s+:aria-label="t\.media\.heading"/);
     }
-    expect(SURFACES[0][1], '弹窗的组级说明要有细分隔').toMatch(/\.media-hint\s*\{[^}]*border-top/s);
+    // 弹窗只有一行开关：说明直接跟着那一行，不再要组级分隔线（0.8.0，#132 新眼睛审查）
+    expect(SURFACES[0][1], '弹窗的媒体说明不该再带组级分隔线').not.toMatch(/\.media-hint\s*\{[^}]*border-top/s);
+    // 站点设置页的脚注讲的是整张卡的边界，与开关行隔开是对的
     expect(SURFACES[2][1], '设置页的卡片脚注要有细分隔').toMatch(/\.media-footnote\s*\{[^}]*border-top/s);
   });
 

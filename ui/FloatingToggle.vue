@@ -40,7 +40,7 @@
       <span v-if="!mini" class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
     </button>
 
-    <!-- 遮住整页（图标即可，读屏文案「遮住整页」） -->
+    <!-- 遮住整页（图标即可，读屏文案「遮住整页」）：闭眼图标与弹窗「遮住这一页」共用一份（#132） -->
     <button
       type="button"
       class="pm-tg-cover"
@@ -49,26 +49,14 @@
       data-testid="pm-toggle-cover"
       @click="emit('cover')"
     >
-      <svg
-        class="pm-tg-cover-icon"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-        <circle cx="12" cy="12" r="3" />
-        <line x1="3" y1="3" x2="21" y2="21" />
-      </svg>
+      <EyeOffIcon class="pm-tg-cover-icon" />
     </button>
 
     <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮，全功能与 mini 形态都有。
          与「遮住」同等待遇的一点就生效：按下去立刻变灰 / 还原（按站点记忆，页面效果由
          storage → applyAll 统一重应用）。按下状态用实心 / 描边两态 + aria-pressed，
-         不只靠颜色（WCAG 1.4.1）；点一下不弹任何面板，再点一下还原 -->
+         不只靠颜色（WCAG 1.4.1）；点一下不弹任何面板，再点一下还原。
+         图标与弹窗开关行共用一份（#132） -->
     <button
       type="button"
       class="pm-tg-cover pm-tg-media"
@@ -77,21 +65,7 @@
       data-testid="pm-toggle-media"
       @click="emit('mediaChange', 'mediaGray', !mediaOn)"
     >
-      <svg
-        class="pm-tg-media-icon"
-        :data-state="mediaOn ? 'on' : 'off'"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect x="3" y="3" width="18" height="18" rx="3" />
-        <circle cx="9" cy="9" r="2" />
-        <polyline points="21 15 16 10 5 21" />
-      </svg>
+      <MediaIcon class="pm-tg-media-icon" :data-state="mediaOn ? 'on' : 'off'" />
     </button>
 
     <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
@@ -172,6 +146,8 @@ import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
 import GripIcon from './GripIcon.vue';
+import EyeOffIcon from './icons/EyeOffIcon.vue';
+import MediaIcon from './icons/MediaIcon.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;

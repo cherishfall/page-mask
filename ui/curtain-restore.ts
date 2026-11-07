@@ -18,6 +18,7 @@ import { isCurtainDrag } from '@/core/curtain';
 import { onLocaleChange, t } from '@/core/i18n';
 import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
 import type { ButtonPos } from '@/core/types';
+import { EYE_OUTLINE_PATH } from './icons/paths';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 
 /** 没存过坐标时的默认位置：与胶囊同一套（离线右各 16px） */
@@ -55,7 +56,8 @@ function createEyeIcon(doc: Document): SVGSVGElement {
   svg.setAttribute('stroke-linecap', 'round');
   svg.setAttribute('stroke-linejoin', 'round');
   const outline = doc.createElementNS(SVG_NS, 'path');
-  outline.setAttribute('d', 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z');
+  // 路径数据与弹窗 EyeOpenIcon 共用一份（#132）：睁眼在全项目只有一个样子
+  outline.setAttribute('d', EYE_OUTLINE_PATH);
   const pupil = doc.createElementNS(SVG_NS, 'circle');
   pupil.setAttribute('cx', '12');
   pupil.setAttribute('cy', '12');

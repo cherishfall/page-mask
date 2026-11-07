@@ -68,25 +68,19 @@
         </button>
       </template>
 
-      <!-- 遮住开关（#54）：遮住后按钮自己写着「恢复本页」。没添加过 / 已添加 / 待授权三种站点都能用 -->
-      <button data-testid="pm-popup-cover" @click="emit('toggleCurtain')">
-        <span class="popup-cover-label">
-          <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
-          <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
-        </span>
-        <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
-        <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
-      </button>
-
-      <!-- 右下角的小按钮开关（#112）：只在这个网站已配置、已允许访问时出现——
-           待授权站点页面上本来就没有胶囊；关掉后下面四件事一件不少，这是隐藏胶囊后的唯一页外入口 -->
+      <!-- 图片和视频变灰 / 悬浮按钮（0.8.0 排版，#132）：这两件是「这个网站的设置」，
+           与上面的站点配置动作归成一组；「遮住这一页」是页面级应急动作，用分隔线分到下面 -->
       <template v-if="phase === 'ready'">
         <div class="divider" role="presentation"></div>
         <!-- 图片和视频变灰（0.8.0，#131）：一行开关 + 一句说明。
-             与「按你的设置显示」一样只在按设置时起作用；原样时也能先设好，所以不设禁用态 -->
+             与「按你的设置显示」一样只在按设置时起作用；原样时也能先设好，所以不设禁用态。
+             标签前的媒体图标与胶囊「媒体」钮同源（#132）——同一个东西一个样子 -->
         <div class="media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
           <div class="switch-row">
-            <label for="pm-popup-media-mediaGray">{{ t.media.mediaGray }}</label>
+            <label class="popup-row-label" for="pm-popup-media-mediaGray">
+              <MediaIcon class="popup-row-icon" />
+              <span>{{ t.media.mediaGray }}</span>
+            </label>
             <input
               id="pm-popup-media-mediaGray"
               type="checkbox"
@@ -114,8 +108,22 @@
         </div>
         <!-- 提示放在开关下面（说明跟着它解释的东西走），不塞进开关行 -->
         <p class="hint capsule-hint">{{ t.popup.showToggleHint }}</p>
-        <div class="divider" role="presentation"></div>
       </template>
+
+      <!-- 遮住这一页（#54 / #132）：页面级应急动作，与站点设置用分隔线分开。
+           图标与胶囊同源：没遮 = 闭眼（同胶囊「遮住」钮），遮着 = 睁眼（同幕布上的恢复钮）——
+           遮住后重开弹窗，看见的就是与幕布上那颗按钮同一只睁眼 -->
+      <div class="divider" role="presentation"></div>
+      <button class="popup-cover" data-testid="pm-popup-cover" @click="emit('toggleCurtain')">
+        <EyeOffIcon v-if="!covered" class="popup-action-icon" />
+        <EyeOpenIcon v-else class="popup-action-icon" />
+        <span class="popup-cover-label">
+          <template v-if="busy === 'curtain'">{{ covered ? t.popup.restoring : t.popup.covering }}</template>
+          <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
+        </span>
+        <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
+        <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
+      </button>
     </template>
 
     <!-- 底部两个入口：真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭 -->
@@ -144,6 +152,9 @@ import { computed } from 'vue';
 import { type MediaFlagKey, type MediaToggles } from '@/core/media';
 import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
+import EyeOffIcon from '@/ui/icons/EyeOffIcon.vue';
+import EyeOpenIcon from '@/ui/icons/EyeOpenIcon.vue';
+import MediaIcon from '@/ui/icons/MediaIcon.vue';
 
 const props = defineProps<{
   /** loading 读取中 / unsupported 不支持的页面 / new 没有配置 / pending 待授权 / ready 就绪 */
@@ -285,6 +296,26 @@ const deleteLabel = deleteSiteHeading();
   font-size: var(--pm-font-size-caption);
   line-height: 16px;
 }
+/* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体，16 盒、随文字色 */
+.popup-action-icon,
+.popup-row-icon {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: none;
+}
+.popup-row-icon {
+  color: var(--pm-fg-muted);
+}
+/* 媒体开关行：图标 + 文字成组，点图标也能拨开关（点击区跟着 label 走） */
+.popup-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+}
+/* 遮住这一页：图标 + 文字 + 快捷键排一行 */
+.popup-cover {
+  gap: var(--pm-space-2);
+}
 /* 分组分隔线（#112）：站点动作 ｜ 胶囊开关 ｜ 页面入口 ｜ 删除，一拍留白 + 一条细线 */
 .divider {
   border-top: 1px solid var(--pm-border);
@@ -297,15 +328,12 @@ const deleteLabel = deleteSiteHeading();
   flex-direction: column;
   gap: var(--pm-space-2);
 }
-/* 组内的说明不是 .popup 的直接子元素，字号自己对齐弹窗里其他说明那一档 */
+/* 组内的说明不是 .popup 的直接子元素，字号自己对齐弹窗里其他说明那一档。
+   0.8.0 起只有一行开关：说明直接跟着它解释的那一行，不再要 #127 的组级分隔线
+   （那是对「一组三行 + 一句总说明」的设计，媒体组缩成一行后分隔线会把说明和它解释的行隔开） */
 .media-group .hint {
   margin: 0;
   font-size: var(--pm-font-size-body);
-}
-/* 说明用一条细分隔与开关行分开（#127 同款）：一眼看得出它是讲这组开关的 */
-.media-group .media-hint {
-  border-top: 1px solid var(--pm-border);
-  padding-top: var(--pm-space-2);
 }
 /* 胶囊开关下的说明：一行小字，跟着开关走 */
 .capsule-hint {
