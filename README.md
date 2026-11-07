@@ -22,11 +22,11 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
-- **收起图片 / 收起视频 / 静音网页**：按网站单独开关，三处都能改（站点设置页、弹窗、悬浮按钮「⋯」菜单）。图片和视频变成灰块，位置不变、链接还能点，按钮上的小图标保持原样；视频还会暂停、不出声；「静音网页」让这个标签页不出声，Chrome 标签页上会出现静音的小喇叭。只在「按你的设置显示」时起作用，切「原样」连声音一起还原
+- **图片和视频变灰**：按网站的一个开关（胶囊上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清，整个页面像一篇图文资料；≤32px 的小图标与表情保持原样。会自动播放的视频被按住，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。只在「按你的设置显示」时起作用，切「原样」恢复彩色
 - **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
-- **幕布**：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住，再点一下回到刚才的样子；遮住后页面上是一颗睁眼的小按钮，可以拖动，鼠标移上去显出「恢复」。没添加过的网站也能用；也可以按快捷键（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）——胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
+- **幕布**：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（0.8.0 起连这个标签页的声音一起按住），再点一下回到刚才的样子；遮住后页面上是一颗睁眼的小按钮，可以拖动，鼠标移上去显出「恢复」。没添加过的网站也能用；也可以按快捷键（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）——胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 - **胶囊可调可藏**：不透明度滑杆（10%–100%，调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方可以在弹窗里按网站把它关掉，再打开时回到右下角、完整形态
 - **界面语言**：全界面中英双语，插件设置里可选（跟随浏览器 / 简体中文 / English），切换马上生效
 - **导出 / 导入**：全部网站的设置和插件设置导出成一个文件（文件名带版本号与导出时间），换电脑后导入
@@ -81,14 +81,15 @@
 
 1. 打开想收拾的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（第一次会问这一次）
 2. 「收起内容」分两步：在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
-3. 想临时看网站原样，点悬浮按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或悬浮按钮旁边的「⋯」菜单；想收起图片 / 视频、或让这个标签页安静，在弹窗底部、悬浮按钮「⋯」菜单、或站点设置页的「图片、视频和声音」里拨开关，三处是同一组设置
+3. 想临时看网站原样，点悬浮按钮；想改收起的内容或标题图标，用弹窗上的两颗按钮，或悬浮按钮旁边的「⋯」菜单；想让图片视频变低调，点胶囊上的「媒体」钮，或在弹窗、站点设置页的「图片和视频」里拨开关，三处是同一组设置
 4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题、导出 / 导入、界面语言、不透明度）
 5. 想临时挡住整页，用弹窗或小按钮上的「遮住」；恢复时点页面上的睁眼小按钮
 
 ### 已知限制
 
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
-- 「收起图片 / 收起视频」只是**看起来收起**：图片请求照发，既不省流量，也不代替广告过滤工具。CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 本期不收。「静音网页」是标签页级，离开这个网站会自动恢复声音；用户手动取消静音后扩展不会追着按回去
+- 「图片和视频变灰」只是**去掉颜色**：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具。CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 不变灰；`<audio>` 与一切声音不参与。「点击视频放行」按最近一次点击位置判断，在个别播放器结构特殊的站点可能需要直接点视频本体
+- 幕布遮住时会把当前标签页连声音一起按住，恢复（或刷新、离开页面）时声音跟着回来；你自己用 Chrome 右键或播放器静音的不受影响
 - iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
 - 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
 - 幕布只挡眼睛不挡输入：视频全屏、页面里的对话框会盖住幕布；键盘焦点仍在页面里，继续打字仍会改内容；刷新或离开页面后幕布消失
@@ -133,11 +134,11 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
-- **Hide images / Hide videos / Mute this page**: three independent per-site switches, available in three places (the site's settings page, the popup and the floating button's "⋯" menu). Pictures and videos turn into grey blocks that stay in place with their links still working; small icons on buttons are left alone. Videos also pause and go silent. "Mute this page" silences the tab (Chrome shows a muted speaker icon on it) while leaving the picture alone. These apply only with "Your settings" on — "As is" brings the sound back too
+- **Turn pictures & videos gray**: one per-site switch, available in three places (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable — and the whole page reads like a quiet article; icons and emoji up to 32px stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". Applies only with "Your settings" on — "As is" brings the color back
 - **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Your settings" and "As is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
-- **Curtain**: the "Cover this page / Restore this page" switch in the popup covers the whole page and the tab title, then takes you straight back. After covering, a small open-eye button remains — draggable, and hovering it reveals the word "Restore". It works on sites you have not added too. There is also a shortcut (Ctrl+Shift+X by default, ⌘+Shift+X on Mac) — the capsule, the popup and the shortcut share one state, so any of them can undo any other
+- **Curtain**: the "Cover this page / Restore this page" switch in the popup covers the whole page and the tab title — and holds the tab's sound too (0.8.0). After covering, a small open-eye button remains — draggable, and hovering it reveals the word "Restore". It works on sites you have not added too. There is also a shortcut (Ctrl+Shift+X by default, ⌘+Shift+X on Mac) — the capsule, the popup and the shortcut share one state, so any of them can undo any other
 - **A capsule you can tune or hide**: an opacity slider (10%–100% — how faint it sits when idle is your call; it turns clear the moment you touch it). If it feels intrusive, hide it per site from the popup; showing it again puts it back at the bottom-right in full form
 - **Interface language**: the whole interface is bilingual (Chinese and English); pick it in Settings ("follow the browser" / 简体中文 / English) and it takes effect immediately
 - **Export / import**: all site settings plus the plugin settings export as one file (the file name carries the version and the export time); import it on another computer
@@ -192,14 +193,15 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
-3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button. To hide pictures/videos or silence the tab, flip the switches at the bottom of the popup, in that 「⋯」 menu, or in the "Pictures, videos & sound" card on the site's settings page — all three are the same set of settings
+3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button. To quiet the pictures and videos, click the floating button's 「媒体」 (Media) button, or flip the switch in the popup or in "Pictures & videos" on the site's settings page — all three are the same setting
 4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title, export / import, interface language, opacity)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
 ### Known limitations
 
 - Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
-- "Hide images / Hide videos" only changes **what you see**: image requests still happen, so this is neither a data saver nor an ad blocker. CSS background images, embedded players inside iframes, `<canvas>` and inline SVG are not covered. "Mute this page" is per tab, and sound comes back when you leave that site; if you unmute the tab by hand, the extension won't mute it again straight away
+- "Turn pictures & videos gray" only removes **the color**: image and video requests still happen, so this is neither a data saver nor an ad blocker. CSS background images, embedded players inside iframes, `<canvas>` and inline SVG are not grayed; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on sites with unusual player structures you may need to click the video itself
+- Covering the page also holds that tab's sound; uncovering, reloading or leaving the page brings it back. A mute you set yourself (Chrome's "Mute site" or the player) is not touched
 - Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
 - Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them
 - The curtain blocks sight, not input: fullscreen video and in-page dialogs render above it; keyboard focus stays in the page, so typing still edits content; the curtain disappears on reload or navigation

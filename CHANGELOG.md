@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.0] - 2026-11-07
+
+按网站的「图片和视频变灰」一个开关取代 0.7.x 的三个开关；遮住整页时连声音一起按住。旧设置自动迁移，不新增任何权限。
+
+### 中文
+
+#### 新增
+
+- **图片和视频变灰**：一个按网站记的开关。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清——整个页面从花花绿绿降到像一篇图文资料；≤32px 的小图标与表情保持原样。声音完全不参与：音量归播放器自己的按钮和 Chrome 右键标签页「静音网站」
+- **自动播放的视频被按住**：站点自己让视频播起来的（X 刷信息流那种自动播放）一律按停，页面上没有会动的东西；你点击某个视频区域，那一个视频就放行正常播放，画面保持黑白。被按停的视频不替网站恢复播放
+- **遮住这一页连声音一起按住**：幕布遮住哪个标签页就静哪个标签页，恢复（或刷新、离开页面）时声音跟着回来；只解除本扩展设的那份静音，你自己用 Chrome 右键或播放器静音的不受影响。没添加过的网站用弹窗遮住，同样连声音一起遮
+- **胶囊上的「媒体」钮**：全功能与 mini 形态都有，一点就变灰 / 还原；弹窗一行开关、站点设置页「图片和视频」卡，三处是同一组设置。弹窗重排：「遮住这一页」带上与胶囊同源的闭眼 / 睁眼图标、媒体开关行带上媒体图标
+
+#### 变更
+
+- **0.7.x 的「收起图片 / 收起视频 / 静音网页」三个开关退场**：原来开着收起图片或收起视频的网站，升级后自动等于「图片和视频变灰」开着；「静音网页」的常设开关不再提供——想让某个网站一直没声，用 Chrome 自带的右键标签页「静音网站」（按域名持久）。悬浮按钮「⋯」菜单里的媒体三行随之移除
+
+#### 说明
+
+- 「变灰」只是去掉颜色：图片 / 视频请求照发，不省流量、不代替广告过滤工具；CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 不变灰
+- 不新增权限：黑白观感是一条样式表，幕布静音用 Chrome 自带的标签页静音（不需要 `tabs` 权限，只解除本扩展设的那份）
+
+### English
+
+#### Added
+
+- **Turn pictures & videos gray**: one per-site switch. Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable — and a loud feed reads like a quiet article; icons and emoji up to 32px stay as they are. Sound is not touched at all: volume belongs to the player's own button and Chrome's "Mute site"
+- **Autoplaying videos are held down**: videos the site starts by itself (a scrolling feed on X, for example) are paused, so nothing on the page moves; click a video and that one plays normally, still in black & white. Videos we paused are not resumed for the site
+- **Covering a page holds its sound**: the tab under the curtain is muted; uncovering, reloading or leaving the page brings the sound back. Only the mute this extension set is removed — a mute you set via Chrome or the player is untouched. It works on sites you have not added too (cover from the popup)
+- **A "Media" button on the floating capsule**: both the full and mini forms have it — one click turns the gray on or off. The popup gets one switch row and the site's settings page a "Pictures & videos" card, all the same setting. The popup is re-laid out, and its "Cover this page" button and gray switch now carry the same icons as the capsule
+
+#### Changed
+
+- **The 0.7.x "Hide images / Hide videos / Mute this page" switches are retired**: a site that had hiding enabled automatically becomes "gray" after the update; the always-on mute switch is gone — to keep a site silent, use Chrome's own right-click "Mute site" (persistent per site). The floating menu's three media switches are removed accordingly
+
+#### Notes
+
+- "Gray" only removes color: image and video requests still happen — not a data saver, not an ad blocker; CSS background images, embedded players inside iframes, `<canvas>` and inline SVG are not grayed
+- No new permissions: the black & white look is one stylesheet, and the curtain mute uses Chrome's own tab mute (no `tabs` permission; only the extension's own mute is ever removed)
+
 ## [0.7.1] - 2026-11-06
 
 0.7.0 发版后复查的一批收口，都是特定操作顺序下才会碰到的状态还原问题；功能、界面用词与权限都没有变化。
