@@ -150,14 +150,21 @@ export function createMediaController(doc: Document): MediaController {
     for (const el of node.querySelectorAll('img, video')) pending.add(el);
   }
 
-  /** 子树被移出文档：只把它从待办里放掉，别让强引用钉住已被信息流替换掉的元素（#126 / #128）。
+  /** 子树被移出文档：把它从待办与放行集合里放掉，别让强引用钉住已被信息流替换掉的元素（#126 / #128）。
    *  挪位置（isConnected 仍真）不当移除：换容器后渲染尺寸可能变，仍要重判一次（#129）。
-   *  0.8.0 起没有要还原的声音状态，这里不再需要任何「原值账目」。 */
+   *  放行记录一并清除：信息流把放行过的视频换掉后，同一个 <video> 元素再插回来按新的一轮算，
+   *  不会再被旧记录放行；这也是 allowed 集合唯一的瘦身路径，长会话信息流不会钉住已移除的元素。 */
   function forget(node: Node): void {
     if (!(node instanceof Element)) return;
     if (node.isConnected) return;
-    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') pending.delete(node);
-    for (const el of node.querySelectorAll('img, video')) pending.delete(el);
+    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') {
+      pending.delete(node);
+      if (node.tagName === 'VIDEO') allowed.delete(node as HTMLVideoElement);
+    }
+    for (const el of node.querySelectorAll('img, video')) {
+      pending.delete(el);
+      if (el.tagName === 'VIDEO') allowed.delete(el as HTMLVideoElement);
+    }
   }
 
   function onMutation(records: MutationRecord[]): void {

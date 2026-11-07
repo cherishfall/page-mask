@@ -273,6 +273,26 @@ describe('自动播放压制与点击放行（0.8.0，ADR-0013）', () => {
     c.dispose();
   });
 
+  it('放行过的视频被移出文档：放行记录一并清掉，再插回后重新压制（allowed 不钉住已移除的元素）', async () => {
+    const video = mountVideo();
+    const c = createMediaController(document);
+    c.sync({ mediaGray: true });
+    pause.mockClear();
+    tap(video);
+    video.dispatchEvent(new Event('play'));
+    expect(pause).not.toHaveBeenCalled();
+
+    video.remove(); // 信息流把这一格换掉：forget() 清 pending 与放行记录
+    await new Promise((r) => setTimeout(r, 30));
+    // 把时间推过 10 秒意图窗：下面若还被放行，只可能是 allowed 集合残留，而不是旧点击背书
+    vi.mocked(Date.now).mockReturnValue(1_000_000 + 20_000);
+    document.body.appendChild(video); // 同一个元素又被插回来
+    pause.mockClear();
+    video.dispatchEvent(new Event('play'));
+    expect(pause, '按新的一轮重新压制，旧放行不复活').toHaveBeenCalled();
+    c.dispose();
+  });
+
   it('同一个视频在页面里挪位置：不影响压制与放行状态（#129 场景的新语义）', async () => {
     const video = mountVideo();
     const c = createMediaController(document);
