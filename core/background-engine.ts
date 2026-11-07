@@ -526,11 +526,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return { ok: true, css: next };
   }
 
-  /** 正式样式的目标文本：按存储里的站点配置与发送方文档的真实地址（sender.url）计算 */
+  /** 正式样式的目标文本：按存储里的站点配置与发送方文档的真实地址（sender.url）计算。
+   *  0.8.3 起规则与灰度的生效条件在 buildDisguiseCss 内部分开：规则跟主开关，灰度独立于两态 */
   async function disguiseCssFor(url: string): Promise<string | null> {
     const profile = await storage.getProfile(new URL(url).origin);
-    // #116：媒体灰块作为同一份正式样式的一部分；清爽态才生效，0 条收起规则但开了开关也会有样式
-    return profile && profile.switchState === 'disguised' ? buildDisguiseCss(profile.hideRules, url, profile) : null;
+    return profile ? buildDisguiseCss(profile, url) : null;
   }
 
   /**

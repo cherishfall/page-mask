@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildDisguiseCss, buildPreviewCss, buildRuleCss, buildSameGroupOutlineCss, maskRulesAt, nextStrategy } from './css-builder';
-import type { HideRule } from './types';
+import { createEmptyProfile, type HideRule, type SiteProfile } from './types';
 
 const baseRule = (over: Partial<HideRule>): HideRule => ({
   id: 'r1',
@@ -10,6 +10,12 @@ const baseRule = (over: Partial<HideRule>): HideRule => ({
   scope: { type: 'all' },
   onlyThis: false,
   createdAt: 0,
+  ...over,
+});
+
+const profileOf = (over: Partial<SiteProfile> = {}): SiteProfile => ({
+  ...createEmptyProfile('https://x.com', 0),
+  switchState: 'disguised',
   ...over,
 });
 
@@ -36,8 +42,8 @@ describe('buildRuleCss 三方案', () => {
   });
 });
 
-describe('buildDisguiseCss 按页面范围汇总', () => {
-  it('只输出该页面上生效的 A/B 方案规则', () => {
+describe('buildDisguiseCss 按页面范围与两态汇总（0.8.3）', () => {
+  it('清爽态：只输出该页面上生效的 A/B 方案规则', () => {
     const rules = [
       baseRule({ id: 'a', strategy: 'remove' }),
       baseRule({ id: 'm', strategy: 'mask' }),
@@ -46,32 +52,30 @@ describe('buildDisguiseCss 按页面范围汇总', () => {
         scope: { type: 'include', patterns: [{ label: '书架', prefix: 'https://x.com/shelf/' }] },
       }),
     ];
-    const css = buildDisguiseCss(rules, 'https://x.com/reader/1')!;
+    const css = buildDisguiseCss(profileOf({ hideRules: rules }), 'https://x.com/reader/1')!;
     expect(css).toContain('display: none');
     expect(css).not.toContain('visibility'); // mask 与范围外规则都不在
   });
-  it('无可用规则返回 null', () => {
-    expect(buildDisguiseCss([], 'https://x.com/')).toBeNull();
+  it('清爽态无可用规则、灰度没开：返回 null', () => {
+    expect(buildDisguiseCss(profileOf(), 'https://x.com/')).toBeNull();
   });
-});
-
-describe('buildDisguiseCss 并入媒体灰度（0.8.0，#131）', () => {
-  it('0 条收起规则但开了媒体开关：也要有正式样式，不能返回 null', () => {
-    const css = buildDisguiseCss([], 'https://x.com/', { mediaGray: true })!;
+  it('原样态：规则不输出（主开关只管收起与标题图标这组定制）', () => {
+    const css = buildDisguiseCss(profileOf({ hideRules: [baseRule({})], switchState: 'original' }), 'https://x.com/');
+    expect(css).toBeNull();
+  });
+  it('灰度独立于两态（#133）：原样态 mediaGray 开着也输出媒体块', () => {
+    const css = buildDisguiseCss(profileOf({ switchState: 'original', mediaGray: true }), 'https://x.com/')!;
     expect(css).toContain('img:not(');
     expect(css).toContain('filter: grayscale(1)');
+    expect(css).not.toContain('display: none');
   });
-
-  it('规则 CSS 与媒体 CSS 拼在同一份文本里：swapCss 只需维护一份记录', () => {
-    const css = buildDisguiseCss([baseRule({})], 'https://x.com/', { mediaGray: true })!;
+  it('清爽态 + 灰度：规则与媒体拼在同一份文本里，swapCss 只需维护一份记录', () => {
+    const css = buildDisguiseCss(profileOf({ hideRules: [baseRule({})], mediaGray: true }), 'https://x.com/')!;
     expect(css).toContain('display: none');
     expect(css).toContain(', video {');
   });
-
-  it('不传 media（向导预览 / 草稿）：不带媒体块，临时还原后看得清页面', () => {
-    const css = buildDisguiseCss([baseRule({})], 'https://x.com/')!;
-    expect(css).not.toContain('grayscale');
-    expect(css).toContain('display: none');
+  it('原样态 + 灰度关：返回 null', () => {
+    expect(buildDisguiseCss(profileOf({ switchState: 'original' }), 'https://x.com/')).toBeNull();
   });
 });
 
@@ -102,7 +106,7 @@ describe('buildPreviewCss 向导预览与正式样式同一实现', () => {
       { candidates: ['.x'], strategy: 'mask' as const },
     ];
     const saved = drafts.map((d, i) => baseRule({ id: `r${i}`, ...d }));
-    expect(buildPreviewCss(drafts)).toBe(buildDisguiseCss(saved, 'https://x.com/'));
+    expect(buildPreviewCss(drafts)).toBe(buildDisguiseCss(profileOf({ hideRules: saved }), 'https://x.com/'));
     expect(buildPreviewCss(drafts)).toBe(
       '#nav { display: none !important; }\n' +
         '.ad { visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }',

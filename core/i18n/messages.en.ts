@@ -81,9 +81,9 @@ export const en: Messages = {
     heading: 'Pictures & videos',
     mediaGray: 'Turn pictures & videos gray',
     mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are held; click a video to watch it.',
-    /** Site settings card footnote: state the limits plainly, including that images still load */
-    hint: 'Only with ‘Your settings’ on. ‘As is’ brings the color back. Images still load in the background — this only removes the color.',
-    hintShort: 'Only with ‘Your settings’ on. ‘As is’ brings the color back.',
+    /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
+    hint: 'Works on its own, independent of ‘Your settings’: switching to ‘As is’ restores what’s hidden and the tab title/icon, while the gray follows this switch. Images still load in the background — this only removes the color.',
+    hintShort: 'Works on its own — independent of ‘Your settings’.',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn pictures & videos gray',
     saveFailed: "Couldn't save this change. Please try again.",

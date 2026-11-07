@@ -11,7 +11,8 @@
  * - 胶囊媒体钮：全功能与 mini 形态都有、aria-pressed 与实心/描边两态、点一下写存储
  * - 站点设置页：「图片和视频」卡片、一行开关与说明、点击后页面效果即时变化
  * - 幕布静音：遮住即静音（reason=extension）、恢复即还原；媒体层不写 muted
- * - 两态边界：切「网站原样」灰度与小图标记还原；切回来重新生效
+ * - 两态边界（0.8.3）：切「网站原样」定制还原、灰度独立照常生效；原样态下媒体钮有可见反应；
+ *   切回来压制照常
  *
  * 不测：请求是否被拦（「看起来变灰 ≠ 不加载」）、iframe 内嵌播放器、背景图。
  */
@@ -234,25 +235,31 @@ async function main() {
     check((await tabMuted())?.muted === false, '幕布撤掉不留哑标签页');
     await popupRestore.close().catch(() => {});
 
-    // ===================== 两态边界 =====================
-    console.log('\n--- 「网站原样」全部还原，切回来重新生效 ---');
+    // ===================== 两态边界（0.8.3：灰度独立于主开关） =====================
+    console.log('\n--- 「网站原样」还原定制，灰度独立 ---');
     await page.bringToFront();
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main')); // 胶囊主按钮切到原样
     await poll(async () => (await getProfile(control, ORIGIN)).switchState === 'original', '切到「网站原样」');
-    await waitFor(page, '原样态大图不再灰', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    // 灰度独立于两态（0.8.3，#133）：原样态下灰度照常生效、小图标照常豁免、压制照常工作
+    await waitFor(page, '原样态灰度仍在', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     const originalState = await mediaState(page);
-    check(!grayed(originalState.bigFilter) && !originalState.iconKept, '原样态：灰度与小图标记一并撤掉');
-    // 原样态不干预播放：play 不再被打断（被按停过的视频由用户自己点播放，扩展不替网站恢复）
-    await tryPlay(page, '#vid');
-    await waitFor(page, '原样态不再压制播放', () => !document.querySelector('#vid').paused, [], { timeout: 8000 });
-    check((await mediaState(page)).videoMuted === false, '原样态：不碰 muted，不拦播放');
+    check(grayed(originalState.bigFilter) && originalState.iconKept, '原样态：定制还原，灰度与小图标豁免照常');
 
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-main')); // 切回按设置
+    // 独立性证明：原样态下关媒体钮，颜色立刻恢复（主开关不再压着灰度）
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '原样态下关媒体钮写入存储');
+    await waitFor(page, '关媒体钮后颜色恢复', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    check(true, '原样态下媒体钮有可见反应：灰度独立于主开关（不再有死按钮）');
+
+    // 开回来，然后切回按设置
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '媒体钮开回来');
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
     await poll(async () => (await getProfile(control, ORIGIN)).switchState === 'disguised', '切回「按你的设置显示」');
-    await waitFor(page, '切回来大图重新变灰', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await tryPlay(page, '#vid');
-    await waitFor(page, '切回来压制重新生效', () => document.querySelector('#vid').paused, [], { timeout: 8000 });
-    check(true, '切回清爽态：灰度与压制全部回来，配置没丢');
+    await waitFor(page, '压制照常', () => document.querySelector('#vid').paused, [], { timeout: 8000 });
+    check(true, '切回清爽态：压制照常，配置没丢');
   } finally {
     await ext.cleanup();
     await srv.close();

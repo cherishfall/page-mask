@@ -18,6 +18,7 @@
  * 被按停的视频不替网站恢复播放（切回原样后用户自己点播放，0.7.x 同款语义）。
  * 增量扫描按 rAF 分批，读写分两阶段，避免和站点框架互相触发重排。
  */
+import { isOwnUiNode } from '@/core/host-shield';
 import { MEDIA_KEEP_ATTR, shouldKeepMedia, type MediaFlags, type MediaSizeFacts } from '@/core/media';
 
 /** 每帧最多处理多少个新增节点：无限滚动一次插几百张图时不堵主线程 */
@@ -197,6 +198,9 @@ export function createMediaController(doc: Document): MediaController {
   }
 
   function onIntent(e: Event): void {
+    // 点我们自己的界面（胶囊、遮罩、向导）不算「想看视频」：否则在胶囊上拨媒体钮的
+    // 那一下，会在 10 秒窗口内给页面上所有浅层视频背书放行（E2E 揪出的真问题）
+    if (isOwnUiNode(e.target as Node)) return;
     // 键盘可达性（WCAG 2.1.1）：Enter / 空格触发的播放同样算用户意图；其余按键不记账
     if (e.type === 'keydown') {
       const key = (e as KeyboardEvent).key;

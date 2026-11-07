@@ -526,7 +526,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       guard.restore();
     }
     // 首屏遮挡用的是同一份正式样式文本：媒体灰度也要在首帧前生效，不能露一帧真图
-    shield.narrow(buildDisguiseCss(profile.hideRules, location.href, profile));
+    shield.narrow(buildDisguiseCss(profile, location.href));
     const ok = await syncFormalStyles();
     shield.release();
     await uiReady;
@@ -542,9 +542,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function restoreAll(): Promise<boolean> {
     healthGen++;
-    // 原样态 = 完全还原：小图标记、按停的视频状态一并撤掉（不替网站恢复播放）
-    media.sync({ mediaGray: false });
-    shield.release();
+    if (!profile) return false;
+    // 原样态 = 定制（收起的内容 + 标签页标题图标）还原；灰度独立于两态（0.8.3，#133）：
+    // mediaGray 开着就继续生效，媒体控制器按配置同步而不是关掉
+    media.sync(profile);
+    // 原样态的正式样式里可能仍有灰度块：首帧防闪同样要压住，等正式样式落地后再撤
+    shield.narrow(buildDisguiseCss(profile, location.href));
     guard.restore();
     clearMasks();
     const ok = await syncFormalStyles();
@@ -552,7 +555,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (disposed || wizardActive) return ok;
     // 幕布开着时 guard.restore() 刚把真实标题放了出来：重新压住标题与覆盖层（#45）
     reassertCurtain();
-    if (!profile) return ok;
     mountToggle();
     return ok;
   }

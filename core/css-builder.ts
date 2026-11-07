@@ -4,10 +4,10 @@
  * + !important），禁止行内样式、禁止 <style> 标签。方案 C 遮罩不走 CSS，由内容脚本的
  * 覆盖层元素承担（滚动跟手需要 JS）。
  */
-import type { HideRule, StrategyId } from './types';
+import type { HideRule, SiteProfile, StrategyId } from './types';
 import { rulesApplicableAt } from './scope';
 import { isSafeSelector } from './validate';
-import { buildMediaCss, type MediaFlags } from './media';
+import { buildMediaCss } from './media';
 
 /** 生成 CSS 只需要"藏什么 + 怎么藏"：正式规则与向导草稿共用 */
 export type CssSource = Pick<HideRule, 'candidates' | 'strategy'>;
@@ -54,20 +54,23 @@ export function buildSameGroupOutlineCss(candidates: readonly string[]): string 
 }
 
 /**
- * 汇总某 URL 上应注入的正式 CSS 文本：A/B 方案规则 +（#116）按站点开关拼进来的媒体灰块。
- * 媒体块是确定性常量文本，作为整份文本的一部分走 swapCss 的 prev→next 换入换出，
- * 后台无状态、注入记录按文档持有的既有设计一点不改。
- *
- * media 缺省时只输出规则 CSS：向导预览 / 草稿始终不带媒体块——向导里要临时还原整页，
- * 用户得看清页面才能点选元素（design.md「进入点选时先临时还原全部规则」）。
- * 0 条规则但开了媒体开关时也要返回文本，不能返回 null。
+ * 汇总某 URL 上应注入的正式 CSS 文本：A/B 方案规则 +（0.8.0）媒体灰度块。
+ * 0.8.3 起两者的生效条件分开（#133）：
+ * - 规则 CSS 只在清爽态输出（主开关 = 「收起的内容 + 标签页标题和图标」这组定制的总闸）；
+ * - 媒体灰度独立于两态：mediaGray 开着就输出，原样态下也生效（胶囊媒体钮任何时候按下都有可见反应）。
+ * 整份文本作为一部分走 swapCss 的 prev→next 换入换出，后台无状态、注入记录按文档持有的既有设计一点不改。
+ * 向导预览 / 草稿不走这里（buildPreviewCss）：向导里要临时还原整页，用户得看清页面才能点选元素。
  */
-export function buildDisguiseCss(rules: HideRule[], url: string, media?: MediaFlags): string | null {
+export function buildDisguiseCss(profile: SiteProfile, url: string): string | null {
   const parts: string[] = [];
-  const ruleCss = buildPreviewCss(rulesApplicableAt(rules, url));
-  if (ruleCss) parts.push(ruleCss);
-  const mediaCss = media ? buildMediaCss(media) : null;
-  if (mediaCss) parts.push(mediaCss);
+  if (profile.switchState === 'disguised') {
+    const ruleCss = buildPreviewCss(rulesApplicableAt(profile.hideRules, url));
+    if (ruleCss) parts.push(ruleCss);
+  }
+  if (profile.mediaGray === true) {
+    const mediaCss = buildMediaCss(profile);
+    if (mediaCss) parts.push(mediaCss);
+  }
   return parts.length ? parts.join('\n') : null;
 }
 

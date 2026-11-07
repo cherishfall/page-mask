@@ -78,7 +78,7 @@
         <div class="media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
           <div class="switch-row">
             <label class="popup-row-label" for="pm-popup-media-mediaGray">
-              <MediaIcon class="popup-row-icon" />
+              <MediaIcon class="popup-row-icon" :data-state="media?.mediaGray === true ? 'on' : 'off'" />
               <span>{{ t.media.mediaGray }}</span>
             </label>
             <input
@@ -296,7 +296,8 @@ const deleteLabel = deleteSiteHeading();
   font-size: var(--pm-font-size-caption);
   line-height: 16px;
 }
-/* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体，16 盒、随文字色 */
+/* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体，16 盒、随文字色。
+   媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3，#133） */
 .popup-action-icon,
 .popup-row-icon {
   inline-size: 16px;
@@ -305,6 +306,9 @@ const deleteLabel = deleteSiteHeading();
 }
 .popup-row-icon {
   color: var(--pm-fg-muted);
+}
+.popup-row-icon[data-state='on'] .pm-media-content {
+  fill: currentColor;
 }
 /* 媒体开关行：图标 + 文字成组，点图标也能拨开关（点击区跟着 label 走） */
 .popup-row-label {

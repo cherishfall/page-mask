@@ -22,7 +22,7 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
-- **图片和视频变灰**：按网站的一个开关（胶囊上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清，整个页面像一篇图文资料；≤32px 的小图标与表情保持原样。会自动播放的视频被按住，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。只在「按你的设置显示」时起作用，切「原样」恢复彩色
+- **图片和视频变灰**：按网站的一个开关（胶囊上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清，整个页面像一篇图文资料；≤32px 的小图标与表情保持原样。会自动播放的视频被按住，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。**独立开关**：不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走
 - **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
@@ -134,7 +134,7 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
-- **Turn pictures & videos gray**: one per-site switch, available in three places (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable — and the whole page reads like a quiet article; icons and emoji up to 32px stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". Applies only with "Your settings" on — "As is" brings the color back
+- **Turn pictures & videos gray**: one per-site switch, available in three places (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable — and the whole page reads like a quiet article; icons and emoji up to 32px stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". **An independent switch**: it does not follow "Your settings" — switching to "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch
 - **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Your settings" and "As is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again

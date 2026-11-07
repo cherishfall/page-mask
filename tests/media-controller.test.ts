@@ -243,6 +243,23 @@ describe('自动播放压制与点击放行（0.8.0，ADR-0013）', () => {
     c.dispose();
   });
 
+  it('点插件自己的界面（胶囊等宿主内节点）不算观看意图（浅层 DOM 下会给视频背书）', async () => {
+    const video = mountVideo();
+    // 模拟胶囊：宿主自定义元素 + shadow root 里的按钮（isOwnUiNode 沿 getRootNode 找到宿主标签）
+    const host = document.createElement('pagemask-toggle');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const insideBtn = document.createElement('button');
+    shadow.appendChild(insideBtn);
+    document.body.appendChild(host);
+    const c = createMediaController(document);
+    c.sync({ mediaGray: true });
+    pause.mockClear();
+    tap(insideBtn);
+    video.dispatchEvent(new Event('play'));
+    expect(pause, '点胶囊的那一下不该给视频放行背书').toHaveBeenCalled();
+    c.dispose();
+  });
+
   it('关掉再开：放行集合清空，自动播放重新被压；muted 全程没人动', () => {
     const video = addVideo();
     video.muted = true;

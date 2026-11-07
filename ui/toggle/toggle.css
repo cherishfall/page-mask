@@ -177,7 +177,8 @@
   inline-size: 13px;
   block-size: 13px;
 }
-.pm-tg-media-icon[data-state='on'] {
+/* 开 = 只填实框里的内容（山 + 太阳），外框保持描边：整颗填实会糊成一个方块（0.8.3，#133） */
+.pm-tg-media-icon[data-state='on'] .pm-media-content {
   fill: currentColor;
 }
 

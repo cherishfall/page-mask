@@ -3,12 +3,12 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-07 · 对应构建 **0.8.2**（`.output/page-mask-0.8.2-chrome.zip`）
+> 最后更新：2026-11-08 · 对应构建 **0.8.3**（`.output/page-mask-0.8.3-chrome.zip`）
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.2-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.8.2`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.2`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.3-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.8.3`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.3`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.8.0 改了弹窗排版与胶囊按钮，截图 4、6 需重拍）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -45,7 +45,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 三种收起方式：消失（整块不见，下面的内容往上顶）、留空（看不见了，但位置还占着）、盖住（原位盖一块和背景同色的方块，不改网站自身样式）
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一
-• 图片和视频变灰：按网站的一个开关（悬浮按钮上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清；小图标与表情保持原样。会自动播放的视频被按住，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。只在「按你的设置显示」时起作用，切「原样」恢复彩色
+• 图片和视频变灰：按网站的一个开关（悬浮按钮上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清；小图标与表情保持原样。会自动播放的视频被按住，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。独立开关，不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时），并把这个标签页的声音一起按住；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 • 胶囊可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
@@ -89,7 +89,7 @@ FEATURES
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page colour sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
-• Pictures & videos gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable; icons and emoji stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". Applies only with "Your settings" on; "As is" brings the color back
+• Pictures & videos gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable; icons and emoji stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the capsule, the popup and the shortcut all work on the same state — any of them can undo any other
 • A capsule you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
@@ -170,7 +170,7 @@ Test steps (no login needed):
 5. Click the small button at the bottom-right to switch the site back to "As is": the element reappears and the title reverts.
 6. Click 「⋯」 on the small button. By default the menu has four items in three groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, a fifth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that second group. The button itself carries a 「媒体」 (Media) button that turns the site's pictures & videos black & white in one click.
 7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「收起内容」 / 「标题和图标」, the 「图片和视频变灰」 ("Turn pictures & videos gray") switch with the same Media icon as the floating button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Pictures & videos" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
-8. Pictures & videos gray (no new permission): turn it on with the floating button's 「媒体」 (Media) button, in the popup, or in the 「图片和视频」 card on the site's settings page — the places stay in sync. Pictures and videos turn black & white, stay in place, keep their size and links, and small icons stay as they are. Videos that the site autoplays are held; click a video and that one plays (still black & white). Switch the small button back to 「原样」 ("As is"): the colors come back; switching to "Your settings" applies them again. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
+8. Pictures & videos gray (no new permission): turn it on with the floating button's 「媒体」 (Media) button, in the popup, or in the 「图片和视频」 card on the site's settings page — the places stay in sync. Pictures and videos turn black & white, stay in place, keep their size and links, and small icons stay as they are. Videos that the site autoplays are held; click a video and that one plays (still black & white). The gray switch is independent of the 「按你的设置显示」 / 「原样」 switch: flipping that switch restores the hidden parts and the tab title/icon while the gray stays as set. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
@@ -180,6 +180,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.8.3 | 2026-11-08 | 产品结构修正（ADR-0014）：灰度完全独立于主开关——「按你的设置显示 / 原样」只管收起的内容与标签页标题图标，灰度按自己的开关在两种状态下都生效（原样态下媒体钮不再是无反应的死按钮）；胶囊媒体钮挪到遮住前（高频在前、应急最远，全功能与 mini 相同）；媒体钮开启态图标改「内容填实、外框描边」并同步弹窗；点插件自己界面的点击不再被当成观看意图。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.2 | 2026-11-07 | 0.8.1 修复复查的收尾（无必修项）：更新 / 重载时的静音清扫覆盖未配置站点的一次性幕布页；放行记录随容器子树移出也清掉；导航兜底与遮 / 撤消息共队列的回归测试。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.1 | 2026-11-07 | 0.8.0 独立代码审查的收口：放行过的视频随元素移出文档清记录（不钉住已移除元素、再插回按新一轮压制）；同一标签页的幕布静音按消息顺序串行（快速连按遮 / 撤不留哑标签页）；扩展更新 / 重载瞬间新实例补解除残留静音。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.0 | 2026-11-07 | 媒体三开关重做（#131/#132）：「图片和视频变灰」一个开关取代「收起图片 / 收起视频 / 静音网页」——图片与视频变黑白但可读可点、零交互，站点自动播放的视频被按住、点击视频放行该视频，声音完全不参与；「静音网页」退场，遮住整页时连标签页声音一起按住、恢复即还原；胶囊（全功能与 mini）加「媒体」钮、弹窗改排版并给遮住 / 媒体配同源图标。旧设置自动迁移，不新增权限、不拦网络请求。详见 `CHANGELOG.md` |

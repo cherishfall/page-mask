@@ -5,6 +5,30 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.3] - 2026-11-08
+
+产品结构修正：「图片和视频变灰」成为完全独立的开关，不再被「按你的设置显示 / 原样」总开关管辖（ADR-0014）。
+
+### 中文
+
+#### 变更
+
+- **主开关收窄**：「按你的设置显示 / 原样」现在只管两件定制——收起的内容、标签页标题和图标。切「原样」= 把你收起的正经内容还给你、标签页回到本来的样子
+- **灰度独立**：图片和视频的变灰按自己的开关走，原样态下照常生效——恢复正经内容的时候，页面该低调还是低调；胶囊「媒体」钮在任何状态下按下都有可见反应
+- **胶囊顺序**：媒体钮挪到遮住钮前面（全功能与 mini 相同）——媒体是随看随切的高频状态，遮住是应急动作，离主按钮最远
+- **媒体钮开启态图标**：只填实框里的山和太阳、外框保持描边（此前整颗填实会糊成一个方块）；弹窗开关行的小图标同步同一套状态
+- 灰度的说明文案改为讲独立（不再有「只在按设置时起作用」句）
+
+### English
+
+#### Changed
+
+- **The main switch is narrowed**: 「按你的设置显示 / 原样」 ("Your settings" / "As is") now governs exactly two customizations — what's hidden and the tab title & icon. "As is" gives you back the parts you hid and the site's own title
+- **The gray switch is fully independent**: pictures and videos follow their own switch and stay gray in either state — restoring the real content no longer drags the gray along, and the capsule "Media" button always has a visible effect
+- **Capsule order**: the Media button now sits before the Cover button (both forms) — a frequently flipped state belongs near the main button, the emergency action farthest away
+- **Media button's on-state icon**: only the mountain and sun inside the frame are filled while the frame keeps its stroke (the fully-filled version read as a plain square); the popup's row icon follows the same state
+- The gray switch's hint copy now describes its independence
+
 ## [0.8.2] - 2026-11-07
 
 0.8.1 修复复查的收尾（无必修项，三条建议全落）：功能与权限没有变化。

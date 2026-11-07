@@ -40,23 +40,11 @@
       <span v-if="!mini" class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
     </button>
 
-    <!-- 遮住整页（图标即可，读屏文案「遮住整页」）：闭眼图标与弹窗「遮住这一页」共用一份（#132） -->
-    <button
-      type="button"
-      class="pm-tg-cover"
-      :aria-label="t.toggle.coverAria"
-      :title="t.toggle.coverAria"
-      data-testid="pm-toggle-cover"
-      @click="emit('cover')"
-    >
-      <EyeOffIcon class="pm-tg-cover-icon" />
-    </button>
-
     <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮，全功能与 mini 形态都有。
-         与「遮住」同等待遇的一点就生效：按下去立刻变灰 / 还原（按站点记忆，页面效果由
-         storage → applyAll 统一重应用）。按下状态用实心 / 描边两态 + aria-pressed，
-         不只靠颜色（WCAG 1.4.1）；点一下不弹任何面板，再点一下还原。
-         图标与弹窗开关行共用一份（#132） -->
+         0.8.3 起排在「遮住」前面：媒体是随看随切的状态开关（高频），遮住是应急动作（低频、
+         最该离主按钮远）。一点就生效（按站点记忆，页面效果由 storage → applyAll 统一重应用）。
+         按下状态用内容填实 / 全描边两态 + aria-pressed，不只靠颜色（WCAG 1.4.1）；
+         点一下不弹任何面板，再点一下还原。图标与弹窗开关行共用一份（#132） -->
     <button
       type="button"
       class="pm-tg-cover pm-tg-media"
@@ -66,6 +54,19 @@
       @click="emit('mediaChange', 'mediaGray', !mediaOn)"
     >
       <MediaIcon class="pm-tg-media-icon" :data-state="mediaOn ? 'on' : 'off'" />
+    </button>
+
+    <!-- 遮住整页（图标即可，读屏文案「遮住整页」）：闭眼图标与弹窗「遮住这一页」共用一份（#132）；
+         应急动作排在媒体之后、离主按钮最远（0.8.3 顺序调整，#133） -->
+    <button
+      type="button"
+      class="pm-tg-cover"
+      :aria-label="t.toggle.coverAria"
+      :title="t.toggle.coverAria"
+      data-testid="pm-toggle-cover"
+      @click="emit('cover')"
+    >
+      <EyeOffIcon class="pm-tg-cover-icon" />
     </button>
 
     <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
