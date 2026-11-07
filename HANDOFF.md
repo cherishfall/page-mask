@@ -1,9 +1,9 @@
 # 交接 / 工作前沿（0.7.x 批次）
 
-最后更新：2026-11-06 21:00
-当前版本：**`0.7.1`**（tag `v0.7.1`，release 已发布，附 `.output/page-mask-0.7.1-chrome.zip`），分支 `master`，`origin/master` = `6c60d26`。
+最后更新：2026-11-07 13:25
+当前版本：**`0.7.1`**（tag `v0.7.1`，release 已发布，附 `.output/page-mask-0.7.1-chrome.zip`），分支 `master` 与 `origin/master` 同步，工作区干净。
 `0.7.0` 已发布（tag `v0.7.0` + release + zip），issue#116 已关；复查票 #125–#130 逐票提交并立即推送、全部关闭。
-下一步：代码侧已判定收敛，只剩**真机人工路径**（见下节），提交商店前由产品所有者完成。
+**批次已收尾**：代码、测试、文档全部落地，只剩真机人工路径（见下节）。本文件保留作交接记录；确认无需交接后可删。
 本批目标：实现 issue#116「按站点收起图片 / 收起视频 / 静音网页」→ 发版 `0.7.0` → 全量复查并迭代到收敛 → 发版 `0.7.1`。
 
 ## 状态表
@@ -18,6 +18,7 @@
 | 发版 0.7.0 | **已完成** | `fd78e75` 版本号 → push → annotated tag `v0.7.0`（中文 changelog 小节为 message）→ `gh release create` 附 0.7.0 zip；发版门禁：compile / 679 单测 / check:docs / check:package（32 文件）/ 全套 E2E 841 项全绿 |
 | 全量复查（含视觉）→ 新 issue → 0.7.x 迭代 | **三轮复查完成，#125–#130 全部关闭** | 独立代码复查 + 9 张真实渲染截图交「新眼睛」审（`tmp/review-0.7.0/`）；逐轮结论见下 |
 | 发版 0.7.1 | **已完成** | `6c60d26` 版本号 + 双语 CHANGELOG + 商店材料 → push → annotated tag `v0.7.1`（中文 changelog 小节为 message）→ release 附 0.7.1 zip；发版门禁：compile / 693 单测 / check:docs / check:package（32 文件）/ 全套 E2E 842 项断言全绿 |
+| 第四轮复核 | **已完成、无新问题** | reviewer-r4 审 `58a4f20`：最小自洽收口，可放行；主会话逐条核对结论一致（详见下节） |
 
 ## 建议顺序
 
@@ -94,7 +95,7 @@
 
 ## 第四轮收口判定（复核 #130 修复本身）
 
-独立复核者已派发，主会话同步按源码 + 测试逐条核对；按已完成的门禁判定**未发现新的功能性问题，代码侧可收敛**：
+第四轮独立复核（reviewer-r4 审 `58a4f20`）结论：**未发现新的功能性问题，可放行**——`releaseMute()` 仍只写 `muted:false`，手动取消的静音在 `mutedByUs` 处就 return，「删 B 不动 A」用例仍过；授权 pattern 三处一致，正常路径 `contains` 为真；`file://` / `chrome-extension://` / url 异常被 catch 成「不该静音」；`onRemoved` 与 `resetSite()` 两次调用幂等单向、`resetSite()` 结尾兜底。主会话另按源码 + 测试逐条核对，结论一致：
 
 - `releaseMute()` 本身未改，仍是「`mutedByUs && !shouldMute` 才写 `muted:false`」，#125 的单向承诺不变；删别的网站时另一个网站上本扩展设的静音保持不动、用户手动取消的静音不被按回去，后台 80 项单测全过。
 - 正常已授权路径：测试夹具默认授予 origin，`permissions.contains` 为真；693 单测与 842 项 E2E 断言（含 `check-media.mjs` 的静音归属、原样态还原）全绿。
