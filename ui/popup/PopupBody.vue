@@ -21,21 +21,6 @@
           </span>
         </div>
 
-        <!-- 开关：<input type="checkbox" switch>，Chrome 不支持 switch 属性，显式 role="switch"。
-             处理期间不禁用：多拨一次由父组件忽略并拨回实际状态，状态由界面文字与 aria-busy 表达 -->
-        <div v-if="phase === 'ready' && hasProfile" class="switch-row">
-          <label for="pm-popup-switch">{{ t.common.cleanMode }}</label>
-          <input
-            id="pm-popup-switch"
-            type="checkbox"
-            switch
-            role="switch"
-            data-testid="pm-popup-switch"
-            :checked="switchOn"
-            @change="emit('toggleSwitch', $event.target as HTMLInputElement)"
-          />
-        </div>
-
         <p v-if="hasProfile" class="meta">
           {{ ruleSummary }}<template v-if="staleCount > 0">
             ·
@@ -57,9 +42,43 @@
           {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
         </button>
       </template>
+      <template v-else-if="phase === 'ready' && hasProfile">
+        <!-- 面具开关与它管的两项框进同一张卡（0.8.10，#138）：弹窗自解释胶囊主钮「是谁、管什么」。
+             卡头的面具图标与胶囊主钮同源同态（填实=按你的设置显示、描边=原样）。
+             开关：Chrome 不支持 switch 属性，显式 role="switch"；处理期间不禁用，多拨一次由
+             父组件忽略并拨回实际状态。主开关关着时两项保持可点（它们是编辑入口，定义的是
+             打开之后生效什么——iOS/Windows 的置灰模式管的是「关了就没意义」的从属设置，
+             这里不适用），只加一行说明 -->
+        <div class="popup-card disguise-group" role="group" :aria-label="t.common.cleanMode" data-testid="pm-popup-disguise">
+          <div class="switch-row">
+            <label class="popup-row-label" for="pm-popup-switch">
+              <MaskIcon class="popup-row-icon" :data-state="switchOn ? 'on' : 'off'" />
+              <span>{{ t.common.cleanMode }}</span>
+            </label>
+            <input
+              id="pm-popup-switch"
+              type="checkbox"
+              switch
+              role="switch"
+              data-testid="pm-popup-switch"
+              :checked="switchOn"
+              @change="emit('toggleSwitch', $event.target as HTMLInputElement)"
+            />
+          </div>
+          <!-- 两个入口（#81）：「收起内容」是主按钮（进点选），「标题和图标」是次按钮（单步小表单）。
+               主开关关着时置灰禁用（0.8.10 目检改判：只加说明时「看到的和读到的打架」，回归
+               iOS/Windows 的禁用+说明多数派；禁用态豁免对比度，说明行解释为什么） -->
+          <button class="primary" :disabled="!switchOn" data-testid="pm-popup-setup" @click="emit('setup')">
+            {{ busy === 'setup' ? t.common.opening : t.popup.setupMore }}
+          </button>
+          <button :disabled="!switchOn" data-testid="pm-popup-title" @click="emit('editTitle')">
+            {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
+          </button>
+          <p v-if="!switchOn" class="hint disguise-hint" data-testid="pm-popup-disguise-off">{{ t.popup.disguiseOffHint }}</p>
+        </div>
+      </template>
       <template v-else>
-        <!-- 两个入口（#81）：新旧网站同构，都有这两颗。「收起内容」是主按钮（进点选），
-             「标题和图标」是次按钮（单步小表单，填完点保存） -->
+        <!-- 还没设置过的网站（new 态）：没有开关可框，两颗入口保持原样 -->
         <button class="primary" data-testid="pm-popup-setup" @click="emit('setup')">
           {{ busy === 'setup' ? t.common.opening : t.popup.setupMore }}
         </button>
@@ -69,14 +88,12 @@
       </template>
 
       <!-- 图片和视频变灰（0.8.5，#134）：没配置过的网站也直接给——打开走第一次设置的授权流程，
-           后台补一份只带灰度的配置。已配置站点它是一行普通开关；「悬浮按钮」开关仍是 ready 专属
-           （待授权/未配置的站点页面上本来就没有胶囊可管）。「遮住这一页」是页面级应急动作，
-           用分隔线分到下面 -->
+           后台补一份只带灰度的配置。「悬浮按钮」开关仍是 ready 专属（待授权/未配置的站点
+           页面上本来就没有胶囊可管）。「遮住这一页」是页面级应急动作，用分隔线分到下面 -->
       <template v-if="phase === 'ready' || phase === 'new'">
-        <div class="divider" role="presentation"></div>
         <!-- 图片和视频变灰（0.8.0，#131）：一行开关 + 一句说明（未配置站点的说明讲授权流程）。
-             标签前的媒体图标与胶囊「媒体」钮同源（#132）——同一个东西一个样子 -->
-        <div class="media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
+             与面具卡同款卡片框（#138）；标签前的媒体图标与胶囊「媒体」钮同源（#132） -->
+        <div class="popup-card media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
           <div class="switch-row">
             <label class="popup-row-label" for="pm-popup-media-mediaGray">
               <MediaIcon class="popup-row-icon" :data-state="media?.mediaGray === true ? 'on' : 'off'" />
@@ -97,20 +114,24 @@
         </div>
       </template>
       <template v-if="phase === 'ready'">
-        <div class="switch-row">
-          <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
-          <input
-            id="pm-popup-capsule"
-            type="checkbox"
-            switch
-            role="switch"
-            data-testid="pm-popup-capsule"
-            :checked="showToggle"
-            @change="emit('toggleCapsule', $event.target as HTMLInputElement)"
-          />
+        <!-- 「悬浮按钮」开关（#112）：与上面两张卡同款容器（0.8.10 目检：无框一组会让人犹豫
+             归属），它管的是这个网站的胶囊显示，不是全局设置 -->
+        <div class="popup-card">
+          <div class="switch-row">
+            <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
+            <input
+              id="pm-popup-capsule"
+              type="checkbox"
+              switch
+              role="switch"
+              data-testid="pm-popup-capsule"
+              :checked="showToggle"
+              @change="emit('toggleCapsule', $event.target as HTMLInputElement)"
+            />
+          </div>
+          <!-- 提示放在开关下面（说明跟着它解释的东西走），不塞进开关行 -->
+          <p class="hint capsule-hint">{{ t.popup.showToggleHint }}</p>
         </div>
-        <!-- 提示放在开关下面（说明跟着它解释的东西走），不塞进开关行 -->
-        <p class="hint capsule-hint">{{ t.popup.showToggleHint }}</p>
       </template>
 
       <!-- 遮住这一页（#54 / #132）：页面级应急动作，与站点设置用分隔线分开。
@@ -157,6 +178,7 @@ import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
 import EyeOffIcon from '@/ui/icons/EyeOffIcon.vue';
 import EyeOpenIcon from '@/ui/icons/EyeOpenIcon.vue';
+import MaskIcon from '@/ui/icons/MaskIcon.vue';
 import MediaIcon from '@/ui/icons/MediaIcon.vue';
 
 const props = defineProps<{
@@ -299,8 +321,9 @@ const deleteLabel = deleteSiteHeading();
   font-size: var(--pm-font-size-caption);
   line-height: 16px;
 }
-/* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体，16 盒、随文字色。
-   媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3） */
+/* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体 / 面具，16 盒、随文字色。
+   媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3）；
+   面具图标跟胶囊主钮同态（#138）：开 = 填实，眼缝描弹窗底色读出挖孔（挖孔透出的是图标身后的表面） */
 .popup-action-icon,
 .popup-row-icon {
   inline-size: 16px;
@@ -313,6 +336,12 @@ const deleteLabel = deleteSiteHeading();
 .popup-row-icon[data-state='on'] .pm-media-content {
   fill: currentColor;
 }
+.popup-row-icon[data-state='on'] .pm-mask-body {
+  fill: currentColor;
+}
+.popup-row-icon[data-state='on'] .pm-mask-eye {
+  stroke: var(--pm-bg);
+}
 /* 媒体开关行：图标 + 文字成组，点图标也能拨开关（点击区跟着 label 走） */
 .popup-row-label {
   display: inline-flex;
@@ -323,13 +352,29 @@ const deleteLabel = deleteSiteHeading();
 .popup-cover {
   gap: var(--pm-space-2);
 }
-/* 分组分隔线（#112）：站点动作 ｜ 胶囊开关 ｜ 页面入口 ｜ 删除，一拍留白 + 一条细线 */
+/* 分组分隔线（#112）：胶囊开关 ｜ 页面入口 ｜ 删除，一拍留白 + 一条细线（卡片之间靠框分隔，#138） */
 .divider {
   border-top: 1px solid var(--pm-border);
   margin: calc(var(--pm-space-1) * -1) 0;
 }
+/* 卡片框（0.8.10，#138）：面具开关与它管的两项一张卡、灰度开关与说明一张卡——
+   与站点设置页的卡片同构（iOS/macOS inset grouped、Windows SettingsCard 先例）。
+   分组关系靠框表达，开关关着时受管项保持可点、只加说明（见模板内注释） */
+.popup-card {
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-card);
+  background: var(--pm-bg);
+  padding: var(--pm-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm-space-2);
+}
+/* 主开关关着时的说明：跟着它解释的这张卡走 */
+.disguise-hint {
+  margin: 0;
+}
 /* 媒体开关一组（0.8.0）：开关与它的说明贴在一起，读成一件事；
-   说明与错误都跟着这一组走 */
+   说明与错误都跟着这一组走（0.8.10 起与面具卡同款卡片框） */
 .media-group {
   display: flex;
   flex-direction: column;

@@ -5,6 +5,28 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.10] - 2026-11-09
+
+插件弹窗分组重排：面具开关和它管的两项框进同一张卡，弹窗自己解释悬浮按钮上每颗钮是干嘛的。
+
+### 中文
+
+#### 变更
+
+- **面具卡**：「按你的设置显示」开关成为卡片头部（带与悬浮按钮主钮同源同态的面具图标），卡内是「收起内容」与「标题和图标」两颗钮——看一眼就知道这颗开关管着哪两件事
+- 开关关着时，卡内两颗钮置灰暂不可用，卡底一行说明「打开开关就能改」（iOS / Windows 设置的通行做法）
+- **灰度卡与悬浮按钮卡**：「图片和视频变灰」「悬浮按钮」也换成同一款卡片容器，三张卡一个样子
+- 卡片分组不改任何行为：开关怎么拨、按钮进哪个流程、设置存在哪，全都和之前一样
+
+### English
+
+#### Changed
+
+- **The mask card**: the "Show this site your way" switch now heads a card (with the same mask icon as the floating button's main button), and "Hide items" / "Title & icon" sit inside it — the popup now shows what that switch governs at a glance
+- With the switch off, the two buttons inside are paused and a one-line hint says turning the switch back on lets you edit (the usual iOS / Windows settings pattern)
+- **Matching cards**: "Turn pictures & videos gray" and "Floating button" use the same card container — one look across the panel
+- Pure regrouping: switches, flows and storage behave exactly as before
+
 ## [0.8.9] - 2026-11-09
 
 悬浮按钮的图标与开关状态重做：面具不再吓人，开还是关一眼可辨。

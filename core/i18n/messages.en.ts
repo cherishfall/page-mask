@@ -110,6 +110,8 @@ export const en: Messages = {
     setupMore: 'Hide items',
     /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
+    /** Hint at the bottom of the card while the master switch is off (0.8.10, #138) */
+    disguiseOffHint: 'While the switch is off, the two above are paused — turn it back on to edit them.',
     coverPage: 'Cover this page',
     /** Show-capsule switch (#112): label + one-line hint under the switch */
     showToggle: 'Floating button',
