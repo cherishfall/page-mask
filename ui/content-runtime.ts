@@ -164,8 +164,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const toggleState = reactive<{
     state: SiteProfile['switchState'];
     position: SiteProfile['floatingBtnPos'];
-    /** mini 形态（#78）：按站点记忆，缺省全功能 */
-    mini: boolean;
     /** 整颗胶囊的不透明度（#102）：闲置值，悬停 / 聚焦 / 拖动时由 CSS 回到 1 */
     opacity: number;
     /** 图片和视频变灰（0.8.0）：胶囊媒体钮的按下状态跟着存储走，别的入口拨了也会即时更新 */
@@ -173,7 +171,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   }>({
     state: 'original',
     position: null,
-    mini: false,
     opacity: 1,
     mediaGray: false,
   });
@@ -221,7 +218,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   function syncToggleState(): void {
     toggleState.state = profile?.switchState ?? 'original';
     toggleState.position = profile?.floatingBtnPos ?? null;
-    toggleState.mini = profile?.capsuleMini === true;
     toggleState.opacity = settings.toggleOpacity; // 闲置不透明度（#110）：数值由 readSettings 归一化
     toggleState.mediaGray = profile?.mediaGray === true;
   }
@@ -263,7 +259,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         h(FloatingToggle, {
           state: toggleState.state,
           position: toggleState.position,
-          mini: toggleState.mini,
           opacity: toggleState.opacity,
           media: {
             mediaGray: toggleState.mediaGray,
@@ -276,7 +271,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           onResetPos: handleResetPos,
           onSettings: handleOpenSettings,
           onCover: handleCover,
-          onSetMini: handleSetMini,
           onMediaChange: handleMediaChange,
           onDelete: handleDeleteRequest,
           onDeleteSite: handleDeleteSite,
@@ -330,22 +324,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     );
   }
 
-  /** mini ↔ 全功能互切（#78）：写进站点配置，胶囊就地换形态，位置不变 */
-  async function handleSetMini(mini: boolean): Promise<void> {
-    if (!profile || !ctx.isValid) return;
-    profile.capsuleMini = mini;
-    syncToggleState();
-    try {
-      await storage.updateProfile(origin, (p) => {
-        p.capsuleMini = mini;
-      });
-    } catch {
-      showPageNotice(ctx, t().notice.saveFailed);
-    }
-  }
-
   /**
-   * 胶囊媒体钮 / 各处开关拨动「图片和视频变灰」：与 mini 切换同一套写法——先就地反映，
+   * 胶囊媒体钮 / 各处开关拨动「图片和视频变灰」：与悬浮按钮开关同一套写法——先就地反映，
    * 再按最新存储只改这一个字段；写入失败拨回并给一句页内提示。页面效果不在这里做：
    * storage.onChanged → applyKey 变化 → applyAll / restoreAll 统一重应用，
    * 弹窗与站点设置页的拨动走的是同一条路。

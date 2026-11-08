@@ -72,6 +72,8 @@ try {
   const settingsPage = await ext.browser.newPage();
   await settingsPage.goto(`${ext.extOrigin}/settings.html`, { waitUntil: 'load' });
   const textOf = (p, sel) => p.$eval(sel, (el) => el.textContent.trim());
+  const titleOf = (p, sel) =>
+    p.evaluate((h, s2) => document.querySelector(h)?.shadowRoot?.querySelector(s2)?.title.trim() ?? '', TOGGLE, sel);
   const bodyHas = async (p, text) => p.evaluate((t) => document.body.textContent.includes(t), text);
 
   // ---------- 初始：auto = 浏览器中文 ----------
@@ -79,7 +81,7 @@ try {
   // 断言「是不是中文」而不是断言具体某句话：界面用词会调整（0.4.1 就整体重写过），
   // 这个用例要守的是「语言真的换了」，不是某个按钮叫什么。
   const hasCJK = (s) => /[\u4e00-\u9fff]/.test(s);
-  check(hasCJK(await shadowText(page, TOGGLE, `${tid('pm-toggle-main')} .pm-tg-label`)), '小胶囊显示中文');
+  check(hasCJK(await titleOf(page, tid('pm-toggle-main'))), '小胶囊悬停提示显示中文');
   check(await bodyHas(mgmt, '全部网站设置'), '管理页是中文');
   check(await bodyHas(settingsPage, '插件设置'), '插件设置页是中文');
   const autoLabel = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
@@ -120,7 +122,7 @@ try {
 
   await page.waitForFunction(
     (h) => {
-      const s = document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent ?? '';
+      const s = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"]')?.title ?? '';
       return s !== '' && !/[\u4e00-\u9fff]/.test(s);
     },
     { timeout: 5000 },
@@ -174,7 +176,7 @@ try {
   check(true, '管理页变回中文');
   await page.waitForFunction(
     (h) => {
-      const s = document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent ?? '';
+      const s = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"]')?.title ?? '';
       return /[\u4e00-\u9fff]/.test(s);
     },
     { timeout: 5000 },

@@ -1,38 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from './button-pos';
+import { BUTTON_EDGE, clampEdgeY, clampPos } from './button-pos';
 
-describe('isLeftDock（#84 停靠侧判定）', () => {
-  it('x ≤ BUTTON_EDGE 判左停靠', () => {
-    expect(isLeftDock(BUTTON_EDGE)).toBe(true);
-    expect(isLeftDock(0)).toBe(true);
-  });
-  it('右停靠的边缘坐标判右', () => {
-    expect(isLeftDock(BUTTON_EDGE + 1)).toBe(false);
-    expect(isLeftDock(1200)).toBe(false);
-  });
-});
-
-describe('snapXToEdge（#84 松手贴最近边）', () => {
+describe('clampPos（0.8.6 自由定位，#135：x/y 都夹进视口）', () => {
   const vw = 1280;
+  const vh = 800;
 
-  it('按钮中心在左半视口 → 贴左缘', () => {
-    expect(snapXToEdge(300, 145, vw)).toBe(BUTTON_EDGE);
+  it('视口内原样保留', () => {
+    expect(clampPos(300, 220, 137, 32, vw, vh)).toEqual({ x: 300, y: 220 });
   });
 
-  it('按钮中心在右半视口 → 贴右缘', () => {
-    expect(snapXToEdge(900, 145, vw)).toBe(vw - 145 - BUTTON_EDGE);
+  it('左/上越界 → 夹到 BUTTON_EDGE', () => {
+    expect(clampPos(-40, -10, 137, 32, vw, vh)).toEqual({ x: BUTTON_EDGE, y: BUTTON_EDGE });
   });
 
-  it('中心正好落在视口中点 → 贴左（≤ 判定）', () => {
-    expect(snapXToEdge(vw / 2 - 145 / 2, 145, vw)).toBe(BUTTON_EDGE);
+  it('右/下越界 → 夹到 视口 − 控件 − BUTTON_EDGE', () => {
+    expect(clampPos(2000, 1500, 137, 32, vw, vh)).toEqual({
+      x: vw - 137 - BUTTON_EDGE,
+      y: vh - 32 - BUTTON_EDGE,
+    });
   });
 
-  it('窄视口右缘夹紧不越界', () => {
-    expect(snapXToEdge(600, 145, 100)).toBe(BUTTON_EDGE);
+  it('视口比控件还窄/矮时取 BUTTON_EDGE（避免负数）', () => {
+    expect(clampPos(600, 500, 137, 32, 100, 20)).toEqual({ x: BUTTON_EDGE, y: BUTTON_EDGE });
   });
 });
 
-describe('clampEdgeY（#84 纵向夹紧）', () => {
+describe('clampEdgeY（纵向夹紧，幕布恢复按钮 resize 用）', () => {
   it('顶边不小于 BUTTON_EDGE', () => {
     expect(clampEdgeY(2, 32, 800)).toBe(BUTTON_EDGE);
   });

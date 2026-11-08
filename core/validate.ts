@@ -213,9 +213,8 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
     icon,
     hideRules,
     floatingBtnPos: isObject(pos) && isFiniteNumber(pos.x) && isFiniteNumber(pos.y) ? { x: pos.x, y: pos.y } : null,
-    // mini 形态是本机界面偏好（与 floatingBtnPos 同口径）：只有显式 true 才落字段，缺省即全功能
-    ...(v.capsuleMini === true ? { capsuleMini: true as const } : {}),
-    // 不显示胶囊（#111）同口径：只有显式 true 才落字段，缺省 = 显示
+    // 不显示胶囊（#111）同口径：只有显式 true 才落字段，缺省 = 显示。
+    // 0.7.x/0.8.x 的 capsuleMini（双形态记忆）随 0.8.6 单形态退场，旧字段在整体写回时自然消失
     ...(v.capsuleHidden === true ? { capsuleHidden: true as const } : {}),
     // 图片和视频变灰（0.8.0，#131）：同口径，只有显式 true 才落字段，坏值一律当作没开。
     // 旧数据迁移（0.7.x 的 hideImages / hideVideos）：任一为 true 就沿用；mutePage 随功能删除丢弃。

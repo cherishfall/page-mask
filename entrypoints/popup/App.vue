@@ -388,7 +388,6 @@ async function toggleCapsule(input: HTMLInputElement) {
         p.capsuleHidden = show ? undefined : true;
         if (show) {
           p.floatingBtnPos = null;
-          p.capsuleMini = false;
         }
       },
       { touch: false },

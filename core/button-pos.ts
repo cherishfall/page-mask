@@ -1,29 +1,30 @@
 /**
- * 停靠类悬浮控件（胶囊、幕布恢复按钮）的位置语义（#84）。
+ * 悬浮控件（胶囊、幕布恢复按钮）的位置语义（0.8.6 起自由定位，#135）。
  *
- * 落库的 ButtonPos.x 只表达「贴哪一边」：≤ BUTTON_EDGE 视为左停靠，其余视为右停靠；
- * y 永远是顶边纵坐标。渲染按停靠边锚定（右停靠写 right），所以宽度变化（全功能 ↔ mini、
- * 恢复按钮显隐文字）时贴边不动——右停靠往右收、左停靠往左收，与 iOS/Android
- * AssistiveTouch、Edge 侧边气泡等浮窗「贴停靠边收放」的惯例一致。
- * 胶囊与幕布恢复按钮共用一个字段（floatingBtnPos），松手一律取最近边贴靠，锚定语义归一；
- * 否则恢复按钮拖到屏幕中间，胶囊会被带到半空。
+ * ButtonPos = 控件左上角在视口内的绝对坐标：x、y 都由拖动或方向键决定，落库前夹进视口；
+ * 渲染一律写 left/top。0.8.5 及以前的「贴边停靠」（x 表停靠边、右停靠渲染 right）退场——
+ * 旧数据里的 x 本就是当时的左上角坐标，直接沿用；贴右缘的胶囊升级后会停在原绝对位置
+ * （窗口拉宽不再跟边），拖一下即归位。
  */
 
 /** 离视口边缘至少留这么多（两个控件同一口径） */
 export const BUTTON_EDGE = 8;
 
-/** 存储的 x 是否表示左停靠 */
-export function isLeftDock(x: number): boolean {
-  return x <= BUTTON_EDGE;
+/** 视口内夹紧：左上角不出视口（右/下边留出控件本体与边缘距） */
+export function clampPos(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): { x: number; y: number } {
+  const clamp1 = (v: number, size: number, viewport: number): number =>
+    Math.min(Math.max(BUTTON_EDGE, v), Math.max(BUTTON_EDGE, viewport - size - BUTTON_EDGE));
+  return { x: clamp1(x, width, viewportWidth), y: clamp1(y, height, viewportHeight) };
 }
 
-/** 松手贴边：取最近边（按钮中心落在视口左半 → 贴左），返回落库用的边缘 x 坐标 */
-export function snapXToEdge(x: number, width: number, viewportWidth: number): number {
-  const onLeft = x + width / 2 <= viewportWidth / 2;
-  return onLeft ? BUTTON_EDGE : Math.max(BUTTON_EDGE, viewportWidth - width - BUTTON_EDGE);
-}
-
-/** 纵向夹紧：顶边不小于边缘距、底边不出视口（x 由贴边锚定保证在视口内，只有 y 需要夹） */
+/** 纵向夹紧：等价 clampPos 的 y 分量（幕布恢复按钮的 x 在拖动中已夹紧，窗口 resize 只需重夹 y） */
 export function clampEdgeY(y: number, height: number, viewportHeight: number): number {
   return Math.min(Math.max(BUTTON_EDGE, y), Math.max(BUTTON_EDGE, viewportHeight - height - BUTTON_EDGE));
 }

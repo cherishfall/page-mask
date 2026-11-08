@@ -107,10 +107,8 @@ export interface SiteProfile {
   /** 标签页图标：网站原来的 / 不显示 / 内置某个（#121） */
   icon: TabIcon;
   hideRules: HideRule[];
-  /** 悬浮按钮记住的位置（#84：x 表贴边侧、y 为顶边）；null = 默认右下角 */
+  /** 悬浮按钮记住的位置（0.8.6 起 x/y 为视口内自由坐标，#135）；null = 默认右下角 */
   floatingBtnPos: ButtonPos | null;
-  /** 胶囊用 mini 形态（只有状态圆点、遮住、展开三个小钮）；缺省 = 全功能（#78，按站点各自记） */
-  capsuleMini?: boolean;
   /**
    * 这个网站不显示胶囊（#111）：缺省 = 显示；只有显式 true 才落字段。
    * 只影响胶囊本身，不影响收起规则、标题和图标、快捷键与幕布上的「恢复」按钮。

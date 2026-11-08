@@ -117,9 +117,9 @@ function contrastInPage(page, host) {
   return page.evaluate((h) => {
     const sr = document.querySelector(h).shadowRoot;
     const pill = sr.querySelector('[data-testid="pm-toggle-main"]').closest('.pm-tg');
-    const label = sr.querySelector('.pm-tg-label');
+    const label = sr.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon');
     const pillBg = getComputedStyle(pill).backgroundColor;
-    const fg = getComputedStyle(label).color;
+    const fg = label ? getComputedStyle(label).color : '';
     // 外圈颜色经一个探针元素归一化：构建时 rgb(0 0 0 / 0.5) 会被压成 #00000080 之类的写法
     const probe = document.createElement('span');
     probe.style.color = getComputedStyle(pill).getPropertyValue('--pm-tg-ring');
@@ -187,13 +187,14 @@ async function main() {
     for (const b of hitBoxes) {
       check(b.w >= 24 && b.h >= 24, `${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 24×24`);
     }
-    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 189（0.8.0 加了「媒体」钮，#131）
+    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 126
+    // （0.8.6 单形态：去文字、去折叠钮，五段全是 24 图标钮，#135）
     const fullPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
       Math.abs(fullPill.h - 26) <= 1,
       `全功能胶囊高 ${fullPill.h.toFixed(1)} ≈ 26（可点区 24 + 上下边框）`,
     );
-    check(fullPill.w >= 175 && fullPill.w <= 196, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 189（≤196，没删文字也没删段）`);
+    check(fullPill.w >= 118 && fullPill.w <= 134, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 126（五段全图标钮，#135）`);
     const pillFont = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       let min = Infinity;
@@ -439,7 +440,9 @@ async function main() {
       },
       TOGGLE,
     );
-    check(aria.pressed === 'true' && aria.text === '按设置', `主按钮有 aria-pressed 与可见文字（aria-pressed=${aria.pressed}，文字「${aria.text}」）`);
+    // 0.8.6（#135）：文字标签退场，主按钮状态由面具图标填实/描边 + aria-pressed + title 表达
+    const mainTitle = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]').title, TOGGLE);
+    check(aria.pressed === 'true' && mainTitle.length > 0, `主按钮有 aria-pressed 与悬停全称提示（aria-pressed=${aria.pressed}，title「${mainTitle}」）`);
     check(!!aria.gripLabel && !!aria.moreLabel, `把手与菜单按钮都有可访问名称（${aria.gripLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面
@@ -451,19 +454,20 @@ async function main() {
     focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid ?? null, TOGGLE);
     check(focused === 'pm-toggle-main', `再 Tab 到主按钮（${focused}）`);
     await page.keyboard.press('Enter');
-    // 当场变：文字与悬停提示都不等存储回来（Nielsen 1「状态可见」）
+    // 当场变：面具图标状态与悬停提示都不等存储回来（Nielsen 1「状态可见」；
+    // 0.8.6 起文字标签退场，图标描边/填实 + title + aria-pressed 三路表达状态，#135）
     const instant = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       const main = sr.querySelector('[data-testid="pm-toggle-main"]');
       return {
-        text: main.querySelector('.pm-tg-label').textContent.trim(),
+        state: main.querySelector('.pm-tg-main-icon')?.dataset.state ?? null,
         tip: main.getAttribute('title'),
         pressed: main.getAttribute('aria-pressed'),
       };
     }, TOGGLE);
     check(
-      instant.text === '原样' && instant.pressed === 'false',
-      `切换后按钮文字当场变（「${instant.text}」，aria-pressed=${instant.pressed}）`,
+      instant.state === 'off' && instant.pressed === 'false',
+      `切换后面具图标当场变（state=${instant.state}，aria-pressed=${instant.pressed}）`,
     );
     check(instant.tip === '点一下按你的设置显示', `悬停提示跟着换（${instant.tip}）`);
     const switched = await (async () => {
@@ -476,8 +480,11 @@ async function main() {
       return getProfile(ext.control, ORIGIN);
     })();
     check(switched.switchState === 'original', `主按钮上按回车切换开关（${switched.switchState}）`);
-    const label = await shadowText(page, TOGGLE, '.pm-tg-label');
-    check(label === '原样', `按钮文字随状态变化（${label}）`);
+    const mainState = await page.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon')?.dataset.state ?? null,
+      TOGGLE,
+    );
+    check(mainState === 'off', `按钮图标随状态变化（state=${mainState}）`);
     // 复位
     await setProfile(ext.control, ORIGIN, { ...switched, switchState: 'disguised' });
     await waitFor(page, '回到清爽态', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
@@ -509,9 +516,10 @@ async function main() {
       return getProfile(ext.control, ORIGIN);
     })();
     check(!!stored.floatingBtnPos, `松手后坐标落库（${JSON.stringify(stored.floatingBtnPos)}）`);
+    // 0.8.6 自由定位（#135）：落库的就是拖到的坐标（已夹进视口），不再贴边
     check(
-      stored.floatingBtnPos.x === 8 || stored.floatingBtnPos.x > 500,
-      `落库坐标贴在左/右边缘，不是飘在中间（x=${stored.floatingBtnPos.x}）`,
+      stored.floatingBtnPos.x >= 8 && stored.floatingBtnPos.x <= 1000 - 126 - 8,
+      `落库坐标在视口内且不再贴边（x=${stored.floatingBtnPos.x}）`,
     );
     // 再拖一次到左上角外侧：贴边不出视口
     const grip2 = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
@@ -587,12 +595,12 @@ async function main() {
     );
     await page.keyboard.press('Escape');
 
-    // 原样态、0 条规则：切换入口本身有用，同样要挂着
+    // 原样态、0 条规则：切换入口本身有用，同样要挂着（0.8.6 起状态由面具图标描边表达，#135）
     await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
     await waitFor(
       page,
-      '原样态、0 条规则时胶囊仍在且写「原样」',
-      (h) => document.querySelector(h)?.shadowRoot?.querySelector('.pm-tg-label')?.textContent.trim() === '原样',
+      '原样态、0 条规则时胶囊仍在且面具摘下',
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon')?.dataset.state === 'off',
       [TOGGLE],
       { timeout: 5000 },
     );
@@ -638,16 +646,16 @@ async function main() {
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
 
-    // 先把胶囊放到一个已知停靠位（右缘 y=220，x>8 即右停靠 #84）：
-    // 幕布恢复按钮与该站胶囊共用同一个停靠边（遮住前后贴同一边，不跳位）
-    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 1200, y: 220 } });
+    // 先把胶囊放到一个已知的自由坐标（x=1000，y=220；0.8.6 起不再贴边，#135）：
+    // 幕布恢复按钮与该站胶囊共用同一份坐标（遮住前后同位，不跳位）
+    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 800, y: 220 } });
     const vw = await page.evaluate(() => window.innerWidth);
     await waitFor(
       page,
-      '胶囊贴右缘挂到指定纵坐标',
+      '胶囊挂在指定自由坐标',
       (h) => {
         const r = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle"]')?.getBoundingClientRect();
-        return !!r && Math.round(window.innerWidth - r.right) === 8 && Math.round(r.y) === 220;
+        return !!r && Math.round(r.x) === 800 && Math.round(r.y) === 220;
       },
       [TOGGLE],
       { timeout: 5000 },
@@ -681,6 +689,10 @@ async function main() {
         labelText: label?.textContent ?? '',
         labelOpacity: label ? getComputedStyle(label).opacity : '',
         aria: btn?.getAttribute('aria-label') ?? null,
+        capsuleY: (() => {
+          const t = document.querySelector('pagemask-toggle');
+          return t ? Math.round(t.getBoundingClientRect().y) : null;
+        })(),
       };
     });
     check(covered.present, '幕布覆盖层已铺上');
@@ -692,9 +704,9 @@ async function main() {
     check(!covered.capsule, '幕布期间整根小胶囊不渲染（一个页面上只有一套恢复入口）');
     check(
       covered.btn !== null &&
-        Math.round(vw - covered.btn.x - covered.btn.w) === 8 &&
-        covered.btn.y === 220,
-      `恢复按钮与该站胶囊贴同一右缘（右距 ${covered.btn ? Math.round(vw - covered.btn.x - covered.btn.w) : '?'}px，y=${covered.btn?.y}）`,
+        Math.abs(covered.btn.x - 800) <= 1 &&
+        Math.round(covered.btn.y) === 220,
+      `恢复按钮落在该站胶囊记录的自由坐标（x=${covered.btn?.x}，y=${covered.btn?.y}）`,
     );
     check(covered.opacity === '1', `恢复按钮常态全不透明（遮住后唯一出路，白底上要过 3:1，#87；${covered.opacity}）`);
     check(
@@ -767,8 +779,8 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     const capsuleBack = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
-      Math.round(vw - capsuleBack.right) === 8 && Math.round(capsuleBack.y) === 220,
-      `撤幕后胶囊贴同一右缘挂回来（右距 ${Math.round(vw - capsuleBack.right)}px，y=${Math.round(capsuleBack.y)}）`,
+      Math.round(capsuleBack.x) === 800 && Math.round(capsuleBack.y) === 220,
+      `撤幕后胶囊在原自由坐标挂回来（x=${Math.round(capsuleBack.x)}，y=${Math.round(capsuleBack.y)}）`,
     );
     const afterRestore = await getProfile(ext.control, ORIGIN);
     check(afterRestore.switchState === 'disguised', `遮住前后开关状态不变（${afterRestore.switchState}）`);
@@ -797,17 +809,19 @@ async function main() {
       `拖动后写回该站胶囊坐标（floatingBtnPos=${JSON.stringify(draggedProfile.floatingBtnPos)}）`,
     );
     const draggedRect = await rectIn(page, CURTAIN, tid('pm-curtain-restore'));
+    // 0.8.6 自由定位：松手落在拖到的位置（不贴边），与落库坐标一致
     check(
-      Math.abs(vw - draggedRect.right - 8) < 2,
-      `松手贴最近边（右距 ${Math.round(vw - draggedRect.right)}px ≈ 8，落库 x=${draggedProfile.floatingBtnPos.x}）`,
+      Math.abs(draggedRect.x - draggedProfile.floatingBtnPos.x) < 2 &&
+        Math.abs(draggedRect.y - draggedProfile.floatingBtnPos.y) < 2,
+      `松手停在拖到的自由坐标（x=${Math.round(draggedRect.x)} ≈ 落库 ${draggedProfile.floatingBtnPos.x}）`,
     );
     await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
     await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     const capsuleMoved = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
-      Math.abs(vw - capsuleMoved.right - 8) < 2,
-      `撤幕后胶囊贴同一右缘（右距 ${Math.round(vw - capsuleMoved.right)}px ≈ 8）`,
+      Math.abs(capsuleMoved.x - draggedProfile.floatingBtnPos.x) < 2,
+      `撤幕后胶囊停在拖动后的自由坐标（x=${Math.round(capsuleMoved.x)}）`,
     );
 
     // ---- 消息通道（#50）：查询本页是否遮着、命令撤掉；都只作用于发送方自己的文档 ----
@@ -904,81 +918,48 @@ async function main() {
     // 复位开关，不让幕布用例影响后面的叠放用例
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
 
-    // ===================== mini 形态（#78）：圆点 + 遮住 + 展开，按站点记忆 =====================
-    console.log('\n--- 胶囊 mini：收成三个小钮，状态与遮住都在，展开回来 ---');
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-shrink'));
-    await waitFor(
-      page,
-      '切成 mini',
-      (h) => {
-        const sr = document.querySelector(h)?.shadowRoot;
-        return !!sr?.querySelector('[data-testid="pm-toggle-expand"]') && !sr.querySelector('[data-testid="pm-toggle-shrink"]');
-      },
-      [TOGGLE],
-      { timeout: 3000 },
-    );
-    const miniShape = await page.evaluate((h) => {
+    // ===================== 单形态确认（0.8.6，#135）：mini/折叠退场 =====================
+    console.log('\n--- 单形态胶囊：无折叠钮、把手悬停显隐、自由坐标拖动 ---');
+    const singleShape = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
-      const main = sr.querySelector('[data-testid="pm-toggle-main"]');
       return {
-        label: main?.querySelector('.pm-tg-label')?.textContent ?? null,
-        pressed: main?.getAttribute('aria-pressed'),
+        fold: !!sr.querySelector('[data-testid="pm-toggle-shrink"], [data-testid="pm-toggle-expand"]'),
         grip: !!sr.querySelector('[data-testid="pm-toggle-grip"]'),
         more: !!sr.querySelector('[data-testid="pm-toggle-more"]'),
-        cover: !!sr.querySelector('[data-testid="pm-toggle-cover"]'),
-        dot: !!main?.querySelector('.pm-tg-dot'),
+        label: !!sr.querySelector('.pm-tg-label'),
       };
     }, TOGGLE);
+    check(!singleShape.fold && !singleShape.label, '折叠钮与文字标签退场：单一形态（#135）');
+    check(singleShape.grip && singleShape.more, '把手与 ⋯ 菜单常驻');
+    // 把手闲置隐藏（占位保留）：opacity 0；悬停胶囊淡入
+    const gripIdle = await page.evaluate((h) => {
+      const g = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-grip"]');
+      return getComputedStyle(g).opacity;
+    }, TOGGLE);
+    check(parseFloat(gripIdle) === 0, `把手闲置时隐藏（opacity=${gripIdle}）`);
+    await page.bringToFront();
+    const capBox = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    await page.mouse.move(capBox.x + capBox.w / 2, capBox.y + capBox.h / 2);
+    await new Promise((res) => setTimeout(res, 300));
+    const gripHover = await page.evaluate((h) => {
+      const g = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-grip"]');
+      return getComputedStyle(g).opacity;
+    }, TOGGLE);
+    check(parseFloat(gripHover) === 1, `悬停胶囊后把手淡入（opacity=${gripHover}）`);
+
+    // 自由坐标拖动（#135）：拖到视口中部，落库原坐标、不再贴边
+    const dragFrom2 = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
+    await page.mouse.move(dragFrom2.x + dragFrom2.w / 2, dragFrom2.y + dragFrom2.h / 2);
+    await page.mouse.down();
+    await page.mouse.move(600, 350, { steps: 8 });
+    await page.mouse.up();
+    await new Promise((res) => setTimeout(res, 400));
+    const movedPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
-      miniShape.label === null && miniShape.dot && miniShape.pressed === 'true',
-      `mini 主按钮只剩状态圆点（无文字，aria-pressed=${miniShape.pressed}）`,
+      Math.abs(movedPill.x - (600 - (dragFrom2.x + dragFrom2.w / 2 - dragFrom2.x))) < 60 || Math.abs(movedPill.x - 600) < 60,
+      `拖到视口中部生效（x=${Math.round(movedPill.x)}）`,
     );
-    check(!miniShape.grip && !miniShape.more, 'mini 没有把手与菜单');
-    check(miniShape.cover, 'mini 保留遮住（急用一步直达，#78）');
-    check((await getProfile(ext.control, ORIGIN)).capsuleMini === true, 'mini 记在站点配置里');
-    // mini 同样收到最小壳（#109）：高 26，宽约 99（0.8.0 mini 也加了「媒体」钮，#131）
-    const miniPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
-    check(Math.abs(miniPill.h - 26) <= 1, `mini 胶囊高 ${miniPill.h.toFixed(1)} ≈ 26`);
-    check(miniPill.w >= 90 && miniPill.w <= 106, `mini 胶囊宽 ${Math.round(miniPill.w)} 收到约 99`);
-
-    // mini 上点圆点 = 照常切换两态（切回清爽，后面的用例要）
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
-    await waitFor(
-      page,
-      'mini 圆点切换生效',
-      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"]')?.getAttribute('aria-pressed') === 'false',
-      [TOGGLE],
-      { timeout: 3000 },
-    );
-    check((await getProfile(ext.control, ORIGIN)).switchState === 'original', 'mini 上切换写进配置');
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
-
-    // mini 上的眼睛照常一键遮住整页，恢复后形态不变
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
-    await waitForShadow(page, CURTAIN, tid('pm-curtain-restore'), { timeout: 3000 });
-    check(!(await page.$(TOGGLE)), '遮住期间整根胶囊让位');
-    await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
-    await page.waitForSelector(TOGGLE, { timeout: 5000 });
-    check(
-      !!(await page.evaluate((h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-expand"]'), TOGGLE)),
-      '幕布恢复后还是 mini',
-    );
-    check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '幕布恢复后回到清爽态');
-
-    // 展开回全功能
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-expand'));
-    await waitFor(
-      page,
-      '展开回全功能',
-      (h) => {
-        const sr = document.querySelector(h)?.shadowRoot;
-        return !!sr?.querySelector('[data-testid="pm-toggle-shrink"]') && !!sr?.querySelector('[data-testid="pm-toggle-more"]');
-      },
-      [TOGGLE],
-      { timeout: 3000 },
-    );
-    // 存储里「缺省即全功能」：false 不落字段（与 sanitize 的本机偏好口径一致）
-    check(!(await getProfile(ext.control, ORIGIN)).capsuleMini, '展开后站点配置记回全功能（缺省不落字段）');
+    check(Math.abs(movedPill.y - 350) < 60, `纵向也自由（y=${Math.round(movedPill.y)}）`);
 
     // ===================== 叠放：页面超高浮层之上的模态对话框 =====================
     console.log('\n--- 页面浮层 z-index:2147483647 时，向导对话框仍在最上层 ---');
@@ -1010,7 +991,7 @@ async function main() {
     // ===================== 单站「不显示胶囊」（#111：数据与行为） =====================
     console.log('\n--- 不显示胶囊：隐藏后有设置也不挂，其余功能不受影响 ---');
     // 隐藏 + 故意留一堆旧形态残留（mini、非默认位置）：模拟「藏之前用过的状态」
-    await patchProfile(ext.control, ORIGIN, { capsuleHidden: true, capsuleMini: true, floatingBtnPos: { x: 0, y: 100 } });
+    await patchProfile(ext.control, ORIGIN, { capsuleHidden: true, floatingBtnPos: { x: 0, y: 100 } });
     await page.reload({ waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 800)); // 负向断言：等过挂载时机
     check(!(await page.$(TOGGLE)), 'capsuleHidden:true：有设置也不挂胶囊');
@@ -1029,7 +1010,7 @@ async function main() {
 
     // 重新显示：按弹窗（#112）将要做的那次写入——hidden=false、位置与形态一并重置——
     // 直写存储后刷新：胶囊回到右下角默认位置、全功能形态
-    await patchProfile(ext.control, ORIGIN, { capsuleHidden: false, capsuleMini: false, floatingBtnPos: null });
+    await patchProfile(ext.control, ORIGIN, { capsuleHidden: false, floatingBtnPos: null });
     await page.reload({ waitUntil: 'load' });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     const reshown = await rectIn(page, TOGGLE, tid('pm-toggle'));
@@ -1041,7 +1022,7 @@ async function main() {
       !!(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-grip"]'), TOGGLE)),
       '显示后是全功能形态（有拖动把手，mini 残留被清掉）',
     );
-    check(!(await getProfile(ext.control, ORIGIN)).capsuleMini, '显示时 mini 残留被重置');
+    check(!!(await page.evaluate((h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-more"]'), TOGGLE)), '显示后是全功能形态（⋯ 菜单常驻）');
 
     // ===================== 幕布：未添加网站的一次性脚本（#46 / #50） =====================
     console.log('\n--- 幕布：未添加网站的一次性脚本（#46 / #50） ---');

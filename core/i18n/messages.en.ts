@@ -422,8 +422,6 @@ export const en: Messages = {
     menuContent: 'Hide items',
     menuOpacity: 'Adjust opacity',
     menuResetPos: 'Move button back to the corner',
-    shrinkAria: 'Switch to the mini button',
-    expandAria: 'Switch to the full button',
     menuDelete: 'Delete this site’s settings',
   },
 

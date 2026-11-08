@@ -424,15 +424,15 @@ async function main() {
     popup = await openPopup(ext, site);
     await popup.waitForSelector(tid('pm-popup-capsule'), { timeout: 5000 });
     check((await popup.$eval(tid('pm-popup-capsule'), (e) => e.checked)) === false, '重开弹窗：开关仍是关');
-    // 藏着时塞旧残留（mini + 非默认位置），再打开开关 → 重置为右下角 + 全功能
-    await patchProfile(ext.control, ORIGIN, { capsuleMini: true, floatingBtnPos: { x: 0, y: 100 } });
+    // 藏着时塞旧残留（非默认位置），再打开开关 → 重置为右下角（0.8.6 起无形态之分）
+    await patchProfile(ext.control, ORIGIN, { floatingBtnPos: { x: 0, y: 100 } });
     await popup.click(tid('pm-popup-capsule'));
     await site.waitForSelector('pagemask-toggle', { timeout: 5000 });
     await poll(async () => {
       const p = await getProfile(ext.control, ORIGIN);
-      return p.capsuleMini == null && p.floatingBtnPos == null;
-    }, '打开开关重置位置与形态');
-    check(true, '打开开关：mini 与自定义位置残留被清掉（回右下角 + 全功能）');
+      return p.floatingBtnPos == null;
+    }, '打开开关重置位置');
+    check(true, '打开开关：自定义位置残留被清掉（回右下角）');
     // 删除确认框：标题带域名、默认焦点在「取消」；Esc 关闭后焦点回删除按钮
     await popup.click(tid('pm-popup-delete'));
     await popup.waitForSelector(tid('pm-popup-delete-dialog'), { timeout: 3000 });

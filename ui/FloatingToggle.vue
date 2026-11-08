@@ -5,14 +5,14 @@
   <div
     ref="rootEl"
     class="pm-tg"
-    :class="{ 'pm-tg-mini': mini, dragging, 'pm-tg-preview': preview }"
+    :class="{ dragging, 'pm-tg-preview': preview }"
     :style="[rootStyle, { '--pm-tg-idle-opacity': opacity ?? 1 }]"
     data-testid="pm-toggle"
   >
-    <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）
-         不用点阵字符：各平台字形大小不一，还会把字号压到 12px 以下 -->
+    <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）。
+         0.8.6 起闲置隐藏、悬停 / 键盘聚焦 / 拖动时淡入（CSS），触屏常显——
+         常驻视觉里少一颗钮，拖动能力不打折 -->
     <button
-      v-if="!mini"
       type="button"
       class="pm-tg-grip"
       :class="{ dragging }"
@@ -27,6 +27,10 @@
       <GripIcon />
     </button>
 
+    <!-- 主按钮（0.8.6，#135）：面具图标取代「圆点 + 文字」——文字只为圆点不可读而存在。
+         戴面具（填实）= 按你的设置显示，摘面具（描边）= 原样；状态用填实/描边 +
+         aria-pressed 表达，不只靠颜色（WCAG 1.4.1）。悬停提示写全称。
+         管的是「收起的内容 + 标题图标」这组定制（灰度独立，见媒体钮） -->
     <button
       type="button"
       class="pm-tg-main"
@@ -35,12 +39,10 @@
       data-testid="pm-toggle-main"
       @click="emit('toggle')"
     >
-      <span class="pm-tg-dot" aria-hidden="true"></span>
-      <!-- mini：只留圆点，状态靠颜色与悬停提示（#78） -->
-      <span v-if="!mini" class="pm-tg-label">{{ state === 'disguised' ? t.common.clean : t.common.original }}</span>
+      <MaskIcon class="pm-tg-main-icon" :data-state="state === 'disguised' ? 'on' : 'off'" />
     </button>
 
-    <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮，全功能与 mini 形态都有。
+    <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮。
          0.8.3 起排在「遮住」前面：媒体是随看随切的状态开关（高频），遮住是应急动作（低频、
          最该离主按钮远）。一点就生效（按站点记忆，页面效果由 storage → applyAll 统一重应用）。
          按下状态用内容填实 / 全描边两态 + aria-pressed，不只靠颜色（WCAG 1.4.1）；
@@ -57,7 +59,7 @@
     </button>
 
     <!-- 遮住整页（图标即可，读屏文案「遮住整页」）：闭眼图标与弹窗「遮住这一页」共用一份（#132）；
-         应急动作排在媒体之后、离主按钮最远（0.8.3 顺序调整） -->
+         应急动作，排在最后（0.8.3 顺序调整） -->
     <button
       type="button"
       class="pm-tg-cover"
@@ -69,36 +71,19 @@
       <EyeOffIcon class="pm-tg-cover-icon" />
     </button>
 
-    <!-- 展开式按钮组（只有全功能有）：不是 role=menu（那要求方向键导航契约），只给 aria-expanded -->
+    <!-- 展开式按钮组（0.8.6 起唯一形态，菜单常驻——原 mini 没有菜单，合并后人人都有）：
+         不是 role=menu（那要求方向键导航契约），只给 aria-expanded；
+         右圆头归它（原折叠钮的职责，#85 退场后移交） -->
     <button
-      v-if="!mini"
       ref="moreEl"
       type="button"
-      class="pm-tg-more"
+      class="pm-tg-more pm-tg-end"
       :aria-label="t.toggle.moreAria"
       :aria-expanded="menuOpen ? 'true' : 'false'"
       data-testid="pm-toggle-more"
       @click="toggleMenu"
     >
       <span aria-hidden="true">⋯</span>
-    </button>
-
-    <!-- 收成小按钮 / 展开成完整（#79）：单箭头指明点击后的变化——mini「›」展开变大、
-         全功能「‹」收起变小；永远排在最末（mini 的「展开」本来就在最末，两态位置连续）。
-         图标与「遮住」同规格（pm-tg-fold-icon 13 盒），笔画实测同粗。
-         两态它都是胶囊的右端点：右圆头归它（.pm-tg-fold，#85） -->
-    <button
-      type="button"
-      class="pm-tg-cover pm-tg-fold"
-      :aria-label="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
-      :title="mini ? t.toggle.expandAria : t.toggle.shrinkAria"
-      :data-testid="mini ? 'pm-toggle-expand' : 'pm-toggle-shrink'"
-      @click="emit('setMini', !mini)"
-    >
-      <svg class="pm-tg-fold-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline v-if="mini" points="7 3 17 12 7 21" />
-        <polyline v-else points="17 3 7 12 17 21" />
-      </svg>
     </button>
 
     <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住。
@@ -142,13 +127,14 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
 import { type MediaFlagKey, type MediaToggles } from '@/core/media';
-import { BUTTON_EDGE, clampEdgeY, isLeftDock, snapXToEdge } from '@/core/button-pos';
+import { BUTTON_EDGE, clampPos } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
 import GripIcon from './GripIcon.vue';
 import EyeOffIcon from './icons/EyeOffIcon.vue';
 import MediaIcon from './icons/MediaIcon.vue';
+import MaskIcon from './icons/MaskIcon.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;
@@ -158,8 +144,6 @@ const KEY_STEP = 15;
 const props = defineProps<{
   state: SiteProfile['switchState'];
   position: { x: number; y: number } | null;
-  /** mini 形态（#78）：状态圆点 + 遮住 + 媒体 + 展开，没有文字、菜单与把手；按站点记忆 */
-  mini: boolean;
   /** 展示用的站点名（确认框标题里带着它） */
   siteLabel: string;
   /**
@@ -188,8 +172,6 @@ const emit = defineEmits<{
   /** 媒体钮被点下（0.8.0）：方向由运行时按当前值算（按键 = 切换） */
   mediaChange: [key: MediaFlagKey, on: boolean];
   cover: [];
-  /** mini ↔ 全功能互切（#78） */
-  setMini: [mini: boolean];
   /** 菜单里的「删除这个网站的设置」被点下：运行时先撤幕布，确认框随后弹出 */
   delete: [];
   deleteSite: [];
@@ -210,32 +192,29 @@ const viewPos = ref<{ x: number; y: number } | null>(null);
 const size = () => {
   const root = rootEl.value;
   const r = root?.getBoundingClientRect();
-  // 首帧还没排版：按典型尺寸夹紧，避免算出负数（三个图标按钮各 24 之后实测约 145×32）
-  return { width: r && r.width > 0 ? r.width : 145, height: r && r.height > 0 ? r.height : 32 };
+  // 首帧还没排版：按典型尺寸夹紧，避免算出负数（0.8.6 单形态五钮实测约 137×32）
+  return { width: r && r.width > 0 ? r.width : 137, height: r && r.height > 0 ? r.height : 32 };
 };
 
-/** 夹进视口：指针拖动、方向键、挂载与窗口变化全部走这一个helper */
+/** 夹进视口：指针拖动、方向键、挂载与窗口变化全部走这一个 helper（0.8.6 自由坐标） */
 function clamp(left: number, top: number): { x: number; y: number } {
   const { width, height } = size();
-  return {
-    x: Math.min(Math.max(BUTTON_EDGE, left), Math.max(BUTTON_EDGE, window.innerWidth - width - BUTTON_EDGE)),
-    y: clampEdgeY(top, height, window.innerHeight),
-  };
+  return clampPos(left, top, width, height, window.innerWidth, window.innerHeight);
 }
 
 const pos = computed(() => dragPos.value ?? viewPos.value ?? props.position);
 
 const rootStyle = computed(() => {
-  // 拖动中跟手（#94 回归修复）：拖动坐标是自由左上角坐标，不走停靠解释——
-  // 否则右半视口里拖动会被钉死在右缘（#84 引入的回归，用户实测「只能沿右缘拖」）
+  // 拖动中跟手（#94 回归修复）：拖动坐标是自由左上角坐标
   const d = dragPos.value;
   if (d) return { left: `${d.x}px`, top: `${d.y}px` };
   const p = pos.value;
+  // 没拖过的默认位：右下角（right/bottom 表达，窗口变化时仍贴角）
   if (!p) return { right: `${BUTTON_EDGE + 8}px`, bottom: `${BUTTON_EDGE + 8}px` };
-  // 停靠边为锚（#84）：x ≤ BUTTON_EDGE 是左停靠，其余是右停靠——右停靠渲染 right，
-  // 全功能 ↔ mini 换宽时贴边不动（右停靠往右收，用户要的「以右侧位置为准」）
-  const top = `${clampEdgeY(p.y, size().height, window.innerHeight)}px`;
-  return isLeftDock(p.x) ? { left: `${p.x}px`, top } : { right: `${BUTTON_EDGE}px`, top };
+  // 0.8.6 自由定位（#135）：存什么坐标就渲染哪，不再贴边停靠——
+  // 存储里的 x/y 由 reclamp 夹在视口内，宽度变化后由 onResize 重新夹紧
+  const c = clamp(p.x, p.y);
+  return { left: `${c.x}px`, top: `${c.y}px` };
 });
 
 const tipText = computed(() => (props.state === 'disguised' ? t.value.toggle.tipOn : t.value.toggle.tipOff));
@@ -318,10 +297,9 @@ function onGripKey(e: KeyboardEvent) {
   const current = dragPos.value ?? viewPos.value ?? props.position ?? defaultPos();
   const next = clamp(current.x + d[0] * KEY_STEP, current.y + d[1] * KEY_STEP);
   dragPos.value = null;
-  // viewPos 记贴边后的值（#84）：渲染按停靠边锚定，记中途回造成一帧跳到另一侧
-  const snapped = { x: snapXToEdge(next.x, size().width, window.innerWidth), y: next.y };
-  viewPos.value = snapped;
-  commit(snapped);
+  // 0.8.6 自由定位：不再贴边，viewPos 记夹紧后的自由坐标
+  viewPos.value = next;
+  commit(next);
 }
 
 /** 默认位置（还没存过坐标时）的像素值：右下角 */
@@ -330,10 +308,9 @@ function defaultPos(): { x: number; y: number } {
   return { x: window.innerWidth - width - BUTTON_EDGE - 8, y: window.innerHeight - height - BUTTON_EDGE - 8 };
 }
 
-/** 松手 / 方向键后落库：贴最近边（#84，与幕布恢复按钮同一规则），渲染按停靠边锚定 */
+/** 松手 / 方向键后落库：0.8.6 起自由坐标原样落库（reclamp 负责视口夹紧），渲染写 left/top */
 function commit(p: { x: number; y: number }) {
-  const { width } = size();
-  emit('moved', { x: snapXToEdge(p.x, width, window.innerWidth), y: p.y });
+  emit('moved', { x: p.x, y: p.y });
 }
 
 // ---------- 菜单 ----------

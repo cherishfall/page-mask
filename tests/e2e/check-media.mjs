@@ -174,25 +174,9 @@ async function main() {
       return { pressed: b?.getAttribute('aria-pressed'), state: b?.querySelector('svg')?.getAttribute('data-state') };
     }, TOGGLE);
     check(btnOff.pressed === 'false' && btnOff.state === 'off', '按钮状态就地变成关（描边）');
-
-    // mini 形态也要有媒体钮（#131）
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-shrink'));
-    await poll(
-      async () => (await getProfile(control, ORIGIN)).capsuleMini === true,
-      '切成 mini 形态',
-    );
-    const miniHas = await page.evaluate(
-      (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-media"]'),
-      TOGGLE,
-    );
-    check(miniHas, 'mini 形态也有媒体钮');
+    // 开回来：后面的站点设置页/两态用例都以「开」为前提
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
-    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, 'mini 的媒体钮也能开');
-    await clickInShadow(page, TOGGLE, tid('pm-toggle-expand'));
-    await poll(
-      async () => (await getProfile(control, ORIGIN)).capsuleMini !== true, // 关掉的布尔字段在存储里消失
-      '展开回全功能',
-    );
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '媒体钮拨回来');
 
     // ===================== 站点设置页 =====================
     console.log('\n--- 站点设置页：卡片、说明与写入 ---');

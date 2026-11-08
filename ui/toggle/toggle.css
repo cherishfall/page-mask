@@ -1,7 +1,8 @@
 /*
  * 页内悬浮按钮样式（ui/toggle/toggle-styles.ts 注入到悬浮按钮的 shadow root）。
  *
- * 布局：一根小胶囊，四段——拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」（菜单）；
+ * 布局：一根小胶囊，五段——拖动把手（悬停/聚焦才显）/ 主按钮（面具，切换）/ 「媒体」/
+ * 「遮住」/ 「⋯」（菜单，右端点）；0.8.6 起单一形态，mini/折叠退场（#135）。
  * 幕布期间胶囊整体不渲染，恢复按钮归幕布宿主所有（ui/curtain-restore.ts，样式在同文件末尾）。
  * 胶囊本体用 tokens 的不透明底色 + 控件描边：半透明灰在深浅页面上都无法同时满足
  * 「本体 ≥3:1、文字 ≥4.5:1」，而这里是常驻控件，必须稳定可辨。
@@ -48,7 +49,9 @@
 /* ── 拖动把手（drag 指南：专用把手、cursor、touch-action） ──
    可点区域 24×24（WCAG 2.5.8）：图形是共享组件 ui/GripIcon.vue 的六点 SVG（10×16，
    #83 起与向导工具条同一枚），不跟着命中区放大。
-   用 SVG 而不是字形，是因为点阵字符在各平台的字形大小不一，且会连带把字号压到 12 以下。 */
+   用 SVG 而不是字形，是因为点阵字符在各平台的字形大小不一，且会连带把字号压到 12 以下。
+   0.8.6（#135）：闲置整段透明但**保留占位**（胶囊宽度不变，其他钮不跳）；
+   悬停胶囊 / 键盘聚焦把手 / 拖动中淡入；触屏（无 hover）常显。 */
 .pm-tg-grip {
   display: inline-flex;
   align-items: center;
@@ -65,11 +68,28 @@
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-tg-grip {
+    transition: none;
+  }
+}
+.pm-tg:hover .pm-tg-grip,
+.pm-tg-grip:focus-visible,
+.pm-tg-grip.dragging {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .pm-tg-grip {
+    opacity: 1; /* 触屏没有 hover：常显，否则拖动不可发现 */
+  }
 }
 .pm-tg-grip.dragging {
   cursor: grabbing;
 }
-.pm-tg-grip:hover {
+.pm-tg:hover .pm-tg-grip {
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
@@ -78,45 +98,11 @@
   block-size: 16px;
 }
 
-/* ── 主按钮：切换清爽 / 原样 ──
-   全功能时主按钮在把手旁边（中间段）：悬停底色用直角，免得圆角在胶囊中间留豁口（#85） */
+/* ── 主按钮：切换「按你的设置显示 / 原样」──
+   0.8.6（#135）：面具图标取代「圆点 + 文字」——图标 13 盒（与媒体/遮住同规格），
+   可点 24×24。戴面具（填实）= 按你的设置显示；摘面具（描边）= 原样；
+   填实/描边 + aria-pressed 表达状态，不只靠颜色（WCAG 1.4.1） */
 .pm-tg-main {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  border-radius: 0;
-  /* 上下 3px：12px 字 × 1.5 行高 = 18，加起来正好 24（可点段的下限，#109） */
-  padding: 3px 7px;
-  background: transparent;
-  color: inherit;
-  font-size: var(--pm-font-size-caption);
-  line-height: var(--pm-line-height);
-  cursor: pointer;
-  white-space: nowrap;
-}
-/* mini 时主按钮是左端点：左圆头归它（#85，圆角跟着实际的端点元素走） */
-.pm-tg-mini .pm-tg-main {
-  border-radius: var(--pm-radius-pill) 0 0 var(--pm-radius-pill);
-}
-.pm-tg-main:hover {
-  background: var(--pm-bg-subtle);
-}
-/* 状态点：颜色之外还有文字（「清爽」/「原样」），不只靠颜色表达状态 */
-.pm-tg-dot {
-  inline-size: 6px;
-  block-size: 6px;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-}
-.pm-tg-main[aria-pressed='true'] .pm-tg-dot {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-}
-
-/* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
-   #79 起收放钮排在它后面：⋯成了中间段，右圆头归最末的收放钮（#85），这里只留直角 */
-.pm-tg-more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -124,6 +110,36 @@
   min-block-size: 24px;
   border: none;
   border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--pm-fg-muted);
+  cursor: pointer;
+}
+.pm-tg-main:hover {
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+}
+.pm-tg-main-icon {
+  inline-size: 13px;
+  block-size: 13px;
+}
+.pm-tg-main-icon[data-state='on'] {
+  fill: currentColor;
+  color: var(--pm-fg);
+}
+
+/* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
+   0.8.6 起它是胶囊右端点：右圆头归它（原折叠钮 #85 的职责随双形态退场移交） */
+.pm-tg-more.pm-tg-end {
+  border-radius: 0 var(--pm-radius-pill) var(--pm-radius-pill) 0;
+}
+.pm-tg-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 24px;
+  min-block-size: 24px;
+  border: none;
   padding: 0;
   background: transparent;
   color: var(--pm-fg-muted);
@@ -156,17 +172,6 @@
   color: var(--pm-fg);
 }
 .pm-tg-cover-icon {
-  inline-size: 13px;
-  block-size: 13px;
-}
-/* 收放钮（#79 引入，#85 起两态都是胶囊右端点）：右圆头归它——此前圆头挂在「⋯」上，
-   收放钮的直角悬停底色超出胶囊圆头轮廓 */
-.pm-tg-fold {
-  border-radius: 0 var(--pm-radius-pill) var(--pm-radius-pill) 0;
-}
-/* 收放钮图标（#79）：与「遮住」同规格的 13 盒——此前双箭头无尺寸约束，
-   笔画在 24 盒下渲染比眼睛图标粗一倍；13 盒下单箭头与眼睛笔画实测同粗 */
-.pm-tg-fold-icon {
   inline-size: 13px;
   block-size: 13px;
 }
