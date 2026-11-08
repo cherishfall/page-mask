@@ -1,32 +1,21 @@
 <template>
-  <!-- 一根小胶囊：拖动把手 / 主按钮（切换）/ 「遮住」/ 「⋯」菜单。菜单项与主按钮是兄弟节点，
-       不再包在会吃掉 pointerdown 的拖动容器里（N1：点菜单项会把开关切掉）。
+  <!-- 一根小胶囊：主按钮（切换）/「媒体」/「遮住」/「⋯」菜单。0.8.8（#136）起没有独立把手：
+       整根胶囊表面都能拖——按住移动 ≥8px 算拖动、不足算点击（AssistiveTouch / Loom 等通行做法）；
+       方向键移动挂在胶囊本体上（接管原把手的键盘角色，Tab 停靠位总数不变）。
+       按下时不抢事件（N1 教训：不能吃掉 pointerdown），跨过阈值才捕获指针转入拖动。
        幕布期间整根胶囊由 content-runtime 卸掉，恢复按钮归幕布宿主所有（ui/curtain-restore.ts） -->
   <div
     ref="rootEl"
     class="pm-tg"
     :class="{ dragging, 'pm-tg-preview': preview }"
     :style="[rootStyle, { '--pm-tg-idle-opacity': opacity ?? 1 }]"
+    role="group"
+    tabindex="0"
+    :aria-label="t.toggle.moveAria"
     data-testid="pm-toggle"
+    @pointerdown="onRootDown"
+    @keydown="onRootKey"
   >
-    <!-- 拖动把手：六点 SVG 共享组件（#83，图形 10×16，命中区由 CSS 撑到 24×24）。
-         0.8.6 起闲置隐藏、悬停 / 键盘聚焦 / 拖动时淡入（CSS），触屏常显——
-         常驻视觉里少一颗钮，拖动能力不打折 -->
-    <button
-      type="button"
-      class="pm-tg-grip"
-      :class="{ dragging }"
-      :aria-label="t.toggle.gripAria"
-      :title="t.toggle.gripTitle"
-      data-testid="pm-toggle-grip"
-      @pointerdown="onGripDown"
-      @pointermove="onGripMove"
-      @lostpointercapture="onGripUp"
-      @keydown="onGripKey"
-    >
-      <GripIcon />
-    </button>
-
     <!-- 主按钮（0.8.6，#135）：面具图标取代「圆点 + 文字」——文字只为圆点不可读而存在。
          戴面具（填实）= 按你的设置显示，摘面具（描边）= 原样；状态用填实/描边 +
          aria-pressed 表达，不只靠颜色（WCAG 1.4.1）。悬停提示写全称。
@@ -131,7 +120,6 @@ import { BUTTON_EDGE, clampPos } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
-import GripIcon from './GripIcon.vue';
 import EyeOffIcon from './icons/EyeOffIcon.vue';
 import MediaIcon from './icons/MediaIcon.vue';
 import MaskIcon from './icons/MaskIcon.vue';
@@ -140,6 +128,9 @@ import MaskIcon from './icons/MaskIcon.vue';
 const POPOVER = { popover: 'auto' } as Record<string, string>;
 /** 方向键每次移动的距离 */
 const KEY_STEP = 15;
+/** 按下后移动这么多像素才算拖动（不足是点击）：Motion 官方 3px / jQuery UI distance 同范式，
+ *  取 8px 防手抖误拖——跨过阈值前绝不抢事件，按钮的 click 才能照常触发 */
+const DRAG_THRESHOLD = 8;
 
 const props = defineProps<{
   state: SiteProfile['switchState'];
@@ -192,8 +183,8 @@ const viewPos = ref<{ x: number; y: number } | null>(null);
 const size = () => {
   const root = rootEl.value;
   const r = root?.getBoundingClientRect();
-  // 首帧还没排版：按典型尺寸夹紧，避免算出负数（0.8.6 单形态五钮实测约 137×32）
-  return { width: r && r.width > 0 ? r.width : 137, height: r && r.height > 0 ? r.height : 32 };
+  // 首帧还没排版：按典型尺寸夹紧，避免算出负数（0.8.8 四钮胶囊实测约 101×26）
+  return { width: r && r.width > 0 ? r.width : 101, height: r && r.height > 0 ? r.height : 26 };
 };
 
 /** 夹进视口：指针拖动、方向键、挂载与窗口变化全部走这一个 helper（0.8.6 自由坐标） */
@@ -247,6 +238,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize);
   window.removeEventListener('scroll', onScroll, { capture: true });
+  // 按下中途卸载（扩展失效收尾）也要摘掉拖动监听，别钉在 window 上
+  endPress();
 });
 
 // 从别处改了位置（例如「按钮归位」）：显示位置跟着走
@@ -259,32 +252,74 @@ watch(
   },
 );
 
-// ---------- 拖动（modern-web-guidance「drag」：专用把手 + setPointerCapture） ----------
+// ---------- 拖动（0.8.8，#136：整根胶囊表面都能拖，无独立把手） ----------
+// 点击与拖动靠移动阈值消歧（Motion 官方 3px / jQuery UI distance 同范式，取 8px 防手抖）。
+// 关键时序：按下只记起点、绝不抢事件（N1 教训），随按下挂 **window 级** pointermove /
+// pointerup / pointercancel——指针一旦移出胶囊，move 不再经过本体冒泡（事件按命中目标
+// 冒泡），不在 window 上听就会永远跨不过阈值；跨过阈值才 setPointerCapture 到本体，
+// 此后 click 落在本体上，按钮不会被拖动误触。不足阈值的按下 / 抬起保持原生点击。
 
 let grab = { x: 0, y: 0 };
+/** 按下的起点（用于阈值判定） */
+let press = { x: 0, y: 0 };
+/** 有一个有效的按下候选（菜单 / 确认框里的按下不算） */
+let pressed = false;
+/** 已跨过阈值、进入拖动（指针已捕获到本体） */
+let captured = false;
 
-function onGripDown(e: PointerEvent) {
+function onRootDown(e: PointerEvent) {
   if (props.preview) return;
   if (e.button !== 0 || !rootEl.value) return;
+  // 菜单与删除确认框不参与拖动：popover / <dialog> 在 top layer，各有「点外关闭」
+  // 与焦点行为，被捕获指针吞掉 click 会破坏它们（N1 同类教训，#136）
+  const target = e.target as HTMLElement | null;
+  if (target?.closest?.('.pm-tg-menu, .pm-tg-del')) {
+    pressed = false;
+    return;
+  }
+  pressed = true;
   const r = rootEl.value.getBoundingClientRect();
   grab = { x: e.clientX - r.left, y: e.clientY - r.top };
-  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  press = { x: e.clientX, y: e.clientY };
+  window.addEventListener('pointermove', onWindowMove);
+  window.addEventListener('pointerup', onWindowUp);
+  window.addEventListener('pointercancel', onWindowUp);
 }
 
-function onGripMove(e: PointerEvent) {
-  const handle = e.currentTarget as HTMLElement;
-  if (!handle.hasPointerCapture(e.pointerId)) return;
+function onWindowMove(e: PointerEvent) {
+  if (!pressed) return endPress();
+  if (!(e.buttons & 1)) return endPress(); // 悬停移动不拖；按键已松开则作废候选
+  if (captured) {
+    dragPos.value = clamp(e.clientX - grab.x, e.clientY - grab.y);
+    return;
+  }
+  if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_THRESHOLD) return;
+  captured = true;
   dragging.value = true;
+  rootEl.value?.setPointerCapture(e.pointerId);
   dragPos.value = clamp(e.clientX - grab.x, e.clientY - grab.y);
 }
 
-/** 松手 / 指针被系统取消（触屏滑动、来电等）都会走到这里：统一收尾并落库 */
-function onGripUp() {
-  dragging.value = false;
-  if (dragPos.value) commit(dragPos.value);
+/** 松手 / 指针被系统取消（触屏滑动、来电等）：统一收尾，拖过才落库，其余交给原生 click */
+function onWindowUp() {
+  endPress();
 }
 
-function onGripKey(e: KeyboardEvent) {
+function endPress() {
+  if (!pressed && !captured) return;
+  const wasCaptured = captured;
+  pressed = false;
+  captured = false;
+  dragging.value = false;
+  window.removeEventListener('pointermove', onWindowMove);
+  window.removeEventListener('pointerup', onWindowUp);
+  window.removeEventListener('pointercancel', onWindowUp);
+  if (wasCaptured && dragPos.value) commit(dragPos.value);
+}
+
+function onRootKey(e: KeyboardEvent) {
+  // 方向键只在本体自己聚焦时移动：按钮上的方向键不劫持（Tab 顺序：本体 → 四颗钮）
+  if (e.target !== rootEl.value) return;
   const dir: Record<string, [number, number]> = {
     ArrowLeft: [-1, 0],
     ArrowRight: [1, 0],

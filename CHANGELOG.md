@@ -5,6 +5,26 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.8] - 2026-11-09
+
+悬浮按钮去掉拖动把手：整根按钮都能拖，静止宽度再省四分之一。
+
+### 中文
+
+#### 变更
+
+- **拖动不再需要把手**：按住悬浮按钮的任何位置拖动即可移动——按下后移动超过 8 像素才算拖动，不足就是正常点击，按钮不会误触（与 iOS 辅助功能的悬浮球同类做法）；拖动把手整段退场，静止宽度 126 → 约 101 像素，高度 26 不变（无障碍下限）
+- **键盘移动保留**：Tab 聚焦到按钮本体后用方向键移动（每次 15 像素），位置照旧按网站记住、拖动越界自动收回视口内
+- **触屏补齐**：主按钮在触屏上与其他图标钮一样放大到 40×40（0.8.6 起它漏在放大档外）
+
+### English
+
+#### Changed
+
+- **No more drag handle**: press and drag the floating button anywhere to move it — moving more than 8px after pressing counts as a drag, less is a normal click, so buttons never misfire (the same approach as iOS AssistiveTouch); the handle segment is gone, resting width shrinks from 126 to about 101px, height stays 26 (the accessibility floor)
+- **Keyboard moving stays**: Tab to the button body and use arrow keys to move it (15px per press); position is still remembered per site and drags are clamped back into the viewport
+- **Touch catch-up**: on touch screens the main button now enlarges to 40×40 like the other icon buttons (it was missing from that tier since 0.8.6)
+
 ## [0.8.7] - 2026-11-09
 
 修复：只开了灰度的网站上，在悬浮按钮上关掉灰度会把整根按钮拆掉。

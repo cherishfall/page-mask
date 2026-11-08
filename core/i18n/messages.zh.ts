@@ -451,10 +451,9 @@ export const zh = {
 
   /** 页面内编辑面板（ui/editor） */
 
-  /** 页面右下角的小按钮（ui/FloatingToggle） */
+  /** 页面右下角的悬浮按钮（ui/FloatingToggle） */
   toggle: {
-    gripAria: '移动按钮（也可以用方向键）',
-    gripTitle: '拖动可以移动按钮',
+    moveAria: '悬浮按钮（按住拖动，或用方向键移动位置）',
     tipOn: '点一下看原样',
     tipOff: '点一下按你的设置显示',
     coverAria: '遮住整个页面',

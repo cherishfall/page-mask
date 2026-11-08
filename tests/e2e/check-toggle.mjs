@@ -175,11 +175,11 @@ async function main() {
     const pill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(pill.right <= 1000 && pill.bottom <= 700, `胶囊默认在视口内右下角（right=${Math.round(pill.right)}, bottom=${Math.round(pill.bottom)}）`);
 
-    // ===================== 三个图标按钮的命中区（#72，WCAG 2.5.8） =====================
-    console.log('\n--- 三个图标按钮：可点区域不小于 24×24、字号不小于 12 ---');
+    // ===================== 图标按钮的命中区（#72，WCAG 2.5.8） =====================
+    console.log('\n--- 图标按钮：可点区域不小于 24×24、字号不小于 12 ---');
     const hitBoxes = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
-      return ['pm-toggle-grip', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
+      return ['pm-toggle-main', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
         const b = sr.querySelector(`[data-testid="${id}"]`).getBoundingClientRect();
         return { id, w: b.width, h: b.height };
       });
@@ -187,14 +187,14 @@ async function main() {
     for (const b of hitBoxes) {
       check(b.w >= 24 && b.h >= 24, `${b.id} 命中区 ${b.w.toFixed(1)}×${b.h.toFixed(1)} ≥ 24×24`);
     }
-    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 126
-    // （0.8.6 单形态：去文字、去折叠钮，五段全是 24 图标钮，#135）
+    // 整壳收到 WCAG 允许的最小（#109）：高 26（24 可点区 + 上下边框），宽约 101
+    // （0.8.8：把手退场，四段全 24 图标钮，#136）
     const fullPill = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(
       Math.abs(fullPill.h - 26) <= 1,
       `全功能胶囊高 ${fullPill.h.toFixed(1)} ≈ 26（可点区 24 + 上下边框）`,
     );
-    check(fullPill.w >= 118 && fullPill.w <= 134, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 126（五段全图标钮，#135）`);
+    check(fullPill.w >= 96 && fullPill.w <= 106, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 101（四段全图标钮，把手退场 #136）`);
     const pillFont = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       let min = Infinity;
@@ -209,18 +209,18 @@ async function main() {
       return { min, who };
     }, TOGGLE);
     check(pillFont.min >= 12, `胶囊里最小的字号 ${pillFont.min}px ≥ 12px（${pillFont.who || '无'}）`);
-    // 图标本身没跟着放大：把手图形 10×16、遮住图标 13×13、⋯ 仍是 13px 的字
+    // 图标本身没跟着放大：遮住图标 13×13、⋯ 仍是 13px 的字（0.8.8 起没有把手图形）
     const iconBoxes = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       const box = (sel) => {
         const r = sr.querySelector(sel).getBoundingClientRect();
         return { w: r.width, h: r.height };
       };
-      return { grip: box('.pm-grip-icon'), cover: box('.pm-tg-cover-icon'), more: box('[data-testid="pm-toggle-more"] span') };
+      return { cover: box('.pm-tg-cover-icon'), more: box('[data-testid="pm-toggle-more"] span') };
     }, TOGGLE);
     check(
-      iconBoxes.grip.w <= 12 && iconBoxes.grip.h <= 18 && iconBoxes.cover.w <= 14 && iconBoxes.more.w <= 16,
-      `图标本身仍然很小（把手 ${iconBoxes.grip.w}×${iconBoxes.grip.h}、遮住 ${iconBoxes.cover.w}、⋯ ${iconBoxes.more.w}）`,
+      iconBoxes.cover.w <= 14 && iconBoxes.more.w <= 16,
+      `图标本身仍然很小（遮住 ${iconBoxes.cover.w}、⋯ ${iconBoxes.more.w}）`,
     );
     // 触屏（pointer: coarse）：可点区域放大到 40×40
     const cdp = await page.createCDPSession();
@@ -228,7 +228,7 @@ async function main() {
     const isCoarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
     const coarseBoxes = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
-      return ['pm-toggle-grip', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
+      return ['pm-toggle-main', 'pm-toggle-cover', 'pm-toggle-more'].map((id) => {
         const b = sr.querySelector(`[data-testid="${id}"]`).getBoundingClientRect();
         return { id, w: b.width, h: b.height };
       });
@@ -431,10 +431,11 @@ async function main() {
       (h) => {
         const sr = document.querySelector(h).shadowRoot;
         const main = sr.querySelector('[data-testid="pm-toggle-main"]');
+        const root = sr.querySelector('[data-testid="pm-toggle"]');
         return {
           pressed: main.getAttribute('aria-pressed'),
           text: main.textContent.trim(),
-          gripLabel: sr.querySelector('[data-testid="pm-toggle-grip"]')?.getAttribute('aria-label'),
+          rootLabel: root?.getAttribute('aria-label'),
           moreLabel: sr.querySelector('[data-testid="pm-toggle-more"]')?.getAttribute('aria-label'),
         };
       },
@@ -443,13 +444,13 @@ async function main() {
     // 0.8.6（#135）：文字标签退场，主按钮状态由面具图标填实/描边 + aria-pressed + title 表达
     const mainTitle = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]').title, TOGGLE);
     check(aria.pressed === 'true' && mainTitle.length > 0, `主按钮有 aria-pressed 与悬停全称提示（aria-pressed=${aria.pressed}，title「${mainTitle}」）`);
-    check(!!aria.gripLabel && !!aria.moreLabel, `把手与菜单按钮都有可访问名称（${aria.gripLabel} / ${aria.moreLabel}）`);
+    check(!!aria.rootLabel && !!aria.moreLabel, `胶囊本体与菜单按钮都有可访问名称（${aria.rootLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面
     await page.mouse.click(60, 400);
     await page.keyboard.press('Tab');
     let focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid ?? null, TOGGLE);
-    check(focused === 'pm-toggle-grip', `Tab 第一个停靠点是拖动把手（${focused}）`);
+    check(focused === 'pm-toggle', `Tab 第一个停靠点是胶囊本体（0.8.8 起方向键挂本体，${focused}）`);
     await page.keyboard.press('Tab');
     focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid ?? null, TOGGLE);
     check(focused === 'pm-toggle-main', `再 Tab 到主按钮（${focused}）`);
@@ -485,24 +486,36 @@ async function main() {
       TOGGLE,
     );
     check(mainState === 'off', `按钮图标随状态变化（state=${mainState}）`);
-    // 复位
+    // 复位：等到面具图标真的回到填实（胶囊一直在场，等「在场」等于没等——拖动用例要在此基础上断言状态）
     await setProfile(ext.control, ORIGIN, { ...switched, switchState: 'disguised' });
-    await waitFor(page, '回到清爽态', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
+    await waitFor(
+      page,
+      '回到清爽态（面具图标回到填实）',
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon')?.dataset.state === 'on',
+      [TOGGLE],
+      { timeout: 5000 },
+    );
 
-    // ===================== 拖动：专用把手、贴边、落库 =====================
-    console.log('\n--- 拖动把手 ---');
-    const grip = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
-    await page.mouse.move(grip.x + grip.w / 2, grip.y + grip.h / 2);
+    // ===================== 拖动：整根胶囊可拖（0.8.8，#136）、阈值消歧、落库 =====================
+    console.log('\n--- 拖胶囊本体 ---');
+    // 从主按钮上发起拖动：移动跨过阈值才算拖，松手不触发开关
+    const grabMain = await rectIn(page, TOGGLE, tid('pm-toggle-main'));
+    await page.mouse.move(grabMain.x + grabMain.w / 2, grabMain.y + grabMain.h / 2);
     await page.mouse.down();
     // #94 回归断言：拖动中要跟手——中心应落在「原中心 - 400」，不能被钉在右缘
     const beforeDrag = await rectIn(page, TOGGLE, tid('pm-toggle'));
-    await page.mouse.move(grip.x + grip.w / 2 - 400, grip.y + grip.h / 2 - 300, { steps: 6 });
+    await page.mouse.move(grabMain.x + grabMain.w / 2 - 400, grabMain.y + grabMain.h / 2 - 300, { steps: 6 });
     const midDrag = await rectIn(page, TOGGLE, tid('pm-toggle'));
     const expectCenter = beforeDrag.x + beforeDrag.w / 2 - 400;
     check(
       Math.abs(midDrag.x + midDrag.w / 2 - expectCenter) < 5,
       `拖动中跟手，不被钉在右缘（中心 ${Math.round(midDrag.x + midDrag.w / 2)}，期望 ${Math.round(expectCenter)}）`,
     );
+    const midState = await page.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon')?.dataset.state ?? null,
+      TOGGLE,
+    );
+    check(midState === 'on', `从按钮上发起的拖动不误触开关（面具图标仍是 on=${midState}）`);
     await page.mouse.up();
     const moved = await rectIn(page, TOGGLE, tid('pm-toggle'));
     check(moved.x >= 0 && moved.y >= 0, `拖动后位置在视口内（${Math.round(moved.x)},${Math.round(moved.y)}）`);
@@ -518,12 +531,12 @@ async function main() {
     check(!!stored.floatingBtnPos, `松手后坐标落库（${JSON.stringify(stored.floatingBtnPos)}）`);
     // 0.8.6 自由定位（#135）：落库的就是拖到的坐标（已夹进视口），不再贴边
     check(
-      stored.floatingBtnPos.x >= 8 && stored.floatingBtnPos.x <= 1000 - 126 - 8,
+      stored.floatingBtnPos.x >= 8 && stored.floatingBtnPos.x <= 1000 - 101 - 8,
       `落库坐标在视口内且不再贴边（x=${stored.floatingBtnPos.x}）`,
     );
-    // 再拖一次到左上角外侧：贴边不出视口
-    const grip2 = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
-    await page.mouse.move(grip2.x + grip2.w / 2, grip2.y + grip2.h / 2);
+    // 再拖一次到左上角外侧：贴边不出视口（这次从「⋯」上发起——四颗钮都能当拖动起点）
+    const grabMore = await rectIn(page, TOGGLE, tid('pm-toggle-more'));
+    await page.mouse.move(grabMore.x + grabMore.w / 2, grabMore.y + grabMore.h / 2);
     await page.mouse.down();
     await page.mouse.move(0, 0, { steps: 4 });
     await page.mouse.up();
@@ -532,6 +545,29 @@ async function main() {
       corner.x >= 0 && corner.x <= 10 && corner.y >= 0 && corner.y <= 10,
       `拖到左上角时贴边、不出视口（${Math.round(corner.x)},${Math.round(corner.y)}）`,
     );
+    // 阈值内的小幅移动仍是点击：按下移动 3px 抬起，开关照常切换（不误判成拖动）
+    const j = await rectIn(page, TOGGLE, tid('pm-toggle-main'));
+    await page.mouse.move(j.x + j.w / 2, j.y + j.h / 2);
+    await page.mouse.down();
+    await page.mouse.move(j.x + j.w / 2 + 3, j.y + j.h / 2 + 3, { steps: 2 });
+    await page.mouse.up();
+    await new Promise((res) => setTimeout(res, 150));
+    const jitterState = await page.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon')?.dataset.state ?? null,
+      TOGGLE,
+    );
+    check(jitterState === 'off', `阈值内移动仍是点击：开关切换了（state=${jitterState}，8px 阈值不误伤点击）`);
+    // 复位开关，别让下面的用例踩到原样态
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await new Promise((res) => setTimeout(res, 300));
+    // 方向键移动（0.8.8 挂在胶囊本体上）：本体聚焦后按右箭头，位置与存储一起动
+    await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle"]').focus(), TOGGLE);
+    const kbBefore = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await new Promise((res) => setTimeout(res, 300));
+    const kbAfter = await rectIn(page, TOGGLE, tid('pm-toggle'));
+    check(Math.abs(kbAfter.x - (kbBefore.x + 30)) <= 2, `方向键右移 2×15px（x ${Math.round(kbBefore.x)} → ${Math.round(kbAfter.x)}）`);
 
     // 按钮放回右下角（#90：坐标已存，菜单这时是八项三条线）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
@@ -921,37 +957,31 @@ async function main() {
     // 复位开关，不让幕布用例影响后面的叠放用例
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
 
-    // ===================== 单形态确认（0.8.6，#135）：mini/折叠退场 =====================
-    console.log('\n--- 单形态胶囊：无折叠钮、把手悬停显隐、自由坐标拖动 ---');
+    // ===================== 单形态确认（0.8.6 单形态 + 0.8.8 无把手，#136） =====================
+    console.log('\n--- 单形态胶囊：无折叠钮、无把手、本体可拖可聚焦 ---');
     const singleShape = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
+      const root = sr.querySelector('[data-testid="pm-toggle"]');
       return {
         fold: !!sr.querySelector('[data-testid="pm-toggle-shrink"], [data-testid="pm-toggle-expand"]'),
         grip: !!sr.querySelector('[data-testid="pm-toggle-grip"]'),
         more: !!sr.querySelector('[data-testid="pm-toggle-more"]'),
         label: !!sr.querySelector('.pm-tg-label'),
+        focusable: root?.getAttribute('tabindex'),
+        role: root?.getAttribute('role'),
+        cursor: getComputedStyle(root).cursor,
       };
     }, TOGGLE);
     check(!singleShape.fold && !singleShape.label, '折叠钮与文字标签退场：单一形态（#135）');
-    check(singleShape.grip && singleShape.more, '把手与 ⋯ 菜单常驻');
-    // 把手闲置隐藏（占位保留）：opacity 0；悬停胶囊淡入
-    const gripIdle = await page.evaluate((h) => {
-      const g = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-grip"]');
-      return getComputedStyle(g).opacity;
-    }, TOGGLE);
-    check(parseFloat(gripIdle) === 0, `把手闲置时隐藏（opacity=${gripIdle}）`);
-    await page.bringToFront();
-    const capBox = await rectIn(page, TOGGLE, tid('pm-toggle'));
-    await page.mouse.move(capBox.x + capBox.w / 2, capBox.y + capBox.h / 2);
-    await new Promise((res) => setTimeout(res, 300));
-    const gripHover = await page.evaluate((h) => {
-      const g = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-grip"]');
-      return getComputedStyle(g).opacity;
-    }, TOGGLE);
-    check(parseFloat(gripHover) === 1, `悬停胶囊后把手淡入（opacity=${gripHover}）`);
+    check(!singleShape.grip && singleShape.more, '把手退场（整根胶囊都能拖）、⋯ 菜单常驻（#136）');
+    check(
+      singleShape.focusable === '0' && singleShape.role === 'group',
+      `本体可聚焦、role=group（方向键挂本体：${singleShape.role}/tabindex=${singleShape.focusable}）`,
+    );
+    check(singleShape.cursor === 'grab', `本体空闲光标是抓手（${singleShape.cursor}）`);
 
-    // 自由坐标拖动（#135）：拖到视口中部，落库原坐标、不再贴边
-    const dragFrom2 = await rectIn(page, TOGGLE, tid('pm-toggle-grip'));
+    // 自由坐标拖动（#135→#136）：从胶囊本体拖到视口中部，落库原坐标、不再贴边
+    const dragFrom2 = await rectIn(page, TOGGLE, tid('pm-toggle-main'));
     await page.mouse.move(dragFrom2.x + dragFrom2.w / 2, dragFrom2.y + dragFrom2.h / 2);
     await page.mouse.down();
     await page.mouse.move(600, 350, { steps: 8 });
@@ -1022,8 +1052,8 @@ async function main() {
       `显示后胶囊回到右下角默认位置（右距 ${Math.round(vw - reshown.right)}px、底距 ${Math.round(700 - reshown.bottom)}px）`,
     );
     check(
-      !!(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-grip"]'), TOGGLE)),
-      '显示后是全功能形态（有拖动把手，mini 残留被清掉）',
+      !(await page.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-grip"]'), TOGGLE)),
+      '显示后是全功能形态（无把手残留，mini 旧态被清掉，#136）',
     );
     check(!!(await page.evaluate((h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-more"]'), TOGGLE)), '显示后是全功能形态（⋯ 菜单常驻）');
 

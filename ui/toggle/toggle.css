@@ -1,8 +1,8 @@
 /*
  * 页内悬浮按钮样式（ui/toggle/toggle-styles.ts 注入到悬浮按钮的 shadow root）。
  *
- * 布局：一根小胶囊，五段——拖动把手（悬停/聚焦才显）/ 主按钮（面具，切换）/ 「媒体」/
- * 「遮住」/ 「⋯」（菜单，右端点）；0.8.6 起单一形态，mini/折叠退场（#135）。
+ * 布局：一根小胶囊，四段——主按钮（面具，切换）/「媒体」/「遮住」/「⋯」（菜单，右端点）；
+ * 0.8.6 起单一形态，mini/折叠退场（#135）；0.8.8 起没有独立把手，整根胶囊表面都能拖（#136）。
  * 幕布期间胶囊整体不渲染，恢复按钮归幕布宿主所有（ui/curtain-restore.ts，样式在同文件末尾）。
  * 胶囊本体用 tokens 的不透明底色 + 控件描边：半透明灰在深浅页面上都无法同时满足
  * 「本体 ≥3:1、文字 ≥4.5:1」，而这里是常驻控件，必须稳定可辨。
@@ -35,73 +35,34 @@
   /* 界面元素自己不参与文字选择 */
   -webkit-user-select: none;
   user-select: none;
+  /* 0.8.8（#136）：整根胶囊都能拖——空隙 / 边框上的抓手光标示意能拖（uBlock 光标示能先例）；
+     四颗按钮各自 cursor: pointer 盖过它。本体 touch-action:none + 直属按钮同款，
+     触屏按住拖动才不会被页面滚动打断（与幕布恢复按钮同一做法） */
+  cursor: grab;
+  touch-action: none;
+}
+.pm-tg > button {
+  touch-action: none;
 }
 .pm-tg:hover,
 .pm-tg:focus-within,
 .pm-tg.dragging {
   opacity: 1;
 }
+.pm-tg.dragging,
+.pm-tg.dragging > button {
+  cursor: grabbing;
+}
 /* 预览模式（#102 / 欢迎页）：作为示意图嵌在扩展页面里，不跟随页面定位 */
 .pm-tg.pm-tg-preview {
   position: static;
 }
 
-/* ── 拖动把手（drag 指南：专用把手、cursor、touch-action） ──
-   可点区域 24×24（WCAG 2.5.8）：图形是共享组件 ui/GripIcon.vue 的六点 SVG（10×16，
-   #83 起与向导工具条同一枚），不跟着命中区放大。
-   用 SVG 而不是字形，是因为点阵字符在各平台的字形大小不一，且会连带把字号压到 12 以下。
-   0.8.6（#135）：闲置整段透明但**保留占位**（胶囊宽度不变，其他钮不跳）；
-   悬停胶囊 / 键盘聚焦把手 / 拖动中淡入；触屏（无 hover）常显。 */
-.pm-tg-grip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: 24px;
-  min-block-size: 24px;
-  border: none;
-  border-radius: var(--pm-radius-pill) 0 0 var(--pm-radius-pill);
-  padding: 0;
-  background: transparent;
-  color: var(--pm-fg-muted);
-  line-height: 1;
-  cursor: grab;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pm-tg-grip {
-    transition: none;
-  }
-}
-.pm-tg:hover .pm-tg-grip,
-.pm-tg-grip:focus-visible,
-.pm-tg-grip.dragging {
-  opacity: 1;
-}
-@media (pointer: coarse) {
-  .pm-tg-grip {
-    opacity: 1; /* 触屏没有 hover：常显，否则拖动不可发现 */
-  }
-}
-.pm-tg-grip.dragging {
-  cursor: grabbing;
-}
-.pm-tg:hover .pm-tg-grip {
-  background: var(--pm-bg-subtle);
-  color: var(--pm-fg);
-}
-.pm-tg-grip .pm-grip-icon {
-  inline-size: 10px;
-  block-size: 16px;
-}
-
 /* ── 主按钮：切换「按你的设置显示 / 原样」──
    0.8.6（#135）：面具图标取代「圆点 + 文字」——图标 13 盒（与媒体/遮住同规格），
    可点 24×24。戴面具（填实）= 按你的设置显示；摘面具（描边）= 原样；
-   填实/描边 + aria-pressed 表达状态，不只靠颜色（WCAG 1.4.1） */
+   填实/描边 + aria-pressed 表达状态，不只靠颜色（WCAG 1.4.1）。
+   0.8.8（#136）：把手退场后它是胶囊左端点，左圆头归它 */
 .pm-tg-main {
   display: inline-flex;
   align-items: center;
@@ -109,7 +70,7 @@
   min-inline-size: 24px;
   min-block-size: 24px;
   border: none;
-  border-radius: 0;
+  border-radius: var(--pm-radius-pill) 0 0 var(--pm-radius-pill);
   padding: 0;
   background: transparent;
   color: var(--pm-fg-muted);
@@ -195,7 +156,8 @@
 }
 
 @media (pointer: coarse) {
-  .pm-tg-grip,
+  /* 触屏四颗图标钮一起放大（0.8.8 补齐：主按钮此前漏在 40 档外，同类不一致 #136） */
+  .pm-tg-main,
   .pm-tg-cover,
   .pm-tg-media,
   .pm-tg-more {

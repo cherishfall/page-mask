@@ -412,8 +412,7 @@ export const en: Messages = {
 
 
   toggle: {
-    gripAria: 'Move the button (arrow keys work too)',
-    gripTitle: 'Drag to move the button',
+    moveAria: 'Floating button (drag it, or move with arrow keys)',
     tipOn: 'Click to see the site as it is',
     tipOff: 'Click to use your settings',
     coverAria: 'Cover the whole page',
