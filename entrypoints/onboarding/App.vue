@@ -3,71 +3,81 @@
     <!-- 读屏播报当前步（#108）：切步时更新文字，不抢焦点 -->
     <p class="visually-hidden" role="status">{{ stepStatus }}</p>
 
-    <!-- 应用壳（#108）：标题、步骤、说明放进滚动区，底栏在 flex 里占自己的高度，不再压住内容 -->
-    <div class="scroll">
+    <header class="head">
       <h1 translate="no">{{ t.onboarding.title }}</h1>
       <p class="sub">{{ t.onboarding.sub }}</p>
+    </header>
 
-      <ol class="steps">
-        <li
-          v-for="(s, i) in t.onboarding.steps"
-          :key="i"
-          class="step"
-          :class="{ active: step === i + 1, done: step > i + 1 }"
-          :aria-current="step === i + 1 ? 'step' : undefined"
-        >
-          <div class="num" aria-hidden="true">{{ i + 1 }}</div>
-          <div class="body">
-            <h2>
-              {{ s.title }}<span v-if="step > i + 1" class="visually-hidden">{{ t.onboarding.done }}</span>
-            </h2>
-            <p>{{ s.text }}</p>
-            <ul v-if="s.features.length" class="features">
-              <li v-for="line in s.features" :key="line">{{ line }}</li>
-            </ul>
-            <!-- 每步一张图：第 2、3 步直接渲染真实组件（#103），弹窗 / 胶囊改版时示意图自动跟上 -->
-            <div class="art" aria-hidden="true" inert>
-              <svg v-if="i === 0" class="art-svg" viewBox="0 0 300 44" role="img">
-                <rect x="1" y="6" width="298" height="32" rx="16" class="sk-bar" />
-                <circle cx="26" cy="22" r="9" class="sk-dot" />
-                <rect x="126" y="14" width="26" height="16" rx="4" class="sk-puzzle" />
-                <path d="M146 34 l6 8 M146 34 l-6 8" class="sk-line" />
-                <rect x="182" y="8" width="28" height="28" rx="8" class="sk-on" />
-                <text x="196" y="27" text-anchor="middle" class="sk-on-text">P</text>
-                <circle cx="240" cy="22" r="9" class="sk-dot" />
-                <circle cx="266" cy="22" r="9" class="sk-dot" />
-              </svg>
-              <div v-else-if="i === 1" class="popup-preview">
-                <PopupBody
-                  phase="new"
-                  host="example.com"
-                  :has-profile="false"
-                  :switch-on="false"
-                  rule-summary=""
-                  :stale-count="0"
-                  message=""
-                  busy=""
-                  :covered="false"
-                  :cover-shortcut="coverShortcut"
-                />
-              </div>
-              <div v-else class="art-capsule">
-                <FloatingToggle
-                  state="disguised"
-                  :position="null"
-                  :mini="false"
-                  site-label="example.com"
-                  :opacity="1"
-                  preview
-                />
-              </div>
-            </div>
+    <!-- 分步单屏（#139）：一次只显示当前步，内容列放宽到 720——
+         旧版三张卡竖排（窄列 + 整页下滑）是装机反馈「窄、要下滑」的来源；
+         矮视口仍由 .scroll 兜底滚动，常态一屏放下不滚 -->
+    <div class="scroll">
+      <!-- 居中用 margin-block:auto 而不是 justify-content:center（0.8.11 目检 B1）：
+           flex 居中在内容溢出时会把顶部顶出可视区、怎么滚都回不去；auto margin 在
+           溢出时自动塌成 0——放得下就居中，放不下就贴顶可滚 -->
+      <div class="stack">
+        <section class="card" aria-labelledby="onboard-step-title" data-testid="onboard-card">
+        <div class="step-head">
+          <span class="num" aria-hidden="true">{{ step }}</span>
+          <h2 id="onboard-step-title" :aria-current="'step'">
+            {{ current.title }}
+          </h2>
+        </div>
+        <p class="step-text">{{ current.text }}</p>
+        <ul v-if="current.features.length" class="features">
+          <li v-for="line in current.features" :key="line">{{ line }}</li>
+        </ul>
+        <!-- 每步一张图：第 2、3 步直接渲染真实组件（#103），弹窗 / 胶囊改版时示意图自动跟上。
+             文案的同步由 tests/onboarding-sync.test.ts 守门：欢迎页文案必须覆盖当前功能名 -->
+        <div class="art" aria-hidden="true" inert>
+          <svg v-if="step === 1" class="art-svg" viewBox="0 0 300 44" role="img">
+            <!-- 这张画画的是 Chrome 工具栏（拼图图标 + 固定后的 PageMask），不是自家界面，
+                 不在「示意图跟组件走」的同步范围内 -->
+            <rect x="1" y="6" width="298" height="32" rx="16" class="sk-bar" />
+            <circle cx="26" cy="22" r="9" class="sk-dot" />
+            <rect x="126" y="14" width="26" height="16" rx="4" class="sk-puzzle" />
+            <!-- 拼图盒子里画个图标轮廓（0.8.11 目检 A3）：光标指着的是「拼图图标」，
+                 盒子里不能是空的——四个小点示意扩展图标格 -->
+            <circle cx="133" cy="19" r="1.7" class="sk-dot" />
+            <circle cx="140" cy="19" r="1.7" class="sk-dot" />
+            <circle cx="133" cy="26" r="1.7" class="sk-dot" />
+            <circle cx="140" cy="26" r="1.7" class="sk-dot" />
+            <path d="M146 34 l6 8 M146 34 l-6 8" class="sk-line" />
+            <rect x="182" y="8" width="28" height="28" rx="8" class="sk-on" />
+            <text x="196" y="27" text-anchor="middle" class="sk-on-text">P</text>
+            <circle cx="240" cy="22" r="9" class="sk-dot" />
+            <circle cx="266" cy="22" r="9" class="sk-dot" />
+          </svg>
+          <div v-else-if="step === 2" class="popup-preview">
+            <PopupBody
+              phase="new"
+              host="example.com"
+              :has-profile="false"
+              :switch-on="false"
+              rule-summary=""
+              :stale-count="0"
+              message=""
+              busy=""
+              :covered="false"
+              :cover-shortcut="coverShortcut"
+            />
           </div>
-        </li>
-      </ol>
+          <div v-else class="art-capsule">
+            <FloatingToggle
+              state="disguised"
+              :position="null"
+              site-label="example.com"
+              :opacity="1"
+              preview
+            />
+          </div>
+        </div>
+      </section>
 
-      <!-- 这句讲的是弹窗里那两个入口在哪，属于内容说明，跟着内容走，不塞进操作栏 -->
-      <p class="tip">{{ t.onboarding.tip }}</p>
+      <!-- 这句讲的是弹窗里那两个入口在哪：只配第 2 步（弹窗那一步）——0.8.11 目检指出
+           它在第 1 步提前引用了还没介绍的弹窗、又与第 3 步逐字重复 -->
+      <p v-if="step === 2" class="tip">{{ t.onboarding.tip }}</p>
+      </div>
     </div>
 
     <div class="nav">
@@ -96,17 +106,20 @@ const step = ref(1);
 const coverShortcut = ref('');
 
 const stepCount = computed(() => t.value.onboarding.steps.length);
+/** 当前步（分步单屏，#139）：标题 / 说明 / 功能列表都来自文案表（step 恒在 1..length 内） */
+const current = computed(() => t.value.onboarding.steps[step.value - 1]!);
 /** 读屏播报（#108）：「第 N 步，共 M 步：<标题>」 */
 const stepStatus = computed(() =>
   t.value.onboarding.stepStatus(step.value, stepCount.value, t.value.onboarding.steps[step.value - 1]?.title ?? ''),
 );
 
-// 切步跟随（#108）：当前步骤滚进滚动区视野；系统要求减弱动效时直接跳位
+// 切步跟随（#108）：矮视口滚动兜底时把当前卡滚进视野；系统要求减弱动效时直接跳位。
+// 滚的是整张卡（0.8.11 目检：滚卡内的 .step-head 会把卡片顶边顶出可视区约 17px）
 const reducedMotion =
   typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 watch(step, async () => {
   await nextTick();
-  document.querySelector('.step.active')?.scrollIntoView({
+  document.querySelector('[data-testid="onboard-card"]')?.scrollIntoView({
     block: 'start',
     behavior: reducedMotion?.matches ? 'auto' : 'smooth',
   });
@@ -130,8 +143,8 @@ function finish() {
 
 <style>
 /* 共享样式（字体、颜色、按钮）来自 @/styles/base.css */
-/* 应用壳（#108）：欢迎页是唯一的整页界面，矮视口（弹窗大小的引导窗）是一等约束——
- * 滚动只发生在内容区，底栏在 flex 里占自己的高度，永远完整可见 */
+/* 欢迎页是唯一的整页界面：常态一屏放下不滚动（#139），矮视口由 .scroll 兜底；
+ * 底栏在 flex 里占自己的高度，永远完整可见 */
 html {
   height: 100%;
 }
@@ -145,19 +158,14 @@ body {
 }
 .page {
   height: 100dvh;
-  max-width: 560px;
+  /* 720（#139）：内容列放宽——旧版 560 是装机反馈「窄窄的」的来源 */
+  max-width: 720px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
 }
-/* 滚动区：内容在这里滚，底部留白让最后一张卡完整滚到操作栏上方 */
-.scroll {
-  flex: 1;
-  min-height: 0; /* flex 子项要这个才收得住高度，否则内容把 .page 撑开 */
-  overflow-y: auto;
-  padding: calc(var(--pm-space-8) + var(--pm-space-4)) var(--pm-space-6) var(--pm-space-6); /* 顶 48 = 原页边距，沿用视觉锚点 */
-  scrollbar-gutter: stable;
-  overscroll-behavior: contain;
+.head {
+  padding: calc(var(--pm-space-8) + var(--pm-space-4)) var(--pm-space-6) 0;
 }
 h1 {
   font-size: var(--pm-font-size-heading);
@@ -165,29 +173,38 @@ h1 {
 }
 .sub {
   color: var(--pm-fg-muted);
-  margin: var(--pm-space-2) 0 var(--pm-space-6);
+  margin: var(--pm-space-2) 0 0;
 }
-.steps {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* 滚动区：常态内容不满一屏，竖直居中（0.8.11 目检 A4「头重脚轻」）；
+   矮视口时内容在这里滚，底栏永远完整可见。居中由 .stack 的 margin-block:auto 承担：
+   flex 容器上的 justify-content:center 在内容溢出时会把顶部顶出可视区、滚不回来 */
+.scroll {
+  flex: 1;
+  min-height: 0; /* flex 子项要这个才收得住高度，否则内容把 .page 撑开 */
+  overflow-y: auto;
+  padding: var(--pm-space-4) var(--pm-space-6) var(--pm-space-6);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: var(--pm-space-3);
 }
-.step {
+/* 卡片 + 说明的竖直栈：空间足够时 margin-block:auto 居中，溢出时塌成 0 贴顶可滚 */
+.stack {
+  margin-block: auto;
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+}
+.card {
   background: var(--pm-bg);
   border: 1px solid var(--pm-border);
   border-radius: var(--pm-radius-card);
   padding: var(--pm-space-4);
-  scroll-margin-block: 12px; /* 切步滚到顶后与滚动区顶边留一拍空隙（#108） */
+  scroll-margin-block: 12px; /* 切步滚到顶后与滚动区顶边留一拍空隙（沿旧 .step 的做法） */
 }
-/* 当前步骤：主色描边加粗（不再靠透明度区分，未激活步骤文字也要清楚可读） */
-.step.active {
-  border-color: var(--pm-accent);
-  box-shadow: inset 0 0 0 1px var(--pm-accent);
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-3);
 }
 .num {
   flex: none;
@@ -195,43 +212,33 @@ h1 {
   height: 28px;
   border-radius: 50%;
   border: 1px solid var(--pm-border-control);
-  background: var(--pm-bg);
-  color: var(--pm-fg-muted);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
   font-weight: var(--pm-font-weight-strong);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.step.active .num {
-  background: var(--pm-accent);
-  border-color: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-.step.done .num {
-  background: var(--pm-success);
-  border-color: var(--pm-success);
-  color: var(--pm-on-success);
-}
-.step h2 {
+.card h2 {
   font-size: var(--pm-font-size-title);
-  margin: 0 0 var(--pm-space-1);
-}
-.step p {
   margin: 0;
+}
+.step-text {
+  margin: var(--pm-space-3) 0 0;
   color: var(--pm-fg-muted);
   line-height: 1.6;
 }
-/* 三件功能（#103）：一行一件，名字在前、结果在后 */
+/* 功能列表（#139 起四件事）：一行一件，名字在前、结果在后 */
 .features {
-  margin: var(--pm-space-2) 0 0;
+  margin: var(--pm-space-3) 0 0;
   padding-left: 1.2em;
   color: var(--pm-fg-muted);
   line-height: 1.6;
 }
 .features li + li {
-  margin-top: 2px;
+  margin-top: var(--pm-space-1);
 }
-/* 底栏（#108）：flex 里固定，不再 sticky 压住内容；只放按钮与圆点（操作栏里不放说明文字） */
+/* 底栏（#108）：flex 里固定，只放按钮与圆点（操作栏里不放说明文字） */
 .nav {
   flex: none;
   position: relative;
@@ -273,7 +280,7 @@ h1 {
 
 /* ── 每步一张图（#93）：文字只留一句，细节看图；全部用 tokens 配色 ── */
 .art {
-  margin-top: var(--pm-space-3);
+  margin-top: var(--pm-space-4);
   /* 示意图是静图（inert 已挡焦点与事件，这里把指针也显式关掉）：里面嵌的是真实组件，不该被点 */
   pointer-events: none;
 }
@@ -307,19 +314,25 @@ h1 {
   font-weight: 600;
 }
 
-/* 真实弹窗（#103）：白色卡片 + 阴影，宽度与真身一致 */
+/* 真实弹窗（#103）：白色卡片 + 阴影，宽度与真身一致；居中放置（#139 分步单屏）。
+   zoom 0.85（0.8.11 目检 B1）：0.8.10 起弹窗加了卡片分组、整卡约 500px 高，
+   原尺寸放不进一屏——缩到 0.85 后连底部的两个入口都完整可见，不必滚动。
+   用 zoom 而不是 transform：zoom 参与布局不留空白，Chrome 扩展页面可用 */
 .popup-preview {
-  width: min(320px, 100%);
+  inline-size: min(320px, 100%);
+  margin: 0 auto;
   background: var(--pm-bg);
   border: 1px solid var(--pm-border);
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
   overflow: hidden;
+  zoom: 0.85;
 }
 /* 真实胶囊（#103）：一块页面感的浅底，里面是 position: static 的预览 */
 .art-capsule {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: var(--pm-space-4);
   background: var(--pm-bg-subtle);
   border: 1px dashed var(--pm-border);

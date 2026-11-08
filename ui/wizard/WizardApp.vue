@@ -7,7 +7,7 @@
     <section
       ref="toolbarEl"
       class="pm-wiz-toolbar"
-      :class="{ moved: !!tbPos }"
+      :class="{ moved: !!tbPos, wide: phase === 'pick' || phase === 'preview' }"
       :style="tbPos ? { left: `${tbPos.left}px`, top: `${tbPos.top}px` } : undefined"
       aria-labelledby="pm-wiz-title"
       data-testid="pm-wizard-toolbar"
@@ -171,6 +171,36 @@
                   />
                   <span>{{ t.wizard.sameGroupToggle(row.sameHits - 1) }}</span>
                 </label>
+                <!-- 同类逐个查看（0.8.11，#140）：勾上后导航行出现，位置文字 + 上一个/下一个
+                     （wrap 循环）；当前成员由实线强调框标出（与整组的虚线描边区分），滚到视口中央。
+                     信息流懒加载补内容后计数随 #88 的重算一起刷新 -->
+                <div
+                  v-if="row.el === sameFocusEl && sameNavCount > 0"
+                  class="pm-wiz-same-nav"
+                  :data-testid="`pm-sel-${row.seq}-same-nav`"
+                >
+                  <span class="pm-wiz-same-pos" aria-live="polite" :data-testid="`pm-sel-${row.seq}-same-pos`">
+                    {{ t.wizard.sameNavPosition(sameNavIndex + 1, sameNavCount) }}
+                  </span>
+                  <button
+                    type="button"
+                    class="pm-btn ghost small"
+                    :data-testid="`pm-sel-${row.seq}-same-prev`"
+                    :aria-label="t.wizard.sameNavPrevAria"
+                    @click="sameNavStep(-1)"
+                  >
+                    {{ t.wizard.sameNavPrev }}
+                  </button>
+                  <button
+                    type="button"
+                    class="pm-btn ghost small"
+                    :data-testid="`pm-sel-${row.seq}-same-next`"
+                    :aria-label="t.wizard.sameNavNextAria"
+                    @click="sameNavStep(1)"
+                  >
+                    {{ t.wizard.sameNavNext }}
+                  </button>
+                </div>
               </li>
             </ol>
             <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ t.wizard.listEmpty }}</p>
@@ -678,7 +708,10 @@ onMounted(() => {
     if (draftTimer) clearTimeout(draftTimer);
     draftTimer = setTimeout(() => {
       drafts.value.forEach(refreshDraftCounts);
-      if (phase.value === 'pick') renderMarkers();
+      if (phase.value === 'pick') {
+        refreshSameNav(); // 信息流补内容：导航计数与强调框跟着重算（#140）
+        renderMarkers();
+      }
     }, 300);
   });
   draftObserver.observe(document.body, { childList: true, subtree: true });
@@ -1238,7 +1271,7 @@ function clearMarkers() {
   markerBoxes = [];
 }
 
-function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
+function addBadge(box: HTMLElement, seq: number | string, onClick?: () => void) {
   const tag = document.createElement(onClick ? 'button' : 'span');
   tag.className = 'pm-wiz-badge';
   tag.textContent = String(seq);
@@ -1246,7 +1279,7 @@ function addBadge(box: HTMLElement, seq: number, onClick?: () => void) {
     const btn = tag as HTMLButtonElement;
     btn.type = 'button';
     btn.tabIndex = -1; // 鼠标捷径：跳转到清单里对应的行；键盘入口是清单本身，不在这里
-    btn.setAttribute('aria-label', t.value.wizard.badgeJump(seq));
+    btn.setAttribute('aria-label', t.value.wizard.badgeJump(Number(seq)));
     btn.dataset.testid = `pm-marker-${seq}`;
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1285,13 +1318,15 @@ function badgePlace(box: HTMLElement, size = BADGE_SIZE) {
  */
 function addMarker(opts: {
   seq: number;
-  kind: 'selected' | 'blank' | 'mask' | 'ghost';
+  kind: 'selected' | 'blank' | 'mask' | 'ghost' | 'same-current';
   el?: Element;
   /** 彻底移除的元素没有矩形，用它进入预览时缓存的页面坐标 */
   ghost?: MarkerRect;
   jump?: () => void;
   /** 只有这一项自己带号码牌；同组里的其它元素只画框（同一个数字重复出现反而更乱） */
   badge?: boolean;
+  /** 号码牌的文字（0.8.11，#140）：同类导航的位置文字「第 i / N 个」，缺省用序号 */
+  badgeText?: string;
   testid?: string;
 }): HTMLElement {
   const box = makeBox(`pm-wiz-${opts.kind}`);
@@ -1304,7 +1339,7 @@ function addMarker(opts: {
     return box;
   }
   const badgeBox = makeBox('pm-wiz-badge-box');
-  addBadge(badgeBox, opts.seq, opts.jump);
+  addBadge(badgeBox, opts.badgeText ?? opts.seq, opts.jump);
   markerBoxes.push(badgeBox);
   const place = badgePlace(badgeBox);
   if (opts.ghost) {
@@ -1339,37 +1374,35 @@ function matchedElements(d: Draft): Element[] {
   return out;
 }
 
-/**
- * 这一组里、除了自己以外的第一个成员（#100）：只用于「勾上后把视口滚到看得见的地方」。
- * 组员本身不再挂任何标记（统一走描边），所以不能再靠子号牌当滚动目标。
- */
-function firstSameGroupMember(el: Element, candidates: readonly string[]): Element | null {
-  for (const sel of candidates) {
-    let list: NodeListOf<Element>;
-    try {
-      list = document.querySelectorAll(sel);
-    } catch {
-      continue;
-    }
-    for (const member of list) {
-      if (member !== el && !isOwnUiNode(member)) return member;
-    }
-  }
-  return null;
-}
-
 /** 按当前阶段整体重画标记：编号每次都按最新顺序重新计算（N6）；全部同步完成，没有延时登记（N21） */
 function renderMarkers() {
   clearMarkers();
   if (phase.value === 'pick') {
     // 序号与清单同源：selectionRows 的第几行就是号码牌上的数字（删掉一项后一起重排）。
-    // 已收起的项也在选择集里（#81）：与新选的统一编号，点它就是取消
+    // 已收起的项也在选择集里（#81）：与新选的统一编号，点它就是取消。
+    // 勾了同类后成员在亮出的组里：只挂号牌不画橙框（0.8.11 目检改判）——
+    // 组关系归虚线描边、当前成员归实线强调框，三种框叠在一颗元素上读不出组
     for (const row of pickRows.value) {
-      const box = addMarker({ seq: row.seq, kind: 'selected', el: row.el });
+      const inFocusedGroup = row.el === sameFocusEl.value || isMarkedGroupMember(row.el);
+      const box = addMarker({ seq: row.seq, kind: inFocusedGroup ? 'ghost' : 'selected', el: row.el });
       if (row.el === lastSel.value) box.classList.add('current');
     }
-    // 勾了同类的行：整组用一条描边样式规则亮出来（pushPageCss 注入，#100 起小组与大组同一形态）。
+    // 勾了同类的行：整组用一条描边样式规则亮出来（pushPageCss 注入，#100 起小组与大组同一形态）；
+    // 当前正在查看的成员另加实线强调框 + 位置号牌（0.8.11 目检 E3：只靠框位置读不出
+    // 「现在看的是哪一个」，号牌写「第 i / N 个」把两边绑死）。
     // 看效果阶段不亮组——整组已真实收起，所见即答案（#82）
+    if (sameFocusEl.value && sameNavMembers.value.length > 0) {
+      const cur = sameNavMembers.value[sameNavIndex.value];
+      if (cur) {
+        addMarker({
+          seq: 0,
+          kind: 'same-current',
+          el: cur,
+          badgeText: t.value.wizard.sameNavPosition(sameNavIndex.value + 1, sameNavCount.value),
+          testid: 'pm-box-same-current',
+        });
+      }
+    }
     return;
   }
   drafts.value.forEach((d, i) => {
@@ -1590,14 +1623,22 @@ async function onPickSameToggle(row: PickRow, e: Event) {
   sameFocusEl.value = want ? el : sameFocusEl.value === el ? null : sameFocusEl.value;
   renderMarkers();
   await pushPageCss();
-  // 后果要看得见：另外那几个多半在屏幕外，滚到这一组第一个成员上（组员现在只靠描边，没有牌子可找）
-  if (want) {
-    await nextTick();
-    const seq = pickRows.value.find((r) => r.el === el)?.seq ?? 0;
-    const member = firstSameGroupMember(el, focusedGroupCandidates());
-    const target = member ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
-    target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  // 后果要看得见：另外那几个多半在屏幕外——从第一个其他成员开始逐个查看（#140），
+  // 导航行给出「第 i / N 个」与上/下一个；一个其他成员都没有时回落到自己的号牌
+  if (!want) {
+    sameNavMembers.value = [];
+    sameNavCount.value = 0;
+    sameNavIndex.value = 0;
+    return;
   }
+  await nextTick();
+  refreshSameNav();
+  const start = sameNavMembers.value.findIndex((m) => m !== el);
+  sameNavIndex.value = start >= 0 ? start : 0;
+  renderMarkers();
+  const seq = pickRows.value.find((r) => r.el === el)?.seq ?? 0;
+  const target = sameNavMembers.value[sameNavIndex.value] ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+  target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
 /**
@@ -1609,29 +1650,87 @@ async function onPickRowClick(row: PickRow, e: MouseEvent) {
   if (t2.closest('input, button, label')) return;
   if (!sameGroupOn(row) || sameFocusEl.value === row.el) return;
   sameFocusEl.value = row.el;
+  refreshSameNav(); // 换了一组：导航行与强调框跟着换（#140）
   renderMarkers();
   await pushPageCss();
 }
 
-/** 预览行「检查同类」（#88）：回点选阶段亮出这一组，看完「下一步」回来，草稿不丢 */
+/** 预览行「检查同类」（#88）：回点选阶段亮出这一组，看完「下一步」回来，草稿不丢。
+ *  0.8.11（#140）：与勾选同一口径——从第一个其他成员开始，导航行可逐个查看 */
 async function inspectSameGroup(d: Draft) {
   if (!d.el) return;
   await backToPick();
   if (phase.value !== 'pick') return;
   sameFocusEl.value = d.el;
+  await nextTick();
+  refreshSameNav();
+  const start = sameNavMembers.value.findIndex((m) => m !== d.el);
+  sameNavIndex.value = start >= 0 ? start : 0;
   renderMarkers();
   await pushPageCss();
-  // 滚到这一组的第一个成员上（与勾选时同一口径）
-  await nextTick();
   const seq = pickRows.value.find((r) => r.el === d.el)?.seq ?? 0;
-  const member = firstSameGroupMember(d.el, focusedGroupCandidates());
-  const target = member ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
+  const target = sameNavMembers.value[sameNavIndex.value] ?? overlayLayer.value?.querySelector('[data-testid="pm-box-' + seq + '"]');
   target?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
 /** 用户要求减少动态时不做平滑滚动（与 flashRow 同一口径） */
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
+// ---------- 同类逐个查看（0.8.11，#140） ----------
+// 勾上「另外 N 个一样的也一起收起」后，整组靠一条描边样式规则亮出（虚线，#82）——
+// 信息流网站里成员常在视口外又没有号牌，用户找不到。导航行给出位置与上/下一个，
+// 当前成员用实线强调框标出（与虚线区分：虚线=这一类都要收，实线=现在看的这一个）。
+
+/** 亮出的那组里、除这一项自己以外的成员（文档序；信息流懒加载后重算） */
+const sameNavMembers = ref<Element[]>([]);
+const sameNavIndex = ref(0);
+/** 计数单独放 ref：导航行的位置文字要响应重算 */
+const sameNavCount = ref(0);
+
+/** 重新量亮出的那组的其他成员（按候选逐个查、去重、封顶与 matchedElements 同一口径） */
+function refreshSameNav() {
+  const el = sameFocusEl.value;
+  if (!el || phase.value !== 'pick') {
+    sameNavMembers.value = [];
+    sameNavCount.value = 0;
+    return;
+  }
+  const members: Element[] = [];
+  const seen = new Set<Element>([el]);
+  outer: for (const sel of focusedGroupCandidates()) {
+    let list: NodeListOf<Element>;
+    try {
+      list = document.querySelectorAll(sel);
+    } catch {
+      continue;
+    }
+    for (const m of list) {
+      if (seen.has(m) || isOwnUiNode(m)) continue;
+      seen.add(m);
+      members.push(m);
+      if (members.length >= MATCHED_LIMIT) break outer;
+    }
+  }
+  sameNavMembers.value = members;
+  sameNavCount.value = members.length;
+  if (sameNavIndex.value >= members.length) sameNavIndex.value = 0;
+}
+
+/** 跳到第 i 个成员（wrap 循环）：重画强调框 + 滚到视口中央 */
+async function sameNavGo(i: number) {
+  refreshSameNav();
+  const members = sameNavMembers.value;
+  if (members.length === 0) return;
+  sameNavIndex.value = ((i % members.length) + members.length) % members.length;
+  renderMarkers();
+  await nextTick();
+  members[sameNavIndex.value]?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
+
+function sameNavStep(delta: number) {
+  void sameNavGo(sameNavIndex.value + delta);
 }
 
 /** 这一行有没有勾「一起收起」：旧项看草稿（同类只有 1 个时两边是同一件事），新选的看勾选时的选择 */

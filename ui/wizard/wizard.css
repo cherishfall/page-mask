@@ -40,6 +40,11 @@
   bottom: auto;
   transform: none;
 }
+/* 选内容与看效果两阶段定宽（0.8.11，#140）：max-content 会随行内文案与行数变宽变窄，
+   装机反馈「窗口大小变来变去」；两步同宽，切步也不跳。标题和图标单步保持 max-content */
+.pm-wiz-toolbar.wide {
+  width: min(720px, calc(100vw - 2 * var(--pm-space-4)));
+}
 /* 整条标题栏可拖（#119）：桌面客户端的惯例——按在标题文字、进度或空白处都能挪；
    按钮照常是按钮。grab 是这颗浮层唯一的非文字可发现性线索。 */
 .pm-wiz-head {
@@ -238,6 +243,18 @@
 .pm-wiz-rows .pm-wiz-same-row {
   flex: 1 1 100%;
   padding-inline-start: 28px;
+}
+/* 同类逐个查看的导航行（0.8.11，#140）：与勾选行一样占满一整行，宽度不随文案跳 */
+.pm-wiz-rows .pm-wiz-same-nav {
+  flex: 1 1 100%;
+  padding-inline-start: 28px;
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+}
+.pm-wiz-same-pos {
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-caption);
 }
 .pm-wiz-row-name {
   flex: 1 1 auto;
@@ -557,6 +574,14 @@
 /* 原地留白的预览：元素还在原位，只是看不见，用虚线框标出位置 */
 .pm-wiz-blank {
   border: 2px dashed var(--pm-fg-muted);
+}
+/* 当前正在查看的同类成员（0.8.11，#140）：实线强调框，与整组的虚线描边区分——
+   虚线 = 这一类都要收；实线 = 现在看的这一个。滚到视口中央时一眼锁定 */
+.pm-wiz-same-current {
+  outline: 3px solid var(--pm-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+  background: rgb(37 99 235 / 0.10);
 }
 /* 彻底移除的预览：只剩一个号码牌（不画框，免得盖住补位上来的内容，N8） */
 .pm-wiz-ghost {

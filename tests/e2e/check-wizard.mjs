@@ -747,6 +747,27 @@ async function main() {
     check((await subBadgeTexts(page)).length === 0, '成员不再挂 3.1/3.2 子号牌：一组只有一种标记（#100）');
     check((await sameChecked(page, 3)) === true, '勾上后勾选框跟着勾上');
 
+    // 同类逐个查看（0.8.11，#140）：导航行出现、从第一个其他成员开始、强调框可移动、到底循环
+    check(!!(await shadowExists(page, HOST, tid('pm-sel-3-same-nav'))), '勾选后行内出现同类导航（#140）');
+    const posOf = async (n) => (await shadowTexts(page, tid(`pm-sel-${n}-same-pos`))).join('');
+    check((await posOf(3)) === '第 1 / 2 个', `位置文字从第一个其他成员开始（${await posOf(3)}）`);
+    await clickInShadow(page, HOST, tid('pm-sel-3-same-next'));
+    const curRect = await page.evaluate((h) => {
+      const b = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-box-same-current"]');
+      return b ? b.getBoundingClientRect().toJSON() : null;
+    }, HOST);
+    check(!!curRect, '当前成员有实线强调框（与整组的虚线描边区分）');
+    const overlapsCard3 = await page.evaluate((b) => {
+      const c = document.querySelector('.card:nth-child(3)').getBoundingClientRect();
+      return b.left < c.right && b.right > c.left && b.top < c.bottom && b.bottom > c.top;
+    }, curRect);
+    check(overlapsCard3, '点「下一个」后强调框落在第二个成员上');
+    check((await posOf(3)) === '第 2 / 2 个', `位置文字跟着走（${await posOf(3)}）`);
+    await clickInShadow(page, HOST, tid('pm-sel-3-same-next'));
+    check((await posOf(3)) === '第 1 / 2 个', '最后一个之后循环回第一个（找得到、看得完）');
+    await clickInShadow(page, HOST, tid('pm-sel-3-same-prev'));
+    check((await posOf(3)) === '第 2 / 2 个', '「上一个」从第一个循环回最后一个');
+
     // #88「检查同类」：预览行跳回点选亮出整组，看完「下一步」回来草稿不丢
     console.log('\n--- 看效果 ↔ 检查同类：往返一圈状态都在（#88） ---');
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
@@ -782,6 +803,11 @@ async function main() {
       '焦点切走上一组：卡片组的描边收回（一次只亮一组）',
     );
     check((await subBadgeTexts(page)).length === 0, '同类组不再逐个挂牌（回归守卫：一个 3.x 子号牌都不该有）');
+    check(
+      (await shadowTexts(page, tid('pm-sel-4-same-pos'))).join('') === '第 1 / 24 个',
+      '大组的导航报具体个数（勾上即从第一个其他成员开始）',
+    );
+    check(!(await shadowExists(page, HOST, tid('pm-sel-3-same-nav'))), '焦点切走后上一组的导航行收回（导航属于亮着的那一组，#140）');
     check(
       (await page.evaluate(() => {
         const el = document.createElement('p');

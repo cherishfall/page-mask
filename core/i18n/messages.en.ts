@@ -116,6 +116,8 @@ export const en: Messages = {
     /** Show-capsule switch (#112): label + one-line hint under the switch */
     showToggle: 'Floating button',
     showToggleHint: 'Turn it off and PageMask stays reachable from the toolbar icon; the cover shortcut keeps working.',
+    /** Replay the onboarding intro (0.8.11, #139): third entry at the popup bottom, opens the onboarding page */
+    replayIntro: 'See the intro again',
     /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
     deleting: 'Deleting…',
     deleteFailed: "Couldn't delete this site's settings, please try again.",
@@ -305,17 +307,18 @@ export const en: Messages = {
         features: [],
       },
       {
-        title: 'Three things the popup does',
+        title: 'Four things the popup does',
         text: 'Click PageMask in the toolbar — this is the popup.',
         features: [
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Title & icon: give the tab a neutral name and icon.',
-          'Cover this page: hide the whole page, then click Restore when you’re back. You can also press Ctrl+Shift+X (Windows) or ⌘+Shift+X (Mac).',
+          'Turn pictures & videos gray: the whole page goes black & white like a quiet article — an independent switch, on and off any time.',
+          'Cover this page: one click covers the whole page; when you’re back, click “Restore” and it returns (the button shows the shortcut for your platform).',
         ],
       },
       {
         title: 'The floating button on the page',
-        text: 'On sites you’ve added, the floating button stays at the bottom-right: click the middle to switch “Your settings / As is”, click the eye to cover the page, click ⋯ for settings.',
+        text: 'On sites you’ve added it stays on the page: click the mask icon to switch “Your settings / As is”, the media button turns the page gray (that’s “Turn pictures & videos gray”), the closed-eye button covers the page, ⋯ opens more actions. Press and drag it anywhere — window size changes pull it back on screen.',
         features: [],
       },
     ],
@@ -374,6 +377,12 @@ export const en: Messages = {
     methodLegend: 'Hide method',
     /** Lives inline in the picked-items list since #82; checking lights up that one group at a time */
     sameGroupToggle: (n: number) => `Also hide the other ${n} like this one`,
+    /** Step through the similar members (0.8.11, #140): nav position text and the two buttons; a11y names carry context */
+    sameNavPosition: (i: number, n: number) => `${i} of ${n}`,
+    sameNavPrev: 'Previous',
+    sameNavNext: 'Next',
+    sameNavPrevAria: 'Previous similar item',
+    sameNavNextAria: 'Next similar item',
     /** Checked rows repeat the exact count in their summary (n = the whole group, this one included) */
     sameGroupSummary: (n: number) => `${n} in total with the others like it`,
     scopeHintHash: 'This site tells pages apart by what follows #, so for now the whole site is the only choice',

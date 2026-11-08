@@ -1068,79 +1068,84 @@ async function main() {
     );
     await oldAdd.close();
 
-    // ===================== 引导页 =====================
+    // ===================== 引导页（0.8.11，#139：分步单屏） =====================
     console.log('\n--- 引导页 ---');
     const o = await browser.newPage();
     await o.goto(`${extOrigin}/onboarding.html`, { waitUntil: 'load' });
-    await o.waitForSelector('.step', { timeout: 5000 });
+    await o.waitForSelector('[data-testid="onboard-card"]', { timeout: 5000 });
     await o.bringToFront();
     const ob = await checkCommon(o, '引导页');
     check(!BRANDS.test(ob.text), '引导页无 🎭 与第三方品牌举例');
     check(ob.text.includes('固定到工具栏') && ob.text.includes('拼图') && ob.text.includes('图钉'), '引导页有「把 PageMask 固定到工具栏」一步（拼图图标 → 图钉）');
-    const current = () => o.evaluate(() => [...document.querySelectorAll('.step')].map((s) => s.getAttribute('aria-current')));
-    let cur = await current();
-    check(cur.length === 3 && cur[0] === 'step' && cur.filter(Boolean).length === 1, `3 步，第 1 步 aria-current="step"（${JSON.stringify(cur)}）`);
-    // #103：示意图就是真实组件，不是照着画的假图
+    check((await o.$$eval('.card', (els) => els.length)) === 1, '分步单屏：一次只显示当前步的一张卡（#139）');
+    const stepTitle = () => o.$eval('[data-testid="onboard-card"] h2', (e) => (e.textContent ?? '').trim());
+    check((await stepTitle()).includes('固定到工具栏'), '默认第 1 步');
+    // #103：示意图就是真实组件，不是照着画的假图——分步后第 2/3 步的组件要翻页才能见到
+    await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
+    await waitFor(o, '切到第 2 步', () => !document.querySelector('[data-testid="onboard-card"] h2')?.textContent?.includes('固定到工具栏'));
+    check((await stepTitle()).includes('四件事'), `第 2 步讲弹窗能做的四件事（${await stepTitle()}）`);
     check(!!(await o.$(tid('pm-popup-setup'))) && !!(await o.$(tid('pm-popup-cover'))), '第 2 步是真实弹窗组件（三个入口都在）');
+    const featuresText = await o.$eval('.features', (e) => e.textContent ?? '');
+    check(
+      ['收起内容', '标题和图标', '图片和视频变灰', '遮住这一页'].every((k) => featuresText.includes(k)),
+      `四件主要功能各说了一句（${featuresText.split('：').join(': ').slice(0, 60)}…）`,
+    );
+    await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
+    await waitFor(o, '切到第 3 步', () => !!(document.querySelector('[data-testid="pm-toggle"]')));
     check(!!(await o.$(tid('pm-toggle'))), '第 3 步是真实胶囊组件');
     check(
       (await o.$$eval('.art', (els) => els.every((e) => e.hasAttribute('inert') && e.getAttribute('aria-hidden') === 'true'))),
       '示意图能看不能点、读屏不重复朗读（inert + aria-hidden）',
     );
-    const featuresText = await o.$eval('.features', (e) => e.textContent ?? '');
-    check(
-      ['收起内容', '标题和图标', '遮住这一页'].every((k) => featuresText.includes(k)),
-      `三件主要功能各说了一句（${featuresText.split('：').join(': ').slice(0, 60)}…）`,
-    );
-    await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
-    await waitFor(o, '切到第 2 步', () => document.querySelectorAll('.step')[1].getAttribute('aria-current') === 'step');
-    cur = await current();
-    check(cur[1] === 'step' && cur.filter(Boolean).length === 1, '「下一步」后 aria-current 移到第 2 步');
     check(await o.$eval('.dots', (d) => d.getAttribute('aria-hidden') === 'true'), '步骤圆点 aria-hidden');
+    check((await o.$$eval('.dots i', (els) => els.findIndex((e) => e.className.includes('on')))) === 2, '圆点停在第 3 步');
     await checkSchemes(o, '引导页', 'bgSubtle');
 
-    // ---- 矮视口是欢迎页的一等约束（#108）：滚动在内容区，底栏固定、不压任何卡片 ----
-    await o.setViewport({ width: 1084, height: 544 });
-    await o.reload({ waitUntil: 'load' });
-    await o.waitForSelector('.step', { timeout: 5000 });
-    // 切到第 2 步（内嵌真实弹窗，单步比视口高），当前步骤应自动滚进视野
-    await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();
-    await waitFor(o, '矮窗切到第 2 步', () => document.querySelectorAll('.step')[1].getAttribute('aria-current') === 'step');
+    // ---- 矮视口是欢迎页的一等约束（#108）：滚动在内容区，底栏固定、不压内容 ----
+    // 用全新页面跑矮视口（0.8.11 实测：复用走过完整流程的页面 + reload 后点击偶发无效，
+    // 全新页面无此问题；根因待第二轮深查）
+    const oShort = await browser.newPage();
+    await oShort.setViewport({ width: 1084, height: 544 });
+    await oShort.goto(`${extOrigin}/onboarding.html`, { waitUntil: 'load' });
+    await oShort.waitForSelector('[data-testid="onboard-card"]', { timeout: 5000 });
+    // 切到第 2 步（内嵌真实弹窗，是最高的一步），当前卡应自动滚进视野。
+    // 注意：waitFor 的谓词会被序列化到页面里执行，**闭包里的辅助函数（tid）带不进去**，
+    // 谓词里必须用字面量选择器（0.8.11 的「点击无效」假象就是它）
+    await oShort.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '下一步')?.click());
+    await waitFor(oShort, '矮窗切到第 2 步', () => !!document.querySelector('[data-testid="pm-popup-setup"]'));
     await new Promise((res) => setTimeout(res, 700)); // 等平滑滚动到位
-    const shortVp = await o.evaluate(() => {
+    const shortVp = await oShort.evaluate(() => {
       const scroll = document.querySelector('.scroll');
       const nav = document.querySelector('.nav');
-      const step2 = document.querySelectorAll('.step')[1];
+      const card = document.querySelector('[data-testid="onboard-card"]');
       const s = scroll.getBoundingClientRect();
       const n = nav.getBoundingClientRect();
-      const st = step2.getBoundingClientRect();
+      const st = card.getBoundingClientRect();
       return {
         scrollable: scroll.scrollHeight > scroll.clientHeight,
         navBelowScroll: n.top >= s.bottom - 1, // 底栏不覆盖内容区（允许 1px 误差）
-        navHeight: n.height,
-        step2TopVisible: st.top >= s.top - 1, // 切步后第 2 步顶部进入可视区
+        stepTopVisible: st.top >= s.top - 1, // 切步后卡片顶部进入可视区
         pageOverflow: document.documentElement.scrollHeight <= window.innerHeight, // 整页不滚
       };
     });
     check(shortVp.pageOverflow, '1084×544：整页不出现滚动条，滚动属于内容区');
-    check(shortVp.scrollable, '1084×544 第 2 步：内容区可滚动');
     check(shortVp.navBelowScroll, `底栏不覆盖内容区（nav.top >= scroll.bottom）`);
-    check(shortVp.step2TopVisible, '切步后第 2 步的顶部自动滚进内容区视野');
+    check(shortVp.stepTopVisible, '切步后卡片的顶部自动滚进内容区视野');
     // 滚到底：第 2 步卡片底部完整可见（不被底栏切掉）
-    await o.evaluate(() => document.querySelector('.scroll').scrollTo(0, 999999));
+    await oShort.evaluate(() => document.querySelector('.scroll').scrollTo(0, 999999));
     await new Promise((res) => setTimeout(res, 200));
-    const bottom = await o.evaluate(() => {
+    const bottom = await oShort.evaluate(() => {
       const scroll = document.querySelector('.scroll');
       const s = scroll.getBoundingClientRect();
-      const st = document.querySelectorAll('.step')[1].getBoundingClientRect();
-      return { step2BottomVisible: st.bottom <= s.bottom + 1 };
+      const st = document.querySelector('[data-testid="onboard-card"]').getBoundingClientRect();
+      return { cardBottomVisible: st.bottom <= s.bottom + 1 };
     });
-    check(bottom.step2BottomVisible, '内容区滚到底后第 2 步卡片完整可见');
+    check(bottom.cardBottomVisible, '内容区滚到底后卡片完整可见');
     // 读屏播报：切步更新为「第 N 步，共 M 步：<标题>」
-    const statusText = await o.$eval('[role="status"]', (e) => e.textContent ?? '');
-    check(/第 2 步/.test(statusText) && statusText.includes('弹窗里能做的三件事'), `role="status" 播报当前步（${statusText}）`);
-    // 高窗口：整页仍不出现滚动条（滚动只属于内容区），底栏仍在底部。
-    // 内容区本身允许滚动：三张步骤卡 + 真实弹窗预览总高约 1100px，900 高的窗口装不下是内容事实。
+    const statusText = await oShort.$eval('[role="status"]', (e) => e.textContent ?? '');
+    check(/第 2 步/.test(statusText) && statusText.includes('弹窗里能做的四件事'), `role="status" 播报当前步（${statusText}）`);
+    await oShort.close();
+    // 高窗口：分步单屏（#139）后内容不满一屏，整页与内容区都无滚动条，底栏贴底。
     await o.setViewport({ width: 1440, height: 900 });
     await new Promise((res) => setTimeout(res, 300));
     const tall = await o.evaluate(() => {
@@ -1152,7 +1157,10 @@ async function main() {
     });
     check(tall.pageNoOverflow, '1440×900：整页无滚动条（滚动只属于内容区）');
     check(tall.navAtBottom, '1440×900：底栏仍贴窗口底部');
-    // Tab 顺序：上一步 → 下一步（示意图 inert，圆点装饰不可聚焦，滚动区没有别的焦点目标）
+    // Tab 顺序：上一步 → 下一步（示意图 inert，圆点装饰不可聚焦，滚动区没有别的焦点目标）。
+    // 矮视口那轮在另一页（oShort）上跑，o 还停在第 3 步——先退回第 2 步再验
+    await o.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '上一步')?.click());
+    await new Promise((res) => setTimeout(res, 300));
     await o.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
     await o.keyboard.press('Tab');
     const tab1 = await o.evaluate(() => (document.activeElement?.textContent ?? '').trim());

@@ -3,8 +3,8 @@
        真正的弹窗页面（entrypoints/popup）负责取数与副作用；欢迎页 import 同一个组件做示意图，
        这样弹窗改版时示意图自动跟上，不会再出现「手抄的假弹窗」。 -->
   <main class="popup" :aria-busy="ariaBusy ? 'true' : 'false'">
-    <header class="head">
-      <h1 class="logo" translate="no">PageMask</h1>
+    <header class="popup-head">
+      <h1 class="popup-logo" translate="no">PageMask</h1>
     </header>
 
     <p v-if="phase === 'loading'" class="hint" data-testid="pm-popup-loading">{{ t.popup.loading }}</p>
@@ -150,13 +150,17 @@
       </button>
     </template>
 
-    <!-- 底部两个入口：真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭 -->
+    <!-- 底部入口：真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭。
+         「重看插件介绍」（0.8.11，#139）独占一行：两个页面入口并排之外的低频入口，全宽保持可点观感 -->
     <div class="links">
       <a class="button small link" href="/management.html#/sites" target="_blank" data-testid="pm-popup-manage">{{ t.popup.manageAll }}</a>
       <a class="button small link" href="/settings.html" target="_blank" data-testid="pm-popup-settings">
         {{ t.popup.settings }}
       </a>
     </div>
+    <a class="button small link link-replay" href="/onboarding.html" target="_blank" data-testid="pm-popup-replay-intro">
+      {{ t.popup.replayIntro }}
+    </a>
 
     <!-- 删除这个网站的设置（#112）：红字文字按钮，最底、与入口用分隔线隔开。
          与胶囊菜单 / 管理页是同一件事、同一套文案（core/site-delete.ts）。
@@ -241,11 +245,14 @@ const deleteLabel = deleteSiteHeading();
   flex-direction: column;
   gap: var(--pm-space-3);
 }
-.head {
+/* 头部类名带 .popup- 前缀（0.8.11，#139）：.head/.logo 是通用词，欢迎页同页嵌入时
+   全局样式会撞车（欢迎页自己的 .head 被这里的 flex 压成两列）——按本文件的既有
+   约定「类名带 .popup 前缀」补齐 */
+.popup-head {
   display: flex;
   align-items: center;
 }
-.logo {
+.popup-logo {
   font-size: var(--pm-font-size-title);
   margin: 0;
   letter-spacing: 0.2px;
@@ -310,6 +317,18 @@ const deleteLabel = deleteSiteHeading();
   color: var(--pm-fg);
   text-align: center;
   text-decoration: none;
+}
+/* 重看插件介绍（0.8.11，#139）：低频入口，轻一档——文字链接（下划线示意可点），
+   与两个页面入口的按钮分开层级；命中区用 padding 垫到 ≥24（WCAG 2.5.8，同开关行的做法）。
+   0.8.11 目检后它不能再占一颗按钮的高度：弹窗加卡片分组后已贴着 600 上限 */
+.popup > .link-replay {
+  display: block;
+  margin-top: calc(-1 * var(--pm-space-3));
+  padding: 6px 0;
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-caption);
+  text-align: center;
+  text-decoration: underline;
 }
 /* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
 .popup-kbd {

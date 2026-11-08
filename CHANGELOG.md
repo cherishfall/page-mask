@@ -5,6 +5,36 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.11] - 2026-11-09
+
+欢迎页重排成一步一屏，补上变灰功能的介绍；向导选同类时可以逐个找到了。
+
+### 中文
+
+#### 变更
+
+- **欢迎页分步单屏**：一次只显示一步，内容列放宽到 720px，常态不用滚动；第 2 步补上「图片和视频变灰」的介绍（共四件事），第 3 步按最新胶囊形态重写
+- **弹窗新增「重看插件介绍」**：在弹窗底部，随时能回看
+- **向导选内容时同类可逐个查看**：勾上「另外 N 个一样的也一起收起」后，行内出现「第 i / N 个」和「上一个 / 下一个」，页面上当前成员用实线框标出并自动滚到视野中央；整组虚线框保留
+- **向导面板定宽**：选内容与看效果两步面板宽度不再随内容变来变去
+
+#### 修复
+
+- 欢迎页与插件功能的同步加了一份守门测试：以后加新功能，欢迎页文案没跟上会直接挂测试
+
+### English
+
+#### Changed
+
+- **The welcome page now shows one step per screen**: the content column widens to 720px and fits without scrolling; step 2 now introduces “Turn pictures & videos gray” (four things in all), and step 3 matches the current floating button
+- **“See the intro again” in the popup**: the intro is reachable at any time from the popup footer
+- **Step through similar matches in the wizard**: after checking “Also hide the other N like this one”, the row shows “i of N” with Previous / Next; the current match on the page gets a solid highlight and is scrolled into view, while the dashed group outline stays
+- **Stable wizard width**: the panel no longer resizes as rows appear during picking
+
+#### Fixed
+
+- A guard test now keeps the welcome page in sync: adding a feature without updating the intro fails the tests
+
 ## [0.8.10] - 2026-11-09
 
 插件弹窗分组重排：面具开关和它管的两项框进同一张卡，弹窗自己解释悬浮按钮上每颗钮是干嘛的。
