@@ -207,10 +207,17 @@ async function toggleSwitch(input: HTMLInputElement) {
 async function enableSite(
   tabId: number,
   o: string,
-  opts: { open?: OpenIntent; requestPermission?: boolean } = {},
+  opts: { open?: OpenIntent; requestPermission?: boolean; initialMedia?: boolean } = {},
 ): Promise<EnableSiteResponse | undefined> {
   return browser.runtime
-    .sendMessage({ t: 'enableSite', origin: o, tabId, open: opts.open, requestPermission: opts.requestPermission })
+    .sendMessage({
+      t: 'enableSite',
+      origin: o,
+      tabId,
+      open: opts.open,
+      requestPermission: opts.requestPermission,
+      initialMedia: opts.initialMedia,
+    })
     .catch(() => undefined);
 }
 
@@ -394,18 +401,41 @@ async function toggleCapsule(input: HTMLInputElement) {
 }
 
 /**
- * 图片、视频、声音三个开关（#116）：按站点记，一次只改拨动的那一个字段。
- * 不设忙锁——连续拨动时每次按开关当下的状态写，存储的原子更新落到最后一次的意图；
- * 写入失败就把开关拨回实际状态，并在这一组下面给一句话，不弹窗、不抢焦点。
+ * 图片和视频变灰开关：按站点记。
+ * 还没配置过的网站（0.8.5，#134）：开 = 走第一次设置的授权流程，后台授权并注入后补一份
+ * 只带灰度的配置——权限框会销毁 popup，所以流程整体交给后台，这里只负责发消息与善后；
+ * 已配置的网站：一次只改拨动的那一个字段，写入失败就把开关拨回实际状态并给一句话。
  */
 async function toggleMedia(key: MediaFlagKey, input: HTMLInputElement) {
   const o = origin.value;
-  if (!o || !profile.value) {
+  const tabId = tab.value?.id;
+  if (!o) {
     input.checked = false;
     return;
   }
   const on = input.checked;
   mediaError.value = '';
+  // 没配置过的网站：只有「打开」有意义（关一个不存在的设置是空操作）
+  if (!profile.value) {
+    if (!on || tabId === undefined || busy.value) {
+      input.checked = false;
+      return;
+    }
+    busy.value = 'toggle';
+    try {
+      const res = await enableSite(tabId, o, { requestPermission: true, initialMedia: true });
+      if (!res?.ok) {
+        input.checked = false;
+        const errors = t.value.popup.error as Record<string, string | undefined>;
+        mediaError.value = (res?.code && errors[res.code]) || errors.injectFailed || '';
+        return;
+      }
+      await refresh(); // 配置已由后台补写：刷新后进入 ready 态（开关保持开、胶囊行出现）
+    } finally {
+      busy.value = '';
+    }
+    return;
+  }
   try {
     const updated = await createPageMaskStorage(browser.storage.local).updateProfile(o, (p) => {
       Object.assign(p, mediaFlagPatch(key, on));

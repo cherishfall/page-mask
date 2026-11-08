@@ -13,6 +13,8 @@
  * - 幕布静音：遮住即静音（reason=extension）、恢复即还原；媒体层不写 muted
  * - 两态边界（0.8.3）：切「网站原样」定制还原、灰度独立照常生效；原样态下媒体钮有可见反应；
  *   切回来压制照常
+ * - 灰-only 建站（0.8.5，#134）：未配置站点的弹窗直接开灰度 = 授权 + 建 gray-only 配置 +
+ *   休眠唤醒（胶囊挂载、灰度生效）
  *
  * 不测：请求是否被拦（「看起来变灰 ≠ 不加载」）、iframe 内嵌播放器、背景图。
  */
@@ -260,6 +262,32 @@ async function main() {
     await tryPlay(page, '#vid');
     await waitFor(page, '压制照常', () => document.querySelector('#vid').paused, [], { timeout: 8000 });
     check(true, '切回清爽态：压制照常，配置没丢');
+
+    // ===================== 灰-only 建站（0.8.5，#134） =====================
+    console.log('\n--- 没配置过的网站直接开灰度 ---');
+    // 删掉配置（授权保留）：重载页面后内容脚本休眠、弹窗回到 new 态
+    await control.evaluate(async () => {
+      const all = await chrome.storage.local.get(null);
+      await chrome.storage.local.remove(Object.keys(all).filter((k) => k.startsWith('profile:')));
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.bringToFront();
+    const popupNew = await openPopup(ext, page);
+    await popupNew.waitForSelector(tid('pm-popup-media'), { timeout: 5000 });
+    const newHint = await popupNew.$eval(`${tid('pm-popup-media')} .media-hint`, (el) => el.textContent.trim());
+    check(newHint.includes('访问权限'), `未配置站点的说明讲授权流程（${newHint}）`);
+    const newChecked = await popupNew.$eval(tid('pm-popup-media-mediaGray'), (el) => el.checked);
+    check(newChecked === false, '未配置站点：灰度开关默认关');
+    check(!(await page.$(TOGGLE)), '休眠中：胶囊还没挂');
+    check((await getProfile(control, ORIGIN)) === null, '前置：配置已删（new 态）');
+
+    await popupNew.click(tid('pm-popup-media-mediaGray'));
+    await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '开灰度：授权 + 建 gray-only 配置');
+    await poll(async () => (await getProfile(control, ORIGIN))?.switchState === 'original', 'gray-only 配置保持原样态');
+    await waitFor(page, '休眠唤醒后灰度生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    check(true, '胶囊挂载：媒体钮/遮住可用（休眠唤醒生效）');
+    await popupNew.close().catch(() => {});
   } finally {
     await ext.cleanup();
     await srv.close();

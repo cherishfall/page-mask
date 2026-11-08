@@ -84,6 +84,8 @@ export const en: Messages = {
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
     hint: 'Works on its own, independent of ‘Your settings’: switching to ‘As is’ restores what’s hidden and the tab title/icon, while the gray follows this switch. Images still load in the background — this only removes the color.',
     hintShort: 'Works on its own — independent of ‘Your settings’.',
+    /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
+    hintNew: 'Turning it on asks for this site’s access, just like first-time setup; pictures and videos then turn black & white (same place, still readable) and autoplaying videos are held.',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn pictures & videos gray',
     saveFailed: "Couldn't save this change. Please try again.",

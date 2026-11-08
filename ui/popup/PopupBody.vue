@@ -68,12 +68,13 @@
         </button>
       </template>
 
-      <!-- 图片和视频变灰 / 悬浮按钮（0.8.0 排版，#132）：这两件是「这个网站的设置」，
-           与上面的站点配置动作归成一组；「遮住这一页」是页面级应急动作，用分隔线分到下面 -->
-      <template v-if="phase === 'ready'">
+      <!-- 图片和视频变灰（0.8.5，#134）：没配置过的网站也直接给——打开走第一次设置的授权流程，
+           后台补一份只带灰度的配置。已配置站点它是一行普通开关；「悬浮按钮」开关仍是 ready 专属
+           （待授权/未配置的站点页面上本来就没有胶囊可管）。「遮住这一页」是页面级应急动作，
+           用分隔线分到下面 -->
+      <template v-if="phase === 'ready' || phase === 'new'">
         <div class="divider" role="presentation"></div>
-        <!-- 图片和视频变灰（0.8.0，#131）：一行开关 + 一句说明。
-             与「按你的设置显示」一样只在按设置时起作用；原样时也能先设好，所以不设禁用态。
+        <!-- 图片和视频变灰（0.8.0，#131）：一行开关 + 一句说明（未配置站点的说明讲授权流程）。
              标签前的媒体图标与胶囊「媒体」钮同源（#132）——同一个东西一个样子 -->
         <div class="media-group" role="group" :aria-label="t.media.heading" data-testid="pm-popup-media">
           <div class="switch-row">
@@ -91,9 +92,11 @@
               @change="emit('toggleMedia', 'mediaGray', $event.target as HTMLInputElement)"
             />
           </div>
-          <p class="hint media-hint">{{ t.media.hintShort }}</p>
+          <p class="hint media-hint">{{ phase === 'new' ? t.media.hintNew : t.media.hintShort }}</p>
           <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-popup-media-error">{{ mediaError }}</p>
         </div>
+      </template>
+      <template v-if="phase === 'ready'">
         <div class="switch-row">
           <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
           <input

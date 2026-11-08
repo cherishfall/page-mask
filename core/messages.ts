@@ -21,10 +21,16 @@ export interface EnableSiteRequest {
   open?: OpenIntent;
   /**
    * 先向用户请求这个站点的访问权限，再继续。
-   * 请求必须由后台在消息监听器的第一个同步回合里发起：popup 会在权限框弹出时被销毁，
+   * 请求必须由后台在用户手势的同一个同步回合里发起：popup 会在权限框弹出时被销毁，
    * 而用户手势可以跨 runtime.sendMessage 传到后台（只在同一个同步回合内有效）。
    */
   requestPermission?: boolean;
+  /**
+   * 灰-only 建站（0.8.5，#134）：授权并注入后，若该站点还没有配置，
+   * 后台补一份只带 mediaGray 的站点配置（switchState 保持 original）。
+   * popup 直接开灰度用——权限框会销毁 popup，配置补写必须由后台完成。
+   */
+  initialMedia?: boolean;
 }
 
 /**

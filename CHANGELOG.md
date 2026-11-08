@@ -5,6 +5,24 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.5] - 2026-11-08
+
+没配置过的网站也能在弹窗里直接开「图片和视频变灰」——「只想把信息流变灰」不再需要先走一遍向导。
+
+### 中文
+
+#### 新增
+
+- **弹窗在还没设置过的网站上直接提供灰度开关**：打开它会像第一次设置一样申请这个网站的访问权限，然后 PageMask 补一份只带灰度的配置、当前页面立即变灰、悬浮按钮挂载——收起的内容和标签页标题图标一概不碰
+- 这类「只灰度」站点的主按钮暂无可视效果（收起与标题图标都为空），属已知形态；之后通过向导添加收起或标题后照常生效
+
+### English
+
+#### Added
+
+- **The popup offers the gray switch on sites that have never been set up**: turning it on asks for that site's access, first-time-style; PageMask then creates a profile that carries only the gray setting, and the current page turns gray right away with the floating button mounted — nothing about hidden elements or the tab title is touched
+- Such gray-only sites show a main button without a visible effect yet (nothing but the gray is configured) — a known shape; adding rules or a title via the wizard later works as usual
+
 ## [0.8.4] - 2026-11-08
 
 0.8.3 独立代码审查的收口（一条轻微项）：功能与权限没有变化。

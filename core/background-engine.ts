@@ -187,6 +187,14 @@ export function createBackground({ browser }: BackgroundDeps): void {
         target: { tabId },
         files: registrationPlan(origin).js as unknown as ScriptPublicPath[],
       });
+      // 灰-only 建站（0.8.5，#134）：popup 直接开灰度——授权并注入后补一份只带 mediaGray 的配置。
+      // 必须由后台做：权限框已销毁 popup，没人能在 popup 里继续写配置。内容脚本靠休眠唤醒
+      // （配置创建的 storage 事件）感知这份新配置并生效。
+      if (msg.initialMedia === true && !(await storage.getProfile(origin))) {
+        await storage.updateProfile(origin, (p) => {
+          p.mediaGray = true;
+        }, { create: true });
+      }
       if (open) {
         // 内容脚本在同一隔离环境里登记了 window.__pagemask，注入完成后直接让它打开向导（不靠轮询重试）
         const [res] = await browser.scripting.executeScript({

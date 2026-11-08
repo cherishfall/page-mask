@@ -885,9 +885,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     ensureCurtainSlotClaimed();
     browser.storage.onChanged.addListener(onStorageChanged);
     browser.runtime.onMessage.addListener(onRuntimeMessage);
+    // 门栅已过，休眠唤醒退役（0.8.5，#134：popup 先注入后写配置，休眠期靠它感知配置创建）
+    browser.storage.onChanged.removeListener(onDormantStorageChanged);
     ctx.onInvalidated(() => {
       try {
         browser.storage.onChanged.removeListener(onStorageChanged);
+        browser.storage.onChanged.removeListener(onDormantStorageChanged);
         browser.runtime.onMessage.removeListener(onRuntimeMessage);
       } catch {
         // 扩展上下文已失效
@@ -938,6 +941,23 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   // 首屏防闪：不等读配置，立即请求正式样式（未配置 / 原样态 / 端口不符时后台什么也不插）
   void syncFormalStyles();
+
+  // 门栅唤醒（0.8.5，#134）：popup 直接开灰度是「先注入、后写配置」——门栅读配置时它还不存在，
+  // 没有这个监听，灰-only 站点注入后会一直休眠（灰度永不生效、胶囊不挂）。休眠期挂 storage
+  // 监听，本站配置创建即激活；激活（或收尾）时摘掉，不与 activate 里正式的那份重复。
+  const onDormantStorageChanged = (changes: Record<string, unknown>, area: string): void => {
+    if (area !== 'local' || disposed || active) return;
+    const c = changes as Record<string, { newValue?: unknown } | undefined>;
+    if (c[profileKey(origin)]?.newValue) activate();
+  };
+  browser.storage.onChanged.addListener(onDormantStorageChanged);
+  ctx.onInvalidated(() => {
+    try {
+      browser.storage.onChanged.removeListener(onDormantStorageChanged);
+    } catch {
+      // 扩展上下文已失效
+    }
+  });
 
   // 入口核对：本页来源有站点配置才激活；否则撤掉首屏遮挡，保持休眠（不挂任何界面和监听）
   void (async () => {

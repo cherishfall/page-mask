@@ -3,12 +3,12 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-08 · 对应构建 **0.8.4**（`.output/page-mask-0.8.4-chrome.zip`）
+> 最后更新：2026-11-08 · 对应构建 **0.8.5**（`.output/page-mask-0.8.5-chrome.zip`）
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.4-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.8.4`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.4`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.5-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.8.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.5`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [ ] 6 张截图与宣传图块按 §8 重拍（0.8.0 改了弹窗排版与胶囊按钮，截图 4、6 需重拍）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗两颗按钮「收起内容」「标题和图标」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -89,7 +89,7 @@ FEATURES
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page colour sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
-• Pictures & videos gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable; icons and emoji stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch
+• Pictures & videos gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable; icons and emoji stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites the user hasn't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the capsule, the popup and the shortcut all work on the same state — any of them can undo any other
 • A capsule you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
@@ -180,6 +180,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.8.5 | 2026-11-08 | 没配置过的网站在弹窗里直接开灰度（#134）：打开时像第一次设置一样申请权限，后台补一份只带灰度的配置，内容脚本休眠唤醒生效——「只想把信息流变灰」不再需要先走向导。功能与权限模型不变（仍是按站点可选主机权限）。详见 `CHANGELOG.md` |
 | 0.8.4 | 2026-11-08 | 0.8.3 独立代码审查的收口（一条轻微项）：原样态+灰度的首帧遮挡在正式样式落地后显式撤掉（此前靠 1.5s 兜底超时，极端情况下刷新后立刻进向导会先灰后彩）。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.3 | 2026-11-08 | 产品结构修正（ADR-0014）：灰度完全独立于主开关——「按你的设置显示 / 原样」只管收起的内容与标签页标题图标，灰度按自己的开关在两种状态下都生效（原样态下媒体钮不再是无反应的死按钮）；胶囊媒体钮挪到遮住前（高频在前、应急最远，全功能与 mini 相同）；媒体钮开启态图标改「内容填实、外框描边」并同步弹窗；点插件自己界面的点击不再被当成观看意图。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.2 | 2026-11-07 | 0.8.1 修复复查的收尾（无必修项）：更新 / 重载时的静音清扫覆盖未配置站点的一次性幕布页；放行记录随容器子树移出也清掉；导航兜底与遮 / 撤消息共队列的回归测试。功能与权限不变。详见 `CHANGELOG.md` |

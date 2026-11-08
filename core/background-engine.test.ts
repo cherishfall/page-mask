@@ -360,6 +360,30 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['editContent'] }));
     });
 
+    it('灰-only 建站（initialMedia）：授权注入后补一份只带 mediaGray 的配置，switchState 保持原样态（0.8.5，#134）', async () => {
+      stubs.granted.add(pattern(ORIGIN));
+
+      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, initialMedia: true });
+
+      expect(res).toEqual({ ok: true });
+      const stored = (await fakeBrowser.storage.local.get(`profile:${ORIGIN}`))[`profile:${ORIGIN}`] as SiteProfile;
+      expect(stored.mediaGray).toBe(true);
+      expect(stored.switchState).toBe('original'); // 灰度独立于两态：gray-only 站点不进清爽态
+      expect(stored.hideRules).toEqual([]);
+      expect(stored.disguisedTitle).toBeNull();
+    });
+
+    it('initialMedia 对已有配置的站点是空操作：不覆盖任何字段', async () => {
+      await configure(ORIGIN);
+
+      const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, initialMedia: true });
+
+      expect(res).toEqual({ ok: true });
+      const stored = (await fakeBrowser.storage.local.get(`profile:${ORIGIN}`))[`profile:${ORIGIN}`] as SiteProfile;
+      expect(stored.mediaGray).toBeUndefined(); // 已有配置没有被顺手打开灰度
+      expect(stored.switchState).toBe('disguised');
+    });
+
     it('标签页已不在该站点（跳走了 / 传错了）：拒绝，不注入', async () => {
       stubs.granted.add(pattern(ORIGIN));
       const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
