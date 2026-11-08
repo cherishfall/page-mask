@@ -161,6 +161,16 @@
   background: var(--pm-fg);
   color: var(--pm-bg);
 }
+/* 填实态也要有悬停/按下变化（design-ui 五种状态缺一不可）：亮度档位在深浅两主题都可见，
+   白图标对变亮后的墨底仍有 ≥7:1 */
+.pm-tg-main[data-state='on']:hover,
+.pm-tg-cover.pm-tg-media[data-state='on']:hover {
+  filter: brightness(1.25);
+}
+.pm-tg-main[data-state='on']:active,
+.pm-tg-cover.pm-tg-media[data-state='on']:active {
+  filter: brightness(0.85);
+}
 
 /* 触屏：图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
 @media (forced-colors: active) {

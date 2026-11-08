@@ -12,6 +12,9 @@
       aria-labelledby="pm-wiz-title"
       data-testid="pm-wizard-toolbar"
     >
+      <!-- 同类导航的读屏播报：常驻节点（live region 必须先于内容存在，随插随毁不播报——
+           0.8.12 准则审查）；行内那份是视觉文字，不带 aria-live，免得双重播报 -->
+      <p class="pm-wiz-sr" aria-live="polite" data-testid="pm-wiz-same-nav-live">{{ sameNavLiveText }}</p>
       <!-- 整条标题栏可拖（#119）：桌面客户端的惯例——按在标题文字、进度或空白处都能挪；
            按钮（退出设置，以及将来的其它控件）按 NO_DRAG_SELECTOR 排除。把手只保留键盘路径。 -->
       <div
@@ -85,7 +88,8 @@
 
           <!-- 分组一：调整选中项（浅底 + 小标题；组内标明现在调的是第几项） -->
           <div class="pm-wiz-group" role="group" aria-labelledby="pm-wiz-adjust-title" data-testid="pm-wiz-group-adjust">
-            <p id="pm-wiz-adjust-title" class="pm-wiz-group-title">{{ t.wizard.adjustGroup }}</p>
+            <h3 id="pm-wiz-adjust-title" class="pm-wiz-group-title">{{ t.wizard.adjustGroup }}</h3>
+            <!-- h3 与清单组标题同级（0.8.12 准则审查：p/h3 混用让读屏标题导航漏掉这一组） -->
             <p class="pm-wiz-group-note" data-testid="pm-wiz-adjust-target">
               <template v-if="lastSel">
                 {{ t.wizard.adjustNow }}<strong>{{ t.wizard.adjustTarget(lastSelIndex + 1, lastSelName) }}</strong>
@@ -179,7 +183,7 @@
                   class="pm-wiz-same-nav"
                   :data-testid="`pm-sel-${row.seq}-same-nav`"
                 >
-                  <span class="pm-wiz-same-pos" aria-live="polite" :data-testid="`pm-sel-${row.seq}-same-pos`">
+                  <span class="pm-wiz-same-pos" :data-testid="`pm-sel-${row.seq}-same-pos`">
                     {{ t.wizard.sameNavPosition(sameNavIndex + 1, sameNavCount) }}
                   </span>
                   <button
@@ -453,6 +457,7 @@ import { isSafeSelector } from '@/core/validate';
 import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId, type TabIcon } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, buildSameGroupOutlineCss, STRATEGY_ORDER } from '@/core/css-builder';
+import { applyMaskAppearance } from '../mask-color';
 import { isOwnUiNode } from '@/core/host-shield';
 import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
@@ -1287,7 +1292,9 @@ function addBadge(box: HTMLElement, seq: number | string, onClick?: () => void) 
     });
   } else {
     tag.setAttribute('aria-hidden', 'true');
-    tag.dataset.testid = `pm-badge-${seq}`;
+    // 文字号牌（同类导航的位置）用固定 testid：数字号牌的「pm-badge-<seq>」前缀
+    // 被多个 E2E 用前缀选择器统计，本地化文案（第 1 / 2 个）会污染计数（0.8.12 审查）
+    tag.dataset.testid = typeof seq === 'number' ? `pm-badge-${seq}` : 'pm-badge-same-pos';
   }
   box.appendChild(tag);
 }
@@ -1331,7 +1338,9 @@ function addMarker(opts: {
 }): HTMLElement {
   const box = makeBox(`pm-wiz-${opts.kind}`);
   box.dataset.testid = opts.testid ?? `pm-box-${opts.seq}`;
-  if (opts.kind === 'mask') box.style.background = '#f4f4f4';
+  // 遮罩外观与运行时同一套（mask-color.ts 的 N25 声明坐实）：底色按祖先链算、圆角跟随，
+  // 不再硬编码 #f4f4f4（0.8.12 准则审查：深色/彩色页面上预览颜色 ≠ 保存所得）
+  if (opts.kind === 'mask' && opts.el) applyMaskAppearance(box, opts.el);
   markerBoxes.push(box);
   if (opts.badge === false) {
     if (opts.ghost) follower.trackGhost(opts.ghost, box);
@@ -1390,15 +1399,17 @@ function renderMarkers() {
     // 勾了同类的行：整组用一条描边样式规则亮出来（pushPageCss 注入，#100 起小组与大组同一形态）；
     // 当前正在查看的成员另加实线强调框 + 位置号牌（0.8.11 目检 E3：只靠框位置读不出
     // 「现在看的是哪一个」，号牌写「第 i / N 个」把两边绑死）。
+    // 当前成员同时是已选行（有自己的序号牌）时不叠位置号牌：两块牌同位会重叠（0.8.12 审查）。
     // 看效果阶段不亮组——整组已真实收起，所见即答案（#82）
     if (sameFocusEl.value && sameNavMembers.value.length > 0) {
       const cur = sameNavMembers.value[sameNavIndex.value];
       if (cur) {
+        const isSelRow = pickRows.value.some((r) => r.el === cur);
         addMarker({
           seq: 0,
           kind: 'same-current',
           el: cur,
-          badgeText: t.value.wizard.sameNavPosition(sameNavIndex.value + 1, sameNavCount.value),
+          ...(isSelRow ? { badge: false as const } : { badgeText: t.value.wizard.sameNavPosition(sameNavIndex.value + 1, sameNavCount.value) }),
           testid: 'pm-box-same-current',
         });
       }
@@ -1619,20 +1630,18 @@ async function onPickSameToggle(row: PickRow, e: Event) {
   } else {
     sameWanted.set(el, want);
   }
-  // 勾上即聚焦这一组；取消勾选时如果亮着的是这一组，一并收回
+  // 勾上即聚焦这一组；取消勾选时如果亮着的是这一组，一并收回。
+  // refreshSameNav 必须在 renderMarkers 之前：它重算 sameNav*，决定强调框画在谁身上
+  // （0.8.12 审查：原顺序让换组的一瞬强调框与「第 i / N」挂在上一组成员上闪烁；
+  //   且取消「非聚焦行」时无脑清空状态会抹掉亮着那组的导航——统一交给 refreshSameNav）
   sameFocusEl.value = want ? el : sameFocusEl.value === el ? null : sameFocusEl.value;
+  refreshSameNav();
   renderMarkers();
   await pushPageCss();
   // 后果要看得见：另外那几个多半在屏幕外——从第一个其他成员开始逐个查看（#140），
   // 导航行给出「第 i / N 个」与上/下一个；一个其他成员都没有时回落到自己的号牌
-  if (!want) {
-    sameNavMembers.value = [];
-    sameNavCount.value = 0;
-    sameNavIndex.value = 0;
-    return;
-  }
+  if (!want) return;
   await nextTick();
-  refreshSameNav();
   const start = sameNavMembers.value.findIndex((m) => m !== el);
   sameNavIndex.value = start >= 0 ? start : 0;
   renderMarkers();
@@ -1732,6 +1741,13 @@ async function sameNavGo(i: number) {
 function sameNavStep(delta: number) {
   void sameNavGo(sameNavIndex.value + delta);
 }
+
+/** 常驻 live region 的播报文字（0.8.12 准则审查）：亮着才报，空串不触发播报 */
+const sameNavLiveText = computed(() =>
+  sameFocusEl.value && sameNavCount.value > 0
+    ? t.value.wizard.sameNavLive(sameNavIndex.value + 1, sameNavCount.value)
+    : '',
+);
 
 /** 这一行有没有勾「一起收起」：旧项看草稿（同类只有 1 个时两边是同一件事），新选的看勾选时的选择 */
 function sameGroupOn(row: PickRow): boolean {

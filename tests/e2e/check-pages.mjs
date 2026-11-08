@@ -384,6 +384,24 @@ async function main() {
     check(sw.node?.checked === false, '空格键切换后 switch checked=false');
     await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'original', '空格键切换写入存储');
     check(true, '空格键切换后存储为清爽模式关');
+    // 主开关关着：面具卡里两颗入口钮置灰禁用 + 卡底说明行出现（0.8.10 #138 的补锁，0.8.12 审查）
+    const offState = await popup.evaluate(() => ({
+      setupDisabled: document.querySelector('[data-testid="pm-popup-setup"]')?.disabled ?? null,
+      titleDisabled: document.querySelector('[data-testid="pm-popup-title"]')?.disabled ?? null,
+      hint: !!document.querySelector('[data-testid="pm-popup-disguise-off"]'),
+    }));
+    check(
+      offState.setupDisabled === true && offState.titleDisabled === true && offState.hint === true,
+      `主开关关着：两颗入口钮禁用、说明行出现（${JSON.stringify(offState)}）`,
+    );
+    await popup.click(tid('pm-popup-switch'));
+    await waitFor(popup, '开关重新变为开', (s) => document.querySelector(s).checked, [tid('pm-popup-switch')]);
+    check(
+      (await popup.evaluate(() => !document.querySelector('[data-testid="pm-popup-setup"]').disabled)) && !(await popup.$(tid('pm-popup-disguise-off'))),
+      '开关打开：入口钮恢复可点、说明行收回',
+    );
+    await popup.click(tid('pm-popup-switch'));
+    await waitFor(popup, '开关再关（沿用旧流程的关态基线）', (s) => !document.querySelector(s).checked, [tid('pm-popup-switch')]);
     // 体检回写失效：popup 显示可读文字（不只靠红点 / title），标记结构与「需要允许访问」是同一套
     await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'], 'stale'), rule('r2', '侧栏', ['#side'])] });
     await popup.waitForSelector(tid('pm-popup-stale'), { timeout: 5000 });

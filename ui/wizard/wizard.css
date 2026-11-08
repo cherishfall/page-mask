@@ -40,6 +40,16 @@
   bottom: auto;
   transform: none;
 }
+/* 读屏专用（shadow root 里没有 base.css 的 .visually-hidden）：视觉隐藏、读屏可及 */
+.pm-wiz-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 /* 选内容与看效果两阶段定宽（0.8.11，#140）：max-content 会随行内文案与行数变宽变窄，
    装机反馈「窗口大小变来变去」；两步同宽，切步也不跳。标题和图标单步保持 max-content */
 .pm-wiz-toolbar.wide {
@@ -187,7 +197,9 @@
 /* 「全部删掉」：文字链接，视觉权重明显低于主按钮 */
 .pm-wiz-link {
   flex: none;
-  padding: 0;
+  /* 命中区补偿（WCAG 2.5.8）：12px 字号的文字链垫到 ≥24，视觉不变（0.8.12 准则审查） */
+  padding: 3px 0;
+  margin: -3px 0;
   border: 0;
   background: none;
   color: var(--pm-fg-muted);
@@ -561,12 +573,12 @@
 }
 .pm-wiz-hover {
   outline: 2px solid var(--pm-accent);
-  background: rgb(37 99 235 / 0.08);
+  background: color-mix(in srgb, var(--pm-accent) 8%, transparent);
   border-radius: 2px;
 }
 .pm-wiz-selected {
   outline: 2px solid var(--pm-warning);
-  background: rgb(194 65 12 / 0.06);
+  background: color-mix(in srgb, var(--pm-warning) 6%, transparent);
 }
 .pm-wiz-selected.current {
   outline-width: 3px;
@@ -581,7 +593,7 @@
   outline: 3px solid var(--pm-accent);
   outline-offset: 2px;
   border-radius: 2px;
-  background: rgb(37 99 235 / 0.10);
+  background: color-mix(in srgb, var(--pm-accent) 10%, transparent);
 }
 /* 彻底移除的预览：只剩一个号码牌（不画框，免得盖住补位上来的内容，N8） */
 .pm-wiz-ghost {

@@ -5,6 +5,34 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.12] - 2026-11-09
+
+夜间质量循环的第二轮：独立代码审查、全界面视觉巡检与界面准则审查收口，功能不变。
+
+### 中文
+
+#### 修复
+
+- **向导选同类：取消勾选不再弄丢导航**——勾了两组同类时，取消其中一组（哪怕不是亮着的那组），另一组的「第 i / N 个」导航不再消失；换组瞬间强调框也不再闪现在上一组成员上
+- **同类号牌的定位标记不再被文案污染**：位置号牌「第 i / N 个」用固定标记，不影响其他测试按号牌前缀统计
+- **向导遮罩预览所见 = 保存所得**：预览遮罩底色改用与运行时同一套算法（按被遮元素背后的实际底色计算、圆角跟随），不再硬编码灰色——深色或彩色页面上预览不再与保存后不一致
+- **悬浮按钮的图标钮补上读屏名称**：面具主钮与「媒体」钮此前只靠悬停提示当名称（部分读屏不播报），与「遮住」钮统一
+- **填实（开启）状态补悬停/按下反馈**：设计规范要求五种状态缺一不可，此前只有关着的状态有
+- **失效项按钮统一叫「重新选一次」**：与失效提示、GLOSSARY 同一套叫法；向导文字链命中区垫到 24px
+- **文案**：自动播放的视频「被按住」改说「会暂停」；欢迎页第 3 步不再引入「媒体」这个要学的叫法（直接说图片图标）；「盖住」统一为「遮住」；选内容的取消动作统一为「取消选中」（GLOSSARY 登记）
+
+### English
+
+#### Fixed
+
+- **Wizard: unchecking one group no longer kills the other group's navigator**; the highlight no longer flashes on the previous group when switching
+- **The position badge no longer leaks localized text into its test id**
+- **Wizard mask preview now matches what saving produces**: the preview tint uses the same color logic as the runtime masks (computed from the real background, following the element's radius) instead of a hardcoded gray
+- **The floating button's icon buttons have screen-reader names now**, consistent with the cover button
+- **The filled (ON) state has hover/pressed feedback**, completing the five required states
+- **The stale-row button is now uniformly “Pick again”**, matching the stale hint and the glossary; text links in the wizard get a 24px hit area
+- **Copy**: autoplaying videos are “paused” (not “held down”); the welcome page no longer introduces a second name for the gray switch; “cover” unified to the product verb; deselection wording unified
+
 ## [0.8.11] - 2026-11-09
 
 欢迎页重排成一步一屏，补上变灰功能的介绍；向导选同类时可以逐个找到了。
