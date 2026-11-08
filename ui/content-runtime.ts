@@ -244,9 +244,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       unmountToggle();
       return;
     }
-    // 按「有没有设置」决定出不出（#67）：三样全空才不挂
+    // 按「有没有设置」决定出不出（#67）：四项全空才不挂。
+    // 但判据只在页面加载时决定胶囊生死（#135）：这页已经挂出来的胶囊不拆——
+    // 会话中间在胶囊/弹窗上关掉最后一项设置（比如灰-only 站点关灰度），
+    // 若当场拆掉，页面上就没有任何入口能把它找回来；刷新后按判据该藏就藏。
     if (!profile || !hasSiteSettings(profile)) {
-      unmountToggle();
+      if (toggleHost) syncToggleState();
       return;
     }
     syncToggleState();

@@ -272,6 +272,35 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     check(true, '胶囊挂载：媒体钮/遮住可用（休眠唤醒生效）');
     await popupNew.close().catch(() => {});
+
+    // ===================== 灰-only 会话内不消失（#135） =====================
+    console.log('\n--- 灰-only 关掉灰度：胶囊当场不拆（#135） ---');
+    await page.bringToFront();
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '胶囊媒体钮关掉灰度（gray-only 配置四项全空）');
+    await waitFor(page, '页面恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    check(!!(await page.$(TOGGLE)), '配置变空胶囊不拆：页面上的入口留住（#135）');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '胶囊还在，当场把灰度拨回来');
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+
+    // 刷新后按判据该藏就藏：先关掉再重载
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '再关掉灰度，准备验证刷新');
+    await page.reload({ waitUntil: 'load' });
+    await page.bringToFront();
+    await new Promise((res) => setTimeout(res, 600)); // 等激活与首轮刷新链跑完
+    check(!(await page.$(TOGGLE)), '刷新后四项全空：胶囊不再挂（判据只在加载时决定生死）');
+
+    // 弹窗重开灰度：已配置但全空的站点走 updateProfile，活跃脚本吃到存储变化挂回胶囊
+    const popupRe = await openPopup(ext, page);
+    await popupRe.waitForSelector(tid('pm-popup-media'), { timeout: 5000 });
+    await popupRe.click(tid('pm-popup-media-mediaGray'));
+    await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '弹窗重新开灰度');
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    check(true, '弹窗重开灰度：胶囊挂回来');
+    await popupRe.close().catch(() => {});
   } finally {
     await ext.cleanup();
     await srv.close();

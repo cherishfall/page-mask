@@ -565,7 +565,7 @@ async function main() {
     check(home.right <= 1000 && home.bottom <= 700, `归位后回到右下角（right=${Math.round(home.right)}, bottom=${Math.round(home.bottom)}）`);
 
     // ===================== 显示条件：有设置就显示（#67） =====================
-    console.log('\n--- 显示条件：有设置就显示，三样全空才不显示 ---');
+    console.log('\n--- 显示条件：有设置就显示，加载时四项全空才不显示（#135） ---');
     const RULES = profileOf(ORIGIN).hideRules;
     // 只改过标题、一条收起项都没有：胶囊仍然要在（否则页面上一点痕迹都没有，下次想改只能靠记住工具栏图标）
     await patchProfile(ext.control, ORIGIN, { switchState: 'disguised', hideRules: [] });
@@ -606,15 +606,18 @@ async function main() {
     );
     check(true, '原样态下 0 条收起项也显示胶囊，文字是「原样」');
 
-    // 三样全空才不挂（#98：还要把「保存过标题和图标」的标记一起清掉，否则仍算有设置）
+    // 四项全空才不挂（#98：还要把「保存过标题和图标」的标记一起清掉，否则仍算有设置）。
+    // 但判据只在页面加载时决定胶囊生死（#135）：中途清空，已挂着的胶囊不拆——
+    // 否则页面上一点入口都不剩；刷新后按判据该藏就藏（灰-only 场景在 check-media.mjs 验证）
     await patchProfile(ext.control, ORIGIN, {
       disguisedTitle: null,
       icon: { kind: 'none' },
       titleIconSet: false,
       hideRules: [],
     });
-    await waitFor(page, '三样全空时不显示胶囊', (h) => !document.querySelector(h), [TOGGLE], { timeout: 5000 });
-    check(true, '标题、图标、收起项全空时不显示胶囊');
+    await waitFor(page, '配置清空后标题还原（这轮刷新已跑完）', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
+    await new Promise((res) => setTimeout(res, 500));
+    check(!!(await page.$(TOGGLE)), '中途清空配置：胶囊不拆（#135 会话内不消失）');
 
     // 恢复：后面的幕布用例要 1 条规则与固定标题
     await patchProfile(ext.control, ORIGIN, {

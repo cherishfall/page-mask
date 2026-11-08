@@ -5,6 +5,44 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.7] - 2026-11-09
+
+修复：只开了灰度的网站上，在悬浮按钮上关掉灰度会把整根按钮拆掉。
+
+### 中文
+
+#### 修复
+
+- **「只灰度」网站在胶囊上关掉灰度，悬浮按钮不再当场消失**：胶囊挂载判据只在页面加载时评估；会话中间把最后一项设置关掉（胶囊或弹窗均可），已经挂着的按钮当页保留——页面上始终有入口能拨回来；刷新后按判据该藏就藏。「删除这个网站的设置」仍然立即清理页面
+
+### English
+
+#### Fixed
+
+- **Turning gray off from the floating button no longer removes the button itself on gray-only sites**: the mount check now runs only when the page loads. Clearing the last setting mid-session (from the button or the popup) keeps the mounted button for the rest of the page visit, so there is always an entry point to switch back; after a reload the usual visibility rule applies. "Delete this site's settings" still clears the page right away
+
+## [0.8.6] - 2026-11-08
+
+悬浮按钮单一形态：一颗面具主钮、自由定位、把手只在用到时出现。
+
+### 中文
+
+#### 变更
+
+- **主按钮换成面具图标**：填实=按你的设置显示、描边=原样；不再用「圆点+文字」
+- **单一形态**：mini 形态、折叠钮与文字标签退场，⋯ 菜单常驻——原来的 mini 用户因此获得拖动与菜单
+- **位置自由定位**：不再限制在浏览器两侧，窗口变化自动夹回视口
+- **拖动把手悬停才出现**（触屏常显），静止时少一颗钮
+
+### English
+
+#### Changed
+
+- **The main button is now a mask icon**: filled = "Your settings", outline = "As is"; the dot + label pair is retired
+- **One single form**: the mini form, collapse button and text label are gone, and the ⋯ menu is always at hand — former mini users gain dragging and the menu
+- **Free positioning**: the button is no longer confined to the browser's sides; window changes snap it back into the viewport
+- **The drag handle appears on hover only** (always visible on touch), so the resting button carries one less piece
+
 ## [0.8.5] - 2026-11-08
 
 没配置过的网站也能在弹窗里直接开「图片和视频变灰」——「只想把信息流变灰」不再需要先走一遍向导。
