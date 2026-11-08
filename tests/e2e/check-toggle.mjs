@@ -117,9 +117,13 @@ function contrastInPage(page, host) {
   return page.evaluate((h) => {
     const sr = document.querySelector(h).shadowRoot;
     const pill = sr.querySelector('[data-testid="pm-toggle-main"]').closest('.pm-tg');
-    const label = sr.querySelector('[data-testid="pm-toggle-main"] .pm-tg-main-icon');
+    const main = sr.querySelector('[data-testid="pm-toggle-main"]');
+    const label = main?.querySelector('.pm-tg-main-icon');
     const pillBg = getComputedStyle(pill).backgroundColor;
     const fg = label ? getComputedStyle(label).color : '';
+    // 图标的实际底色：选中态整钮填实（#137）时是主按钮自己的实底，透明（未选中）时回落到胶囊底
+    const mainBg = main ? getComputedStyle(main).backgroundColor : 'rgba(0, 0, 0, 0)';
+    const iconBackdrop = mainBg === 'rgba(0, 0, 0, 0)' ? pillBg : mainBg;
     // 外圈颜色经一个探针元素归一化：构建时 rgb(0 0 0 / 0.5) 会被压成 #00000080 之类的写法
     const probe = document.createElement('span');
     probe.style.color = getComputedStyle(pill).getPropertyValue('--pm-tg-ring');
@@ -149,7 +153,7 @@ function contrastInPage(page, host) {
     return {
       pageBg,
       ring,
-      textVsPill: Number(ratio(fg, pillBg).toFixed(2)),
+      textVsPill: Number(ratio(fg, iconBackdrop).toFixed(2)),
       pillVsPage: Number(ratio(pillBg, pageBg).toFixed(2)),
       ringVsPage: Number(ratio(ring, pageBg).toFixed(2)),
     };
@@ -435,6 +439,7 @@ async function main() {
         return {
           pressed: main.getAttribute('aria-pressed'),
           text: main.textContent.trim(),
+          bg: main ? getComputedStyle(main).backgroundColor : '',
           rootLabel: root?.getAttribute('aria-label'),
           moreLabel: sr.querySelector('[data-testid="pm-toggle-more"]')?.getAttribute('aria-label'),
         };
@@ -444,6 +449,7 @@ async function main() {
     // 0.8.6（#135）：文字标签退场，主按钮状态由面具图标填实/描边 + aria-pressed + title 表达
     const mainTitle = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]').title, TOGGLE);
     check(aria.pressed === 'true' && mainTitle.length > 0, `主按钮有 aria-pressed 与悬停全称提示（aria-pressed=${aria.pressed}，title「${mainTitle}」）`);
+    check(aria.bg === 'rgb(31, 35, 41)', `主按钮选中态整钮填实：墨底反白（bg=${aria.bg}，#137）`);
     check(!!aria.rootLabel && !!aria.moreLabel, `胶囊本体与菜单按钮都有可访问名称（${aria.rootLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面

@@ -5,6 +5,26 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.9] - 2026-11-09
+
+悬浮按钮的图标与开关状态重做：面具不再吓人，开还是关一眼可辨。
+
+### 中文
+
+#### 变更
+
+- **主按钮换威尼斯面具图标**：横长圆润轮廓 + 两道弯眼缝，与产品名 PageMask 对应——旧版实心蛋形加两只小圆眼在 13px 下像骷髅/头套剪影，装机反馈「太吓人」；填实态眼缝镂空，读得出「面具」
+- **开关状态整钮填实**：功能开着 = 那颗钮整颗变成墨色底、图标反白（iOS 控制中心同类做法）；关着 = 透明底描边，比开着明显低调。开/关不再只靠 13px 图标内部的填实差异来猜
+- 对比发生在胶囊自己的墨底/白底上，任何网页底色下都看得清（深浅主题反色对 ≥11:1）
+
+### English
+
+#### Changed
+
+- **The main button is now a venetian mask icon**: a rounded, horizontal outline with two curved eye slits, matching the PageMask name — the old solid egg shape with two dot eyes read like a skull at 13px and users called it scary; the filled state keeps the eye slits hollow so it still reads as a mask
+- **Switch states now fill the whole button**: a feature that is ON turns its button into a solid ink chip with an inverted icon (like iOS Control Center); OFF is an outlined icon on transparent background, clearly quieter than ON. You no longer have to guess from fill differences inside a 13px icon
+- The contrast happens on the capsule's own ink/white surfaces, so it stays readable over any web page (inverted pair ≥11:1 in both themes)
+
 ## [0.8.8] - 2026-11-09
 
 悬浮按钮去掉拖动把手：整根按钮都能拖，静止宽度再省四分之一。

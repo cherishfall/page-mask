@@ -161,19 +161,31 @@ async function main() {
       return {
         pressed: b?.getAttribute('aria-pressed'),
         state: b?.querySelector('svg')?.getAttribute('data-state'),
+        bg: b ? getComputedStyle(b).backgroundColor : '',
+        fg: b ? getComputedStyle(b.querySelector('svg')).color : '',
         inMini: null,
       };
     }, TOGGLE);
     check(btnState.pressed === 'true' && btnState.state === 'on', `弹窗拨过的状态在媒体钮上显示开（${JSON.stringify(btnState)}）`);
+    check(
+      btnState.bg === 'rgb(31, 35, 41)' && btnState.fg === 'rgb(255, 255, 255)',
+      `选中态整钮填实：墨底反白（bg=${btnState.bg}，图标=${btnState.fg}，#137）`,
+    );
 
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '媒体钮点一下写回存储（关）');
     await waitFor(page, '关掉后大图恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await page.mouse.move(300, 300); // 指针离开媒体钮：别把悬停底色读进「关闭态」断言（#137）
     const btnOff = await page.evaluate((h) => {
       const b = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-media"]');
-      return { pressed: b?.getAttribute('aria-pressed'), state: b?.querySelector('svg')?.getAttribute('data-state') };
+      return {
+        pressed: b?.getAttribute('aria-pressed'),
+        state: b?.querySelector('svg')?.getAttribute('data-state'),
+        bg: b ? getComputedStyle(b).backgroundColor : '',
+      };
     }, TOGGLE);
     check(btnOff.pressed === 'false' && btnOff.state === 'off', '按钮状态就地变成关（描边）');
+    check(btnOff.bg === 'rgba(0, 0, 0, 0)', `关闭态回到透明底，比选中态更不显眼（bg=${btnOff.bg}，#137）`);
     // 开回来：后面的站点设置页/两态用例都以「开」为前提
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '媒体钮拨回来');

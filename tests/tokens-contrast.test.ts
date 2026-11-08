@@ -77,6 +77,7 @@ describe('tokens 对比度', () => {
     const listed = new Set(table.map((r) => `${r.fg}/${r.bg}`));
     const required = [
       'fg/bg',
+      'bg/fg', // 选中态整钮填实的反色对（#137）：图标反白落在墨底上
       'fg/bg-subtle',
       'fg-muted/bg',
       'fg-muted/bg-subtle',

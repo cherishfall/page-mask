@@ -76,7 +76,7 @@
   color: var(--pm-fg-muted);
   cursor: pointer;
 }
-.pm-tg-main:hover {
+.pm-tg-main:not([data-state='on']):hover {
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
@@ -84,9 +84,12 @@
   inline-size: 13px;
   block-size: 13px;
 }
+/* 填实态（0.8.9，#137）：身体填 currentColor，眼缝描选中态容器色（--pm-fg）读出挖孔 */
 .pm-tg-main-icon[data-state='on'] {
   fill: currentColor;
-  color: var(--pm-fg);
+}
+.pm-tg-main-icon[data-state='on'] .pm-mask-eye {
+  stroke: var(--pm-fg);
 }
 
 /* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
@@ -146,6 +149,17 @@
 /* 开 = 只填实框里的内容（山 + 太阳），外框保持描边：整颗填实会糊成一个方块（0.8.3，#133） */
 .pm-tg-media-icon[data-state='on'] .pm-media-content {
   fill: currentColor;
+}
+
+/* ── 选中态整钮填实（0.8.9，#137）：墨底反白 ──
+   iOS 控制中心 / M3 filled icon button / Ant CheckableTag 同构：开 = 容器换实底、图标反色，
+   关 = 透明底、保持最不显眼。信号面积是整颗钮，24px 下唯一稳定满足 WCAG 1.4.11 3:1 的
+   位置；图标填实 / 描边降为第二信号（M3 outlined→filled）。反色对 --pm-fg / --pm-bg
+   浅色 15.9:1、深色 11.4:1，对比发生在胶囊自己的受控底上，不受网页底色影响 */
+.pm-tg-main[data-state='on'],
+.pm-tg-cover.pm-tg-media[data-state='on'] {
+  background: var(--pm-fg);
+  color: var(--pm-bg);
 }
 
 /* 触屏：图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */

@@ -23,6 +23,7 @@
     <button
       type="button"
       class="pm-tg-main"
+      :data-state="state === 'disguised' ? 'on' : 'off'"
       :aria-pressed="state === 'disguised' ? 'true' : 'false'"
       :title="tipText"
       data-testid="pm-toggle-main"
@@ -39,6 +40,7 @@
     <button
       type="button"
       class="pm-tg-cover pm-tg-media"
+      :data-state="mediaOn ? 'on' : 'off'"
       :aria-pressed="mediaOn ? 'true' : 'false'"
       :title="t.media.mediaTitle"
       data-testid="pm-toggle-media"
