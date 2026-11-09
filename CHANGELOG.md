@@ -5,6 +5,36 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.15] - 2026-11-10
+
+按真机反馈重做弹窗、悬浮按钮与设置面板的外观和排布，并做一次全界面文案专项。功能与权限不变。
+
+### 中文
+
+#### 改动
+
+- **弹窗重排（#148）**：新老网站共用同一套四块卡，顺序与悬浮按钮四段一一对应——① 面具卡（开关 + 「标题和图标」「收起内容」两颗入口并排一行，主操作在右）② 灰度卡 ③ 遮住卡（与前两张同款卡片框，但卡内没有开关，只有按钮 + 快捷键 + 一句「只是临时挡住、刷新就还原」）④ 辅助行（悬浮按钮开关，不带卡片框）。「查看使用说明」从底部挪到标题右侧；没设置过的网站不显示假开关，改用一句肯定句说明设置好之后开关做什么；两颗编辑入口不再置灰——任何状态、开关开或关都能点
+- **悬浮按钮开启态收敛（#149）**：去掉整颗墨底反白（真机上太扎眼），改成三个低调但可辨的信号——中性底 + 强调色图标填实 + 分段底部 2px 指示条；悬停 / 按下改用底色变化，不再把整颗压暗；状态切换补 150ms 颜色过渡，系统开启「减弱动态」时保留 120ms 纯色淡变；高对比度模式改用系统高亮色
+- **设置面板收窄且可收起（#150）**：选内容 / 看效果两步的面板由 720px 收到 480px（两步仍同宽），标题栏新增「收起 / 展开」——收起后只剩一条标题栏，原本被面板挡住的页面元素可以直接点，草稿不丢；拖动抓手的常态底色与对比度提高，看得出能拖
+- **文案专项（#151）**：叫法统一、中英对齐、去口语化——说明文字里不再混用开关全称（全称只留给开关标签本身）；「遮住整页 / 遮住整个页面」等几套叫法统一为「遮住这一页」；英文把 "Hidden items"（概念名）当数量单位的地方改回 "N items set to hide"，「除了这类页面」统一为 "Except these pages"；去掉「有人走过来时」「人走开了」「想收拾的网站」这类不专业说法；「编辑面板」「工具条」「现成的标题」等内部名词退出界面；同一句删除失败提示、同一句「标题不能留成空白」的坑提示各收成一份出处；删掉三个没人用的文案键
+
+#### 修复
+
+- 英文弹窗在「已设置」状态下会超过 Chrome 弹出的 600px 上限（英文说明比中文长），收紧卡片内边距后回到 588.9px
+
+### English
+
+#### Changed
+
+- **Popup rebuilt around four cards (#148)**: new and already-set-up sites share one layout, matching the floating button's four segments — ① mask card (switch plus “Title & icon” / “Hide items” side by side, primary action on the right) ② gray card ③ cover card (same card frame, but no switch inside: a button, the shortcut key, and one line saying the cover is temporary) ④ helper row (the floating-button switch, deliberately not a card). “View the guide” moved up next to the title; an unset site shows no fake switch but one plain sentence about what the switch will do; both edit entries are always clickable, whatever the switch says
+- **Floating button's on state toned down (#149)**: the solid ink fill is gone (too loud on a real screen); the state now reads through three quiet signals — neutral fill, accent-coloured filled icon, and a 2px accent rule along the bottom of that segment. Hover and press change the background instead of dimming the whole button. State changes get a 150ms colour transition, kept at 120ms of plain colour fade under “reduce motion”, and high-contrast mode uses the system highlight colours
+- **Setup panel narrower and collapsible (#150)**: the pick / check panel drops from 720px to 480px (both steps stay the same width), and its title bar gains Collapse / Expand — collapsed it is a single bar, the page underneath is clickable, and drafts are kept; the drag grip got a resting background and stronger contrast so it reads as draggable
+- **Copy pass across the whole interface (#151)**: one name per thing, Chinese and English aligned, casual phrasing removed — explanatory text no longer reuses the switch's full label (that label is now the only place it appears); the several names for covering a page collapse into “Cover this page” / 「遮住这一页」; where English used “Hidden items” (a concept name) as a count it now says “N items set to hide”, and the scope option is “Except these pages”; 「有人走过来时」「人走开了」「想收拾的网站」 and their English counterparts are rewritten in plain professional language; internal names (“editor”, “toolbar”, “ready-made titles”) are gone from the interface; the delete-failure line and the “a title can't be blank” caveat each have a single source of truth now; three unused copy keys removed
+
+#### Fixed
+
+- The English popup in the set-up state exceeded Chrome's 600px popup limit (English runs longer than Chinese); tightening the card padding brings it back to 588.9px
+
 ## [0.8.14] - 2026-11-09
 
 会话保留的边界收口：删掉设置就清场，弹窗里重新打开悬浮按钮就真的出现。
