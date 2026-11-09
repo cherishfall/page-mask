@@ -62,13 +62,13 @@
            ① 卡头开关、④ 辅助行开关、底部删除入口。两态卡头高度、图标、文字位置一致，不跳动。 -->
 
       <!-- ① 面具卡：卡头「面具图标 + 按你的设置显示」，ready 多一颗开关；
-           new 不放假开关，同位置用一句肯定句说明开关设置好之后做什么。
+           new 不放假开关，同位置用一句肯定句说明开关设置好之后做什么（ready 态没有说明行：
+           开关的标签与卡内两颗已写名字的按钮已经把这张卡说清，不再重复，0.8.16 #153）。
            卡头 label 的 :for 在 new 态是 undefined（渲染后无 for 属性），CSS 用 label[for]
            只给真关联了开关的那一态加指针样式，避免「看着能点、点了没反应」（方案 §四）。
-           两颗编辑入口排一行：标题和图标（次·左）在前、收起内容（主·实心蓝·右，全屏唯一）在后，
-           两颗等高 40px（方案 v3 §三①）。任何状态、开关开或关都可点——它们是编辑入口，
-           定义的是「打开之后生效什么」，不是从属于开关的即时设置，所以不禁用；
-           要解释开关管什么，用卡内那句肯定句。 -->
+           两颗编辑入口排一行：标题和图标在前、收起内容在后，同为次操作档（#153 去主按钮），等高 40px。
+           任何状态、开关开或关都可点——它们是编辑入口，定义的是「打开之后生效什么」，
+           不是从属于开关的即时设置，所以不禁用。 -->
       <div
         v-if="phase === 'new' || phase === 'ready'"
         class="popup-card disguise-group"
@@ -92,12 +92,12 @@
             @change="emit('toggleSwitch', $event.target as HTMLInputElement)"
           />
         </div>
-        <p class="hint card-switch-hint">{{ hasProfile ? t.popup.cardSwitchHint : t.popup.cardSwitchHintNew }}</p>
+        <p v-if="!hasProfile" class="hint card-switch-hint">{{ t.popup.cardSwitchHintNew }}</p>
         <div class="edit-actions">
           <button data-testid="pm-popup-title" @click="emit('editTitle')">
             {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
           </button>
-          <button class="primary" data-testid="pm-popup-setup" @click="emit('setup')">
+          <button data-testid="pm-popup-setup" @click="emit('setup')">
             {{ busy === 'setup' ? t.common.opening : t.popup.setupMore }}
           </button>
         </div>
@@ -117,6 +117,18 @@
             <MediaIcon class="popup-row-icon" :data-state="media?.mediaGray === true ? 'on' : 'off'" />
             <span>{{ t.media.mediaGray }}</span>
           </label>
+          <!-- ⓘ 信息标（0.8.16，#153）：说明收短句，被砍掉的细节（黑白可读可点、自动播放暂停、
+               点击放行）移到这里，鼠标悬停 / 键盘聚焦时浮出（用户提的形态）。
+               聚焦即可见（键盘可达），Esc 撤下（WCAG 1.4.13 dismissible）；内容是补充说明，
+               关键的「单独记」已经写在卡内短句里 -->
+          <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" @keydown.capture="dismissInfoOnEsc">
+            <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
+              <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
+            </svg>
+            <span role="tooltip" class="popup-info-tip">{{ t.popup.mediaTooltip }}</span>
+          </span>
           <input
             id="pm-popup-media-mediaGray"
             type="checkbox"
@@ -148,15 +160,23 @@
         <p class="hint cover-hint">{{ t.popup.coverHint }}</p>
       </div>
 
-      <!-- ④ 辅助行（悬浮按钮）：不带卡片框，用一条分隔线与四块功能分开。
-           ready 是开关 + 说明；new 管的东西还不存在，不显示开关，同位置放一句说明。
+      <!-- ④ 辅助行（悬浮按钮）：不带卡片框（0.8.16，#153：删掉上方的独立分割线，
+           卡片边界 + 留白已经分好组）。ready 是开关 + 短说明 + ⓘ（被砍掉的「快捷键照常可用」
+           移到浮层）；new 管的东西还不存在，不显示开关，同位置放一句说明。
            待授权 / loading / unsupported 都不显示这一行。 -->
       <template v-if="phase === 'new' || phase === 'ready'">
-        <div class="divider" role="presentation"></div>
         <div class="aux-row">
           <template v-if="hasProfile">
             <div class="switch-row">
               <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
+              <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" @keydown.capture="dismissInfoOnEsc">
+                <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
+                  <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
+                </svg>
+                <span role="tooltip" class="popup-info-tip">{{ t.popup.showToggleTooltip }}</span>
+              </span>
               <input
                 id="pm-popup-capsule"
                 type="checkbox"
@@ -174,10 +194,13 @@
       </template>
     </template>
 
-    <!-- 底部入口：真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭 -->
+    <!-- 底部入口（0.8.16，#153）：文字链接，不再是按钮——它们是导航去别的页面，不是对本页的操作
+         （用户反馈「不该做成按钮」；uBO / Dark Reader 等扩展弹窗底部同为链接行）。
+         muted + 下划线保证「看着就能点」（#74 的顾虑由下划线解决，GOV.UK 链接惯例）；
+         真链接（中键 / Cmd+点击也能开新标签）；target=_blank 新标签打开，面板失焦自动关闭 -->
     <div class="links">
-      <a class="button small link" href="/management.html#/sites" target="_blank" data-testid="pm-popup-manage">{{ t.popup.manageAll }}</a>
-      <a class="button small link" href="/settings.html" target="_blank" data-testid="pm-popup-settings">
+      <a class="popup-link" href="/management.html#/sites" target="_blank" data-testid="pm-popup-manage">{{ t.popup.manageAll }}</a>
+      <a class="popup-link" href="/settings.html" target="_blank" data-testid="pm-popup-settings">
         {{ t.popup.settings }}
       </a>
     </div>
@@ -254,6 +277,12 @@ const emit = defineEmits<{
 const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
 /** 删除入口用全名（与胶囊菜单 / 管理页 / 列表 ⋯ 菜单同一叫法）；确认框里的实心红按钮才是「删除设置」 */
 const deleteLabel = deleteSiteHeading();
+
+/** ⓘ 浮层的 Esc 撤下（WCAG 1.4.13 dismissible）：焦点还在 ⓘ 上时按 Esc，移走焦点浮层即收起 */
+function dismissInfoOnEsc(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return;
+  (e.currentTarget as HTMLElement).blur();
+}
 </script>
 
 <style>
@@ -265,9 +294,10 @@ const deleteLabel = deleteSiteHeading();
   padding: var(--pm-space-3);
   display: flex;
   flex-direction: column;
-  /* 四块卡片 + 几行说明后仍要塞进 600px（#148）。英文说明比中文长，实测英文 ready
-     648.9px 顶破红线，整屏组件间距再收一档到 4px（方案 v3 §三① 给英文态留余量）。 */
-  gap: var(--pm-space-1);
+  /* 0.8.16（#153）：0.8.15 为英文态 600px 红线把间距压到 4px，中文态跟着憋屈（用户反馈
+     「一点呼吸的气口都没有」）。本批把说明文字砍短换回呼吸感：组件间距 8px（M3 8dp 网格），
+     卡片内边距 12px（iOS inset grouped / Ant 卡片量级）。高度红线继续由 check-language 守门 */
+  gap: var(--pm-space-2);
 }
 /* 头部类名带 .popup- 前缀（0.8.11，#139）：.head/.logo 是通用词，欢迎页同页嵌入时
    全局样式会撞车（欢迎页自己的 .head 被这里的 flex 压成两列） */
@@ -349,19 +379,28 @@ const deleteLabel = deleteSiteHeading();
   min-block-size: var(--pm-control-lg);
   padding-inline: var(--pm-space-3);
 }
-/* 底部一行两个入口：它们不是「内容里的小动作」，是两个页面唯一的入口，所以用次按钮
-   （有底有边、比主按钮浅一档），不用无框小字——无框小字看着像不能点（#74） */
+/* 底部一行两个入口（0.8.16，#153）：文字链接——导航去别的页面不是本页操作，
+   不该占按钮的视觉档（用户反馈；uBO / Dark Reader 弹窗底部同为链接行）。
+   下划线 + muted 色（GOV.UK：链接默认带下划线）保证看着就能点（#74 的顾虑），
+   hover 变正文色；命中区 ≥24px（WCAG 2.5.8） */
 .links {
   display: flex;
   gap: var(--pm-space-2);
 }
-.links > .link {
+.links > .popup-link {
   flex: 1;
-  padding-inline: var(--pm-space-1);
-  /* 链接默认色会盖过按钮字色（a 的特异性压过控件样式）：按钮样式的链接用正文色 */
-  color: var(--pm-fg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-font-size-caption);
   text-align: center;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.links > .popup-link:hover {
+  color: var(--pm-fg);
 }
 /* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
 .popup-kbd {
@@ -406,33 +445,83 @@ const deleteLabel = deleteSiteHeading();
   align-items: center;
   gap: var(--pm-space-2);
 }
+/* ⓘ 信息标（0.8.16，#153）：短说明 + 浮层补细节。可聚焦（键盘可达）、悬停或聚焦时浮出，
+   Esc 撤下（dismissInfoOnEsc，WCAG 1.4.13 dismissible / persistent / hoverable）。
+   图标 14px、命中区 24px（WCAG 2.5.8）。
+   浮层锚定在整行（.switch-row 相对定位、inset-inline: 0 铺满行宽）而不是图标上：
+   弹窗窗口会裁掉越界内容，按图标居中 / 右对齐都会顶破左或右缘；铺满行宽永远贴着
+   内容边界，文字最多两行。浮层是行的子元素，指针移到浮层上仍是 :hover（hoverable） */
+.switch-row {
+  position: relative;
+}
+.popup-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-inline: calc(var(--pm-space-1) * -1);
+  color: var(--pm-fg-muted);
+  border-radius: 50%;
+  cursor: help;
+}
+.popup-info-icon {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.popup-info:hover,
+.popup-info:focus-visible {
+  color: var(--pm-fg);
+}
+.popup-info-tip {
+  display: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% + 6px);
+  padding: var(--pm-space-2);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow-overlay);
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  text-align: start;
+  cursor: auto;
+  z-index: 1;
+}
+.switch-row:hover .popup-info-tip,
+.switch-row:focus-within .popup-info-tip {
+  display: block;
+}
 /* 遮住这一页：图标 + 文字 + 快捷键排一行（按钮本身走 controls.css 的次操作档） */
 .popup-cover {
   gap: var(--pm-space-2);
 }
-/* 分组分隔线（#112 / #148）：辅助行与四块功能之间、删除入口与页面入口之间，
-   一拍留白 + 一条细线；卡片之间靠框分隔，不再给遮住卡单独加线 */
+/* 分组分隔线（0.8.16，#153）：只保留删除入口上方一条——把「删配置」这个危险动作
+   与上面的两个页面入口分开（0.8.15 曾在辅助行上方也画一条，用户反馈丑，已删：
+   卡片边界 + 8px 留白已经分好组，格式塔共同区域不需要再多一道线）。
+   margin 归零：上下各吃 .popup 的 8px 组件间距，线不再贴着文字 */
 .divider {
   border-top: 1px solid var(--pm-border);
-  margin: calc(var(--pm-space-1) * -1) 0;
 }
 /* 卡片框（0.8.10，#138）：面具 / 灰度 / 遮住三张同款卡片，与站点设置页同构
-   （iOS/macOS inset grouped、Windows SettingsCard 先例）。分组关系靠框表达。 */
+   （iOS/macOS inset grouped、Windows SettingsCard 先例）。分组关系靠框表达。
+   0.8.16（#153）：内边距 4→12、卡内间距 4→8——间距换回呼吸感（见 .popup 注释） */
 .popup-card {
   border: 1px solid var(--pm-border);
   border-radius: var(--pm-radius-card);
   background: var(--pm-bg);
-  /* 三张卡内边距也收一档到 4px：与 .popup gap 一起给英文态省高度（#148 / 方案 v3 §三①） */
-  padding: var(--pm-space-1);
+  padding: var(--pm-space-3);
   display: flex;
   flex-direction: column;
-  /* 卡内控件 + 说明收紧一档，给新增的几行说明腾高度（#148） */
-  gap: var(--pm-space-1);
+  gap: var(--pm-space-2);
 }
-/* ① 卡内两颗编辑入口并排（0.8.15 #148 / 方案 v3 §三①）：次在左、主在右，间距 8；
-   docs/design-ui.md §五第 1/2/5 条「一屏一个主操作永远在最右」「次操作在左」「按钮间距 8」。
-   两颗都按「主要提交」档给到 40px（不能只把 primary 拉高），并排比竖排省一行，
-   给 600px 与英文态留余量。<style> 非 scoped，一律 .popup 限定。 */
+/* ① 卡内两颗编辑入口并排（0.8.15 #148）：「标题和图标」在前、「收起内容」在后，间距 8。
+   0.8.16（#153）：两颗同为次操作档（用户明确推翻「收起内容是主按钮」——已设置网站里它只是
+   两个编辑入口之一；Ant「默认按钮用于一组没有优先级差别的动作」）。弹窗不再有实心主按钮，
+   pending 态的「允许访问」仍是实心（那一屏唯一的动作）。
+   两颗都按「主要提交」档给到 40px，并排比竖排省一行。<style> 非 scoped，一律 .popup 限定。 */
 .popup .edit-actions {
   display: flex;
   gap: var(--pm-space-2);

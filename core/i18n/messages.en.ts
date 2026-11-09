@@ -93,9 +93,9 @@ export const en: Messages = {
     mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
     hint: 'This switch works on its own, independent of “Your settings”: switching to “As is” restores hidden items and the tab title and icon, while pictures and videos stay gray. Images still load in the background — this only removes the color.',
-    hintShort: 'Works on its own: switching to “As is” keeps pictures and videos gray, while hidden items and the tab title and icon return to normal.',
+    hintShort: 'Its own setting — the switch above doesn’t affect it.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
-    hintNew: 'Turning it on first asks you to allow access to this site; pictures and videos then turn black & white (same place, still readable) and autoplaying videos are paused.',
+    hintNew: 'Turning it on first asks you to allow access to this site.',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn pictures & videos gray',
     saveFailed: "Couldn't save this change. Please try again.",
@@ -121,15 +121,19 @@ export const en: Messages = {
     /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
-    cardSwitchHint: 'Controls hidden items and the tab title and icon. Pictures & videos gray is a separate switch.',
-    /** On an unset site there is no switch; instead say the switch appears once set up (#148) */
-    cardSwitchHintNew: 'Once set up, a switch appears here to move between “Your settings” and “As is”.',
+    cardSwitchHintNew: 'Once set up, a switch appears here.',
+    /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
+    mediaTooltip: 'Pictures and videos turn black & white: same place, still readable, links still work. Autoplaying videos pause; clicking a video lets that one play.',
     coverPage: 'Cover this page',
     /** Cover card: say this is temporary and changes no settings (#148) */
-    coverHint: 'This only covers the page for now — reloading or leaving restores it and changes none of your settings.',
+    coverHint: 'Temporary — reloading restores it. Changes no settings.',
     /** Show-capsule switch (#112): label + one-line hint under the switch */
     showToggle: 'Floating button',
-    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages. The popup settings and the “Cover this page” shortcut still work.',
+    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages.',
+    /** ⓘ popover (0.8.16, #153): details cut from the short hint live here */
+    showToggleTooltip: 'The popup settings and the “Cover this page” shortcut keep working.',
+    /** Accessible name for the ⓘ info tag (#153) */
+    infoLabel: 'More information',
     /** On an unset site there is no switch; say the button appears once set up (#148) */
     showToggleHintNew: 'Once this site is set up, a floating button appears on its pages.',
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */

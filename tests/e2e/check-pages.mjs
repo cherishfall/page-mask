@@ -344,8 +344,8 @@ async function checkPopupChrome(popup, label) {
       `${label}：两颗编辑入口等高 ≥40px（次 ${layout.titleH.toFixed(1)} / 主 ${layout.setupH.toFixed(1)}）`,
     );
     check(
-      layout.hintSizes.length === 4 && new Set(layout.hintSizes).size === 1,
-      `${label}：三张卡与辅助行说明字号一致（${layout.hintSizes.join(' / ')}）`,
+      (layout.hintSizes.length === 3 || layout.hintSizes.length === 4) && new Set(layout.hintSizes).size === 1 && layout.hintSizes[0] === '13px',
+      `${label}：卡内与辅助行说明字号一致 13px（${layout.hintSizes.join(' / ')}；ready 态 3 条、new 态 4 条，#153 删掉 ready 的卡头说明行）`,
     );
     check(layout.forLabel === layout.hasSwitch, `${label}：卡头 label[for] 只在有开关时出现（new 态不放假可点 label）`);
     check(layout.auxNoCard, `${label}：辅助行（悬浮按钮）无卡片框，只用分隔线与四块功能分开`);
@@ -463,7 +463,12 @@ async function main() {
       offState.setupDisabled === false && offState.titleDisabled === false && offState.offHint === false,
       `主开关关着：两颗编辑入口仍可点、无禁用说明行（${JSON.stringify(offState)}）`,
     );
-    check(offState.cardHint.length > 0, `主开关关着：卡内仍有肯定句说明开关管什么（${offState.cardHint}）`);
+    // 0.8.16（#153）：ready 态面具卡不再有说明行——开关标签 + 两颗写明名字的按钮已把卡说清，
+    // new 态才有一句「设置好之后，这里会出现开关。」
+    check(
+      offState.cardHint.length === 0,
+      `ready 态面具卡没有说明行（0.8.16 #153 收文字；「${offState.cardHint}」应为空）`,
+    );
     await popup.click(tid('pm-popup-switch'));
     await waitFor(popup, '开关重新变为开', (s) => document.querySelector(s).checked, [tid('pm-popup-switch')]);
     const onState = await popup.evaluate(() => ({
