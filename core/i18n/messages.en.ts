@@ -427,6 +427,10 @@ export const en: Messages = {
     noticeOk: 'Got it',
     dragAria: 'Move the toolbar (arrow keys work too)',
     dragTitle: 'Drag to move the toolbar',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    collapseAria: 'Collapse the toolbar so you can click the page',
+    expandAria: 'Expand the toolbar',
     badgeJump: (seq: number) => `Jump to item ${seq} in the list`,
   },
 

@@ -286,11 +286,14 @@ async function main() {
   const srvNew = await startServer(handler);
   const srvNew2 = await startServer(handler);
   const srvNew3 = await startServer(handler);
+  // 0.8.15（#150）单独一个干净来源：测工具条收窄 / 收起，不复用主流程已改过 profile 的页
+  const srvC = await startServer(handler);
   const ORIGIN = srv.origin;
   const NEW_ORIGIN = srvNew.origin;
   const TITLE_ONLY_ORIGIN = srvNew2.origin;
   const CANCEL_ORIGIN = srvNew3.origin;
-  const ext = await launchExtension({ hostOrigins: [ORIGIN, NEW_ORIGIN, TITLE_ONLY_ORIGIN, CANCEL_ORIGIN] });
+  const C_ORIGIN = srvC.origin;
+  const ext = await launchExtension({ hostOrigins: [ORIGIN, NEW_ORIGIN, TITLE_ONLY_ORIGIN, CANCEL_ORIGIN, C_ORIGIN] });
   try {
     const page = await ext.browser.newPage();
     page.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
@@ -1355,6 +1358,226 @@ async function main() {
     check(true, '恢复后胶囊保留：页面回到原样但入口留着（#143）');
     await pageOnly.close();
 
+    // ===================== 0.8.15（#150）：工具条收窄 480 + 可收起 =====================
+    console.log('\n--- 0.8.15 #150：两步同宽且 ≤480、可收起让开页面 ---');
+    const pageC = await ext.browser.newPage();
+    pageC.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
+    await pageC.goto(`${C_ORIGIN}/c.html`, { waitUntil: 'load' });
+    await openNewSite(pageC, C_ORIGIN, 'editContent');
+
+    // 320px 窄视口：宽度公式里的 calc(100vw - 32px) 仍生效、工具条不越界。
+    // resize 时 reclampToolbar 只在 tbPos 存在时动作，本段从不拖动，不会给工具条加 moved 定位
+    await pageC.setViewport({ width: 320, height: 640 });
+    await waitFor(pageC, '320px 窄视口下工具条收窄', (h) => {
+      const tb = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-toolbar"]');
+      return !!tb && tb.getBoundingClientRect().width <= 288.5;
+    }, [HOST]);
+    const wNarrow = (await shadowRect(pageC, tid('pm-wizard-toolbar'))).w;
+    check(wNarrow > 100 && wNarrow <= 288.5 && wNarrow <= 480.5, `320px 窄视口下工具条 ${Math.round(wNarrow)}px（= 100vw - 32，不越界、仍 ≤480）`);
+    await pageC.setViewport({ width: 1280, height: 800 });
+    await waitFor(pageC, '恢复 1280 视口', (h) => {
+      const tb = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-toolbar"]');
+      return !!tb && tb.getBoundingClientRect().width > 400;
+    }, [HOST]);
+
+    // ① pick 阶段宽度：≤480 且仍是个像样的浮层（run-e2e.mjs:386 的 w > 100 口径）
+    const wPick = (await shadowRect(pageC, tid('pm-wizard-toolbar'))).w;
+    check(wPick > 100 && wPick <= 480.5, `选内容阶段工具条宽 ${Math.round(wPick)}px（≤480）`);
+
+    // ⑤ 「收起」按钮：初始 aria-expanded=true、命中区 ≥24×24、排在退出设置左边、aria 齐全且有落点
+    const collapseLook = await pageC.evaluate((h) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const b = sr?.querySelector('[data-testid="pm-wiz-collapse"]');
+      if (!b) return null;
+      const r = b.getBoundingClientRect();
+      const exit = sr.querySelector('[data-testid="pm-wiz-exit"]').getBoundingClientRect();
+      return {
+        expanded: b.getAttribute('aria-expanded'),
+        controls: b.getAttribute('aria-controls'),
+        label: b.getAttribute('aria-label'),
+        controlled: !!sr.querySelector('#pm-wiz-body'),
+        text: b.textContent.trim(),
+        w: r.width, h: r.height,
+        leftOfExit: r.right <= exit.left + 0.5,
+      };
+    }, HOST);
+    check(
+      collapseLook && collapseLook.expanded === 'true' && collapseLook.controlled &&
+        collapseLook.controls === 'pm-wiz-body' && /收起/.test(collapseLook.label) &&
+        collapseLook.text === '收起' && collapseLook.w >= 24 && collapseLook.h >= 24 && collapseLook.leftOfExit,
+      `「收起」按钮初始展开、命中区 ${Math.round(collapseLook?.w ?? 0)}×${Math.round(collapseLook?.h ?? 0)} ≥24、在退出左侧、aria-expanded/controls/label 齐全且 controls 有落点（${collapseLook?.text}）`,
+    );
+
+    // 量展开态工具条矩形（后面「折叠后露出的区域」要用）
+    const tbExp = await shadowRect(pageC, tid('pm-wizard-toolbar'));
+
+    // ③ 点「收起」：只剩标题栏（其余直接子内容 display:none、不占高度），live region 常驻、退出设置仍在
+    await clickInShadow(pageC, HOST, tid('pm-wiz-collapse'));
+    const folded = await pageC.evaluate((h) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const tb = sr?.querySelector('[data-testid="pm-wizard-toolbar"]');
+      const b = sr?.querySelector('[data-testid="pm-wiz-collapse"]');
+      if (!tb || !b) return null;
+      const live = tb.querySelector('.pm-wiz-sr');
+      const head = tb.querySelector('.pm-wiz-head');
+      const others = [...tb.children].filter((k) => k !== live && k !== head);
+      return {
+        expanded: b.getAttribute('aria-expanded'),
+        text: b.textContent.trim(),
+        label: b.getAttribute('aria-label'),
+        liveKept: !!live && live.getAttribute('aria-live') === 'polite' && getComputedStyle(live).display !== 'none',
+        headVisible: !!head && head.getBoundingClientRect().height > 0,
+        othersHidden: others.length >= 2 && others.every((k) => getComputedStyle(k).display === 'none' && k.getBoundingClientRect().height === 0),
+        othersCount: others.length,
+        exitPresent: !!sr.querySelector('[data-testid="pm-wiz-exit"]'),
+        h: tb.getBoundingClientRect().height,
+      };
+    }, HOST);
+    check(
+      folded && folded.expanded === 'false' && folded.text === '展开' && /展开/.test(folded.label) &&
+        folded.liveKept && folded.headVisible && folded.othersHidden && folded.exitPresent,
+      `收起后只剩标题栏：${folded?.othersCount} 个内容节点 display:none、live region 与标题栏常驻、退出设置仍在、按钮变「展开」且 aria-expanded=false（高 ${Math.round(folded?.h ?? 0)}）`,
+    );
+    const tbCol = await shadowRect(pageC, tid('pm-wizard-toolbar'));
+    check(tbCol.h < tbExp.h - 20, `收起后工具条明显变矮（${Math.round(tbExp.h)} → ${Math.round(tbCol.h)}），原内容区露出`);
+
+    // ③ 续：在「展开态工具条覆盖、折叠态标题栏之上」的区域真实点选一次页面元素。
+    // 工具条 bottom 固定，收起变矮后露出的是标题栏【上方】那条带（y ∈ [tbExp.y, tbCol.y)）；
+    // 这一带展开时压着工具条内容、点击落不到捕获层，收起后才能落到捕获层完成点选。
+    const pickHit = await pageC.evaluate(({ x0, y0, x1, y1 }) => {
+      for (let y = y0; y <= y1; y += 12) {
+        for (let x = x0; x <= x1; x += 24) {
+          for (const e of document.elementsFromPoint(x, y)) {
+            if (e === document.documentElement || e === document.body) continue;
+            if (e.getRootNode && e.getRootNode() instanceof ShadowRoot) continue; // 捕获层等 shadow 内节点
+            if (e.matches && e.matches('pagemask-wizard, pagemask-toggle, pagemask-notice')) continue;
+            const r = e.getBoundingClientRect();
+            if (r.width < 8 || r.height < 8) continue;
+            return { x, y, tag: e.tagName, text: (e.textContent || '').trim().slice(0, 16) };
+          }
+        }
+      }
+      return null;
+    }, {
+      x0: Math.round(tbExp.x + 12), x1: Math.round(tbExp.x + tbExp.w - 12),
+      y0: Math.round(tbExp.y + 12), y1: Math.round(tbCol.y - 12),
+    });
+    check(!!pickHit, `原工具条盖住的区域里找得到真实页面元素（${pickHit ? `${pickHit.tag}「${pickHit.text}」@(${pickHit.x},${pickHit.y})` : '没找到'}）`);
+    if (pickHit) {
+      await pageC.mouse.click(pickHit.x, pickHit.y);
+      await waitFor(
+        pageC, '折叠后在原工具条盖住的区域完成一次点选',
+        (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid^="pm-badge-"]').length === 1,
+        [HOST],
+      );
+      check(true, `折叠后页面完全可点：在 (${pickHit.x},${pickHit.y}) 点中 ${pickHit.tag}「${pickHit.text}」，选中 1 项`);
+    }
+
+    // ④ 点「展开」还原：内容可见、aria-expanded 切回 true、已选条目还在（不丢草稿 / 选择）
+    await clickInShadow(pageC, HOST, tid('pm-wiz-collapse'));
+    const reopened = await pageC.evaluate((h) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const tb = sr?.querySelector('[data-testid="pm-wizard-toolbar"]');
+      const b = sr?.querySelector('[data-testid="pm-wiz-collapse"]');
+      const foot = tb?.querySelector('.pm-wiz-footer');
+      const pick = tb?.querySelector('.pm-wiz-pick');
+      return {
+        expanded: b?.getAttribute('aria-expanded'),
+        text: b?.textContent.trim(),
+        footVisible: !!foot && getComputedStyle(foot).display !== 'none' && foot.getBoundingClientRect().height > 0,
+        pickVisible: !!pick && getComputedStyle(pick).display !== 'none',
+        badges: sr.querySelectorAll('[data-testid^="pm-badge-"]').length,
+        previewText: sr.querySelector('[data-testid="pm-wiz-preview"]')?.textContent ?? '',
+      };
+    }, HOST);
+    check(
+      reopened && reopened.expanded === 'true' && reopened.text === '收起' &&
+        reopened.footVisible && reopened.pickVisible && reopened.badges === 1 && reopened.previewText.includes('1'),
+      `展开后内容还原（底栏 / 选内容区可见）、aria-expanded=true，已选 1 项还在（${reopened?.previewText.trim()}，号牌 ${reopened?.badges}）`,
+    );
+
+    // ① 续 / ②：进「看效果」，量 preview 宽度 + 展开「调整」后不折行不溢出
+    await clickInShadow(pageC, HOST, tid('pm-wiz-preview'));
+    await waitForShadow(pageC, HOST, tid('pm-wiz-drafts'));
+    const wPreview = (await shadowRect(pageC, tid('pm-wizard-toolbar'))).w;
+    check(
+      Math.abs(wPick - wPreview) < 1 && wPreview <= 480.5,
+      `pick / preview 两步同宽且 ≤480（${Math.round(wPick)} / ${Math.round(wPreview)}px），#140 定宽成果不回退`,
+    );
+    await openAdjust(pageC, 1);
+    const adjustGeom = await pageC.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const tb = sr.querySelector('[data-testid="pm-wizard-toolbar"]');
+      const tr = tb.getBoundingClientRect();
+      const body = sr.querySelector('[data-testid="pm-draft-1-body"]');
+      let rightMost = 0;
+      for (const el of body.querySelectorAll('*')) {
+        if (getComputedStyle(el).display === 'none') continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0) rightMost = Math.max(rightMost, r.right);
+      }
+      const scopeBtns = [...sr.querySelectorAll('[data-testid="pm-draft-1-scope"] .pm-wiz-scope-row button')];
+      const segSpans = [...sr.querySelectorAll('[data-testid="pm-draft-1-body"] .pm-wiz-seg-opt span')];
+      const oneLine = (els) => {
+        const tops = els.map((e) => Math.round(e.getBoundingClientRect().top));
+        return els.length >= 2 && tops.every((t) => Math.abs(t - tops[0]) <= 1);
+      };
+      return {
+        w: tr.width, scrollWidth: tb.scrollWidth, clientWidth: tb.clientWidth,
+        rightMost, toolbarRight: tr.right,
+        scopeOneLine: oneLine(scopeBtns), scopeCount: scopeBtns.length,
+        segOneLine: oneLine(segSpans), segCount: segSpans.length,
+      };
+    }, HOST);
+    check(
+      adjustGeom.scrollWidth <= adjustGeom.clientWidth + 1 &&
+        adjustGeom.rightMost <= adjustGeom.toolbarRight + 1 &&
+        adjustGeom.scopeOneLine && adjustGeom.segOneLine,
+      `展开「调整」后不溢出、不折行：宽 ${Math.round(adjustGeom.w)}，scrollWidth ${adjustGeom.scrollWidth} ≤ clientWidth ${adjustGeom.clientWidth}，最右内容 ${Math.round(adjustGeom.rightMost)} ≤ ${Math.round(adjustGeom.toolbarRight)}，范围 ${adjustGeom.scopeCount} 档 / 收起方式 ${adjustGeom.segCount} 档都各自同一行`,
+    );
+
+    // ④ 续（草稿）：折叠 → 展开，草稿清单与行内控件都还在，不退出向导、不重置
+    const draftsBefore = await draftCount(pageC);
+    const nameBefore = await nameValue(pageC, 1);
+    await clickInShadow(pageC, HOST, tid('pm-wiz-collapse'));
+    const draftsFolded = await pageC.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const d = sr.querySelector('[data-testid="pm-wiz-drafts"]');
+      return {
+        hidden: getComputedStyle(d).display === 'none',
+        expanded: sr.querySelector('[data-testid="pm-wiz-collapse"]').getAttribute('aria-expanded'),
+        exitPresent: !!sr.querySelector('[data-testid="pm-wiz-exit"]'),
+      };
+    }, HOST);
+    check(draftsFolded.hidden && draftsFolded.expanded === 'false' && draftsFolded.exitPresent, '折叠态下草稿清单隐藏、退出设置仍在、aria-expanded=false');
+    await clickInShadow(pageC, HOST, tid('pm-wiz-collapse'));
+    const draftsAfter = await draftCount(pageC);
+    const nameAfter = await nameValue(pageC, 1);
+    check(
+      draftsAfter === draftsBefore && draftsAfter === 1 && nameAfter === nameBefore &&
+        (await pageC.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-body"]') !== null, HOST)),
+      `展开后草稿还在：${draftsAfter} 行、名称「${nameAfter}」不变、「调整」展开态也保留`,
+    );
+
+    // ⑥ 折叠态下退出流程不受影响：收起 → 点退出设置 → 确认框弹出 → 确认退出 → 向导关闭
+    await clickInShadow(pageC, HOST, tid('pm-wiz-collapse'));
+    check(await shadowExists(pageC, HOST, tid('pm-wiz-exit')), '折叠态下「退出设置」仍在标题栏');
+    await clickInShadow(pageC, HOST, tid('pm-wiz-exit'));
+    await waitFor(
+      pageC, '折叠态点退出也弹确认',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open,
+      [HOST], { timeout: 3000 },
+    );
+    const exitBodyC = await pageC.evaluate(
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText,
+      HOST,
+    );
+    check(exitBodyC.includes('退出'), `折叠态下退出确认框照常弹出（${exitBodyC.replace(/\s+/g, ' ').slice(0, 30)}…）`);
+    await clickInShadow(pageC, HOST, tid('pm-wiz-exit-yes'));
+    await waitFor(pageC, '折叠态确认退出后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    check(true, '折叠态下退出流程完整可用');
+    await pageC.close();
+
 
   } catch (e) {
     r.fail(e);
@@ -1364,6 +1587,7 @@ async function main() {
     await srvNew.close();
     await srvNew2.close();
     await srvNew3.close();
+    await srvC.close();
   }
   process.exitCode = r.summary();
 }

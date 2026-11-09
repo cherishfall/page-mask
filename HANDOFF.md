@@ -26,7 +26,7 @@
 | 调研报告 + 界面方案文档 | ✅ v2 定稿 | `docs/dev/research-0.8.15-ui.md`（已入库 `fe16142`）、`docs/dev/design-0.8.15-popup.md`（v2 修订未提交）；v2 修了 4 处矛盾/错误，见决策记录 21:35 |
 | 细致调查（代码/测试/文案全貌） | ✅ 完成 | `tmp/audit-code.md`（83KB：文件地图、五条反馈逐条事实、「改了会挂」清单 14 类、phase 差异表、10 条冲突登记）；`tmp/audit-copy.md`（89KB：文案 100% 集中在两张 i18n 表、90+ 行 E2E 字面量断言）；均不入库 |
 | 发 GitHub issue / 拆票 | ✅ 完成 | **#148**（弹窗重排 A）、**#149**（胶囊开启态 B）、**#150**（向导工具条 C）、**#151**（文案专项 D）；#142 / #37 保持不改，无重复。#149/#150 票面已按方案 v2 同步动效口径 |
-| 实现 + 门禁 + 一票一提交一推送 + 关票 | 🔄 A、B 完成，C/D 待做 | **A（#148）= `4b515dc`** 已推送并关票。**B（#149）**：子代理实现 → 主会话补扫两处过时文档、退回换掉 4 处固定 sleep → 全套门禁亲手复跑通过 → 提交推送关票。串行；之后 C（#150）→ D（#151 + 发版） |
+| 实现 + 门禁 + 一票一提交一推送 + 关票 | 🔄 A、B 完成，C 进行中，D 待做 | **A（#148）= `4b515dc`**、**B（#149）= `10c1b10`**，均已推送并关票：子代理实现 → 主会话亲手抽查/补扫 → 全套门禁亲手复跑 → 提交推送 + `gh issue close --comment`。**C（#150）** 子代理 `impl-C` 已启动（向导工具条），串行；之后 D（#151 + 发版） |
 | 发版（版本号 / CHANGELOG / tag / release） | ⬜ 未开始 | 待实现收口 |
 | 收尾（DEVLOG / ADR / 删 HANDOFF） | ⬜ 未开始 | |
 
@@ -88,6 +88,9 @@
 - **B 票最终门禁（主会话亲手复跑）**：`compile` Exit 0、`vitest` 43 files / 705 tests、全套 E2E「全部 E2E 断言通过 ✅」（check-toggle 169 / check-media 47）、`check:docs` / `check:package` 通过。E2E 汇总 100/273/16/174/63/169/47/27/47。
 - **B 票收口补充**：4 处固定 sleep 换成共用条件 `toggleSettled`（`waitFor` 50ms 轮询，判据是目标色实算值 + `box-shadow` 离散终值 + hover 底色退回透明）；子代理还说明为何不选 `getAnimations().finished`（一次性快照可能早于 CSSTransition 注册而返回空数组）。`toggleSettled` 在两个 E2E 文件各一份（约 18 行重复），是按「别扩大范围」刻意为之；若日后要收敛到 `lib/harness.mjs` 统一导出，另开小票。
 - **遗留观察（不属本批，登记备查）**：`tests/e2e/check-toggle.mjs:910 / 942` 还有两处 `setTimeout(res, 250)`（幕布恢复按钮 hover 的 opacity 过渡），注释不同、为既有代码，本批按边界未动；若日后偶发红，同法换成观测量轮询。
+
+- **方案 v4（派 C 票前核对向导模板后）**：① **折叠不做高度补间**——工具条内容是近 400 行模板、多个按 `phase` 并列的分支 + `.pm-wiz-footer`，为做高度补间包一层容器会动到既有直接子选择器、footer 定位与 `check-wizard.mjs` 几何断言；内容高度随选中项数变化，`max-height` 固定值会做出「前 100ms 看不出变化」的假过渡；且这是用户主动点的「让开」动作，按钮文字变「展开」+ 面板立刻缩短，反馈已明确（与 §五「状态切换需过渡」不是同一类场景）。改为「瞬时收起 + 面板/按钮 150ms 颜色过渡，reduced-motion 120ms」。② **抓取提示不新造符号**——`.pm-wiz-handle` 里已有 `GripIcon` 六点抓握点纹，只提高可见性，不加第二个图标、不加常驻「拖动」文字（480px 空间紧张 + AGENTS.md「一个符号一个意思」）。
+- **C 票派单要点**：`wizard.css` 两处 720 → 480（`.pm-wiz-toolbar` 的 `max-width` 与 `.wide` 的 `width`），保留 `.wide` class 与两步同宽绑定；标题图标单步仍 `max-content`；新增「收起/展开」文字按钮（`aria-expanded` / `aria-controls` / ≥24 命中区）放在「退出设置」左侧；折叠用 `.collapsed > :not(.pm-wiz-head):not(.pm-wiz-sr) { display:none }`，**必须排除 `.pm-wiz-sr` 的 aria-live 节点**；`NO_DRAG_SELECTOR` 已含 `button:not(.pm-wiz-handle)`，新按钮自动不触发拖动。验收线：看效果展开「调整」不折行不溢出，装不下就回调到实测最小可容值并留痕。
 
 ## D 票（文档与发版）待同步清单（全仓 Grep 已扫，别漏）
 

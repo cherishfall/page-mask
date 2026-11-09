@@ -466,6 +466,11 @@ export const zh = {
     noticeOk: '知道了',
     dragAria: '移动工具条（也可以用方向键）',
     dragTitle: '拖动可以移动工具条',
+    /** 标题栏「收起 / 展开」（0.8.15，#150）：可见文字短，aria-label 写全称说清点下去会怎样 */
+    collapse: '收起',
+    expand: '展开',
+    collapseAria: '收起工具条，让页面可以点选',
+    expandAria: '展开工具条',
     /** 页面上号码牌的读屏名字 */
     badgeJump: (seq: number) => `跳到清单里的第 ${seq} 项`,
   },

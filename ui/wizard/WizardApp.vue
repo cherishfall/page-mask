@@ -6,8 +6,9 @@
     <!-- 工具条：默认底部居中，可拖动（N15） -->
     <section
       ref="toolbarEl"
+      id="pm-wiz-body"
       class="pm-wiz-toolbar"
-      :class="{ moved: !!tbPos, wide: phase === 'pick' || phase === 'preview' }"
+      :class="{ moved: !!tbPos, wide: phase === 'pick' || phase === 'preview', collapsed }"
       :style="tbPos ? { left: `${tbPos.left}px`, top: `${tbPos.top}px` } : undefined"
       aria-labelledby="pm-wiz-title"
       data-testid="pm-wizard-toolbar"
@@ -42,6 +43,21 @@
           <!-- 进度只在两步的「收起内容」里显示；「标题和图标」是单步小表单，没有步数可言 -->
           <p v-if="progressTotal > 1" class="pm-wiz-progress" data-testid="pm-wiz-progress">{{ progressText }}</p>
         </div>
+        <!-- 收起 / 展开（0.8.15，#150）：轻操作文字按钮，排在退出设置左边。
+             折叠只切 collapsed（CSS 隐藏 section 的非标题栏直接子内容），不丢草稿、不退出向导、
+             不重置 tbPos；overlayLayer 是 section 的兄弟节点，号码牌 / 悬停高亮不受影响。
+             它是 button，已被 NO_DRAG_SELECTOR 的 button:not(.pm-wiz-handle) 排除，不会触发拖动 -->
+        <button
+          type="button"
+          class="pm-wiz-collapse"
+          :aria-expanded="!collapsed"
+          :aria-controls="'pm-wiz-body'"
+          :aria-label="collapsed ? t.wizard.expandAria : t.wizard.collapseAria"
+          data-testid="pm-wiz-collapse"
+          @click="collapsed = !collapsed"
+        >
+          {{ collapsed ? t.wizard.expand : t.wizard.collapse }}
+        </button>
         <button
           type="button"
           class="pm-btn small"
@@ -569,6 +585,9 @@ const drafts = ref<Draft[]>([]);
 /** 这一步底部「在哪些页面收起」的选择；整批规则共用一份范围（默认整个网站） */
 const tbPos = ref<{ left: number; top: number } | null>(null);
 const dragging = ref(false);
+/** 工具条是否收起（0.8.15，#150）：只切 section 的 collapsed class，由 CSS 隐藏
+    非标题栏直接子内容；不碰草稿 / phase / tbPos / 号码牌，收起后页面完全可点 */
+const collapsed = ref(false);
 
 const rootEl = ref<HTMLElement | null>(null);
 const overlayLayer = ref<HTMLElement | null>(null);

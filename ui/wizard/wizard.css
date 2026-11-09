@@ -20,9 +20,11 @@
   transform: translateX(-50%);
   box-sizing: border-box;
   width: max-content;
-  /* 720 宽（#123）：装机反馈「看效果」那一屏太窄——清单有 名字 / 范围 / 调整 / ✕ 四列，
-     560 装不下，文字被挤成两三行。窄屏仍然两侧各留 16 */
-  max-width: min(720px, calc(100vw - 2 * var(--pm-space-4)));
+  /* 720 宽（#123）的理由已不成立：当年「看效果」清单有 名字 / 范围 / 调整 / ✕ 四列、
+     560 装不下才放宽；0.8.11 #140 之后每行已折成「序号 + 名字 + 调整 + ✕」+ 一行摘要，
+     四列不在了。0.8.15（#150）真机反馈太宽、盖住要点元素，收窄到 480；
+     窄屏仍然两侧各留 16（calc 里的 2 * var(--pm-space-4)） */
+  max-width: min(480px, calc(100vw - 2 * var(--pm-space-4)));
   pointer-events: auto;
   background: var(--pm-bg);
   color: var(--pm-fg);
@@ -34,6 +36,11 @@
      但左右内边距必须留在工具条上（#123 复查）：正文贴着面板边缘、文字顶到边上，
      正是上批把它们一起挪走造成的——标题栏用负边距自己撑到最外，正文这层留 12 */
   padding: 0 var(--pm-space-4) var(--pm-space-3);
+  /* 折叠状态切换给面板描边 / 投影一个短过渡（0.8.15 #150，方案 §六 v4）：
+     折叠本身瞬时收起，不做高度 / 宽度补间——宽度是定值，不给 width / height 加过渡 */
+  transition:
+    border-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    box-shadow 150ms cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 /* 拖动过：改用左上角坐标定位（由脚本夹紧在可视区内） */
 .pm-wiz-toolbar.moved {
@@ -51,9 +58,19 @@
   white-space: nowrap;
 }
 /* 选内容与看效果两阶段定宽（0.8.11，#140）：max-content 会随行内文案与行数变宽变窄，
-   装机反馈「窗口大小变来变去」；两步同宽，切步也不跳。标题和图标单步保持 max-content */
+   装机反馈「窗口大小变来变去」；两步同宽，切步也不跳。标题和图标单步保持 max-content。
+   0.8.15（#150）：随 .pm-wiz-toolbar 一起从 720 收窄到 480，两步仍同宽；class 与
+   WizardApp.vue 的绑定都不变（两步同宽是 #140 的成果，不能回退） */
 .pm-wiz-toolbar.wide {
-  width: min(720px, calc(100vw - 2 * var(--pm-space-4)));
+  width: min(480px, calc(100vw - 2 * var(--pm-space-4)));
+}
+/* 收起（0.8.15，#150）：只留标题栏一条，其余直接子内容瞬时隐藏。
+   必须排除 .pm-wiz-sr（模板 L17 的 aria-live 读屏播报节点：live region 要先于内容
+   存在且常驻，隐藏它会丢播报）与 .pm-wiz-head（标题栏）。折叠不包一层容器、
+   不做高度补间（方案 §六 v4）；overlayLayer / .pm-wiz-status / dialog 都在
+   section 之外，不受影响 */
+.pm-wiz-toolbar.collapsed > :not(.pm-wiz-head):not(.pm-wiz-sr) {
+  display: none;
 }
 /* 整条标题栏可拖（#119）：桌面客户端的惯例——按在标题文字、进度或空白处都能挪；
    按钮照常是按钮。grab 是这颗浮层唯一的非文字可发现性线索。 */
@@ -92,15 +109,19 @@
   padding: 0;
   border: 0;
   border-radius: var(--pm-radius-control);
-  background: transparent;
-  color: var(--pm-fg-muted);
+  /* 0.8.15（#150）：uBO #1714「光有 cursor:grab 不够，要给抓取区一个可见提示」。
+     沿用已有的六点 GripIcon，只给常态一层极淡底 + 把点纹色从 --pm-fg-muted 提到 --pm-fg，
+     不新造第二个抓握符号、不加常驻「拖动」文字（一个符号一个意思；480 收窄后标题栏空间紧张） */
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
 .pm-wiz-handle:hover {
-  background: var(--pm-bg-subtle);
+  /* hover 比常态再深一档，抓取区更可发现 */
+  background: var(--pm-bg-control-active);
 }
 /* 拖动中：光标停在把手（最内层）上时也要是「抓取中」，不能回退成 grab */
 .pm-wiz-head.dragging,
@@ -128,6 +149,30 @@
    窄窗口下标题换行，这个按钮不跟着压扁 */
 .pm-wiz-head > .pm-btn {
   flex: none;
+}
+/* 「收起 / 展开」轻操作文字按钮（0.8.15，#150）：排在退出设置左边、headtext 之后。
+   轻操作档 = 无底无边、文字色略淡（design-ui.md §四）；min 尺寸把命中区垫到 ≥24×24
+   （WCAG 2.5.8 / C42）。只给颜色类属性 150ms 过渡，不做位移 / 缩放、不写 linear */
+.pm-wiz-collapse {
+  flex: none;
+  min-inline-size: 24px;
+  min-block-size: 24px;
+  padding: 0 var(--pm-space-1);
+  border: 0;
+  border-radius: var(--pm-radius-control);
+  background: transparent;
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  cursor: pointer;
+  transition:
+    color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    background-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+.pm-wiz-collapse:hover,
+.pm-wiz-collapse:focus-visible {
+  color: var(--pm-fg);
+  background: var(--pm-bg-subtle);
 }
 .pm-wiz-sub {
   margin: 2px 0 0;
@@ -532,6 +577,20 @@
     animation: none;
     background: var(--pm-bg-subtle);
     box-shadow: inset 3px 0 0 var(--pm-accent);
+  }
+  /* 0.8.15（#150）：折叠切换的面板描边 / 按钮颜色过渡收敛到 120ms 纯色淡变，
+     去掉任何 transform / 位移 / 缩放（本就没有，明确不引入）；口径同 ui/toggle/toggle.css #149 */
+  .pm-wiz-toolbar {
+    transition:
+      border-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      box-shadow 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      opacity 120ms cubic-bezier(0.2, 0, 0.38, 0.9);
+  }
+  .pm-wiz-collapse {
+    transition:
+      color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      opacity 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9);
   }
 }
 
