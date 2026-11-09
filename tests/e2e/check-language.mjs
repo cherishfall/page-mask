@@ -166,7 +166,7 @@ try {
   // 语言名不翻译：英文界面下仍是 简体中文 / English
   check((await textOf(settingsPage, 'label[for="pm-settings-lang-zh"]')) === '简体中文', '英文界面下「简体中文」不翻译');
   const intro = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
-  check(intro.startsWith('Automatic (now '), `英文下「自动」显示探测结果（${intro}）`);
+  check(intro.startsWith('Automatic (now: '), `英文下「自动」显示探测结果（${intro}）`);
 
   // ---------- 切回自动：立刻变回中文 ----------
   console.log('\n--- 切回自动（浏览器中文） ---');

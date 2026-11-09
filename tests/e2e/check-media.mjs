@@ -342,7 +342,7 @@ async function main() {
     const popupNew = await openPopup(ext, page);
     await popupNew.waitForSelector(tid('pm-popup-media'), { timeout: 5000 });
     const newHint = await popupNew.$eval(`${tid('pm-popup-media')} .media-hint`, (el) => el.textContent.trim());
-    check(newHint.includes('访问权限'), `未配置站点的说明讲授权流程（${newHint}）`);
+    check(newHint.includes('允许访问'), `未配置站点的说明讲清先允许访问（${newHint}）`);
     const newChecked = await popupNew.$eval(tid('pm-popup-media-mediaGray'), (el) => el.checked);
     check(newChecked === false, '未配置站点：灰度开关默认关');
     check(!(await page.$(TOGGLE)), '休眠中：胶囊还没挂');

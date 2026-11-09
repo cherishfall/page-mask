@@ -80,7 +80,7 @@
             />
           </div>
           <div class="row quick" role="group" aria-labelledby="pm-settings-title-quick">
-            <span id="pm-settings-title-quick" class="hint">{{ t.common.quickFill }}</span>
+            <span id="pm-settings-title-quick" class="hint">{{ t.common.quickTitle }}</span>
             <button
               v-for="q in QUICK_TITLES"
               :key="q.id"

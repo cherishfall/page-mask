@@ -304,7 +304,7 @@ export function createManagementStore() {
     if (!p || !confirmed) return;
     state.resetError[p.origin] = '';
     const res: Ack | undefined = await browser.runtime.sendMessage({ t: 'resetSite', origin: p.origin }).catch(() => undefined);
-    if (!res?.ok) state.resetError[p.origin] = t().management.error.reset;
+    if (!res?.ok) state.resetError[p.origin] = t().common.deleteSiteFailed;
     await reload();
   }
 

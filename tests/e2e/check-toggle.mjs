@@ -533,7 +533,7 @@ async function main() {
       instant.state === 'off' && instant.pressed === 'false',
       `切换后面具图标当场变（state=${instant.state}，aria-pressed=${instant.pressed}）`,
     );
-    check(instant.tip === '点一下按你的设置显示', `悬停提示跟着换（${instant.tip}）`);
+    check(instant.tip === '点一下切换到「按设置」', `悬停提示跟着换（${instant.tip}）`);
     const switched = await (async () => {
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {

@@ -2,8 +2,9 @@
  * UI copy · English (#57). Mirrors messages.zh.ts key for key; the type annotation makes any
  * missing / extra key a compile error, and core/i18n.test.ts compares both tables recursively.
  *
- * Wording follows GLOSSARY.md: "Shown your way" / "As the site is", hide methods
- * Disappear / Keep space / Cover, "may be broken", tab title / tab icon, "cover" / "restore".
+ * Wording follows GLOSSARY.md: "Your settings" / "As is" (the full label "Show this site your way"
+ * only on the switch itself), hide methods Disappear / Keep space / Cover, "may be broken",
+ * tab title / tab icon, "cover" / "restore".
  *
  * Copy discipline (0.4.1, see AGENTS.md): name the action and the object, never invent a term.
  * One name per thing across the whole product. No "authorize", "take effect", "rule" or "process"
@@ -11,6 +12,12 @@
  * Keep it short: the popup is 320px wide and English runs longer than Chinese.
  */
 import type { Messages } from './messages.zh';
+
+/**
+ * The "a title can't be blank" caveat used to be copy-pasted into three keys (0.8.15 #151).
+ * One source of truth; declared outside the object because an object literal can't reference itself.
+ */
+const titleBlankHint = 'A title can’t be blank, or Chrome shows the address instead.';
 
 export const en: Messages = {
   common: {
@@ -28,13 +35,16 @@ export const en: Messages = {
     clean: 'Your settings',
     original: 'As is',
     cleanMode: 'Show this site your way',
-    quickFill: 'Ready-made titles',
-    quickTitle: 'Ready-made titles',
+    quickTitle: 'Common titles',
+    /** Blank-title caveat shared by three keys (see the const above) */
+    titleBlankHint,
     unnamedElement: 'Unnamed element',
     languageNameZh: '简体中文',
     languageNameEn: 'English',
     deleted: (name: string) => `Deleted “${name}”`,
     deleteNamed: (name: string) => `Delete “${name}”`,
+    /** Delete-site-settings failure shared by the popup / page notice / management page (0.8.15 #151) */
+    deleteSiteFailed: 'Couldn’t delete this site’s settings. Please try again',
     strategy: {
       remove: 'Disappear',
       blank: 'Keep space',
@@ -82,10 +92,10 @@ export const en: Messages = {
     mediaGray: 'Turn pictures & videos gray',
     mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
-    hint: 'Works on its own, independent of ‘Your settings’: switching to ‘As is’ restores what’s hidden and the tab title/icon, while the gray follows this switch. Images still load in the background — this only removes the color.',
+    hint: 'This switch works on its own, independent of “Your settings”: switching to “As is” restores hidden items and the tab title and icon, while pictures and videos stay gray. Images still load in the background — this only removes the color.',
     hintShort: 'Works on its own: switching to “As is” keeps pictures and videos gray, while hidden items and the tab title and icon return to normal.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
-    hintNew: 'Turning it on asks for this site’s access, just like first-time setup; pictures and videos then turn black & white (same place, still readable) and autoplaying videos are paused.',
+    hintNew: 'Turning it on first asks you to allow access to this site; pictures and videos then turn black & white (same place, still readable) and autoplaying videos are paused.',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn pictures & videos gray',
     saveFailed: "Couldn't save this change. Please try again.",
@@ -112,8 +122,8 @@ export const en: Messages = {
     editTitle: 'Title & icon',
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
     cardSwitchHint: 'Controls hidden items and the tab title and icon. Pictures & videos gray is a separate switch.',
-    /** On an unset site there is no switch; instead say what it will do once set up (#148) */
-    cardSwitchHintNew: 'Once set up, use this switch to move between the site as it is and your settings.',
+    /** On an unset site there is no switch; instead say the switch appears once set up (#148) */
+    cardSwitchHintNew: 'Once set up, a switch appears here to move between “Your settings” and “As is”.',
     coverPage: 'Cover this page',
     /** Cover card: say this is temporary and changes no settings (#148) */
     coverHint: 'This only covers the page for now — reloading or leaving restores it and changes none of your settings.',
@@ -128,19 +138,18 @@ export const en: Messages = {
     replayIntroAria: 'View the PageMask guide',
     /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
     deleting: 'Deleting…',
-    deleteFailed: "Couldn't delete this site's settings, please try again.",
     restorePage: 'Restore this page',
     covering: 'Covering…',
     restoring: 'Restoring…',
     manageAll: 'All site settings',
     settings: 'Settings',
     error: {
-      tabMismatch: 'The page changed. Go back to the site you want and click PageMask again',
+      tabMismatch: 'The page changed. Go back to the site you want to set up and click PageMask again',
       notGranted: 'Access to this site wasn’t granted. Click again and choose “Allow”',
       injectFailed: 'Couldn’t start on this page. Reload it and try again',
       denied: 'PageMask needs access to this site to change its title and hide things. Click again and choose “Allow”',
       gestureLost: 'Couldn’t open the permission prompt. Click PageMask again',
-      toggleFailed: 'Couldn’t switch how the site is shown. Please try again',
+      toggleFailed: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
       editFailed: 'Couldn’t open “Title & icon”. Reload this page and try again',
       coverFailed: 'Couldn’t cover this page. Reload it and try again',
     },
@@ -148,18 +157,18 @@ export const en: Messages = {
 
   management: {
     pageTitle: 'PageMask · All site settings',
-    appSub: 'These are the sites you added. Open one to change its tab title and icon, or see what it hides.',
+    appSub: 'These are the sites you added. Open one to change its tab title and icon, or to see its hidden items.',
 
     sitesTitle: 'All site settings',
     sitesHint: 'Pick a site to open its settings. PageMask never touches sites you didn’t add.',
     /** Row-end "more" button (#113): accessible name carries the host so rows never blur together */
     moreActions: (label: string) => `More actions: ${label}`,
-    sitesEmpty: 'No sites yet. Open a site you want to tidy up and click the PageMask icon in the toolbar to start.',
+    sitesEmpty: 'No sites yet. Open a site you want to set up and click the PageMask icon in the toolbar to start.',
     pendingAll: (n: number) =>
       n === 1
         ? '1 site hasn’t been allowed yet. Until you allow it, its settings do nothing.'
         : `${n} sites haven’t been allowed yet. Until you allow them, their settings do nothing.`,
-    authorizeAll: 'Allow all',
+    authorizeAll: 'Allow access to all',
     pendingBadge: 'Needs access',
     pendingHint: 'The browser hasn’t allowed PageMask to open this site. Your settings are kept and apply once you allow it.',
     authorize: 'Allow access',
@@ -174,10 +183,10 @@ export const en: Messages = {
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title.',
     titleFootnote: (fallback: string) =>
-      `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome shows the address instead.`,
+      `Saved automatically once you stop typing. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'When the “Shown your way” switch at the top is on, this site’s tab uses the icon you pick here.',
+    iconIntro: 'When the “Your settings” switch at the top is on, this site’s tab uses the icon you pick here.',
     iconSite: "The site's own icon",
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -196,11 +205,11 @@ export const en: Messages = {
     },
 
     rulesHeading: 'Hidden items',
-    rulesEmpty: 'Nothing is hidden yet.',
+    rulesEmpty: 'Nothing set to hide.',
     ruleStaleNote: (name: string) =>
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
     rulesEditHint:
-      'To change how something is hidden or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Hide items”.',
+      'To change the hide method or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Hide items”.',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -212,19 +221,19 @@ export const en: Messages = {
 
     error: {
       auth: 'Access wasn’t granted and your site settings are kept. Click again when needed and choose “Allow”',
-      toggle: 'Couldn’t switch how the site is shown. Please try again',
+      toggle: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
       rules: 'Couldn’t save this change. Please try again',
       icon: 'Couldn’t save the icon. Please try again',
-      reset: 'Couldn’t delete this site’s settings. Please try again',
     },
 
     import: {
       done: (parts: string, mode: string) => `Import finished: ${parts} (${mode})`,
-      partAdded: (n: number) => `${n} added`,
-      partUpdated: (n: number) => `${n} updated`,
-      partRemoved: (n: number) => `${n} local sites removed`,
-      partSkipped: (n: number) => `${n} malformed sites skipped`,
-      partSkippedRules: (n: number) => `${n} unreadable hidden items ignored`,
+      partAdded: (n: number) => (n === 1 ? '1 site added' : `${n} sites added`),
+      partUpdated: (n: number) => (n === 1 ? '1 site updated' : `${n} sites updated`),
+      partRemoved: (n: number) => (n === 1 ? '1 local site removed' : `${n} local sites removed`),
+      partSkipped: (n: number) => (n === 1 ? '1 malformed site skipped' : `${n} malformed sites skipped`),
+      partSkippedRules: (n: number) =>
+        n === 1 ? '1 unreadable item set to hide ignored' : `${n} unreadable items set to hide ignored`,
       modeMerge: 'merged',
       modeReplace: 'replaced',
       cancelled: 'Import cancelled. Nothing on this computer changed',
@@ -241,19 +250,20 @@ export const en: Messages = {
     titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own.',
     titleLabel: 'Default tab title',
     titleFootnote: (fallback: string) =>
-      `Leave it empty to use “${fallback}” (follows the browser language). A title can’t be blank, or Chrome shows the address instead.`,
+      `Leave it empty to use “${fallback}” (follows the browser language). ${titleBlankHint}`,
 
 
     toggleHeading: 'Floating button',
     toggleIntro:
-      'Opacity is how faint it sits when idle; it turns fully clear as soon as you hover, focus it with the keyboard, or drag it.',
+      'Opacity sets how faint the floating button looks when idle; it turns fully clear as soon as you hover it, focus it with the keyboard, or drag it.',
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
     toggleOpacityError: "Couldn't save the opacity, please try again.",
-    toggleHint: 'Only this button. The “Restore” button on a covered page stays as it is.',
+    toggleHint: 'Only the floating button. The “Restore” button on a covered page stays as it is.',
 
     shortcutHeading: 'Keyboard shortcut',
-    shortcutIntro: 'When someone walks up, no need to hunt for the mouse: press it to cover the page, press again to restore.',
+    shortcutIntro:
+      'Press the shortcut to cover this page, press it again to restore. The cover lasts only for this page — reloading or leaving restores it, without changing your settings.',
     shortcutLabel: 'Cover / restore',
     shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
     shortcutChange: 'Change in Chrome',
@@ -262,13 +272,13 @@ export const en: Messages = {
     shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
 
     transferHeading: 'Export / Import',
-    transferIntro: 'Saves every site’s settings plus these preferences into one file. Import it after switching computers or reinstalling the browser to restore.',
+    transferIntro: 'Saves every site’s settings plus these settings into one file. Import it after switching computers or reinstalling the browser to restore.',
     exportAll: 'Export all settings',
     importModeLegend: 'Import mode',
     merge: 'Merge (recommended)',
-    mergeHint: 'Hidden items of the same site are combined; settings already on this computer are kept',
+    mergeHint: 'Items set to hide for the same site are combined; settings already on this computer are kept',
     replace: 'Replace everything',
-    replaceHint: 'Deletes all settings on this computer first, then uses the file’s (you’ll confirm once more)',
+    replaceHint: 'Deletes all settings on this computer first, then uses the settings from the file (you’ll confirm once more)',
     chooseFile: 'Choose an export file to import',
 
     aboutHeading: 'About',
@@ -280,17 +290,17 @@ export const en: Messages = {
     languageHeading: 'Language',
     languageIntro:
       'Every open PageMask page switches right away — no reload needed. The default tab title still follows the browser language.',
-    languageAuto: (current: string) => `Automatic (now ${current})`,
+    languageAuto: (current: string) => `Automatic (now: ${current})`,
     languageZh: '简体中文',
     languageEn: 'English',
 
     replaceDialog: {
       title: 'Replace all current settings with this file?',
       localSites: (sites: number, rules: number) =>
-        `All ${sites} sites and ${rules} hidden items on this computer will be replaced`,
+        `All ${sites} sites and ${rules} items set to hide on this computer will be replaced`,
       removed: (n: number, rules: number, list: string) =>
-        `${n} of them are not in the file and will be dropped (${rules} hidden items): ${list}`,
-      incoming: (sites: number, rules: number) => `Becomes the file’s ${sites} sites and ${rules} hidden items`,
+        `${n} of them are not in the file and will be dropped (${rules} items set to hide): ${list}`,
+      incoming: (sites: number, rules: number) => `Becomes the file’s ${sites} sites and ${rules} items set to hide`,
       settings: 'The settings here (the default title) are replaced by the file’s too',
       irreversible: 'This can’t be undone. If unsure, cancel first and use “Export all settings” for a copy',
       confirm: 'Replace',
@@ -300,12 +310,11 @@ export const en: Messages = {
   onboarding: {
     pageTitle: 'PageMask · Getting started',
     title: 'Welcome to PageMask',
-    sub: 'A few clicks on the sites you read, and the parts you don’t want are gone. PageMask never touches sites you didn’t add.',
-    done: '(done)',
+    sub: 'Pick the parts you don’t want on the sites you read and hide them. PageMask never touches sites you didn’t add.',
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
-    tip: 'Both settings entries sit at the bottom of the popup: all site settings, and the extension settings.',
+    tip: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”.',
     /** Screen-reader announcement for the current step (#108): updated on step change, never steals focus */
     stepStatus: (n: number, m: number, title: string) => `Step ${n} of ${m}: ${title}`,
     steps: [
@@ -319,14 +328,14 @@ export const en: Messages = {
         text: 'Click PageMask in the toolbar — this is the popup.',
         features: [
           'Hide items: click the parts of a page you don’t want; they disappear.',
-          'Title & icon: give the tab a neutral name and icon.',
-          'Turn pictures & videos gray: the whole page goes black & white like a quiet article — an independent switch, on and off any time.',
-          'Cover this page: one click covers the whole page; when you’re back, click “Restore” and it returns (the button shows the shortcut for your platform).',
+          'Title & icon: give the tab a name and icon of your choosing.',
+          'Turn pictures & videos gray: pictures and videos across the page turn black & white — same place, still readable. This switch works on its own; turn it on or off any time.',
+          'Cover this page: one click covers the page for now; click “Restore” or press the shortcut to bring it back. Reloading or leaving the page also restores it, without changing your settings.',
         ],
       },
       {
         title: 'The floating button on the page',
-        text: 'On sites you’ve added it stays on the page: click the mask icon to switch “Your settings / As is”, the picture icon turns the page gray (“Turn pictures & videos gray”), the closed-eye button covers the page, ⋯ opens more actions. Press and drag it anywhere — window size changes pull it back on screen.',
+        text: 'On sites you’ve added, a floating button sits on the page: click the mask icon to switch “Your settings / As is”, the picture icon to turn pictures and videos gray, the closed-eye icon to cover this page, and ⋯ to open more actions. Drag it anywhere on the page; changing the window size pulls it back on screen.',
         features: [],
       },
     ],
@@ -341,11 +350,11 @@ export const en: Messages = {
     },
     progress: (index: number, total: number) => `Step ${index} of ${total}`,
     titleHint: (fallback: string) =>
-      `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}” — a title can’t be blank, or Chrome would show the address instead.`,
+      `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
     pickLead: [
       'Click something on the page to pick it.',
       'Click it again to unpick. You can pick several in a row.',
-      'Everything you pick is listed below, and you can unpick any of it at any time.',
+      'Everything you pick is listed below.',
     ],
     adjustGroup: 'Adjust the last pick',
     adjustNow: 'Adjusting',
@@ -358,7 +367,7 @@ export const en: Messages = {
     clearAll: 'Deselect all',
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
-      'Scroll the page to check the result (Cover should stay glued to its element). Rename any row right here; open Adjust to change how it hides or where it applies.',
+      'Scroll the page to check the result (a covered element should scroll with it). Rename any row right here; open Adjust to change the hide method or where it applies.',
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
@@ -369,7 +378,7 @@ export const en: Messages = {
     rowScopeLegend: 'Where it applies',
     rowScopeAll: 'The whole site',
     rowScopeInclude: 'Only these pages',
-    rowScopeExclude: 'All but these pages',
+    rowScopeExclude: 'Except these pages',
     reselect: 'Pick again',
     advancedSummary: 'Advanced: the selector itself',
     advancedHint: 'One per line; each line is checked against this page before saving',
@@ -416,7 +425,7 @@ export const en: Messages = {
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',
     warnUnstable: 'This element can’t be found reliably once switched back, so the previous setting was kept',
     warnUnsavable: (index: number) =>
-      `Item ${index} can’t be found reliably. Click the ✕ next to it to skip it, then use “Bigger” to pick again`,
+      `Item ${index} can’t be found reliably. Click the ✕ next to it to deselect it, then use “Bigger” to pick again`,
     warnPreviewFailed: 'The effect didn’t show up. Try again',
     warnPreviewClearFailed: 'The preview couldn’t be removed. Reload the page to get back to normal',
     warnNotCleared: 'The preview couldn’t be removed, so nothing was saved. Reload the page and try again',
@@ -425,44 +434,43 @@ export const en: Messages = {
     noticeGone: 'This site’s settings were deleted elsewhere, so this change wasn’t saved. Start again from the extension icon.',
     noticeGoneRules: 'This site’s settings were deleted elsewhere, so this selection wasn’t saved. Start again from the extension icon.',
     noticeOk: 'Got it',
-    dragAria: 'Move the toolbar (arrow keys work too)',
-    dragTitle: 'Drag to move the toolbar',
+    dragAria: 'Move this panel (arrow keys work too)',
+    dragTitle: 'Drag to move the panel',
     collapse: 'Collapse',
     expand: 'Expand',
-    collapseAria: 'Collapse the toolbar so you can click the page',
-    expandAria: 'Expand the toolbar',
+    collapseAria: 'Collapse the panel so you can click the page',
+    expandAria: 'Expand the panel',
     badgeJump: (seq: number) => `Jump to item ${seq} in the list`,
   },
 
 
   toggle: {
-    moveAria: 'Floating button (drag it, or move with arrow keys)',
-    tipOn: 'Click to see the site as it is',
-    tipOff: 'Click to use your settings',
+    moveAria: 'Floating button (press and drag it, or move it with arrow keys)',
+    tipOn: 'Click to switch to “As is”',
+    tipOff: 'Click to switch to “Your settings”',
     coverAria: 'Cover this page',
     moreAria: 'More actions',
     menuTitle: 'Title & icon',
     menuContent: 'Hide items',
     menuOpacity: 'Adjust opacity',
-    menuResetPos: 'Move button back to the corner',
+    menuResetPos: 'Move the floating button back to the bottom-right corner',
     menuDelete: 'Delete this site’s settings',
   },
 
   notice: {
     saveFailed: 'Couldn’t save this change. Please try again',
-    deleteFailed: 'Couldn’t delete this site’s settings. Please try again',
     settingsFailed: 'Couldn’t open the extension settings. Please try again',
   },
 
   curtain: {
-    restoreAria: 'Remove the cover and go back to the page',
+    restoreAria: 'Remove the cover and go back to the page you were on',
     restore: 'Restore',
   },
 
   errors: {
     invalidExportFile: 'This file isn’t a settings file exported by PageMask',
     newerImport: 'This file comes from a newer PageMask. Update PageMask before importing',
-    noSitesInFile: (base: string) => `${base}: it has no site settings to import, so nothing was changed`,
+    noSitesInFile: (base: string) => `${base}: it has no site settings to import, so nothing on this computer was changed`,
     invalidProfile: 'The site settings are malformed and weren’t saved',
     invalidOrigin: (origin: string) => `Invalid site address: ${origin}`,
     importFailed: (reason: string) => `Import failed: ${reason}`,

@@ -485,7 +485,7 @@ async function onDeleteClose() {
       window.close();
       return;
     }
-    deleteError.value = t.value.popup.deleteFailed; // 失败：弹窗留着，删除按钮上方一行错误
+    deleteError.value = t.value.common.deleteSiteFailed; // 失败：弹窗留着，删除按钮上方一行错误
   } finally {
     deleteBusy.value = false;
     busy.value = '';

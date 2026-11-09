@@ -385,7 +385,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     const res: Ack | undefined = await browser.runtime
       .sendMessage({ t: 'resetSiteHere' } satisfies BgRequest)
       .catch(() => undefined);
-    if (!res?.ok) showPageNotice(ctx, t().notice.deleteFailed);
+    if (!res?.ok) showPageNotice(ctx, t().common.deleteSiteFailed);
   }
 
   /** 点了「调整不透明度」（#120）：后台开插件设置并停在那张卡；开不起来就在页面上说一句 */
