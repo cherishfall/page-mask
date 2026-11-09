@@ -5,6 +5,29 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.17] - 2026-11-10
+
+0.8.16 发版后两轮深审查（Web Interface Guidelines 代码审查 + 第二轮全量截图目检）的收尾：读屏可达性补齐、触屏细节、两处措辞。功能与权限不变。
+
+### 中文
+
+#### 修复
+
+- 弹窗 ⓘ 信息标对读屏不可达：聚焦时只播报「更多信息」三个字，浮层正文读不到——补 `aria-describedby` 指向浮层正文，聚焦即播报完整内容
+- 弹窗「页面还没加载好」的说明行是异步出现的，读屏感知不到——补 `role="status"`
+- 触屏点击胶囊时系统默认的灰色高亮闪一下，叠在自有反馈上显脏——有意关掉（按钮自带悬停 / 按下 / 选中底反馈）
+- 弹窗删除确认框内容超高时滚动会连动到弹窗页面——滚动限制在框内
+- 两处措辞：ⓘ 浮层与站点设置页对「点击放行视频」统一说成「点一下视频就能看」；不透明度滑杆说明补上方向（数值越小越淡）
+
+### English
+
+#### Fixed
+
+- The popup's ⓘ info tags were unreachable for screen readers: focusing announced only “More information” without the popover text — wired `aria-describedby` to the popover body so focus reads the full content
+- The “page hasn't finished loading” notice appears asynchronously but was invisible to screen readers — added `role="status"`
+- The system tap-highlight flash on touch overlaid the capsule's own hover / press / selected feedback — turned off intentionally
+- Scroll chaining from the popup's delete dialog into the popup page when content overflows — contained to the dialog
+- Two wording nits: the ⓘ popover and the site settings page now use the same phrasing for click-to-allow (“click a video to watch it”); the opacity slider hint spells out the direction (lower = fainter)
 ## [0.8.16] - 2026-11-10
 
 按真机反馈收口观感：悬浮按钮开启态去掉指示条与强调色、弹窗松开间距并砍短文字、灰度补上背景图与「没加载好的页面」两个缺口，设计文档同步审计；发版前全量截图审查又修掉一批文案与可点性问题。功能与权限不变。

@@ -120,14 +120,16 @@
           <!-- ⓘ 信息标（0.8.16，#153）：说明收短句，被砍掉的细节（黑白可读可点、自动播放暂停、
                点击放行）移到这里，鼠标悬停 / 键盘聚焦时浮出（用户提的形态）。
                聚焦即可见（键盘可达），Esc 撤下（WCAG 1.4.13 dismissible）；内容是补充说明，
-               关键的「单独记」已经写在卡内短句里 -->
-          <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" @keydown.capture="dismissInfoOnEsc">
+               关键的「单独记」已经写在卡内短句里。
+               aria-describedby 指向浮层正文（0.8.17 WIG 审查）：读屏聚焦时播报完整内容，
+               而不是只播报「更多信息」三个字 -->
+          <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" aria-describedby="pm-popup-tip-media" @keydown.capture="dismissInfoOnEsc">
             <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
               <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
               <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
             </svg>
-            <span role="tooltip" class="popup-info-tip">{{ t.popup.mediaTooltip }}</span>
+            <span role="tooltip" id="pm-popup-tip-media" class="popup-info-tip">{{ t.popup.mediaTooltip }}</span>
           </span>
           <input
             id="pm-popup-media-mediaGray"
@@ -141,7 +143,7 @@
         </div>
         <p class="hint media-hint">{{ phase === 'new' ? t.media.hintNew : t.media.hintShort }}</p>
         <!-- 页面没加载好但配置已建档（0.8.16，#154）：说明而非错误（配置会在页面打开后生效） -->
-        <p v-if="mediaNotice" class="hint media-notice" data-testid="pm-popup-media-notice">{{ mediaNotice }}</p>
+        <p v-if="mediaNotice" class="hint media-notice" role="status" data-testid="pm-popup-media-notice">{{ mediaNotice }}</p>
         <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-popup-media-error">{{ mediaError }}</p>
       </div>
 
@@ -171,13 +173,13 @@
           <template v-if="hasProfile">
             <div class="switch-row">
               <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
-              <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" @keydown.capture="dismissInfoOnEsc">
+              <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" aria-describedby="pm-popup-tip-toggle" @keydown.capture="dismissInfoOnEsc">
                 <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
                   <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
                   <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                   <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
                 </svg>
-                <span role="tooltip" class="popup-info-tip">{{ t.popup.showToggleTooltip }}</span>
+                <span role="tooltip" id="pm-popup-tip-toggle" class="popup-info-tip">{{ t.popup.showToggleTooltip }}</span>
               </span>
               <input
                 id="pm-popup-capsule"

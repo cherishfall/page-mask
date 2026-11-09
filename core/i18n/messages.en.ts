@@ -123,7 +123,7 @@ export const en: Messages = {
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
     cardSwitchHintNew: 'Once set up, a switch appears here.',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
-    mediaTooltip: 'Once gray: same place, still readable, links still work. Autoplaying videos pause; clicking a video lets that one play.',
+    mediaTooltip: 'Once gray: same place, still readable, links still work. Autoplaying videos pause; click a video to watch it.',
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
     mediaNotReady: 'This page hasn’t finished loading. Once it’s open, pictures and videos turn gray automatically.',
     coverPage: 'Cover this page',
@@ -265,7 +265,7 @@ export const en: Messages = {
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
     toggleOpacityError: "Couldn't save the opacity, please try again.",
-    toggleHint: 'Only how faint this button sits when idle. The button that appears on a covered page is unaffected — always clearly visible.',
+    toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:

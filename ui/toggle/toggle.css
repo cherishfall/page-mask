@@ -43,6 +43,9 @@
 }
 .pm-tg > button {
   touch-action: none;
+  /* 触屏点击的系统默认灰闪（tap highlight）关掉：按钮自带悬停 / 按下 / 选中底反馈，
+     系统灰闪叠在上面显脏（0.8.17 WIG 审查；有意的设置，不是漏写） */
+  -webkit-tap-highlight-color: transparent;
 }
 .pm-tg:hover,
 .pm-tg:focus-within,
