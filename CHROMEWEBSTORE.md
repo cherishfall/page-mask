@@ -7,8 +7,8 @@
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.15-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.8.15`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.15`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.16-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.8.16`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.16`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [x] 6 张截图与宣传图块已按 §8 重拍（0.8.10：胶囊 0.8.6–0.8.9 形态与状态、弹窗 0.8.10 卡片分组，`store-shots.mjs` 全量重生成）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -71,7 +71,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
-• 「图片和视频变灰」只是去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；CSS 背景图、iframe 内嵌播放器、canvas、内联 SVG 不变灰；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
+• 「图片和视频变灰」只是去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、canvas、内联 SVG；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
 • 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
 • 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；iframe 和 shadow DOM 里的元素暂时无法选择
 • 反馈与支持：https://github.com/cherishfall/page-mask/issues
@@ -115,7 +115,7 @@ PRIVACY & PERMISSIONS
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
-• "Turn pictures & videos gray" only removes the color: image and video requests still happen, so this is neither a data saver nor an ad blocker. CSS background images, embedded players inside iframes, canvas and inline SVG are not grayed; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
+• "Turn pictures & videos gray" only removes the color: image and video requests still happen, so this is neither a data saver nor an ad blocker. Since 0.8.16, content images drawn as CSS background images turn gray as well; still not grayed: embedded players inside iframes, canvas and inline SVG; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
 • The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
 • Doesn't run on browser pages, local files or the Chrome Web Store; elements inside iframes/shadow DOM can't be picked yet
 • Support: https://github.com/cherishfall/page-mask/issues
@@ -180,6 +180,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.8.16 | 2026-11-10 | 观感批次（#152–#155）：悬浮按钮开启态改「墨色填实图标 + 淡灰选中底」（指示条退场）；弹窗松间距（8/12px）、说明砍短 + ⓘ 信息标、辅助行分割线退场、底部入口改文字链接、「收起内容」退居次按钮；灰度覆盖 CSS 背景图内容（书封类站点实测生效）+ 未加载好的页面上开灰度照常建档；全量截图审查修掉一批文案与可点性问题。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.15 | 2026-11-10 | 界面批次按真机反馈收口（#148 / #149 / #150）：弹窗重建为四块卡（与悬浮按钮四段一一对应，两颗编辑入口并排且不再置灰，「遮住这一页」成卡并说明临时性，帮助入口挪到标题右侧）；悬浮按钮开启态去掉整颗墨底反白，改中性底 + 强调色图标 + 底部 2px 指示条，补 150ms 颜色过渡；设置面板 720→480px 并新增「收起 / 展开」，收起后页面可直接点选。同批文案专项（#151）：叫法统一、中英对齐、内部名词退场。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.14 | 2026-11-09 | 会话保留边界收口（#144）：删除设置后清掉会话标记（空配置回来不再莫名冒出悬浮按钮）；弹窗里把「悬浮按钮」由关拨到开即视为明确要求，页面挂出按钮。两处偶发变红的测试断言修正。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.13 | 2026-11-09 | 修复（#143）：只开灰度的网站上，关掉灰度后遮住整页再恢复，悬浮按钮会消失——会话保留判据改为「本页挂出过」而非「此刻在场」（遮住与向导会临时收起按钮，返回时挂回）。功能与权限不变。详见 `CHANGELOG.md` |
@@ -234,7 +235,7 @@ Test steps (no login needed):
 ## 9. 已知限制（写给审核员，也写给用户）
 
 - 界面语言默认跟随浏览器（简体中文 / English 两套文案），可在插件设置里切换。
-- 「图片和视频变灰」只去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 不变灰；`<audio>` 与一切声音不参与。
+- 「图片和视频变灰」只去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、`<canvas>`、内联 SVG；`<audio>` 与一切声音不参与。
 - 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响。
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
 - iframe 与 shadow DOM 内部的元素暂时无法点选。

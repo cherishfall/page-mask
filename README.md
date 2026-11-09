@@ -90,7 +90,7 @@
 ### 已知限制
 
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
-- 「图片和视频变灰」只是**去掉颜色**：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具。CSS 背景图、iframe 内嵌播放器、`<canvas>`、内联 SVG 不变灰；`<audio>` 与一切声音不参与。「点击视频放行」按最近一次点击位置判断，在个别播放器结构特殊的站点可能需要直接点视频本体
+- 「图片和视频变灰」只是**去掉颜色**：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具。0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、`<canvas>`、内联 SVG；`<audio>` 与一切声音不参与。「点击视频放行」按最近一次点击位置判断，在个别播放器结构特殊的站点可能需要直接点视频本体
 - 幕布遮住时会把当前标签页连声音一起按住，恢复（或刷新、离开页面）时声音跟着回来；你自己用 Chrome 右键或播放器静音的不受影响
 - iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
 - 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
@@ -204,7 +204,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 ### Known limitations
 
 - Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
-- "Turn pictures & videos gray" only removes **the color**: image and video requests still happen, so this is neither a data saver nor an ad blocker. CSS background images, embedded players inside iframes, `<canvas>` and inline SVG are not grayed; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on sites with unusual player structures you may need to click the video itself
+- "Turn pictures & videos gray" only removes **the color**: image and video requests still happen, so this is neither a data saver nor an ad blocker. Since 0.8.16, content images drawn as CSS background images (book covers and the like) turn gray as well; still not grayed: embedded players inside iframes, `<canvas>` and inline SVG; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on sites with unusual player structures you may need to click the video itself
 - Covering the page also holds that tab's sound; uncovering, reloading or leaving the page brings it back. A mute you set yourself (Chrome's "Mute site" or the player) is not touched
 - Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
 - Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them

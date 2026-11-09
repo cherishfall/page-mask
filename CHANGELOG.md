@@ -5,6 +5,45 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.16] - 2026-11-10
+
+按真机反馈收口观感：悬浮按钮开启态去掉指示条与强调色、弹窗松开间距并砍短文字、灰度补上背景图与「没加载好的页面」两个缺口，设计文档同步审计；发版前全量截图审查又修掉一批文案与可点性问题。功能与权限不变。
+
+### 中文
+
+#### 改动
+
+- **悬浮按钮开启态重做（#152）**：0.8.15 的「强调色图标 + 分段底部 2px 指示条」退场——指示条紧贴胶囊边框，看着像两道重复的线；改成图标开关的通行做法（Material 3 图标按钮 / Carbon 工具栏选中态 / iOS 控制中心同路）：填实图标换墨色、分段铺一层淡灰选中底，「开」靠形状（填实 vs 描边）与墨色浓淡两个信号辨认，不再依赖颜色；悬停 / 按下用一层更深的透明薄层表达，状态切换保留 150ms 过渡
+- **弹窗观感（#153）**：组件间距 4→8px、卡片内边距 4→12px，把 0.8.15 为英文高度红线压掉的呼吸感还回来；说明文字砍短——已设置网站的卡头不再有说明行，灰度卡、遮住卡、悬浮按钮行的说明各收成一句短话，被砍掉的细节（黑白但可读可点、自动播放的视频会暂停、快捷键照常可用）移进两个 ⓘ 信息标，鼠标悬停或键盘聚焦时浮出、Esc 撤下；删除悬浮按钮行上方的独立分割线；底部「全部网站设置」「插件设置」改回文字链接（muted + 下划线），不再占按钮的视觉档；「标题和图标」「收起内容」两颗入口同为次操作档——已设置网站里「收起内容」不再独占实心蓝主按钮（待授权网站的「允许访问」仍是实心）
+- **灰度补两个缺口（#154）**：① 书封 / 封面这类用 CSS 背景图画的内容图现在一并变灰（多抓鱼实测：首页 18 个背景图元素全部变灰，≤32px 小图标照旧豁免）——0.8.15 及之前这类站点等于没开；② 页面没加载好时（比如网络代理抖动出现的 Chrome 错误页）打开灰度不再失败：设置照常保存，弹窗改为一句「这个页面还没加载好。打开之后，图片和视频会自动变黑白」，等页面真正打开灰度自动生效——0.8.15 及之前这种场景只会留下「没能在这个页面上启动」
+
+#### 修复
+
+- 灰度在多抓鱼等「封面走 CSS 背景图」的站点上不生效（根因：纯 img/video 选择器盖不住背景图，本版由内容脚本扫描打标）
+- 在没加载好的页面上打开灰度，设置没能保存、灰度永远开不上（根因：Chrome 错误页拒绝脚本注入，配置写入被一并跳过）
+
+#### 修复（发版审查，0.8.16 收口前）
+
+- 弹窗顶部的站点名不带端口，和「全部网站设置」列表里的同一个网站对不上号（现在与列表、悬浮按钮用同一套展示名规则）
+- 同一个「图片和视频变灰」在浮层说明里被写成「变成黑白」：全项目统一「变灰」的说法（弹窗 ⓘ 浮层、站点设置页说明、欢迎页，中英同步）
+- 站点设置页的提示句引用「原样」「按设置」这些要先学的状态名，改成「上面的开关关着 / 打开时」
+- 「留空就用『阅读』——标题不能设成空白」读起来自相矛盾，重写成一句连贯的话（向导、站点设置页、插件设置页三处同源）
+- 站点设置页「恢复网站原来的标题和图标」看不出能点，补下划线；清单里的序号徽章改成和页面号码牌同一个颜色
+- 悬浮按钮选中态的悬停反馈太弱（和选中底几乎一个颜色），加深一档
+
+### English
+
+#### Changed
+
+- **Floating button's on state redesigned (#152)**: 0.8.15's accent icon + 2px bottom rule are gone — the rule sat flush against the capsule border and read as a doubled line. The state now follows the common icon-toggle pattern (Material 3 icon button, Carbon selected toolbar icon, iOS Control Center): the filled icon turns ink, the segment gets a quiet gray selected fill, and "on" is carried by shape (filled vs outline) plus ink weight instead of color. Hover and press deepen a translucent state layer; the 150ms transition stays
+- **Popup made breathable (#153)**: component spacing 4→8px, card padding 4→12px, giving back the air 0.8.15 traded away for the English height limit. Copy is halved — the set-up site's mask card no longer has a hint line, and the gray / cover / floating-button hints are each one short sentence; the details that were cut (black-and-white but readable and clickable, autoplaying videos pause, shortcuts keep working) moved into two ⓘ info tags that appear on hover or keyboard focus and dismiss with Esc; the standalone divider above the floating-button row is removed; the two footer entries are text links again (muted + underline) instead of buttons; “Title & icon” and “Hide items” are equal secondary buttons — “Hide items” no longer holds the only solid primary (a pending site's “Allow access” still does)
+- **Gray closes two gaps (#154)**: ① content images drawn as CSS background images (book covers and the like) now turn gray too — on such sites the switch used to do nothing; ② turning gray on from a page that hasn't finished loading (say, a Chrome error page after a proxy hiccup) no longer fails: the setting is saved, the popup explains “once the page is open, pictures and videos turn gray automatically”, and it takes effect without another toggle
+
+#### Fixed
+
+- Gray had no effect on sites like duozhuayu whose covers are CSS background images (root cause: an img/video selector can't reach background images; this release marks them via the content script)
+- Turning gray on from an error page silently failed to save the setting (root cause: script injection is refused on Chrome error pages, skipping the profile write)
+
 ## [0.8.15] - 2026-11-10
 
 按真机反馈重做弹窗、悬浮按钮与设置面板的外观和排布，并做一次全界面文案专项。功能与权限不变。
