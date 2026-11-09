@@ -94,6 +94,7 @@
 - **采纳用户方案**：标题栏右侧一行 12px 文字链接，左「PageMask」右「重看插件介绍」。320px 弹窗中英文都放得下（中文 6 字约 72px、英文 "See the intro again" 约 108px，加标题仍不足 240px）。
 - 命中区用 padding 垫到 ≥24；`prefers-reduced-motion` 之外给一个极轻的 hover 下划线变化即可，不做动效。
 - 欢迎页第 2 步是 `inert + aria-hidden` 的真实组件预览，会跟着显示一个「重看插件介绍」指向介绍页自己——给 `PopupBody` 加一个 `preview` 开关，预览态隐藏这个链接；`tests/onboarding-sync.test.ts` 的守门断言是读源码字符串，仍成立。
+- **落地时改了文案**（0.8.15 #148 / #151）：中文「重看插件介绍」→「查看使用说明」，英文 "See the intro again" → "View the guide"。「插件介绍」不是登记叫法，英文那句也超出「动作 + 对象」的写法；`popup.replayIntroAria` 另给读屏全称「查看 PageMask 使用说明」。上面按原文宽度做的估算仍成立（新文案更短）。
 
 ### 5. 蓝色实心主按钮
 
