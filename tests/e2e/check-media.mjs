@@ -26,6 +26,7 @@ import {
   patchSettings,
   setProfile,
   sendToBackground,
+  sendToTab,
   tabIdOf,
 } from './lib/extension.mjs';
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
@@ -313,6 +314,37 @@ async function main() {
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     check(true, '弹窗重开灰度：胶囊挂回来');
     await popupRe.close().catch(() => {});
+
+    // ===================== 会话保留跨幕布与向导（0.8.13，#143） =====================
+    console.log('\n--- 灰-only：关灰度后遮住/恢复、进向导/退出，胶囊都在（#143） ---');
+    await page.bringToFront();
+    // 复现真机路径：先把灰度关掉（配置全空、胶囊按 #135 保留）
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '关掉灰度（配置全空）');
+    check(!!(await page.$(TOGGLE)), '前置：胶囊按会话规则保留（#135）');
+    // 遮住：胶囊合法卸掉（#50）；恢复：胶囊要挂回来——0.8.12 的「只看在场」实现在这里丢失
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
+    await page.waitForSelector('pagemask-curtain', { timeout: 8000 });
+    check(!(await page.$(TOGGLE)), '遮住时胶囊卸掉（一个页面只有一套恢复入口，#50）');
+    await clickInShadow(page, 'pagemask-curtain', '[data-testid="pm-curtain-restore"]');
+    await waitFor(page, '幕布撤掉', (h) => !document.querySelector(h), ['pagemask-curtain'], { timeout: 8000 });
+    check(!!(await page.$(TOGGLE)), '恢复后胶囊挂回来：会话保留跨幕布存活（#143）');
+    // 向导同族场景：进向导卸胶囊、退出要挂回来
+    const wizTabId = await tabIdOf(control, `${ORIGIN}/*`);
+    await sendToTab(control, wizTabId, { t: 'openWizard', mode: 'editContent' });
+    await page.waitForSelector('pagemask-wizard', { timeout: 8000 });
+    check(!(await page.$(TOGGLE)), '向导开着时胶囊卸掉');
+    await page.evaluate(() => {
+      const sr = document.querySelector('pagemask-wizard')?.shadowRoot;
+      sr?.querySelector('[data-testid="pm-wiz-exit"]')?.click();
+    });
+    // 有未保存改动会先弹确认框（无改动直接退）：两条路都兼容
+    await page.evaluate(() => {
+      const sr = document.querySelector('pagemask-wizard')?.shadowRoot;
+      sr?.querySelector('[data-testid="pm-wiz-exit-yes"]')?.click();
+    });
+    await waitFor(page, '向导退出', (h) => !document.querySelector(h), ['pagemask-wizard'], { timeout: 8000 });
+    check(!!(await page.$(TOGGLE)), '退出向导后胶囊挂回来（#143）');
   } finally {
     await ext.cleanup();
     await srv.close();

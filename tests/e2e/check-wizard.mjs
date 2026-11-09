@@ -1349,8 +1349,10 @@ async function main() {
       `恢复后配置回到「没设置过」（${JSON.stringify(afterReset && { title: afterReset.disguisedTitle, icon: afterReset.icon, titleIconSet: afterReset.titleIconSet })}）`,
     );
     check(afterReset?.hideRules.length === 0, '恢复不产生也不删除收起规则');
-    await waitFor(pageOnly, '什么都没设置后胶囊也撤掉', (h) => !document.querySelector(h), [TOGGLE]);
-    check(true, '恢复后胶囊随之消失（页面完全回到原样）');
+    // 0.8.13（#143）：恢复标题让配置全空，但胶囊本页挂出过——会话保留，页面上留个入口
+    // （与 check-toggle 的「中途清空配置：胶囊不拆」同一语义；「删除这个网站的设置」才清场）
+    await waitFor(pageOnly, '恢复后胶囊仍在（会话保留）', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
+    check(true, '恢复后胶囊保留：页面回到原样但入口留着（#143）');
     await pageOnly.close();
 
 

@@ -5,6 +5,24 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.13] - 2026-11-09
+
+修好一个真机发现的毛病：只开了灰度的网站上，关掉灰度后遮住整页、再恢复，悬浮按钮不见了。
+
+### 中文
+
+#### 修复
+
+- **遮住/恢复之后悬浮按钮还在**：会话保留（按钮在本次浏览期间不因设置清空而消失）现在按「这一页挂出过」判断，而不是「此刻按钮还在不在」——遮住整页与进设置向导都会临时收起按钮，按新判断它们返回时按钮会挂回来
+- 同族场景一并修好：关掉灰度后进设置向导、再退出，按钮同样会挂回来
+
+### English
+
+#### Fixed
+
+- **The floating button is back after covering and restoring**: the keep-alive rule now asks “did this page ever show it” instead of “is it on screen right now” — covering the page and opening the wizard both take the button down for a moment, and it now comes back when they close
+- The same fix covers the sibling case: unchecking gray, opening the wizard and closing it again keeps the button in place
+
 ## [0.8.12] - 2026-11-09
 
 夜间质量循环的第二轮：独立代码审查、全界面视觉巡检与界面准则审查收口，功能不变。

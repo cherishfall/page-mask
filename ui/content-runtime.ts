@@ -236,20 +236,27 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     );
   }
 
+  /** 这页的胶囊挂出过没有（0.8.13，#143）：页面生命周期的标记，挂载成功即置位。
+   *  会话保留（#135）看它而不是看 toggleHost——遮住整页（#50）与进向导都会**合法地**
+   *  卸掉胶囊，若只看在场与否，返回时配置全空就把胶囊拒之门外（真机反馈：关灰度 →
+   *  遮住 → 恢复后胶囊消失） */
+  let toggleShownThisPage = false;
+
   function mountToggle(): void {
     // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
     if (curtain.active) return;
-    // 这个网站选择了「不显示胶囊」（#111）：直接卸掉，其余功能（收起规则、标题图标、快捷键）不受影响
+    // 这个网站选择了「不显示胶囊」（#111）：直接卸掉，其余功能（收起规则、标题图标、快捷键）不受影响。
+    // 显式的隐藏 / 重新显示视为重新要求：再打开时即使配置全空也挂（本页挂出过）
     if (profile?.capsuleHidden === true) {
       unmountToggle();
       return;
     }
     // 按「有没有设置」决定出不出（#67）：四项全空才不挂。
-    // 但判据只在页面加载时决定胶囊生死（#135）：这页已经挂出来的胶囊不拆——
+    // 但判据只在页面加载时决定胶囊生死（#135）：这页挂出过就保留 / 恢复——
     // 会话中间在胶囊/弹窗上关掉最后一项设置（比如灰-only 站点关灰度），
-    // 若当场拆掉，页面上就没有任何入口能把它找回来；刷新后按判据该藏就藏。
-    if (!profile || !hasSiteSettings(profile)) {
-      if (toggleHost) syncToggleState();
+    // 或从幕布 / 向导返回（它们会临时卸掉胶囊），都不能让页面失去唯一入口；
+    // 刷新后按判据该藏就藏（标记随文档生命周期走）。
+    if ((!profile || !hasSiteSettings(profile)) && !toggleShownThisPage) {
       return;
     }
     syncToggleState();
@@ -280,6 +287,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         }),
     });
     toggleApp.mount(toggleHost.root);
+    toggleShownThisPage = true;
   }
 
   function unmountToggle(): void {

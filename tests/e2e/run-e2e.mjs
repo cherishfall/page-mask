@@ -449,11 +449,18 @@ async function main() {
 
     const oPage = await browser.newPage();
     await oPage.goto(`${ext.extOrigin}/onboarding.html`, { waitUntil: 'load' });
-    await oPage.waitForSelector('.step', { timeout: 5000 });
-    check((await oPage.$$('.step')).length === 3, '引导页 3 步（固定到工具栏 / 三件事 / 小按钮，#103）');
+    await oPage.waitForSelector('[data-testid="onboard-card"]', { timeout: 5000 });
+    check(
+      (await oPage.$$eval('.dots i', (els) => els.length)) === 3,
+      '引导页 3 步（固定到工具栏 / 弹窗四件事 / 悬浮按钮，0.8.11 分步单屏 #139）',
+    );
     const next = await oPage.waitForSelector('xpath/.//button[normalize-space()="下一步"]', { timeout: 3000 });
     await next.click();
-    await waitFor(oPage, '引导页切到第 2 步', () => document.querySelector('.step.active .num')?.textContent === '2');
+    await waitFor(
+      oPage,
+      '引导页切到第 2 步',
+      () => [...(document.querySelectorAll('.dots i') ?? [])].findIndex((e) => e.className.includes('on')) === 1,
+    );
     check(true, '引导页步骤可切换');
     await oPage.close();
 
