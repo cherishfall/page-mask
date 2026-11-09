@@ -473,6 +473,9 @@
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
 }
+/* 清单序号与页面上的号码牌同一个「第 N 项」一个样子（0.8.16 发版审查）：都用 warning 底。
+   页面号牌（.pm-wiz-badge）在任意网页内容上要够显眼才选了 warning 底；清单里的徽章
+   跟它同色，用户扫一眼就能把「页面上的 ②」对到「清单第 2 行」（格式塔相似） */
 .pm-wiz-num {
   flex: none;
   display: inline-grid;
@@ -480,8 +483,8 @@
   inline-size: 20px;
   block-size: 20px;
   border-radius: var(--pm-radius-pill);
-  background: var(--pm-fg);
-  color: var(--pm-bg);
+  background: var(--pm-warning);
+  color: var(--pm-on-warning);
   font-size: var(--pm-font-size-caption);
   font-weight: var(--pm-font-weight-strong);
 }

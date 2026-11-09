@@ -17,7 +17,7 @@ import type { Messages } from './messages.zh';
  * The "a title can't be blank" caveat used to be copy-pasted into three keys (0.8.15 #151).
  * One source of truth; declared outside the object because an object literal can't reference itself.
  */
-const titleBlankHint = 'A title can’t be blank, or Chrome shows the address instead.';
+const titleBlankHint = 'It never stays truly empty — Chrome would show the address instead.';
 
 export const en: Messages = {
   common: {
@@ -90,9 +90,9 @@ export const en: Messages = {
   media: {
     heading: 'Pictures & videos',
     mediaGray: 'Turn pictures & videos gray',
-    mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
+    mediaGrayHint: 'Pictures and videos turn gray: same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
-    hint: 'This switch works on its own, independent of “Your settings”: switching to “As is” restores hidden items and the tab title and icon, while pictures and videos stay gray. Images still load in the background — this only removes the color.',
+    hint: 'This switch works on its own — the switch above doesn’t control it: when the switch above is off, hidden items and the tab title and icon return to normal while pictures and videos stay gray. Images still load in the background — this only removes the color.',
     hintShort: 'Its own setting — the switch above doesn’t affect it.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on first asks you to allow access to this site.',
@@ -123,7 +123,7 @@ export const en: Messages = {
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
     cardSwitchHintNew: 'Once set up, a switch appears here.',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
-    mediaTooltip: 'Pictures and videos turn black & white: same place, still readable, links still work. Autoplaying videos pause; clicking a video lets that one play.',
+    mediaTooltip: 'Once gray: same place, still readable, links still work. Autoplaying videos pause; clicking a video lets that one play.',
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
     mediaNotReady: 'This page hasn’t finished loading. Once it’s open, pictures and videos turn gray automatically.',
     coverPage: 'Cover this page',
@@ -166,7 +166,7 @@ export const en: Messages = {
     appSub: 'These are the sites you added. Open one to change its tab title and icon, or to see its hidden items.',
 
     sitesTitle: 'All site settings',
-    sitesHint: 'Pick a site to open its settings. PageMask never touches sites you didn’t add.',
+    sitesHint: 'PageMask never touches sites you didn’t add.',
     /** Row-end "more" button (#113): accessible name carries the host so rows never blur together */
     moreActions: (label: string) => `More actions: ${label}`,
     sitesEmpty: 'No sites yet. Open a site you want to set up and click the PageMask icon in the toolbar to start.',
@@ -185,14 +185,14 @@ export const en: Messages = {
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
     titleHeading: 'Tab title',
-    titleIntro: 'Once saved, this site’s tab shows this text. With the switch on “As is”, the site’s own title comes back.',
+    titleIntro: 'Once saved, this site’s tab shows this text. When the switch above is off, the site’s own title comes back.',
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title.',
     titleFootnote: (fallback: string) =>
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'When the “Your settings” switch at the top is on, this site’s tab uses the icon you pick here.',
+    iconIntro: 'When the switch above is on, this site’s tab uses the icon you pick here.',
     iconSite: "The site's own icon",
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -265,7 +265,7 @@ export const en: Messages = {
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
     toggleOpacityError: "Couldn't save the opacity, please try again.",
-    toggleHint: 'Only the floating button. The “Restore” button on a covered page stays as it is.',
+    toggleHint: 'Only how faint this button sits when idle. The button that appears on a covered page is unaffected — always clearly visible.',
 
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:
@@ -335,7 +335,7 @@ export const en: Messages = {
         features: [
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Title & icon: give the tab a name and icon of your choosing.',
-          'Turn pictures & videos gray: pictures and videos across the page turn black & white — same place, still readable. This switch works on its own; turn it on or off any time.',
+          'Turn pictures & videos gray: pictures and videos across the page turn gray — same place, still readable. This switch works on its own; turn it on or off any time.',
           'Cover this page: one click covers the page for now; click “Restore” or press the shortcut to bring it back. Reloading or leaving the page also restores it, without changing your settings.',
         ],
       },

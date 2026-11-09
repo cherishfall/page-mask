@@ -377,9 +377,15 @@ async function resetTitleIcon() {
   margin: var(--pm-space-2) 0;
 }
 
-/* 回退出口（#99）：不是卡片标题下的字段，单独一行，和上下两张卡都留出距离 */
+/* 回退出口（#99）：不是卡片标题下的字段，单独一行，和上下两张卡都留出距离。
+   0.8.16 发版审查：.ghost 无底无边、颜色与旁边说明同档，扫一眼分不清哪半句能点——
+   补下划线（与向导「标题和图标」里的同一个入口同款，看得出能点） */
 .title-reset {
   margin: var(--pm-space-2) 0 var(--pm-space-3);
+}
+.title-reset .ghost {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .title-reset .hint {
   margin: 0;

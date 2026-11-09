@@ -58,6 +58,7 @@ import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
 import { originPattern } from '@/core/registration';
+import { siteLabelOf } from '@/entrypoints/management/site';
 import type { SiteProfile } from '@/core/types';
 import type {
   CurtainCoverMsg,
@@ -99,7 +100,9 @@ const mediaToggles = computed(() => ({
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
 const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
-const host = computed(() => (origin.value ? new URL(origin.value).hostname.replace(/^www\./, '') : ''));
+// 站点展示名与「全部网站设置」列表、悬浮按钮同一套规则（siteLabelOf：去 www、中文域名转回
+// Unicode、非默认端口带上）——0.8.16 发版审查：弹窗只显 hostname 时，本地端口站点在列表里对不上号
+const host = computed(() => (origin.value ? siteLabelOf(origin.value) : ''));
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
 /** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
 const ruleSummary = computed(() => {
