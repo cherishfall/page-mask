@@ -37,32 +37,31 @@ const tid = (id) => `[data-testid="${id}"]`;
 const TOGGLE = 'pagemask-toggle';
 
 /**
- * 状态过渡落定的等待条件（#149）：交给项目 waitFor 在页面内轮询「会因过渡而变的观测量」，
- * 取代固定 250ms sleep。DEVLOG 0.8.14「断言的等待条件要落在会因刷新而变的观测量上」——
- * 固定 sleep 在慢机器 / CDP 抖动下仍可能读到 rgba(...,0.x) / -1.2px 这类插值中间态
- * （本票第一版即因此失败）。每个目标按钮须同时满足：
- *   - color 已等于探针实测的目标色（开 = --pm-accent / 关 = --pm-fg-muted，不锁死 RGB，随主题变）；
- *   - box-shadow 不再是插值中间态：开 = 含实算强调色的 inset 指示条（插值是 rgba(...,0.x)，
- *     不含 rgb(...) 实色）、关 = 'none'（只在过渡终点出现）；
- *   - 悬停底色已退回透明（开/关容器都中性、不再整颗填实）。
+ * 状态过渡落定的等待条件（#149；0.8.16 #152 改选中底口径）：交给项目 waitFor 在页面内轮询
+ * 「会因过渡而变的观测量」，取代固定 250ms sleep。DEVLOG 0.8.14「断言的等待条件要落在会因
+ * 刷新而变的观测量上」——固定 sleep 在慢机器 / CDP 抖动下仍可能读到 rgba(...,0.x) /
+ * -1.2px 这类插值中间态（0.8.15 票第一版即因此失败）。每个目标按钮须同时满足：
+ *   - color 已等于探针实测的目标色（开 = --pm-fg 墨色 / 关 = --pm-fg-muted，不锁死 RGB，随主题变）；
+ *   - background 已等于探针实测的目标底（开 = --pm-bg-selected 选中底 / 关 = 透明）；
+ *   - box-shadow === 'none'（state layer 只在悬停 / 按下出现，静止为 none）。
  * 目标色在 shadow root 内用探针实测（:host 语义变量），与紧随其后的计算样式断言同一个观测量。
  */
 const toggleSettled = (h, ids, on) => {
   const sr = document.querySelector(h)?.shadowRoot;
   if (!sr) return false;
   const probe = document.createElement('span');
-  probe.style.color = on ? 'var(--pm-accent)' : 'var(--pm-fg-muted)';
+  probe.style.color = on ? 'var(--pm-fg)' : 'var(--pm-fg-muted)';
+  if (on) probe.style.backgroundColor = 'var(--pm-bg-selected)';
   sr.appendChild(probe);
-  const target = getComputedStyle(probe).color;
+  const pcs = getComputedStyle(probe);
+  const target = pcs.color;
+  const targetBg = pcs.backgroundColor;
   probe.remove();
   return ids.every((id) => {
     const b = sr.querySelector(`[data-testid="${id}"]`);
     if (!b) return false;
     const cs = getComputedStyle(b);
-    const shadowSettled = on
-      ? cs.boxShadow !== 'none' && cs.boxShadow.includes(target)
-      : cs.boxShadow === 'none';
-    return cs.color === target && shadowSettled && cs.backgroundColor === 'rgba(0, 0, 0, 0)';
+    return cs.color === target && cs.backgroundColor === targetBg && cs.boxShadow === 'none';
   });
 };
 
@@ -187,55 +186,59 @@ async function main() {
     // ===================== 胶囊媒体钮 =====================
     console.log('\n--- 悬浮按钮「媒体」钮：状态与写入 ---');
     await page.bringToFront();
-    await page.mouse.move(300, 300); // 指针离开媒体钮：开态 hover 用浅底反馈，别把它读进状态断言（#149）
-    await waitFor(page, '媒体钮开态计算样式落定（color / 指示条不再插值，#149）', toggleSettled, [TOGGLE, ['pm-toggle-media'], true], { timeout: 8000 });
+    await page.mouse.move(300, 300); // 指针离开媒体钮：开态 hover 才有 state layer，别把它读进状态断言（#152）
+    await waitFor(page, '媒体钮开态计算样式落定（color / 选中底不再插值，#152）', toggleSettled, [TOGGLE, ['pm-toggle-media'], true], { timeout: 8000 });
     const btnState = await page.evaluate((h) => {
       const sr = document.querySelector(h)?.shadowRoot;
       const b = sr?.querySelector('[data-testid="pm-toggle-media"]');
       const svg = b?.querySelector('svg');
       const content = svg?.querySelector('.pm-media-content');
       const cs = b ? getComputedStyle(b) : null;
-      // 实测 --pm-accent 当前主题下的计算色（探针放进 shadow root 才能解析 :host 上的变量）
+      // 实测 --pm-fg / --pm-bg-selected 当前主题下的计算色（探针放进 shadow root 才能解析 :host 上的变量）
       const probe = document.createElement('span');
-      probe.style.color = 'var(--pm-accent)';
+      probe.style.color = 'var(--pm-fg)';
+      probe.style.backgroundColor = 'var(--pm-bg-selected)';
       sr?.appendChild(probe);
-      const accent = getComputedStyle(probe).color;
+      const pcs = getComputedStyle(probe);
+      const fg = pcs.color;
+      const selectedBg = pcs.backgroundColor;
       probe.remove();
       return {
         pressed: b?.getAttribute('aria-pressed'),
         state: svg?.getAttribute('data-state'),
         bg: cs ? cs.backgroundColor : '',
-        accent,
-        fg: svg ? getComputedStyle(svg).color : '',
+        selectedBg,
+        targetFg: fg,
+        iconColor: svg ? getComputedStyle(svg).color : '',
         contentFill: content ? getComputedStyle(content).fill : '',
         boxShadow: cs ? cs.boxShadow : '',
       };
     }, TOGGLE);
     check(btnState.pressed === 'true' && btnState.state === 'on', `弹窗拨过的状态在媒体钮上显示开（${JSON.stringify(btnState)}）`);
-    // 0.8.15（#149）：容器保持中性、不再整颗墨底反白；三个独立信号 = 强调色 + 内容填实 + 底部指示条
+    // 0.8.16（#152）：开态 = 淡灰选中底 + 墨色填实图标；指示条（#149）已按用户反馈退场
     const INK_BG = 'rgb(31, 35, 41)'; // 0.8.9 墨底（浅色 --pm-fg），用来锁「不再整颗填实」
     check(
-      btnState.bg !== INK_BG && btnState.bg === 'rgba(0, 0, 0, 0)',
-      `开态容器仍是中性透明底、不再整颗墨底反白（bg=${btnState.bg}，#149）`,
+      btnState.bg !== INK_BG && btnState.bg === btnState.selectedBg,
+      `开态是淡灰选中底、不是墨底也不是透明（bg=${btnState.bg}，#152）`,
     );
     check(
-      btnState.boxShadow !== 'none' && btnState.boxShadow.includes(btnState.accent),
-      `开态有非颜色状态指示物：底部 2px --pm-accent 指示条（boxShadow=${btnState.boxShadow}，强调色=${btnState.accent}，#149）`,
+      btnState.boxShadow === 'none',
+      `开态静止时没有指示条 / state layer（boxShadow=${btnState.boxShadow}，#152）`,
     );
     check(
-      btnState.fg === btnState.accent,
-      `开态图标色 = --pm-accent 实算值（图标=${btnState.fg}，#149）`,
+      btnState.iconColor === btnState.targetFg,
+      `开态图标色 = --pm-fg 实算值（图标=${btnState.iconColor}，#152）`,
     );
     check(
       btnState.contentFill !== 'none',
-      `开态图标内容填实、与关态描边不同形（fill=${btnState.contentFill}，#149）`,
+      `开态图标内容填实、与关态描边不同形（fill=${btnState.contentFill}，#152）`,
     );
 
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '媒体钮点一下写回存储（关）');
     await waitFor(page, '关掉后大图恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await page.mouse.move(300, 300); // 指针离开媒体钮：别把悬停底色读进「关闭态」断言（#137 / #149）
-    await waitFor(page, '媒体钮关态计算样式落定（指示条消失 / color 回 muted，#149）', toggleSettled, [TOGGLE, ['pm-toggle-media'], false], { timeout: 8000 });
+    await waitFor(page, '媒体钮关态计算样式落定（底色回透明 / color 回 muted，#152）', toggleSettled, [TOGGLE, ['pm-toggle-media'], false], { timeout: 8000 });
     const btnOff = await page.evaluate((h) => {
       const b = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-toggle-media"]');
       const svg = b?.querySelector('svg');
@@ -249,13 +252,13 @@ async function main() {
       };
     }, TOGGLE);
     check(btnOff.pressed === 'false' && btnOff.state === 'off', '按钮状态就地变成关（描边）');
-    check(btnOff.bg === 'rgba(0, 0, 0, 0)', `关闭态回到透明底，比开态更不显眼（bg=${btnOff.bg}，#137 / #149）`);
-    check(btnOff.boxShadow === 'none', `关闭态没有底部指示条（boxShadow=${btnOff.boxShadow}，#149）`);
-    // 两态可辨（0.8.15 #149）：颜色 + 形状 + 指示条，两态都实测计算样式，不放宽成永真
-    check(btnState.fg !== btnOff.fg, `开/关两态图标色不同（开 ${btnState.fg} / 关 ${btnOff.fg}，#149）`);
+    check(btnOff.bg === 'rgba(0, 0, 0, 0)', `关闭态回到透明底，比开态更不显眼（bg=${btnOff.bg}，#137 / #152）`);
+    check(btnOff.boxShadow === 'none', `关闭态没有 state layer（boxShadow=${btnOff.boxShadow}，#152）`);
+    // 两态可辨（0.8.16 #152）：颜色（墨 vs 灰）+ 形状（填实 vs 描边）+ 选中底，两态都实测计算样式
+    check(btnState.iconColor !== btnOff.fg, `开/关两态图标色不同（开 ${btnState.iconColor} / 关 ${btnOff.fg}，#152）`);
     check(
-      btnState.boxShadow !== 'none' && btnOff.boxShadow === 'none',
-      '开/关两态用「有无底部指示条」区分（非颜色状态指示物）',
+      btnState.bg === btnState.selectedBg && btnOff.bg === 'rgba(0, 0, 0, 0)',
+      '开/关两态用「有无选中底」区分（非颜色状态指示物，#152）',
     );
     // 开回来：后面的站点设置页/两态用例都以「开」为前提
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));

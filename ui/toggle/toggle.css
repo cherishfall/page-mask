@@ -84,15 +84,16 @@
   inline-size: 13px;
   block-size: 13px;
 }
-/* 填实态（0.8.15，#149）：身体填 currentColor（开态 = --pm-accent），眼缝描 --pm-bg 读出挖孔。
-   容器改回中性底后，挖孔透出的正是按钮身后的 --pm-bg，与弹窗
-   .popup-row-icon[data-state='on'] .pm-mask-eye 同源同态。
-   0.8.9 的「眼缝描 --pm-fg」是墨底时代写法；中性底上会出现「蓝色面具画黑眼缝」的脏效果，已退场 */
+/* 填实态（0.8.16，#152）：身体填 currentColor（开态 = --pm-fg 墨色），眼缝描选中底读出挖孔。
+   挖孔透出的正是图标身后的选中底（--pm-bg-selected），与弹窗
+   .popup-row-icon[data-state='on'] .pm-mask-eye 同源同态（弹窗的图标坐在卡片白底上，描 --pm-bg）。
+   0.8.9 的「眼缝描 --pm-fg」是墨底时代写法；0.8.15 描 --pm-bg 是中性底时代的写法，
+   选中底换上来之后一并跟着换 */
 .pm-tg-main-icon[data-state='on'] {
   fill: currentColor;
 }
 .pm-tg-main-icon[data-state='on'] .pm-mask-eye {
-  stroke: var(--pm-bg);
+  stroke: var(--pm-bg-selected);
 }
 
 /* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
@@ -155,31 +156,35 @@
   fill: currentColor;
 }
 
-/* ── 开启态（0.8.15，#149）：容器保持中性，三个独立信号表达「开」 ──
-   ① 颜色：图标 --pm-fg-muted → --pm-accent（浅 5.17:1 / 深 7.68:1，过 WCAG 1.4.11 状态 3:1）
-   ② 形状：图标内容填实 vs 关态描边（沿用上面 data-state='on' 的 fill 规则，不只靠颜色，1.4.1）
-   ③ 指示条：分段底部 2px --pm-accent，用 inset box-shadow 画——不改变布局盒尺寸
-      （胶囊几何被 check-toggle.mjs 锁死高 26 / 宽 96–106，绝不改 border 宽度或加 padding/margin）
-   容器不再整颗换墨底反白：M3 filled icon button / iOS 控制中心 / Ant CheckableTag 都把它归为
-   「高强调」，用在常驻设置钮上太扎眼（用户反馈）；WCAG 1.4.11 Figure 6 明确加粗边框 / 状态指示物
-   是合规路径（research-0.8.15-ui.md §二.6）。与弹窗开关 / 主按钮同色，实现「胶囊 ↔ 弹窗相互映衬」。
-   两颗开启态按钮（主按钮、媒体钮）共用这一条规则、一套外观。原注释「24px 下整颗换底是唯一稳定
-   满足 3:1 的位置」过强，已被调研推翻，此处一并作废 */
+/* ── 开启态（0.8.16，#152）：分段淡灰选中底 + 墨色填实图标 ──
+   0.8.15（#149）的三信号方案（强调色图标 + 分段底部 2px 指示条）被真机反馈推翻：
+   指示条与胶囊 1px 边框不重合，看起来像两道重复的线（HANDOFF §2 早已登记沿圆头被裁 7px、
+   两颗可见长度不一）；开启变蓝用户也不喜欢。改按图标开关的通行做法：
+   M3 icon button toggleable（未选中 = 描边图标无底；选中 = filled icon + secondaryContainer
+   淡色容器，不用 primary 强调色）、Carbon 工具栏图标选中态（layer-selected 淡灰底）、
+   iOS 控制中心（激活 = 色调底 + 填实图标）。
+   状态由两个独立信号承载，不靠颜色单独表达（WCAG 1.4.1）：① 形状——图标填实 vs 描边；
+   ② 墨色浓淡——图标 --pm-fg-muted → --pm-fg（浅 15.78:1 / 深 12.75:1，对选中底也有
+   12.01:1 / 9.67:1，过 1.4.11 的 3:1）；选中底（--pm-bg-selected，浅 #dde1e6 / 深 #303743）
+   是第三个辅助信号，让「开」在一瞥下就能认出来。
+   两颗开启态按钮（主按钮、媒体钮）共用这一条规则、一套外观 */
 .pm-tg-main[data-state='on'],
 .pm-tg-cover.pm-tg-media[data-state='on'] {
-  color: var(--pm-accent);
-  box-shadow: inset 0 -2px 0 var(--pm-accent);
+  color: var(--pm-fg);
+  background: var(--pm-bg-selected);
 }
-/* 五种状态（design-ui.md §四）：开启态 hover / active 用与关态同档的浅底反馈；
-   box-shadow 与 background 是不同属性、可共存，底部指示条不会被悬停底盖掉。
+/* 五种状态（design-ui.md §四）：开启态的悬停 / 按下用 M3 state layer 薄层加深一档
+   （box-shadow inset 9999px 全覆盖画法，不改布局盒尺寸——胶囊几何被 check-toggle.mjs
+   锁死高 26 / 宽 96–106，绝不改 border 宽度或加 padding/margin；也不动 background，
+   选中底在 hover / active 下保持可见）。
    键盘聚焦沿用文件末尾 :focus-visible 的 --pm-focus-ring；胶囊两颗钮都不禁用，第五态不适用 */
 .pm-tg-main[data-state='on']:hover,
 .pm-tg-cover.pm-tg-media[data-state='on']:hover {
-  background: var(--pm-bg-subtle);
+  box-shadow: inset 0 0 0 9999px var(--pm-state-hover);
 }
 .pm-tg-main[data-state='on']:active,
 .pm-tg-cover.pm-tg-media[data-state='on']:active {
-  background: var(--pm-bg-control-active);
+  box-shadow: inset 0 0 0 9999px var(--pm-state-press);
 }
 
 /* 状态过渡（0.8.15，#149）：150ms Carbon productive standard（= duration-moderate-01 /
@@ -220,8 +225,8 @@
   .pm-tg {
     opacity: 1 !important;
   }
-  /* 开态底部指示条（box-shadow）在此模式下失效：改用系统 Highlight / HighlightText 反色，
-     配合「图标填实 vs 描边」的形状信号，状态仍可辨、不靠颜色单独表达。
+  /* 选中底与 state layer 薄层（box-shadow）在此模式下都失效：改用系统 Highlight / HighlightText
+     反色，配合「图标填实 vs 描边」的形状信号，状态仍可辨、不靠颜色单独表达。
      带 .pm-tg 前缀把特异性抬到与 hover/active 规则同档，压过它们的浅底；
      不改 border 宽度 / padding / margin（胶囊几何被 E2E 锁死），也不碰 :focus-visible 焦点环 */
   .pm-tg .pm-tg-main[data-state='on'],
