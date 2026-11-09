@@ -15,12 +15,16 @@
  *   切回来压制照常
  * - 灰-only 建站（0.8.5，#134）：未配置站点的弹窗直接开灰度 = 授权 + 建 gray-only 配置 +
  *   休眠唤醒（胶囊挂载、灰度生效）
+ * - 背景图元素（0.8.16，#154）：书封式 CSS background-image 变灰、≤32px 背景小图标豁免
+ * - 未加载好的页面（0.8.16，#154）：Chrome 错误页上开灰度照常建档（pageNotReady），
+ *   弹窗给说明而非报错——推特的失败场景（代理抖动 → 错误页 → 开关永远开不上）
  *
- * 不测：请求是否被拦（「看起来变灰 ≠ 不加载」）、iframe 内嵌播放器、背景图。
+ * 不测：请求是否被拦（「看起来变灰 ≠ 不加载」）、iframe 内嵌播放器。
  */
 import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
 import {
   getProfile,
+  grantPermissions,
   launchExtension,
   openPopup,
   patchSettings,
@@ -74,9 +78,14 @@ const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><tit
   #big { display: block; width: 200px; height: 120px; }
   #icon { display: block; width: 16px; height: 16px; }
   #vid, #vid2 { display: block; width: 160px; height: 90px; background: #333; }
+  /* 背景图元素（0.8.16，#154）：书封式大封面要灰，小图标豁免（内容脚本打标记） */
+  #bgcover { display: block; width: 200px; height: 150px; background-image: url("${PICTURE}"); background-size: cover; }
+  #bgsign { display: inline-block; width: 24px; height: 24px; background-image: url("${PICTURE}"); }
 </style></head><body>
   <img id="big" src="${PICTURE}" alt="大图">
   <img id="icon" src="${PICTURE}" alt="按钮小图标">
+  <div id="bgcover" role="img" aria-label="背景图封面"></div>
+  <div id="bgsign"></div>
   <!-- 两个都不带 muted 初始标记：媒体层不写 muted，全程应保持 false -->
   <video id="vid"></video>
   <video id="vid2"></video>
@@ -92,10 +101,16 @@ const mediaState = (page) =>
     const big = document.querySelector('#big');
     const icon = document.querySelector('#icon');
     const vid = document.querySelector('#vid');
+    const bgcover = document.querySelector('#bgcover');
+    const bgsign = document.querySelector('#bgsign');
     return {
       bigFilter: getComputedStyle(big).filter,
       iconFilter: getComputedStyle(icon).filter,
       iconKept: icon.hasAttribute('data-pm-media-keep'),
+      bgFilter: getComputedStyle(bgcover).filter,
+      bgMarked: bgcover.hasAttribute('data-pm-media-bg'),
+      bgsignFilter: getComputedStyle(bgsign).filter,
+      bgsignKept: bgsign.hasAttribute('data-pm-media-keep'),
       videoMuted: vid.muted,
       videoPaused: vid.paused,
     };
@@ -117,6 +132,8 @@ async function main() {
   const ORIGIN = srv.origin;
   const HOST = new URL(ORIGIN).host;
   // extraPermissions:['tabs'] 只给测试拷贝：action.openPopup() 不授予 activeTab，popup 读网址需要它
+  // 127.0.0.1:9（discard 端口）必然连接失败，用来复现「Chrome 错误页」场景（#154）；
+  // revocable:false 下来源是必需权限、安装即授予，不需要 grantPermissions（它会重载扩展、换掉控制页）
   const ext = await launchExtension({ hostOrigins: [ORIGIN], extraPermissions: ['tabs'], revocable: false });
   const { browser, control, extOrigin } = ext;
   try {
@@ -164,9 +181,12 @@ async function main() {
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '弹窗拨「图片和视频变灰」写入存储');
     await waitFor(page, '大图变灰', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await waitFor(page, '小图标被豁免', () => document.querySelector('#icon').hasAttribute('data-pm-media-keep'), [], { timeout: 8000 });
+    await waitFor(page, '背景图元素被标记（#154）', () => document.querySelector('#bgcover').hasAttribute('data-pm-media-bg'), [], { timeout: 8000 });
     const imageState = await mediaState(page);
     check(grayed(imageState.bigFilter), `大图是灰度（filter=${imageState.bigFilter}）`);
     check(imageState.iconKept && !grayed(imageState.iconFilter), `小图标留原样（filter=${imageState.iconFilter}）`);
+    check(grayed(imageState.bgFilter), `背景图封面变灰（书封走 CSS background-image 的站点，#154；filter=${imageState.bgFilter}）`);
+    check(imageState.bgsignKept && !grayed(imageState.bgsignFilter), `≤32px 背景小图标豁免（#154；filter=${imageState.bgsignFilter}）`);
     check(imageState.videoMuted === false, '媒体层不写视频的 muted（声音归播放器与用户）');
 
     await popup.close();
@@ -452,6 +472,37 @@ async function main() {
     }, ORIGIN);
     await new Promise((res) => setTimeout(res, 900));
     check(!(await page.$(TOGGLE)), '空配置回来：胶囊不挂（四项全空才不显示，#67/#144）');
+
+    // ===================== 未加载好的页面上开灰度（0.8.16，#154） =====================
+    console.log('\n--- Chrome 错误页上打开灰度（#154）---');
+    // 127.0.0.1:9 必然连接失败 → Chrome 网络错误页 → executeScript
+    // 抛 "Frame with ID 0 is showing error page"。0.8.15 及之前：配置没建成、灰度永远开不上。
+    // 授权走 grantPermissions（模拟用户点「允许」后的可选授权态，permissions.request 才能直接通过）；
+    // 它会重载扩展、换掉控制页——本段收尾都用 ext.control 现取
+    const errOrigin = 'http://127.0.0.1:9';
+    await grantPermissions(ext, [errOrigin]);
+    const errPage = await browser.newPage();
+    await errPage.goto(`${errOrigin}/`, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+    await new Promise((res) => setTimeout(res, 800));
+    const errPopup = await openPopup(ext, errPage);
+    await errPopup.waitForSelector(tid('pm-popup-media-mediaGray'), { timeout: 8000 });
+    await errPopup.click(tid('pm-popup-media-mediaGray'));
+    await poll(async () => (await getProfile(ext.control, errOrigin))?.mediaGray === true, '错误页上开灰度：配置照常建档');
+    await errPopup.waitForSelector(tid('pm-popup-media-notice'), { timeout: 5000 });
+    const noticeText = await errPopup.$eval(tid('pm-popup-media-notice'), (e) => e.textContent.trim());
+    check(noticeText.includes('还没加载好'), `弹窗给说明而非报错（${noticeText}）`);
+    const errProfile = await getProfile(ext.control, errOrigin);
+    check(errProfile.switchState === 'original', 'gray-only 建档 switchState 保持原样态');
+    // 页面恢复后（这里用正常页面模拟「下次打开」）：内容脚本激活、灰度自动生效
+    await errPage.goto(`${ORIGIN}/white`, { waitUntil: 'load' }).catch(() => undefined);
+    // 错误页站点的授权还在，但注册表里的匹配模式是 127.0.0.1:9，正常页面不会注入——
+    // 这里只验证建档与弹窗表现；「下次打开自动生效」由注册表匹配（registrationPlan）保证
+    await ext.control.evaluate(async (o) => {
+      await chrome.permissions.remove({ origins: [`${o}/*`] });
+      await chrome.storage.local.remove(`profile:${o}`);
+    }, errOrigin);
+    await errPopup.close().catch(() => undefined);
+    await errPage.close();
   } finally {
     await ext.cleanup();
     await srv.close();

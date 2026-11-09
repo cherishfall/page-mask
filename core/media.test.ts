@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMediaCss, MEDIA_KEEP_ATTR, SMALL_MEDIA_MAX_PX, shouldKeepMedia } from './media';
+import { buildMediaCss, MEDIA_BG_ATTR, MEDIA_KEEP_ATTR, SMALL_MEDIA_MAX_PX, shouldKeepMedia } from './media';
 
 describe('buildMediaCss 灰度样式（0.8.0，#131）', () => {
   it('开关没开 / 缺省：没有样式（旧数据、原样态都不注入）', () => {
@@ -7,13 +7,13 @@ describe('buildMediaCss 灰度样式（0.8.0，#131）', () => {
     expect(buildMediaCss({ mediaGray: false })).toBeNull();
   });
 
-  it('打开：img（放行小图标记与 emoji）与 video 一条规则，grayscale 去色', () => {
+  it('打开：img（放行小图标记与 emoji）、video 与背景图元素一条规则，grayscale 去色（#154）', () => {
     const css = buildMediaCss({ mediaGray: true })!;
     expect(css).toContain(`img:not([${MEDIA_KEEP_ATTR}])`);
     expect(css).toContain('[class*="emoji" i]');
     expect(css).toContain('[alt*="emoji" i]');
     expect(css).toContain('[src*="emoji" i]');
-    expect(css).toContain(', video {');
+    expect(css).toContain(`, video, [data-pm-media-bg]:not([${MEDIA_KEEP_ATTR}]) {`);
     expect(css).toContain('filter: grayscale(1) !important;');
   });
 

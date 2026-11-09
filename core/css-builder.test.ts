@@ -72,7 +72,7 @@ describe('buildDisguiseCss 按页面范围与两态汇总（0.8.3）', () => {
   it('清爽态 + 灰度：规则与媒体拼在同一份文本里，swapCss 只需维护一份记录', () => {
     const css = buildDisguiseCss(profileOf({ hideRules: [baseRule({})], mediaGray: true }), 'https://x.com/')!;
     expect(css).toContain('display: none');
-    expect(css).toContain(', video {');
+    expect(css).toContain(', video, [data-pm-media-bg]:not([data-pm-media-keep]) {');
   });
   it('原样态 + 灰度关：返回 null', () => {
     expect(buildDisguiseCss(profileOf({ switchState: 'original' }), 'https://x.com/')).toBeNull();

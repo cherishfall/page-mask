@@ -425,6 +425,37 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(res.code).toBe('injectFailed');
       expect(res.error).toContain('Cannot access');
     });
+
+    it('灰-only 建档遇到未加载好的页面（Chrome 错误页）：照常建档并回复 pageNotReady（0.8.16，#154）', async () => {
+      stubs.granted.add(pattern(ORIGIN));
+      stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Frame with ID 0 is showing error page'));
+
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, initialMedia: true })) as {
+        ok: boolean;
+        code?: string;
+      };
+
+      // 中国代理环境访问外站，页面常常停在 Chrome 错误页——用户「打开灰度」的意图已经表达：
+      // 权限已到手，配置照常落库，等页面真正打开时注册表 + 配置双全，灰度自动生效
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'pageNotReady' }));
+      const stored = (await fakeBrowser.storage.local.get(`profile:${ORIGIN}`))[`profile:${ORIGIN}`] as SiteProfile;
+      expect(stored.mediaGray).toBe(true);
+      expect(stored.switchState).toBe('original');
+    });
+
+    it('灰-only 建档、注入失败且配置已存在：不覆盖配置，回复 pageNotReady', async () => {
+      await configure(ORIGIN);
+      stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Frame with ID 0 is showing error page'));
+
+      const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, initialMedia: true })) as {
+        ok: boolean;
+        code?: string;
+      };
+
+      expect(res).toEqual(expect.objectContaining({ ok: false, code: 'pageNotReady' }));
+      const stored = (await fakeBrowser.storage.local.get(`profile:${ORIGIN}`))[`profile:${ORIGIN}`] as SiteProfile;
+      expect(stored.mediaGray).toBeUndefined(); // 已有配置不被顺手改
+    });
   });
 
   // ---------- 带权限请求的启用站点（#39：权限框会销毁 popup，所以整条链必须在后台跑完） ----------

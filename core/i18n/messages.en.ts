@@ -124,6 +124,8 @@ export const en: Messages = {
     cardSwitchHintNew: 'Once set up, a switch appears here.',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
     mediaTooltip: 'Pictures and videos turn black & white: same place, still readable, links still work. Autoplaying videos pause; clicking a video lets that one play.',
+    /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
+    mediaNotReady: 'This page hasn’t finished loading. Once it’s open, pictures and videos turn gray automatically.',
     coverPage: 'Cover this page',
     /** Cover card: say this is temporary and changes no settings (#148) */
     coverHint: 'Temporary — reloading restores it. Changes no settings.',

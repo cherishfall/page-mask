@@ -207,6 +207,23 @@ export function createBackground({ browser }: BackgroundDeps): void {
       }
       return { ok: true };
     } catch (e) {
+      // 灰-only 建站遇到「还没加载好的页面」（0.8.16，#154）：Chrome 网络错误页上 executeScript
+      // 一律抛 "Frame with ID 0 is showing error page"（中国代理环境下访问外站时常见）。
+      // 此时权限已经到手，用户「打开这个网站的灰度」的意图已经表达——照常建档，
+      // 等页面真正打开时注册表 + 配置双全，灰度自动生效；弹窗给一句说明而不是报错。
+      // 其余流程（开向导、重新授权）没有可延迟的配置，维持 injectFailed 原样。
+      if (msg.initialMedia === true) {
+        try {
+          if (!(await storage.getProfile(origin))) {
+            await storage.updateProfile(origin, (p) => {
+              p.mediaGray = true;
+            }, { create: true });
+          }
+          return { ok: false, code: 'pageNotReady', error: String(e) } satisfies EnableSiteResponse;
+        } catch {
+          // 建档也失败（存储异常等）：按原样报注入失败
+        }
+      }
       return { ok: false, code: 'injectFailed', error: String(e) };
     }
   }

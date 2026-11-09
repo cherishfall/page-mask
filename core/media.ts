@@ -14,8 +14,9 @@
  * !important 抢不回去。这份文本并入 buildDisguiseCss 的正式样式：注入记录、bfcache、预渲染、
  * storage 联动、向导临时还原全部沿用现成链路。
  *
- * 边界（如实写给用户，不夸大）：这只是「看起来变灰」，请求照发；background-image、
- * iframe 内嵌播放器、canvas、内联 SVG 不变灰；声音完全不参与（ADR-0013）。
+ * 边界（如实写给用户，不夸大）：这只是「看起来变灰」，请求照发。0.8.16（#154，ADR-0017）起
+ * 背景图（CSS background-image）一并变灰——由内容脚本扫描打标记；iframe 内嵌播放器、canvas、
+ * 内联 SVG 仍不变灰；声音完全不参与（ADR-0013）。
  * CSS 路线不需要任何新权限。
  */
 import type { SiteProfile } from './types';
@@ -45,6 +46,13 @@ export type MediaFlags = Pick<SiteProfile, 'mediaGray'>;
 /** 内容脚本给「不变灰的小图」打的属性；CSS 选择器据此放行 */
 export const MEDIA_KEEP_ATTR = 'data-pm-media-keep';
 
+/**
+ * 内容脚本给「有背景图（CSS background-image 带 url）的元素」打的属性（0.8.16，#154）。
+ * 多抓鱼等站点的书封 / 封面全走背景图，纯 img/video 选择器盖不住（ADR-0017 收窄这个边界）；
+ * 内容脚本扫描后打标记，CSS 据此灰度。豁免（小图 / 表情 / 自家 UI）同样打 MEDIA_KEEP_ATTR 放行。
+ */
+export const MEDIA_BG_ATTR = 'data-pm-media-bg';
+
 /** 渲染尺寸 ≤32px 的图标、表情不变灰（HoverBlurr / 电子书模式的做法：页面自己的按钮不跟着变） */
 export const SMALL_MEDIA_MAX_PX = 32;
 
@@ -52,6 +60,7 @@ export const SMALL_MEDIA_MAX_PX = 32;
  * 图片选择器：把明显是表情 / 小图标来源的图也直接放行，减轻内容脚本的标记负担。
  * 多个 :not() 串联而不是 :not(a, b) 列表——后者要 Selectors 4，串联在旧内核上也稳。
  * `i` 标志让 class="Emoji"、alt="EMOJI" 一并命中。
+ * 末段是背景图元素（#154）：带 MEDIA_BG_ATTR 且未被豁免的才灰。
  */
 const IMG_SELECTOR =
   `img:not([${MEDIA_KEEP_ATTR}])` +
@@ -63,7 +72,7 @@ const IMG_SELECTOR =
  */
 export function buildMediaCss(flags: MediaFlags): string | null {
   if (flags.mediaGray !== true) return null;
-  return `${IMG_SELECTOR}, video { filter: grayscale(1) !important; }`;
+  return `${IMG_SELECTOR}, video, [${MEDIA_BG_ATTR}]:not([${MEDIA_KEEP_ATTR}]) { filter: grayscale(1) !important; }`;
 }
 
 /** 判定「小图」所需的尺寸与属性快照：DOM 采集在内容脚本，判定留在这里便于单测 */

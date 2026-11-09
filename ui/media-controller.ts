@@ -3,6 +3,9 @@
  *
  * 1. 小图豁免：纯 CSS 没法按「渲染尺寸」选元素，所以只在「图片和视频变灰」打开期间，给 ≤32px 的
  *    图标 / 表情打一个 data-pm-media-keep 属性，core/media.ts 的选择器据此放行。
+ * 1b. 背景图标记（0.8.16，#154，ADR-0017）：CSS 也选不出「带背景图的元素」，扫描后给
+ *     background-image 带 url 的元素打 data-pm-media-bg，CSS 据此灰度（豁免同样打 keep）。
+ *     多抓鱼等站点的封面全走背景图，不扫就永远灰不了。
  *    默认先全灰、小图确认后再放行——宁可多灰一帧，也不让大图露出来（首屏防闪优先）。
  * 2. 视频自动播放压制：灰度管不住「动」。站点脚本自己让视频播起来的（X 刷信息流的自动播放）
  *    一律按停；**用户点了视频区域就把那一个视频放行**，正常播放、画面保持灰度——
@@ -19,7 +22,7 @@
  * 增量扫描按 rAF 分批，读写分两阶段，避免和站点框架互相触发重排。
  */
 import { isOwnUiNode } from '@/core/host-shield';
-import { MEDIA_KEEP_ATTR, shouldKeepMedia, type MediaFlags, type MediaSizeFacts } from '@/core/media';
+import { MEDIA_BG_ATTR, MEDIA_KEEP_ATTR, shouldKeepMedia, type MediaFlags, type MediaSizeFacts } from '@/core/media';
 
 /** 每帧最多处理多少个新增节点：无限滚动一次插几百张图时不堵主线程 */
 const BATCH = 60;
@@ -74,6 +77,29 @@ function decideImage(img: HTMLImageElement): boolean {
   return shouldKeepMedia({ className: facts.className, alt: facts.alt, src: facts.src });
 }
 
+/**
+ * 背景图判定（0.8.16，#154）：计算样式 background-image 带 url 才算——渐变（无 url）不算，
+ * url("data:…") 也算（小尺寸豁免会放行绝大多数图标）。三态：null = 没有背景图；
+ * true = 有但豁免（≤32px 小图 / 表情来源）；false = 灰。
+ * 尺寸判定与 img 同口径：渲染尺寸说了算，0×0（未布局 / 隐藏）先按灰处理，样式变化后重判。
+ */
+function decideBackground(el: HTMLElement): boolean | null {
+  const cs = getComputedStyle(el);
+  const bg = cs.backgroundImage;
+  if (!bg || bg === 'none' || !bg.includes('url(')) return null;
+  const rect = el.getBoundingClientRect();
+  const url = bg.slice(0, 300); // 表情豁免只看来源名，前 300 字符足够，不给超长 data URI 浪费
+  if (rect.width > 0 && rect.height > 0) {
+    return shouldKeepMedia({
+      renderedWidth: rect.width,
+      renderedHeight: rect.height,
+      className: el.getAttribute('class') ?? '',
+      src: url,
+    });
+  }
+  return shouldKeepMedia({ className: el.getAttribute('class') ?? '', src: url });
+}
+
 /** 最近一次用户意图事件：放行判定的唯一依据 */
 interface IntentMark {
   target: EventTarget | null;
@@ -111,10 +137,15 @@ export function createMediaController(doc: Document): MediaController {
     if (!video.paused) video.pause();
   }
 
-  /** 一批元素两阶段处理：先只读判定（含 rect），再统一写属性 / 按停，避免读写交替触发重排 */
+  /**
+   * 一批元素两阶段处理：先只读判定（含 rect），再统一写属性 / 按停，避免读写交替触发重排。
+   * img / video 走各自的判定；其余元素查计算样式的 background-image（#154）：
+   * 带 url 才入列——三态返回，null = 没有背景图（写阶段清掉旧标记）。
+   */
   function processBatch(elements: Element[]): void {
     const images: [HTMLImageElement, boolean][] = [];
     const videos: HTMLVideoElement[] = [];
+    const bgs: [HTMLElement, boolean | null][] = [];
     for (const el of elements) {
       if (!el.isConnected) continue;
       if (el.tagName === 'IMG' && wantMedia) {
@@ -122,11 +153,24 @@ export function createMediaController(doc: Document): MediaController {
         images.push([img, decideImage(img)]);
       } else if (el.tagName === 'VIDEO') {
         videos.push(el as HTMLVideoElement);
+      } else if (wantMedia && el instanceof HTMLElement && !isOwnUiNode(el)) {
+        bgs.push([el, decideBackground(el)]);
       }
     }
     for (const [img, keep] of images) {
       if (keep) img.setAttribute(MEDIA_KEEP_ATTR, '');
       else img.removeAttribute(MEDIA_KEEP_ATTR);
+    }
+    for (const [el, keep] of bgs) {
+      if (keep === null) {
+        // 背景图没了（样式被换掉）：标记一并撤，别让灰度留在已经不图的元素上
+        el.removeAttribute(MEDIA_BG_ATTR);
+        el.removeAttribute(MEDIA_KEEP_ATTR);
+      } else {
+        el.setAttribute(MEDIA_BG_ATTR, '');
+        if (keep) el.setAttribute(MEDIA_KEEP_ATTR, '');
+        else el.removeAttribute(MEDIA_KEEP_ATTR);
+      }
     }
     for (const video of videos) applyVideo(video);
   }
@@ -147,8 +191,10 @@ export function createMediaController(doc: Document): MediaController {
 
   function collect(node: Node): void {
     if (!(node instanceof Element)) return;
-    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') pending.add(node);
-    for (const el of node.querySelectorAll('img, video')) pending.add(el);
+    // 子树全扫（#154）：img / video 之外，带背景图的元素也要进待办——书封 / 封面这类
+    // 背景图元素在无限滚动站点里与新图一起插入。rAF 分批消化，不堵主线程
+    pending.add(node);
+    for (const el of node.querySelectorAll('*')) pending.add(el);
   }
 
   /** 子树被移出文档：把它从待办与放行集合里放掉，别让强引用钉住已被信息流替换掉的元素（#126 / #128）。
@@ -158,11 +204,10 @@ export function createMediaController(doc: Document): MediaController {
   function forget(node: Node): void {
     if (!(node instanceof Element)) return;
     if (node.isConnected) return;
-    if (node.tagName === 'IMG' || node.tagName === 'VIDEO') {
-      pending.delete(node);
-      if (node.tagName === 'VIDEO') allowed.delete(node as HTMLVideoElement);
-    }
-    for (const el of node.querySelectorAll('img, video')) {
+    pending.delete(node);
+    if (node.tagName === 'VIDEO') allowed.delete(node as HTMLVideoElement);
+    // 子树全扫对应的瘦身：移出文档的元素（含背景图元素）都从待办放掉，别钉住已替换的节点
+    for (const el of node.querySelectorAll('*')) {
       pending.delete(el);
       if (el.tagName === 'VIDEO') allowed.delete(el as HTMLVideoElement);
     }
@@ -176,8 +221,11 @@ export function createMediaController(doc: Document): MediaController {
         for (const n of r.removedNodes) forget(n);
         for (const n of r.addedNodes) collect(n);
       } else if (r.type === 'attributes' && r.target instanceof Element) {
-        // src / srcset 换了（懒加载占位换成真图），或 class / style 改了尺寸：重新判定一次
-        if (r.target.tagName === 'IMG') pending.add(r.target);
+        // src / srcset 换了（懒加载占位换成真图），或 class / style 改了尺寸：重新判定一次。
+        // 背景图元素同样重判（#154）：class / style 变化会改它的渲染尺寸或换掉背景图
+        if (r.target.tagName === 'IMG' || (r.target instanceof HTMLElement && r.target.hasAttribute(MEDIA_BG_ATTR))) {
+          pending.add(r.target);
+        }
       }
     }
     schedule();
@@ -251,12 +299,24 @@ export function createMediaController(doc: Document): MediaController {
   }
 
   function clearKeepMarks(): void {
-    for (const el of doc.querySelectorAll(`img[${MEDIA_KEEP_ATTR}]`)) el.removeAttribute(MEDIA_KEEP_ATTR);
+    // img 的 keep 标记与背景图元素的两枚标记一并清（#154）：关掉灰度后页面不能留任何私有属性
+    for (const el of doc.querySelectorAll(`[${MEDIA_KEEP_ATTR}], [${MEDIA_BG_ATTR}]`)) {
+      el.removeAttribute(MEDIA_KEEP_ATTR);
+      el.removeAttribute(MEDIA_BG_ATTR);
+    }
   }
 
   function scanExisting(): void {
-    // 首帧不等 rAF：document_start 时页面上已有的 img / video 当场处理（播放中的视频按停）
-    processBatch(Array.from(doc.querySelectorAll('img, video')));
+    // 首帧不等 rAF：document_start 时页面刚开、元素还很少，当场处理（播放中的视频按停）。
+    // 会话中段打开灰度（弹窗 / 胶囊）时 DOM 可能已有几千个元素：全量同步扫会卡一拍，
+    // 改走待办队列按 rAF 分批消化（#154 子树全扫后的必要护栏）
+    const all = Array.from(doc.querySelectorAll('*'));
+    if (all.length <= 600) {
+      processBatch(all);
+      return;
+    }
+    for (const el of all) pending.add(el);
+    schedule();
   }
 
   return {

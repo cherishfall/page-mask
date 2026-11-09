@@ -15,6 +15,7 @@
     :show-toggle="profile?.capsuleHidden !== true"
     :media="mediaToggles"
     :media-error="mediaError"
+    :media-notice="mediaNotice"
     :delete-error="deleteError"
     @toggle-switch="toggleSwitch"
     @setup="setup"
@@ -89,6 +90,8 @@ const message = computed(() => {
 });
 /** 媒体开关写入失败时的一句话（显示在这一组下面，不占用顶部的通用错误位） */
 const mediaError = ref('');
+/** 页面没加载好但配置已建档（0.8.16，#154）：说明而非错误——下次打开页面灰度自动生效 */
+const mediaNotice = ref('');
 /** 开关当前值直接由配置投影，不在弹窗里另存一份状态 */
 const mediaToggles = computed(() => ({
   mediaGray: profile.value?.mediaGray === true,
@@ -414,6 +417,7 @@ async function toggleMedia(key: MediaFlagKey, input: HTMLInputElement) {
   }
   const on = input.checked;
   mediaError.value = '';
+  mediaNotice.value = '';
   // 没配置过的网站：只有「打开」有意义（关一个不存在的设置是空操作）
   if (!profile.value) {
     if (!on || tabId === undefined || busy.value) {
@@ -424,6 +428,14 @@ async function toggleMedia(key: MediaFlagKey, input: HTMLInputElement) {
     try {
       const res = await enableSite(tabId, o, { requestPermission: true, initialMedia: true });
       if (!res?.ok) {
+        if (res?.code === 'pageNotReady') {
+          // 页面还在错误页等未加载好的状态（0.8.16，#154）：配置已照常建档，
+          // 刷新后进入 ready 态（开关保持开），给一句说明而不是报错——
+          // 等页面真正打开，灰度会自动生效（推特的失败场景：代理抖动下错误页很常见）
+          await refresh();
+          mediaNotice.value = t.value.popup.mediaNotReady;
+          return;
+        }
         input.checked = false;
         const errors = t.value.popup.error as Record<string, string | undefined>;
         mediaError.value = (res?.code && errors[res.code]) || errors.injectFailed || '';

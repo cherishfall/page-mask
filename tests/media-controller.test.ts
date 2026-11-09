@@ -367,3 +367,75 @@ describe('自动播放压制与点击放行（0.8.0，ADR-0013）', () => {
     c.dispose();
   });
 });
+
+describe('背景图标记（0.8.16，#154，ADR-0017）', () => {
+  /** jsdom 不会算样式表：用实例字段挂背景图文本，测试里把 getComputedStyle 指过去 */
+  function addBg(w: number, h: number, bg: string): HTMLElement & { __pmTestBg?: string } {
+    const el = document.createElement('div') as HTMLElement & { __pmTestBg?: string };
+    el.__pmTestBg = bg;
+    el.getBoundingClientRect = () => rect(w, h);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function stubComputed(): void {
+    const real = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
+      const cs = real(el);
+      const bg = (el as unknown as { __pmTestBg?: string }).__pmTestBg;
+      if (bg !== undefined) {
+        Object.defineProperty(cs, 'backgroundImage', { configurable: true, get: () => bg });
+      }
+      return cs;
+    });
+  }
+
+  afterEach(() => {
+    vi.mocked(window.getComputedStyle).mockRestore();
+  });
+
+  it('带背景图的元素打 bg 标记：大图灰、≤32px 小图豁免、emoji 来源豁免', async () => {
+    stubComputed();
+    const cover = addBg(240, 300, 'url("https://example.com/cover.jpg")');
+    const small = addBg(24, 24, 'url("https://example.com/btn.png")');
+    const emoji = addBg(200, 200, 'url("https://example.com/emoji-sticker.png")');
+    const plain = addBg(200, 200, 'linear-gradient(to right, red, blue)');
+    const controller = createMediaController(document);
+    controller.sync({ mediaGray: true });
+    await vi.waitFor(() => {
+      expect(cover.hasAttribute('data-pm-media-bg')).toBe(true);
+      expect(cover.hasAttribute(MEDIA_KEEP_ATTR)).toBe(false);
+      expect(small.hasAttribute('data-pm-media-bg')).toBe(true);
+      expect(small.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+      expect(emoji.hasAttribute('data-pm-media-bg')).toBe(true);
+      expect(emoji.hasAttribute(MEDIA_KEEP_ATTR)).toBe(true);
+      expect(plain.hasAttribute('data-pm-media-bg')).toBe(false);
+    }, { timeout: 500, interval: 5 });
+    controller.dispose();
+  });
+
+  it('背景图被样式换掉后标记清掉，不留灰度', async () => {
+    stubComputed();
+    const cover = addBg(240, 300, 'url("https://example.com/cover.jpg")');
+    const controller = createMediaController(document);
+    controller.sync({ mediaGray: true });
+    await vi.waitFor(() => expect(cover.hasAttribute('data-pm-media-bg')).toBe(true), { timeout: 500, interval: 5 });
+    cover.__pmTestBg = 'none';
+    // 样式变化在真实浏览器由 observer 的 attributes 通道重判；打标元素本身也会被重查
+    cover.setAttribute('class', 'changed');
+    await vi.waitFor(() => expect(cover.hasAttribute('data-pm-media-bg')).toBe(false), { timeout: 500, interval: 5 });
+    controller.dispose();
+  });
+
+  it('关掉灰度：bg 标记与 keep 标记一并清掉', async () => {
+    stubComputed();
+    const cover = addBg(240, 300, 'url("https://example.com/cover.jpg")');
+    const controller = createMediaController(document);
+    controller.sync({ mediaGray: true });
+    await vi.waitFor(() => expect(cover.hasAttribute('data-pm-media-bg')).toBe(true), { timeout: 500, interval: 5 });
+    controller.sync({ mediaGray: false });
+    expect(cover.hasAttribute('data-pm-media-bg')).toBe(false);
+    expect(cover.hasAttribute(MEDIA_KEEP_ATTR)).toBe(false);
+    controller.dispose();
+  });
+});

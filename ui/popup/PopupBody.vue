@@ -140,6 +140,8 @@
           />
         </div>
         <p class="hint media-hint">{{ phase === 'new' ? t.media.hintNew : t.media.hintShort }}</p>
+        <!-- 页面没加载好但配置已建档（0.8.16，#154）：说明而非错误（配置会在页面打开后生效） -->
+        <p v-if="mediaNotice" class="hint media-notice" data-testid="pm-popup-media-notice">{{ mediaNotice }}</p>
         <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-popup-media-error">{{ mediaError }}</p>
       </div>
 
@@ -254,6 +256,8 @@ const props = defineProps<{
   media?: MediaToggles;
   /** 开关写入失败时的一句话，显示在这一组下面（role=alert） */
   mediaError?: string;
+  /** 页面没加载好但配置已建档的说明（0.8.16，#154）：不是错误，用普通说明样式 */
+  mediaNotice?: string;
   /** 删除失败时的一行错误（显示在删除按钮上方，role=alert） */
   deleteError?: string;
   /** 欢迎页第 2 步的示意图：隐藏头部「查看使用说明」链接，避免介绍页指向自己（#148） */
@@ -536,6 +540,7 @@ function dismissInfoOnEsc(e: KeyboardEvent): void {
    新增类名一律用 .popup 限定，别用通用词压到欢迎页自己的 .head / .card 等元素。 */
 .popup .card-switch-hint,
 .popup .media-hint,
+.popup .media-notice,
 .popup .cover-hint,
 .popup .aux-hint,
 /* 卡内错误提示（mediaError / deleteError）跟着同一档，别比它旁边的说明小一号 */
