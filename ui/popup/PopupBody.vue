@@ -375,7 +375,9 @@ const deleteLabel = deleteSiteHeading();
 }
 /* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体 / 面具，16 盒、随文字色。
    媒体图标跟胶囊同一套状态表达：开 = 内容填实、外框描边（0.8.3）；
-   面具图标跟胶囊主钮同态（#138）：开 = 填实，眼缝描弹窗底色读出挖孔（挖孔透出的是图标身后的表面） */
+   面具图标跟胶囊主钮同态（#138）：开 = 填实，眼缝描弹窗底色读出挖孔（挖孔透出的是图标身后的表面）。
+   0.8.15（#149）：开态图标改用 --pm-accent，与胶囊开启态、弹窗开关 / 主按钮同色（同源同态）；
+   关态仍是 --pm-fg-muted，填实规则继续用 currentColor 自动跟随，眼缝 stroke 保持 var(--pm-bg) */
 .popup-action-icon,
 .popup-row-icon {
   inline-size: 16px;
@@ -384,6 +386,9 @@ const deleteLabel = deleteSiteHeading();
 }
 .popup-row-icon {
   color: var(--pm-fg-muted);
+}
+.popup-row-icon[data-state='on'] {
+  color: var(--pm-accent);
 }
 .popup-row-icon[data-state='on'] .pm-media-content {
   fill: currentColor;

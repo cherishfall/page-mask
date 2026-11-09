@@ -84,12 +84,15 @@
   inline-size: 13px;
   block-size: 13px;
 }
-/* 填实态（0.8.9，#137）：身体填 currentColor，眼缝描选中态容器色（--pm-fg）读出挖孔 */
+/* 填实态（0.8.15，#149）：身体填 currentColor（开态 = --pm-accent），眼缝描 --pm-bg 读出挖孔。
+   容器改回中性底后，挖孔透出的正是按钮身后的 --pm-bg，与弹窗
+   .popup-row-icon[data-state='on'] .pm-mask-eye 同源同态。
+   0.8.9 的「眼缝描 --pm-fg」是墨底时代写法；中性底上会出现「蓝色面具画黑眼缝」的脏效果，已退场 */
 .pm-tg-main-icon[data-state='on'] {
   fill: currentColor;
 }
 .pm-tg-main-icon[data-state='on'] .pm-mask-eye {
-  stroke: var(--pm-fg);
+  stroke: var(--pm-bg);
 }
 
 /* ── 「⋯」菜单按钮：可点 24×24（WCAG 2.5.8），字形仍是 13px ──
@@ -140,42 +143,96 @@
   block-size: 13px;
 }
 /* 媒体钮（0.8.0，#131）：「图片和视频变灰」的快捷开关，与「遮住」同规格的 13 盒。
-   按下状态用实心 / 描边两态表达（像收藏书签的实心态），不只靠颜色（WCAG 1.4.1），
-   aria-pressed 同步给读屏 */
+   开/关用「内容填实 vs 描边」两态 + aria-pressed 表达，不只靠颜色（WCAG 1.4.1）。
+   0.8.3（#133）起开态只填实框里的内容（山 + 太阳）、外框保持描边——整颗填实会糊成一个方块；
+   这条「内容填实」在 0.8.15（#149）是三信号里的**形状信号**，与下面「颜色 + 底部指示条」组合，
+   容器始终中性、不再整钮填实（0.8.9 #137 的整钮墨底反白已退场）。两套旧注释在此合并理清 */
 .pm-tg-media-icon {
   inline-size: 13px;
   block-size: 13px;
 }
-/* 开 = 只填实框里的内容（山 + 太阳），外框保持描边：整颗填实会糊成一个方块（0.8.3，#133） */
 .pm-tg-media-icon[data-state='on'] .pm-media-content {
   fill: currentColor;
 }
 
-/* ── 选中态整钮填实（0.8.9，#137）：墨底反白 ──
-   iOS 控制中心 / M3 filled icon button / Ant CheckableTag 同构：开 = 容器换实底、图标反色，
-   关 = 透明底、保持最不显眼。信号面积是整颗钮，24px 下唯一稳定满足 WCAG 1.4.11 3:1 的
-   位置；图标填实 / 描边降为第二信号（M3 outlined→filled）。反色对 --pm-fg / --pm-bg
-   浅色 15.9:1、深色 11.4:1，对比发生在胶囊自己的受控底上，不受网页底色影响 */
+/* ── 开启态（0.8.15，#149）：容器保持中性，三个独立信号表达「开」 ──
+   ① 颜色：图标 --pm-fg-muted → --pm-accent（浅 5.17:1 / 深 7.68:1，过 WCAG 1.4.11 状态 3:1）
+   ② 形状：图标内容填实 vs 关态描边（沿用上面 data-state='on' 的 fill 规则，不只靠颜色，1.4.1）
+   ③ 指示条：分段底部 2px --pm-accent，用 inset box-shadow 画——不改变布局盒尺寸
+      （胶囊几何被 check-toggle.mjs 锁死高 26 / 宽 96–106，绝不改 border 宽度或加 padding/margin）
+   容器不再整颗换墨底反白：M3 filled icon button / iOS 控制中心 / Ant CheckableTag 都把它归为
+   「高强调」，用在常驻设置钮上太扎眼（用户反馈）；WCAG 1.4.11 Figure 6 明确加粗边框 / 状态指示物
+   是合规路径（research-0.8.15-ui.md §二.6）。与弹窗开关 / 主按钮同色，实现「胶囊 ↔ 弹窗相互映衬」。
+   两颗开启态按钮（主按钮、媒体钮）共用这一条规则、一套外观。原注释「24px 下整颗换底是唯一稳定
+   满足 3:1 的位置」过强，已被调研推翻，此处一并作废 */
 .pm-tg-main[data-state='on'],
 .pm-tg-cover.pm-tg-media[data-state='on'] {
-  background: var(--pm-fg);
-  color: var(--pm-bg);
+  color: var(--pm-accent);
+  box-shadow: inset 0 -2px 0 var(--pm-accent);
 }
-/* 填实态也要有悬停/按下变化（design-ui 五种状态缺一不可）：亮度档位在深浅两主题都可见，
-   白图标对变亮后的墨底仍有 ≥7:1 */
+/* 五种状态（design-ui.md §四）：开启态 hover / active 用与关态同档的浅底反馈；
+   box-shadow 与 background 是不同属性、可共存，底部指示条不会被悬停底盖掉。
+   键盘聚焦沿用文件末尾 :focus-visible 的 --pm-focus-ring；胶囊两颗钮都不禁用，第五态不适用 */
 .pm-tg-main[data-state='on']:hover,
 .pm-tg-cover.pm-tg-media[data-state='on']:hover {
-  filter: brightness(1.25);
+  background: var(--pm-bg-subtle);
 }
 .pm-tg-main[data-state='on']:active,
 .pm-tg-cover.pm-tg-media[data-state='on']:active {
-  filter: brightness(0.85);
+  background: var(--pm-bg-control-active);
 }
 
-/* 触屏：图标按钮的可点区域放大到 40×40（与 styles/controls.css 的触屏档一致） */
+/* 状态过渡（0.8.15，#149）：150ms Carbon productive standard（= duration-moderate-01 /
+   M3 DurationShort3）。只动可平滑过渡的颜色类属性，不写 linear、不碰 width/height/top/left；
+   过渡只跟随 data-state，不加动画锁，hover / focus / pressed 各自仍有可见变化。
+   图标的 currentColor 随按钮 color 平滑过渡；形状的 none↔fill 本就是离散状态信号 */
+.pm-tg-main,
+.pm-tg-cover,
+.pm-tg-main-icon .pm-mask-body,
+.pm-tg-main-icon .pm-mask-eye,
+.pm-tg-media-icon .pm-media-content {
+  transition:
+    background-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    border-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    fill 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    box-shadow 150ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+/* prefers-reduced-motion 不是置 0ms：Apple「状态变化动画不应完全去除，可用渐变 / 颜色变化」
+   + WCAG 2.3.3 / C39。收敛到 120ms 纯色 / opacity 淡变；本项目开态切换本就无任何
+   transform / 位移 / 缩放可去，上限 <400ms（Doherty） */
+@media (prefers-reduced-motion: reduce) {
+  .pm-tg-main,
+  .pm-tg-cover,
+  .pm-tg-main-icon .pm-mask-body,
+  .pm-tg-main-icon .pm-mask-eye,
+  .pm-tg-media-icon .pm-media-content {
+    transition:
+      color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      opacity 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      background-color 120ms cubic-bezier(0.2, 0, 0.38, 0.9),
+      box-shadow 120ms cubic-bezier(0.2, 0, 0.38, 0.9);
+  }
+}
+
+/* 强制颜色模式（Windows 高对比度）：系统色接管，box-shadow 会被丢弃 */
 @media (forced-colors: active) {
   .pm-tg {
     opacity: 1 !important;
+  }
+  /* 开态底部指示条（box-shadow）在此模式下失效：改用系统 Highlight / HighlightText 反色，
+     配合「图标填实 vs 描边」的形状信号，状态仍可辨、不靠颜色单独表达。
+     带 .pm-tg 前缀把特异性抬到与 hover/active 规则同档，压过它们的浅底；
+     不改 border 宽度 / padding / margin（胶囊几何被 E2E 锁死），也不碰 :focus-visible 焦点环 */
+  .pm-tg .pm-tg-main[data-state='on'],
+  .pm-tg .pm-tg-cover.pm-tg-media[data-state='on'] {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+  }
+  /* 眼缝挖孔透出的底色随容器一起换成 Highlight（同源同态，避免描 Canvas 色） */
+  .pm-tg-main-icon[data-state='on'] .pm-mask-eye {
+    stroke: Highlight;
   }
 }
 

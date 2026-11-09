@@ -77,7 +77,7 @@ describe('tokens 对比度', () => {
     const listed = new Set(table.map((r) => `${r.fg}/${r.bg}`));
     const required = [
       'fg/bg',
-      'bg/fg', // 选中态整钮填实的反色对（#137）：图标反白落在墨底上
+      'bg/fg', // 历史反色对，仍登记守门（#137）；0.8.15 起界面不再使用整钮填实
       'fg/bg-subtle',
       'fg-muted/bg',
       'fg-muted/bg-subtle',

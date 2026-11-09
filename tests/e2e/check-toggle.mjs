@@ -37,6 +37,36 @@ const r = createReporter();
 const { check } = r;
 const TOGGLE = 'pagemask-toggle';
 const WIZARD = 'pagemask-wizard';
+/**
+ * 状态过渡落定的等待条件（#149）：交给项目 waitFor 在页面内轮询「会因过渡而变的观测量」，
+ * 取代固定 250ms sleep。DEVLOG 0.8.14「断言的等待条件要落在会因刷新而变的观测量上」——
+ * 固定 sleep 在慢机器 / CDP 抖动下仍可能读到 rgba(...,0.x) / -1.2px 这类插值中间态
+ * （本票第一版即因此失败）。每个目标按钮须同时满足：
+ *   - color 已等于探针实测的目标色（开 = --pm-accent / 关 = --pm-fg-muted，不锁死 RGB，随主题变）；
+ *   - box-shadow 不再是插值中间态：开 = 含实算强调色的 inset 指示条（插值是 rgba(...,0.x)，
+ *     不含 rgb(...) 实色）、关 = 'none'（只在过渡终点出现）；
+ *   - 悬停底色已退回透明（开/关容器都中性、不再整颗填实）。
+ * 目标色在 shadow root 内用探针实测（:host 语义变量），与紧随其后的计算样式断言同一个观测量。
+ */
+const toggleSettled = (h, ids, on) => {
+  const sr = document.querySelector(h)?.shadowRoot;
+  if (!sr) return false;
+  const probe = document.createElement('span');
+  probe.style.color = on ? 'var(--pm-accent)' : 'var(--pm-fg-muted)';
+  sr.appendChild(probe);
+  const target = getComputedStyle(probe).color;
+  probe.remove();
+  return ids.every((id) => {
+    const b = sr.querySelector(`[data-testid="${id}"]`);
+    if (!b) return false;
+    const cs = getComputedStyle(b);
+    const shadowSettled = on
+      ? cs.boxShadow !== 'none' && cs.boxShadow.includes(target)
+      : cs.boxShadow === 'none';
+    return cs.color === target && shadowSettled && cs.backgroundColor === 'rgba(0, 0, 0, 0)';
+  });
+};
+
 /** 幕布宿主：遮住后「恢复」按钮住在这里（#50 起不再由胶囊渲染） */
 const CURTAIN = 'pagemask-curtain';
 const tid = (id) => `[data-testid="${id}"]`;
@@ -121,7 +151,8 @@ function contrastInPage(page, host) {
     const label = main?.querySelector('.pm-tg-main-icon');
     const pillBg = getComputedStyle(pill).backgroundColor;
     const fg = label ? getComputedStyle(label).color : '';
-    // 图标的实际底色：选中态整钮填实（#137）时是主按钮自己的实底，透明（未选中）时回落到胶囊底
+    // 图标的实际底色：0.8.15（#149）起开态容器也保持中性透明底、不再整钮填实，
+    // 图标始终落在胶囊底（--pm-bg）上；透明（开/关两态）时统一回落 pillBg
     const mainBg = main ? getComputedStyle(main).backgroundColor : 'rgba(0, 0, 0, 0)';
     const iconBackdrop = mainBg === 'rgba(0, 0, 0, 0)' ? pillBg : mainBg;
     // 外圈颜色经一个探针元素归一化：构建时 rgb(0 0 0 / 0.5) 会被压成 #00000080 之类的写法
@@ -431,15 +462,30 @@ async function main() {
 
     // ===================== 键盘：Tab 聚焦、回车切换 =====================
     console.log('\n--- 键盘操作 ---');
+    await page.mouse.move(60, 400); // 指针离开主按钮：开态 hover 用浅底反馈，别读进状态断言（#149）
+    await waitFor(page, '主按钮开态计算样式落定（color / 指示条不再插值，#149）', toggleSettled, [TOGGLE, ['pm-toggle-main'], true], { timeout: 8000 });
     const aria = await page.evaluate(
       (h) => {
         const sr = document.querySelector(h).shadowRoot;
         const main = sr.querySelector('[data-testid="pm-toggle-main"]');
         const root = sr.querySelector('[data-testid="pm-toggle"]');
+        const svg = main?.querySelector('svg');
+        const body = svg?.querySelector('.pm-mask-body');
+        const cs = main ? getComputedStyle(main) : null;
+        // 实测 --pm-accent 当前主题下的计算色（探针放进 shadow root 才能解析 :host 上的变量）
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--pm-accent)';
+        sr.appendChild(probe);
+        const accent = getComputedStyle(probe).color;
+        probe.remove();
         return {
           pressed: main.getAttribute('aria-pressed'),
           text: main.textContent.trim(),
-          bg: main ? getComputedStyle(main).backgroundColor : '',
+          bg: cs ? cs.backgroundColor : '',
+          accent,
+          fg: svg ? getComputedStyle(svg).color : '',
+          bodyFill: body ? getComputedStyle(body).fill : '',
+          boxShadow: cs ? cs.boxShadow : '',
           rootLabel: root?.getAttribute('aria-label'),
           moreLabel: sr.querySelector('[data-testid="pm-toggle-more"]')?.getAttribute('aria-label'),
         };
@@ -449,7 +495,18 @@ async function main() {
     // 0.8.6（#135）：文字标签退场，主按钮状态由面具图标填实/描边 + aria-pressed + title 表达
     const mainTitle = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]').title, TOGGLE);
     check(aria.pressed === 'true' && mainTitle.length > 0, `主按钮有 aria-pressed 与悬停全称提示（aria-pressed=${aria.pressed}，title「${mainTitle}」）`);
-    check(aria.bg === 'rgb(31, 35, 41)', `主按钮选中态整钮填实：墨底反白（bg=${aria.bg}，#137）`);
+    // 0.8.15（#149）：主按钮开态容器保持中性、不再整颗墨底反白；三信号 = 强调色 + 填实 + 底部指示条
+    const INK_BG = 'rgb(31, 35, 41)'; // 0.8.9 墨底（浅色 --pm-fg），用来锁「不再整颗填实」
+    check(
+      aria.bg !== INK_BG && aria.bg === 'rgba(0, 0, 0, 0)',
+      `主按钮开态容器仍是中性透明底、不再整颗墨底反白（bg=${aria.bg}，#149）`,
+    );
+    check(
+      aria.boxShadow !== 'none' && aria.boxShadow.includes(aria.accent),
+      `主按钮开态有底部 2px --pm-accent 指示条（boxShadow=${aria.boxShadow}，强调色=${aria.accent}，#149）`,
+    );
+    check(aria.fg === aria.accent, `主按钮开态图标色 = --pm-accent 实算值（${aria.fg}，#149）`);
+    check(aria.bodyFill !== 'none', `主按钮开态面具身体填实、与关态描边不同形（fill=${aria.bodyFill}，#149）`);
     check(!!aria.rootLabel && !!aria.moreLabel, `胶囊本体与菜单按钮都有可访问名称（${aria.rootLabel} / ${aria.moreLabel}）`);
 
     // 从页面开头 Tab 进来：先把焦点放回页面
@@ -683,8 +740,94 @@ async function main() {
         c.pillVsPage >= 3 || c.ringVsPage >= 3,
         `${meta.label}：胶囊本体可辨（本体 ${c.pillVsPage}:1 / 外圈 ${c.ringVsPage}:1，页面 ${c.pageBg}）`,
       );
-      check(c.textVsPill >= 4.5, `${meta.label}：文字对胶囊底 ≥4.5:1（${c.textVsPill}:1）`);
+      check(c.textVsPill >= 4.5, `${meta.label}：开态 --pm-accent 图标对中性胶囊底 ≥4.5:1（${c.textVsPill}:1，#149）`);
     }
+
+    // ===================== 开启态外观（0.8.15 #149）：两颗共用一条规则 + reduced-motion 过渡 =====================
+    console.log('\n--- 开启态：主按钮与媒体钮同源同态、状态过渡 ---');
+    const savedProfile = await getProfile(ext.control, ORIGIN); // 段末整份写回，避免给幕布段的字段集合断言添新字段
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised', mediaGray: true });
+    await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    await waitFor(page, '主按钮与媒体钮都处于开启态', () => {
+      const sr = document.querySelector('pagemask-toggle')?.shadowRoot;
+      return sr?.querySelector('[data-testid="pm-toggle-main"]')?.getAttribute('data-state') === 'on'
+        && sr?.querySelector('[data-testid="pm-toggle-media"]')?.getAttribute('data-state') === 'on';
+    }, [], { timeout: 5000 });
+    await page.mouse.move(60, 400);
+    await waitFor(page, '主按钮与媒体钮开态计算样式都落定（#149）', toggleSettled, [TOGGLE, ['pm-toggle-main', 'pm-toggle-media'], true], { timeout: 8000 });
+    const onPair = await page.evaluate((h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--pm-accent)';
+      sr.appendChild(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      const read = (id) => {
+        const b = sr.querySelector(`[data-testid="${id}"]`);
+        const cs = getComputedStyle(b);
+        return {
+          bg: cs.backgroundColor,
+          color: cs.color,
+          boxShadow: cs.boxShadow,
+          iconColor: getComputedStyle(b.querySelector('svg')).color,
+          pressed: b.getAttribute('aria-pressed'),
+        };
+      };
+      return { accent, main: read('pm-toggle-main'), media: read('pm-toggle-media') };
+    }, TOGGLE);
+    check(
+      onPair.main.bg !== 'rgb(31, 35, 41)' && onPair.media.bg !== 'rgb(31, 35, 41)',
+      `主按钮与媒体钮开态都不是墨底反白（主 ${onPair.main.bg} / 媒体 ${onPair.media.bg}，#149）`,
+    );
+    check(
+      onPair.main.color === onPair.accent && onPair.media.color === onPair.accent &&
+        onPair.main.iconColor === onPair.accent && onPair.media.iconColor === onPair.accent,
+      `两颗开态图标色都是 --pm-accent 实算值（${onPair.accent}，#149）`,
+    );
+    check(
+      onPair.main.boxShadow.includes(onPair.accent) && onPair.media.boxShadow.includes(onPair.accent),
+      `两颗开态指示条都是 --pm-accent 实算值（主 ${onPair.main.boxShadow}，#149）`,
+    );
+    check(
+      onPair.main.color === onPair.media.color &&
+        onPair.main.iconColor === onPair.media.iconColor &&
+        onPair.main.boxShadow === onPair.media.boxShadow &&
+        onPair.main.bg === onPair.media.bg,
+      '主按钮与媒体钮开态共用一套外观（强调色 / 指示条 / 中性底全一致，#149）',
+    );
+    check(
+      onPair.main.pressed === 'true' && onPair.media.pressed === 'true',
+      '两颗开态仍由 aria-pressed 向读屏报状态（#149 不动 data-state 契约）',
+    );
+
+    // prefers-reduced-motion 下不是 0ms：保留 120ms 纯色 / opacity 淡变、去掉位移缩放（#149）
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    const reduceMotion = await page.evaluate((h) => {
+      const main = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]');
+      const cs = getComputedStyle(main);
+      return { property: cs.transitionProperty, duration: cs.transitionDuration };
+    }, TOGGLE);
+    const reduceProps = reduceMotion.property.split(',').map((s) => s.trim());
+    const reduceDurs = reduceMotion.duration.split(',').map((s) => parseFloat(s.trim()));
+    check(
+      reduceProps.includes('color') && reduceProps.includes('opacity') &&
+        reduceDurs.length > 0 && reduceDurs.every((d) => d > 0 && d <= 0.4),
+      `reduced-motion 下仍有 >0 且 <400ms 的 color/opacity 过渡（property=${reduceMotion.property} / duration=${reduceMotion.duration}，#149）`,
+    );
+    // 普通模式：状态过渡是 150ms，不是 0ms 突变
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+    const normalMotion = await page.evaluate((h) => {
+      const main = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-main"]');
+      const cs = getComputedStyle(main);
+      return { property: cs.transitionProperty, duration: cs.transitionDuration };
+    }, TOGGLE);
+    const normalDurs = normalMotion.duration.split(',').map((s) => parseFloat(s.trim()));
+    check(
+      normalMotion.property.includes('box-shadow') && normalDurs.length > 0 && normalDurs.every((d) => Math.abs(d - 0.15) < 0.001),
+      `普通模式状态过渡 150ms（property=${normalMotion.property} / duration=${normalMotion.duration}，#149）`,
+    );
+    await setProfile(ext.control, ORIGIN, savedProfile); // 整份写回，精确恢复字段集合（幕布段要断言「没有新字段」）
 
     // ===================== 幕布：一键遮住整页（#45 / #50） =====================
     console.log('\n--- 幕布：遮住 / 恢复（#45 / #50） ---');
