@@ -1,8 +1,10 @@
 # 0.8.15 界面批次 · 方案（实现的唯一依据）
 
 日期：2026-11-09
-依据：`docs/dev/research-0.8.15-ui.md`（证据）、`GLOSSARY.md`（用词）、`docs/design-ui.md`（控件与排布）、`docs/design.md`（产品共识）、`AGENTS.md`（整屏审查五条）。
+依据：`docs/dev/research-0.8.15-ui.md`（主会话调研·证据）、`tmp/research-design.md`（设计系统/同类产品补充调研，不入库）、`tmp/audit-code.md`（代码与测试事实清单，不入库）、`tmp/audit-copy.md`（文案审计，不入库）、`GLOSSARY.md`（用词）、`docs/design-ui.md`（控件与排布）、`docs/design.md`（产品共识）、`AGENTS.md`（整屏审查五条）。
 本文件定的是「长什么样、怎么排、点下去怎样」，实现不得自行改动；与上述权威文件冲突时以权威文件为准，并回来改本文件。
+
+> **v2 修订（三份子代理报告回来后）**：① 统一主叫法为 `GLOSSARY.md` 已登记的「收起内容」，撤回稿中「收起页面内容」（§7.1 已决定不改叫法，稿内三处是自相矛盾）；② `prefers-reduced-motion` 由「置 0ms」改为「保留 100–150ms 纯色淡变、去掉位移缩放」（`tmp/research-design.md` §F，Apple 官方 F-5/F-6 + WCAG 2.3.3/C39）；③ 补记「遮住卡同款容器」「帮助入口用短文字链接」「向导不按阶段分宽」三处对补充调研的取舍（§三/§六）。
 
 ---
 
@@ -16,8 +18,8 @@
 2. 弹窗从上到下的顺序，与胶囊从左到右的顺序能一一对应。
 3. 每块自己说清「这是什么、点下去会怎样」，不靠读文档、不靠猜。
 4. 全项目同一件事一个叫法、一个样子；中英两份文案按同样的意思写。
-5. 状态变化有过渡，不 0ms 突变；`prefers-reduced-motion` 下关掉。
-6. 悬浮在网页上的东西（胶囊、向导工具条）尽量少挡页面、低调。
+5. 状态变化有 150ms 级短过渡，不 0ms 突变；`prefers-reduced-motion` 下**保留纯色淡变**、只去掉位移/缩放。
+6. 悬浮在网页上的东西（胶囊、向导工具条）尽量少挡页面、低调，且给用户能主动让开的路径。
 
 ---
 
@@ -27,7 +29,7 @@
 
 ```
 ┌────────────────────────────────────┐
-│ PageMask              重看插件介绍 │ ← 头部：h1 + 最次要文字链接
+│ PageMask                查看使用说明 │ ← 头部：h1 + 最次要文字链接
 │ duozhuayu.com                       │
 │ 还没有收起设置 / N 项收起设置        │ ← 一句状态，不念功能名
 ├────────────────────────────────────┤
@@ -38,7 +40,7 @@
 │  │ 标题和图标              （次）│  │
 │  └──────────────────────────────┘  │
 │  ┌──────────────────────────────┐  │
-│  │ 收起页面内容        （主·蓝） │  │ ← 全屏唯一实心主按钮
+│  │ 收起内容            （主·蓝） │  │ ← 全屏唯一实心主按钮
 │  └──────────────────────────────┘  │
 ├────────────────────────────────────┤
 │ ② 灰度卡                            │ ↔ 胶囊「媒体」钮
@@ -66,24 +68,27 @@
 | 「遮住」钮 | ③ 遮住卡 | 同一个页面级动作，弹窗/胶囊/快捷键三处通用 |
 | 「⋯」菜单（收起内容 / 标题和图标 ｜ 调整不透明度、放回右下角 ｜ 删除设置） | ④ 辅助行 + 底部删除入口 | 菜单里「管按钮自己」的那一组，与弹窗里管悬浮按钮的设置同类，放最后 |
 
-- 弹窗 ① 内两颗入口的顺序改为 **「标题和图标」→「收起页面内容」**（用户要的页面顺序）；胶囊 ⋯ 菜单里这两项**同步调换**，否则对应关系断一处（#80 当年就是按弹窗对齐的）。
+- 弹窗 ① 内两颗入口的顺序改为 **「标题和图标」→「收起内容」**（用户要的页面顺序）；胶囊 ⋯ 菜单里这两项**同步调换**，否则对应关系断一处（#80 当年就是按弹窗对齐的）。
 - ②③ 与 ① 同款卡片框（用户要「样式差不多」）；④ 故意**不做卡片框**，用一条分隔线与四块功能分开——它不是四大功能之一，是「这个入口自己要不要显示」（格式塔共同区域：同框即同组）。
+
+> **对补充调研 §A 的一处有意偏离，记录理由**：`tmp/research-design.md` §A.1/A.4 依 Apple HIG「区分控制与内容」和 GOV.UK「按钮=动作」建议「遮住这一页」**不套**卡片容器、单独做全宽动作条。本方案仍采用同款卡片容器，因为用户这条诉求非常明确（「遮住这一页的样式和上面的差不多」），且与「四大功能一一对应胶囊四段」的核心心智模型绑在一起；**但卡内结构按调研意见做动作化区分**：没有开关、有一颗次操作档按钮 + 键帽 + 一句临时性说明，靠「有没有开关」而不是「有没有框」区分设置与动作。这样既满足同款外观，又不把一次性动作伪装成可记住的设置（`docs/adr/0007`）。
 
 ---
 
 ## 三、逐块规格
 
 ### 头部
-- 左 `PageMask`（h1，20/600），右「重看插件介绍」文字链接（12px、`--pm-fg-muted`、下划线、hover 变色）。
-- 命中区用 padding 垫到 ≥24（WCAG 2.5.8）；`aria-label` 写全称。
+- 左 `PageMask`（h1，20/600），右「查看使用说明」文字链接（12px、`--pm-fg-muted`、下划线、hover 变色）；英文 `View the guide`。
+- **为什么仍是文字链接而不是图标**：补充调研 §B.1 建议 header 右上角用 24×24 图标（Apple 本地化长度提醒 + WCAG 2.5.8）。本方案保留文字，是因为把文案从「重看插件介绍」/ "See the intro again" 收短到 6 字 / 14 字符后，320px 与英文态都不再挤压标题；图标含义不自解释，与用户「自解释」总诉求相悖。合规靠两条补齐：`min-height/min-width: 24px` 撑命中区（W3C C42）、`aria-label` 用全称、与 h1 的 24px 圆不相交（WCAG 2.5.8 Spacing 例外）。
+- **同一入口跨页面同一叫法、同一相对顺序**（WCAG 2.2 3.2.6 Consistent Help / G220）：本入口当前只在弹窗出现，弹窗内固定头部右侧，不因 `phase` 变化而挪位。
 - 欢迎页第 2 步的预览（`PopupBody preview`）隐藏这个链接，避免「介绍页里有个指向介绍页自己的链接」；`tests/onboarding-sync.test.ts` 读的是源码字符串，仍成立。
-- 英文按同样的意思重写，不逐字硬译（见 §六文案表）。
+- 英文按同样的意思重写，不逐字硬译（见 §七文案表）。
 
 ### ① 面具卡
 - 卡头：**ready** 是「面具图标 + 按你的设置显示 + 开关」；**new** 是同一行位置放「面具图标 + 按你的设置显示」+ 卡内一行短说明（见 §四）。两态卡头高度、图标、文字完全一致，不跳动。
 - 卡内两颗按钮：
   - 「标题和图标」= 次操作（浅灰底 + 控件色边框）。
-  - 「收起页面内容」= **主操作**（实心 `--pm-accent`），全弹窗唯一；放在卡内最后。
+  - 「收起内容」= **主操作**（实心 `--pm-accent`），全弹窗唯一；放在卡内最后。蓝底保留，理由是「一屏一个主操作」的项目共识与四档按钮体系（`docs/design-ui.md` §一/§四）；用户问「为什么一直蓝色」，答案是它承担「没设置过时第一步做什么」的指路作用（`research-0.8.15-ui.md` §二.3）。
 - **两态、开关开或关，两颗都可点**。删掉 `:disabled="!switchOn"` 与 `disguiseOffHint`；`PopupBody.vue` 顶部那段「保持可点」的旧注释这次统一为最终结论。
 - 开关关着时，卡内不再出现「暂不可用」这类不实说明；如需解释开关管什么，用一句**肯定句**写清它管「收起的内容 + 标题和图标」，且灰度不受它管（自解释，见 §六）。
 
@@ -142,9 +147,11 @@
 - 五种状态（默认/悬停/按下/键盘聚焦/不可用）继续沿用 `docs/design-ui.md` §四；开启态的悬停/按下仍有可见变化。
 
 ### 动效
-- 状态切换给 `background-color / color / border-color / fill` **150ms ease-out** 过渡；`@media (prefers-reduced-motion: reduce)` 下置 0ms。
-- 依据：M3 motion / Carbon motion 都用短过渡表达状态变化，避免 0ms 突变（Nielsen #1 状态可见）；**150ms 是项目取值**，不冒充设计系统原文数值。
+- 状态切换给 `background-color / color / border-color / fill` **150ms `cubic-bezier(0.2, 0, 0.38, 0.9)`** 过渡（Carbon productive standard 曲线；150ms = Carbon `duration-moderate-01` / M3 `DurationShort3`）。不写 `linear`，不动 `width/height/top/left`（避免重排）。
+- `@media (prefers-reduced-motion: reduce)` 分支**不是置 0ms**：保留 **120ms 纯 `opacity`/`color` 淡变**，只去掉任何 `transform` / 位移 / 缩放。依据 `tmp/research-design.md` §F-5/F-6（Apple 官方：状态变化动画「不应完全去除」，可用渐变/颜色变化）、F-7（crossfade）、WCAG 2.3.3 + C39。上限 <400ms（Doherty Threshold）。
+- 过渡只跟随数据状态，不加动画锁；`hover / focus / pressed` 五种状态各自仍有可见变化，过渡不是它们的替代。
 - 弹窗卡片出现/隐藏、向导工具条折叠同样遵守：只给短过渡，不做装饰性动画（用户要「低调」）。
+- **幕布覆盖/恢复的淡入淡出（调研 §F.4 建议 200ms/150ms）不在本批**：会动到幕布控制器与首屏防闪 E2E，和本批三票无关，登记到后续动效票，不混进来出回归。
 
 ### 同步范围（修一类）
 `ui/toggle/toggle.css` 两条开启态规则、`ui/FloatingToggle.vue` 的 `data-state` 契约、`ui/popup/PopupBody.vue` 卡头面具/媒体图标 `data-state='on'` 的填实规则、`styles/tokens.css` 顶部对比度表里「bg on fg 是选中态整钮填实的反色对（#137）」注释、`tests/tokens-contrast.test.ts`（若解析该表）、欢迎页第 3 步真实胶囊预览、相关 E2E 断言。
@@ -158,31 +165,79 @@
 | 宽度 | pick/preview 两步固定 `min(720px, 100vw - 32px)` | 两步**仍同宽**（保住「不变来变去」），收窄到 `min(480px, calc(100vw - 2 * var(--pm-space-4)))`；实现时以「看效果」展开「调整」后不折行/不溢出为验收线，不行就回调到能容下的最小值并留痕 |
 | 位置 | 底部居中、可拖 | 保持；**新增「收起」能力** |
 | 收起 | 无 | 标题栏右侧一颗轻操作文字按钮「收起」/「展开」（aria-label 写全称）；收起后只剩标题栏一条，页面完全可点；再点还原。收起态不丢草稿、不退出向导 |
-| 动效 | 无 | 折叠高度变化 150ms ease-out，`prefers-reduced-motion` 下 0ms |
+| 动效 | 无 | 折叠用 150ms 短过渡；`prefers-reduced-motion` 下保留 120ms 纯色淡变（口径同 §五） |
 | 标题和图标单步 | `max-content` 随内容伸缩 | 保持，但核对它不会因上两步收窄而显得是第三种样子 |
+| 抓取提示 | 仅 `cursor: grab` | 标题栏加**可见的抓取提示**（浅色抓握点纹 + 微文案「拖动」），照 uBO #1714 的官方补法；不自造新图标语义 |
 
 - 依据：Nielsen #3 用户可控与自由、Fitts（浮层遮挡减少可点区域）、项目 `docs/design-ui.md` §七；720 的原始理由（四列）已不成立。
 - 「收起」是新的界面动作，按 AGENTS.md 整屏审查第 2 条：用一个**明确的文字**，不新造图标符号，不与 ✕（移除）、关闭（文字）撞车。
+- **不采用补充调研 §D.5 的两条**（记录理由，不是漏看）：
+  - 「按阶段分宽」（点选窄 / 看效果 720）：会重新引入用户在 0.8.11 前明确抱怨过的「形状变来变去」，与 #140 的定宽成果直接冲突。本方案改为**两步同宽收窄 + 可收起**，用「让开」而不是「变宽」解决遮挡。
+  - 「默认停靠角落」：现有 `left:50%; bottom` 与 `moved` 拖动逻辑、`check-wizard.mjs:348–350` 底部位置断言绑在一起；收窄到 480px 后底部居中已不横穿页面。改角落收益低于回归风险，本批不动。
+  - 折叠态不做「悬停半透明自动让开」：WCAG 1.4.13 要求 Dismissible / Hoverable / Persistent，自动让开容易做成「指针一移就消失」，与「自解释」相悖。
 
 ---
 
-## 七、文案表
+## 七、文案表（本批 A 票落地范围）
 
-> 待 `tmp/audit-copy.md` 汇总后填入：现中文 / 现英文 / 问题 / 新中文 / 新英文 / 同步位置。
-> 已定方向（不改的部分见 `GLOSSARY.md`）：
-> - 删掉 `newSiteHint` 那段把三个功能名逐个念一遍的长句，换成一句状态说明（Carbon：说明为什么空 + 第一步）。
-> - 删掉 `disguiseOffHint`（「开关关着时，上面两项暂不可用」）——按钮两态都可点，这句话不成立。
-> - 灰度说明改成肯定句，说清「单独记」而不是「不受 X 影响」。
-> - 「遮住」卡补一句临时性说明。
-> - 「悬浮按钮」在 new 态的说明写清「添加设置后才会出现」。
-> - 「收起内容」是否改叫「收起页面内容」：待文案审计定稿后统一决定；若改，`GLOSSARY.md`、中英 i18n、胶囊 ⋯ 菜单、向导两步标题、欢迎页、E2E 字面量断言、设计文档、商店材料、CHANGELOG 必须一次扫完。
+审计全文见 `tmp/audit-copy.md`（不入库）；结论先行：**界面文案 100% 集中在 `core/i18n/messages.zh.ts` / `messages.en.ts` 两表**，无硬编码中文；但有 90+ 行 E2E 按中文整串断言，改任何一句都要同步改断言。
+
+### 7.1 决定：不改「收起内容」这个主叫法
+
+用户两次提到「收起页面内容」。**本批不改**，理由：`GLOSSARY.md` 已把它登记为界面用词，且配套「收起的内容 / 收起方式 / 收起设置」成套；改名要动 15+ 文件与 `check-pages.mjs:507/509/718`、`check-toggle.mjs:306/591/635`、`check-media.mjs` 等大量字面量断言，风险与「自解释」收益不成比例。改用**卡片结构 + 每块一句说明**补足自解释（下面 7.2）。用户若坚持，单独开票：先改 GLOSSARY，再全项目扫。
+
+### 7.2 A 票要落地的文案（中英同写，英文按同样意思重写）
+
+| 键 | 新中文 | 新英文 | 说明 |
+|---|---|---|---|
+| `popup.newSiteHint` | 这个网站还没设置过。 | This site isn't set up yet. | 一句状态即可，第一步交给蓝色主按钮（Carbon Empty States）；保留「还没设置过」以过 `check-pages.mjs:513` |
+| `popup.disguiseOffHint` | **删除该键**（中英同删） | 同 | 两钮两态都可点，这句「暂不可用」不成立；`core/i18n.test.ts` 要求两边键集合一致 |
+| `popup.cardSwitchHint`（新） | 这个开关管收起的内容和标签页标题、图标；图片和视频变灰单独记。 | Controls hidden items and the tab title and icon. Pictures & videos gray is a separate switch. | 补上审计 §3-1「最严重的不自解释」；ready 态常驻卡头下 |
+| `popup.cardSwitchHintNew`（新） | 设置好之后，用这个开关在网站原样和你的设置之间切换。 | Once set up, use this switch to move between the site as it is and your settings. | new 态卡头没开关，同位置放这句 |
+| `media.hintShort` | 单独起作用：切到「原样」时，图片和视频仍变灰，收起的内容和标题图标会还原。 | Works on its own: switching to "As is" keeps pictures and videos gray, while hidden items and the tab title and icon return to normal. | 肯定句、说具体后果；用短名「原样」，不用全称 |
+| `popup.coverHint`（新） | 只是临时挡住，刷新或离开这个页面就还原，不会改你的设置。 | This only covers the page for now — reloading or leaving restores it and changes none of your settings. | 补上审计 §3-4「临时性界面零体现」 |
+| `popup.showToggleHint` | 关掉后，这个网站的页面上不再显示悬浮按钮；弹窗里的设置和「遮住这一页」快捷键照常可用。 | Turn it off and the floating button no longer appears on this site's pages. The popup settings and the "Cover this page" shortcut still work. | 正面说后果，不靠反推 |
+| `popup.showToggleHintNew`（新） | 添加设置后，页面上会出现悬浮按钮。 | Once this site is set up, a floating button appears on its pages. | new 态不放假开关，同位置放这句 |
+| `popup.replayIntro` | 查看使用说明 | View the guide | 头部小链接要短；`aria-label` 用全称「查看 PageMask 使用说明」/ "View the PageMask guide"；`onboarding-sync.test.ts` 只断言 testid 与 href，不断言文字 |
+| `popup.error.editFailed` | 没能打开「标题和图标」。刷新这个页面后再试一次 | Couldn't open "Title & icon". Reload this page and try again | **硬违规必修**：「编辑面板」被 `GLOSSARY.md:92` 列入 _Avoid_ |
+| `toggle.coverAria` | 遮住这一页 | Cover this page | 消灭第三套叫法，与弹窗/欢迎页一致（审计 §2-B） |
+
+- 新键必须中英同增；`core/i18n.test.ts:56-60` 会守键集合一致。
+- 所有说明按 AGENTS.md「说明跟着它解释的东西走」放在各自卡片内，不进操作栏、不重复按钮文字。
+- 补了说明后要复核弹窗总高不超过 600（0.8.11 的约束）；「重看介绍」从底部挪到头部正好腾出一行。
+
+### 7.3 不在 A 票、另开文案专项票（#151）
+
+审计里其余跨界面同类问题不是不做，是**不在结构票里混合改**（90+ 断言，混在一起出回归难定位）：
+- 「遮住整页 / 一键遮住整页」在设置页、欢迎页 3 处的分叉；
+- 「按你的设置显示」全称在说明里的 4 处滥用、`management.iconIntro` 英文自造词 "Shown your way"；
+- 英文把 "Hidden items"（概念名）当数量单位，应统一 "N items set to hide"；`wizard.rowScopeExclude` 英文 "All but these pages" → "Except these pages"；
+- `settings.shortcutIntro`「有人走过来时」、欢迎页「人走开了」等不专业委婉语；`sitesEmpty`「收拾」；`settings.toggleIntro` 两个「它」；
+- `wizard.pickLead` 第三行重复「取消选中」、`wizard.dragAria`「工具条」内部说法、`wizard.exitBody*` 把「原样」误用为「撤销预览」；
+- 抽 `common.titleBlankHint` 消除三处逐字重复、合并 `quickFill`/`quickTitle` 死键、清理 `onboarding.done` 死键；
+- `GLOSSARY.md` 自身两处过时/矛盾（`:144`「返回『你添加的网站』」与 `:43` _Avoid_ 冲突；菜单项数描述与实现 4/5 项不符）。
 
 ---
 
 ## 八、影响面与测试清单
 
-> 待 `tmp/audit-code.md` 汇总后填入：文件:行、锁死的断言、需同步的文档与 i18n 键、欢迎页连带。
-> 已知必改：`tests/e2e/check-pages.mjs` 387–402（禁用断言）、`tests/e2e/check-pages.mjs` 506–509（new 态按钮文案）、`tests/onboarding-sync.test.ts` 30–33（介绍入口）、`tests/onboarding-sync.test.ts` 41–49（功能名清单）、所有按中文字面量断言的 E2E。
+完整只读审计见 `tmp/audit-code.md`；文案字面量断言总表见 `tmp/audit-copy.md` §5.1。已知必改：
+
+| 位置 | 约束 |
+|---|---|
+| `tests/e2e/check-pages.mjs:387–402` | 锁「主开关关着 → 两钮 disabled + 说明行」，A 票要改成「两态都可点、无说明行」 |
+| `tests/e2e/check-pages.mjs:263/307/507/509/513/557` | 弹窗按钮文字、`还没设置过`、`允许 PageMask 访问这个网站` 等整串断言 |
+| `tests/e2e/check-pages.mjs:1105` | 欢迎页第 2 步真实弹窗组件（入口在） |
+| `tests/onboarding-sync.test.ts:30–33 / 41–49` | 介绍入口 testid + href；欢迎页文案必须含四个功能名当前值 |
+| `tests/e2e/check-media.mjs:172–173 / 189`、`check-toggle.mjs:452` | B 票：锁墨底反白的断言要按新规格重写 |
+| `tests/e2e/check-toggle.mjs:306/591/635` | 胶囊 ⋯ 菜单项整串（A 票调换两项顺序后要同步） |
+| `tests/e2e/check-media.mjs:275` | `media.hintNew` 的「访问权限」子串；若 A 票改这句要同步 |
+| `core/i18n.test.ts:56–75` | 中英键集合、函数参数个数、英文表不得残留中文 |
+| `tests/media-ui.test.ts:71–82` | `media.hint / hintShort` 等键中英都必须非空，不能删 |
+| `tests/e2e/check-i18n.mjs:52–57` | `_locales` 两份整串相等（本批不动 manifest 文案） |
+| `styles/tokens.css` + `tests/tokens-contrast.test.ts` | B 票：顶部对比度表注释与守门 |
+
+欢迎页连带：第 2 步 `phase="new"` 渲染真实 `PopupBody`（`inert + aria-hidden`），第 3 步渲染真实 `FloatingToggle`；A/B 两票改结构会同时改到这两张示意图，且 `preview` 开关要传给 `PopupBody` 以隐藏头部介绍链接。
 
 ---
 
