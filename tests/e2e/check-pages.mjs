@@ -286,6 +286,70 @@ async function checkPopupChrome(popup, label) {
   );
   const h = await popupHeight(popup);
   check(h <= 600, `${label}：面板高度 ${h.toFixed(1)}px 不超过 Chrome 弹窗上限 600px`);
+  // ── #148 结构断言 ──
+  // 头部「查看使用说明」链接从底部独占一行挪到 h1 右侧；命中区 ≥24（WCAG 2.5.8 / C42）
+  const guide = await popup.evaluate(() => {
+    const a = document.querySelector('[data-testid="pm-popup-replay-intro"]');
+    const box = a?.getBoundingClientRect();
+    return {
+      inHead: !!a?.closest('.popup-head'),
+      afterLogo: !!a?.previousElementSibling?.classList.contains('popup-logo'),
+      href: a?.getAttribute('href') ?? '',
+      hit: box ? Math.min(box.height, box.width) : 0,
+      noBottomReplay: !document.querySelector('.link-replay'),
+    };
+  });
+  check(
+    guide.inHead && guide.afterLogo && guide.href === '/onboarding.html' && guide.noBottomReplay,
+    `${label}：「查看使用说明」在头部 h1 右侧、指向介绍页，底部不再独占一行`,
+  );
+  check(guide.hit >= 24, `${label}：头部链接命中区 ${guide.hit.toFixed(1)}px ≥ 24px`);
+  // 遮住卡（#148 / ADR-0007）：与设置卡同款卡片框，但内部是按钮、没有开关
+  const coverCard = await popup.evaluate((s) => {
+    const card = document.querySelector(s)?.closest('.popup-card');
+    return { inCard: !!card, noSwitch: !!card && !card.querySelector('input[role="switch"]'), hasHint: !!card?.querySelector('.cover-hint') };
+  }, tid('pm-popup-cover'));
+  check(coverCard.inCard && coverCard.noSwitch && coverCard.hasHint, `${label}：遮住是卡片框内的按钮、卡内无开关、有临时说明`);
+  // new / ready 才有四块功能（pending 走自己的重新授权分支）：两颗编辑入口顺序与并排等高、
+  // 辅助行无卡片框、说明字号一致、卡头 label[for] 两态正确（#148 / 方案 v3 §三①）
+  if (await popup.$(tid('pm-popup-disguise'))) {
+    const layout = await popup.evaluate(() => {
+      const g = document.querySelector('[data-testid="pm-popup-disguise"]');
+      const btns = [...g.querySelectorAll('button[data-testid]')].map((b) => b.getAttribute('data-testid'));
+      const aux = document.querySelector('.aux-row') ?? document.querySelector('[data-testid="pm-popup-capsule"]');
+      const title = document.querySelector('[data-testid="pm-popup-title"]')?.getBoundingClientRect();
+      const setup = document.querySelector('[data-testid="pm-popup-setup"]')?.getBoundingClientRect();
+      const hintSizes = ['.card-switch-hint', '.media-hint', '.cover-hint', '.aux-hint']
+        .map((s) => document.querySelector(s))
+        .filter((el) => el)
+        .map((el) => getComputedStyle(el).fontSize);
+      return {
+        btns,
+        auxNoCard: !!aux && !aux.closest('.popup-card'),
+        topDelta: title && setup ? Math.abs(title.top - setup.top) : Infinity,
+        titleH: title?.height ?? 0,
+        setupH: setup?.height ?? 0,
+        hintSizes,
+        forLabel: !!g.querySelector('.switch-row label[for]'),
+        hasSwitch: !!document.querySelector('[data-testid="pm-popup-switch"]'),
+      };
+    });
+    check(
+      layout.btns[0] === 'pm-popup-title' && layout.btns[1] === 'pm-popup-setup',
+      `${label}：两颗编辑入口「标题和图标」在前、「收起内容」在后（${layout.btns.join(' → ')}）`,
+    );
+    check(layout.topDelta < 1.5, `${label}：两颗编辑入口并排同一行（top 差 ${layout.topDelta.toFixed(1)}px）`);
+    check(
+      layout.titleH >= 40 && layout.setupH >= 40,
+      `${label}：两颗编辑入口等高 ≥40px（次 ${layout.titleH.toFixed(1)} / 主 ${layout.setupH.toFixed(1)}）`,
+    );
+    check(
+      layout.hintSizes.length === 4 && new Set(layout.hintSizes).size === 1,
+      `${label}：三张卡与辅助行说明字号一致（${layout.hintSizes.join(' / ')}）`,
+    );
+    check(layout.forLabel === layout.hasSwitch, `${label}：卡头 label[for] 只在有开关时出现（new 态不放假可点 label）`);
+    check(layout.auxNoCard, `${label}：辅助行（悬浮按钮）无卡片框，只用分隔线与四块功能分开`);
+  }
 }
 
 /**
@@ -384,21 +448,32 @@ async function main() {
     check(sw.node?.checked === false, '空格键切换后 switch checked=false');
     await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'original', '空格键切换写入存储');
     check(true, '空格键切换后存储为清爽模式关');
-    // 主开关关着：面具卡里两颗入口钮置灰禁用 + 卡底说明行出现（0.8.10 #138 的补锁，0.8.12 审查）
-    const offState = await popup.evaluate(() => ({
-      setupDisabled: document.querySelector('[data-testid="pm-popup-setup"]')?.disabled ?? null,
-      titleDisabled: document.querySelector('[data-testid="pm-popup-title"]')?.disabled ?? null,
-      hint: !!document.querySelector('[data-testid="pm-popup-disguise-off"]'),
-    }));
+    // 两颗编辑入口定义的是「打开之后生效什么」，不是开关的从属设置（#148）：
+    // 主开关关 / 开都保持可点，卡内用肯定句说明开关管什么，不再有「开关关着」的禁用说明行。
+    const offState = await popup.evaluate(() => {
+      const g = document.querySelector('[data-testid="pm-popup-disguise"]');
+      return {
+        setupDisabled: document.querySelector('[data-testid="pm-popup-setup"]')?.disabled ?? null,
+        titleDisabled: document.querySelector('[data-testid="pm-popup-title"]')?.disabled ?? null,
+        offHint: !!document.querySelector('[data-testid="pm-popup-disguise-off"]'),
+        cardHint: g?.querySelector('.card-switch-hint')?.textContent.trim() ?? '',
+      };
+    });
     check(
-      offState.setupDisabled === true && offState.titleDisabled === true && offState.hint === true,
-      `主开关关着：两颗入口钮禁用、说明行出现（${JSON.stringify(offState)}）`,
+      offState.setupDisabled === false && offState.titleDisabled === false && offState.offHint === false,
+      `主开关关着：两颗编辑入口仍可点、无禁用说明行（${JSON.stringify(offState)}）`,
     );
+    check(offState.cardHint.length > 0, `主开关关着：卡内仍有肯定句说明开关管什么（${offState.cardHint}）`);
     await popup.click(tid('pm-popup-switch'));
     await waitFor(popup, '开关重新变为开', (s) => document.querySelector(s).checked, [tid('pm-popup-switch')]);
+    const onState = await popup.evaluate(() => ({
+      setupDisabled: document.querySelector('[data-testid="pm-popup-setup"]')?.disabled ?? null,
+      titleDisabled: document.querySelector('[data-testid="pm-popup-title"]')?.disabled ?? null,
+      offHint: !!document.querySelector('[data-testid="pm-popup-disguise-off"]'),
+    }));
     check(
-      (await popup.evaluate(() => !document.querySelector('[data-testid="pm-popup-setup"]').disabled)) && !(await popup.$(tid('pm-popup-disguise-off'))),
-      '开关打开：入口钮恢复可点、说明行收回',
+      onState.setupDisabled === false && onState.titleDisabled === false && onState.offHint === false,
+      `主开关开着：两颗编辑入口仍可点、无禁用说明行（${JSON.stringify(onState)}）`,
     );
     await popup.click(tid('pm-popup-switch'));
     await waitFor(popup, '开关再关（沿用旧流程的关态基线）', (s) => !document.querySelector(s).checked, [tid('pm-popup-switch')]);
@@ -511,6 +586,23 @@ async function main() {
     );
     const newSiteHint = await popup.$eval(tid('pm-popup-hint-new'), (e) => e.textContent.trim()).catch(() => null);
     check(!!newSiteHint && newSiteHint.includes('还没设置过'), `未配置站点有一句说明（${newSiteHint}）`);
+    // #148：new 态与 ready 同构，但不放假开关；两颗编辑入口任何状态可点，同位置用肯定句说明开关将来做什么
+    const newState = await popup.evaluate(() => {
+      const g = document.querySelector('[data-testid="pm-popup-disguise"]');
+      return {
+        setupDisabled: document.querySelector('[data-testid="pm-popup-setup"]')?.disabled ?? null,
+        titleDisabled: document.querySelector('[data-testid="pm-popup-title"]')?.disabled ?? null,
+        noFakeSwitch: !g.querySelector('input[role="switch"]'),
+        noCapsule: !document.querySelector('[data-testid="pm-popup-capsule"]'),
+        cardHint: g.querySelector('.card-switch-hint')?.textContent.trim() ?? '',
+      };
+    });
+    check(
+      newState.setupDisabled === false && newState.titleDisabled === false,
+      `new 态两颗编辑入口都可点（${JSON.stringify(newState)}）`,
+    );
+    check(newState.noFakeSwitch && newState.noCapsule, 'new 态面具卡 / 辅助行都不放假开关');
+    check(newState.cardHint.length > 0, `new 态同位置有肯定句说明开关设置好之后做什么（${newState.cardHint}）`);
     await checkPopupChrome(popup, '未添加的网站');
     await coverAndRestore(ext, popup, site2, '未添加的网站');
 
@@ -1103,6 +1195,8 @@ async function main() {
     await waitFor(o, '切到第 2 步', () => !document.querySelector('[data-testid="onboard-card"] h2')?.textContent?.includes('固定到工具栏'));
     check((await stepTitle()).includes('四件事'), `第 2 步讲弹窗能做的四件事（${await stepTitle()}）`);
     check(!!(await o.$(tid('pm-popup-setup'))) && !!(await o.$(tid('pm-popup-cover'))), '第 2 步是真实弹窗组件（三个入口都在）');
+    // #148：示意图用 preview 隐藏头部「查看使用说明」链接（介绍页里不该有指向介绍页自己的链接）
+    check(!(await o.$(tid('pm-popup-replay-intro'))), '第 2 步示意图（preview）隐藏头部介绍链接');
     const featuresText = await o.$eval('.features', (e) => e.textContent ?? '');
     check(
       ['收起内容', '标题和图标', '图片和视频变灰', '遮住这一页'].every((k) => featuresText.includes(k)),
@@ -1201,6 +1295,10 @@ async function main() {
     // #112：待授权站点页面上本来就没有胶囊，开关先不出现；删除仍可用（删掉待授权站点）
     check(!(await popup.$(tid('pm-popup-capsule'))), '待授权站点不显示「悬浮按钮」开关');
     check(!!(await popup.$(tid('pm-popup-delete'))), '待授权站点仍有「删除这个网站的设置」入口');
+    // #148：new / ready 同构只针对这两态；pending 保留自己的「重新授权」分支，不渲染四块功能卡
+    for (const id of ['pm-popup-disguise', 'pm-popup-media', 'pm-popup-setup', 'pm-popup-capsule']) {
+      check(!(await popup.$(tid(id))), `待授权站点不渲染四块功能卡里的 ${id.replace('pm-popup-', '')}`);
+    }
     // 「需要允许访问」与「可能失效」是同一套标记：都是 .pm-mark + 圆点在最前，只用颜色区分
     const pendingMark = await popup.$eval(tid('pm-popup-pending-badge'), (e) => ({
       classes: [...e.classList],

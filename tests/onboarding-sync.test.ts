@@ -27,7 +27,7 @@ describe('欢迎页与当前功能集同步（#139）', () => {
     expect(app, '不许再出现已退场的 mini prop').not.toContain(':mini');
   });
 
-  it('弹窗里有「重看插件介绍」入口，指向 onboarding 页', () => {
+  it('弹窗里有「查看使用说明」入口，指向 onboarding 页', () => {
     expect(popupBody).toContain('pm-popup-replay-intro');
     expect(popupBody).toContain('href="/onboarding.html"');
   });

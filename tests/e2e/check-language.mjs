@@ -156,6 +156,11 @@ try {
   }));
   check(overflow.scroll <= overflow.client, `英文弹窗不横向溢出（scroll=${overflow.scroll} ≤ client=${overflow.client}）`);
   check(Math.round(overflow.width) === 320, `弹窗宽度仍是最窄 320px（${Math.round(overflow.width)}px）`);
+  // 英文说明比中文长，纵向同样要塞进 Chrome 弹窗 600px 上限（#148 / 方案 v3 §八）。
+  // 不跨文件 import check-pages 的 helper，本地量同一份 main.popup 的盒高；
+  // 用 $eval 而非可选链兜底 0，元素不在就直接抛错，不会写成永真。
+  const enHeight = await popup.$eval('main.popup', (m) => m.getBoundingClientRect().height);
+  check(enHeight <= 600, `英文弹窗（ready）面板高度 ${enHeight.toFixed(1)}px 不超过 Chrome 弹窗上限 600px`);
   await popup.close();
 
   // 语言名不翻译：英文界面下仍是 简体中文 / English

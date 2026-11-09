@@ -10,8 +10,8 @@
  * - screenshot-1-before-after：同一页面的「之前 / 之后」并排 + 大字说明
  * - screenshot-2-wizard：向导的点选与看效果两步并排（#81 起两步）
  * - screenshot-3-tabbar：标签栏里的两个标签页（原样 / 清爽），展示标题与图标
- * - screenshot-4-popup：弹窗正常状态（按你的设置显示开关、收起内容 / 标题和图标、图片和视频变灰
- *   开关、悬浮按钮开关、带图标的「遮住这一页」、底部两个入口）
+ * - screenshot-4-popup：弹窗正常状态（头部「查看使用说明」链接；面具卡：按你的设置显示开关 + 标题和图标 /
+ *   收起内容两颗编辑入口；灰度卡：图片和视频变灰开关；遮住卡：带图标的「遮住这一页」按钮；辅助行：悬浮按钮开关；底部两个入口）
  * - screenshot-5-management：「你添加的网站」与「插件设置」两个独立页面并排
  * - screenshot-6-curtain：悬浮按钮「⋯」菜单（0.8.0 起媒体开关在胶囊媒体钮上，菜单四项三组）+ 遮住整页后的睁眼恢复按钮
  * - promo-tile-440x280：新图标 + 一句话定位，无 emoji
@@ -427,7 +427,7 @@ try {
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(menuFile)}" style="width:572px;height:347px;display:block;border-radius:10px;border:1px solid #dfe3e8;object-fit:cover;object-position:right bottom">
-         <figcaption class="cap" style="margin-top:10px">「⋯」菜单：收起内容 · 标题和图标 · 调整不透明度 · 删除这个网站的设置（媒体开关在胶囊的「媒体」钮上）</figcaption>
+         <figcaption class="cap" style="margin-top:10px">「⋯」菜单：标题和图标 · 收起内容 · 调整不透明度 · 删除这个网站的设置（媒体开关在胶囊的「媒体」钮上）</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(curtainFile)}" style="width:572px;height:347px;display:block;border-radius:10px;border:1px solid #dfe3e8;object-fit:cover">

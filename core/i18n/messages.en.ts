@@ -83,7 +83,7 @@ export const en: Messages = {
     mediaGrayHint: 'Pictures and videos turn black & white — same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
     hint: 'Works on its own, independent of ‘Your settings’: switching to ‘As is’ restores what’s hidden and the tab title/icon, while the gray follows this switch. Images still load in the background — this only removes the color.',
-    hintShort: 'Works on its own — independent of ‘Your settings’.',
+    hintShort: 'Works on its own: switching to “As is” keeps pictures and videos gray, while hidden items and the tab title and icon return to normal.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on asks for this site’s access, just like first-time setup; pictures and videos then turn black & white (same place, still readable) and autoplaying videos are paused.',
     /** Hover / screen-reader label for the capsule media button */
@@ -102,22 +102,30 @@ export const en: Messages = {
       other: 'Extensions can’t change this kind of page',
     },
     pendingBadge: 'Needs access',
-    newSiteHint:
-      'This site isn’t set up yet. “Hide items” picks the parts of the page you don’t want, “Title & icon” changes the tab’s name and picture; to cover the whole page for a moment, use “Cover this page”.',
+    /** One short line for an unset site; the blue primary button in the card is the first step (#148) */
+    newSiteHint: 'This site isn’t set up yet.',
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
     reauthorize: 'Allow access',
     reauthorizing: 'Waiting for you to allow…',
     setupMore: 'Hide items',
     /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
-    /** Hint at the bottom of the card while the master switch is off (0.8.10, #138) */
-    disguiseOffHint: 'While the switch is off, the two above are paused — turn it back on to edit them.',
+    /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
+    cardSwitchHint: 'Controls hidden items and the tab title and icon. Pictures & videos gray is a separate switch.',
+    /** On an unset site there is no switch; instead say what it will do once set up (#148) */
+    cardSwitchHintNew: 'Once set up, use this switch to move between the site as it is and your settings.',
     coverPage: 'Cover this page',
+    /** Cover card: say this is temporary and changes no settings (#148) */
+    coverHint: 'This only covers the page for now — reloading or leaving restores it and changes none of your settings.',
     /** Show-capsule switch (#112): label + one-line hint under the switch */
     showToggle: 'Floating button',
-    showToggleHint: 'Turn it off and PageMask stays reachable from the toolbar icon; the cover shortcut keeps working.',
-    /** Replay the onboarding intro (0.8.11, #139): third entry at the popup bottom, opens the onboarding page */
-    replayIntro: 'See the intro again',
+    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages. The popup settings and the “Cover this page” shortcut still work.',
+    /** On an unset site there is no switch; say the button appears once set up (#148) */
+    showToggleHintNew: 'Once this site is set up, a floating button appears on its pages.',
+    /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
+    replayIntro: 'View the guide',
+    /** Full accessible name for the short header link (#148) */
+    replayIntroAria: 'View the PageMask guide',
     /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
     deleting: 'Deleting…',
     deleteFailed: "Couldn't delete this site's settings, please try again.",
@@ -133,7 +141,7 @@ export const en: Messages = {
       denied: 'PageMask needs access to this site to change its title and hide things. Click again and choose “Allow”',
       gestureLost: 'Couldn’t open the permission prompt. Click PageMask again',
       toggleFailed: 'Couldn’t switch how the site is shown. Please try again',
-      editFailed: 'Couldn’t open the editor. Reload this page and try again',
+      editFailed: 'Couldn’t open “Title & icon”. Reload this page and try again',
       coverFailed: 'Couldn’t cover this page. Reload it and try again',
     },
   },
@@ -427,7 +435,7 @@ export const en: Messages = {
     moveAria: 'Floating button (drag it, or move with arrow keys)',
     tipOn: 'Click to see the site as it is',
     tipOff: 'Click to use your settings',
-    coverAria: 'Cover the whole page',
+    coverAria: 'Cover this page',
     moreAria: 'More actions',
     menuTitle: 'Title & icon',
     menuContent: 'Hide items',

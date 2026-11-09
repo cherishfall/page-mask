@@ -82,13 +82,13 @@
     <!-- 菜单：popover 自带「点外面关闭」与 Esc 关闭，并进 top layer 不可能被页面浮层压住。
          按用途分三组（#77）：改内容的 / 按钮位置 / 删除这个网站的设置——最后一项与上面用
          分隔线隔开、写成红字，免得顺手点错。两项都进同一个三步向导，只是停的步不同；
-         组内顺序与弹窗一致，收起内容在前（主功能，#80） -->
+         组内顺序与弹窗一致，标题和图标在前、收起内容在后（0.8.15，#148，与弹窗同步调换） -->
     <div ref="menuEl" v-bind="POPOVER" class="pm-tg-menu" data-testid="pm-toggle-menu" @toggle="onMenuToggle">
-      <button type="button" class="pm-tg-item" data-testid="pm-toggle-more-items" @click="onMenu('moreItems')">
-        {{ t.toggle.menuContent }}
-      </button>
       <button type="button" class="pm-tg-item" data-testid="pm-toggle-title" @click="onMenu('edit')">
         {{ t.toggle.menuTitle }}
+      </button>
+      <button type="button" class="pm-tg-item" data-testid="pm-toggle-more-items" @click="onMenu('moreItems')">
+        {{ t.toggle.menuContent }}
       </button>
       <!-- 按钮自己那一组（#120）：先「调整不透明度」，再「放回右下角」。
            分隔线常驻——不透明度这一项一直在；「放回右下角」只在拖过之后才有意义，

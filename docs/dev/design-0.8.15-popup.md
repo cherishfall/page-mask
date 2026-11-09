@@ -5,6 +5,8 @@
 本文件定的是「长什么样、怎么排、点下去怎样」，实现不得自行改动；与上述权威文件冲突时以权威文件为准，并回来改本文件。
 
 > **v2 修订（三份子代理报告回来后）**：① 统一主叫法为 `GLOSSARY.md` 已登记的「收起内容」，撤回稿中「收起页面内容」（§7.1 已决定不改叫法，稿内三处是自相矛盾）；② `prefers-reduced-motion` 由「置 0ms」改为「保留 100–150ms 纯色淡变、去掉位移缩放」（`tmp/research-design.md` §F，Apple 官方 F-5/F-6 + WCAG 2.3.3/C39）；③ 补记「遮住卡同款容器」「帮助入口用短文字链接」「向导不按阶段分宽」三处对补充调研的取舍（§三/§六）。
+>
+> **v3 修订（A 票实现反馈回来后）**：① 卡内两颗编辑入口由**竖排改并排**（次左主右），见 §三①；② 补「英文态纵向 ≤600px 也要有断言」到 §八；③ §7.2 文案表补 `popup.replayIntroAria`（头部短链接的读屏全称，A 票最小补齐）。
 
 ---
 
@@ -37,10 +39,7 @@
 │  [面具] 按你的设置显示      [开关]  │   ready：开关
 │  没设置过时：一行说明替代开关        │   new：说明（见 §四）
 │  ┌──────────────────────────────┐  │
-│  │ 标题和图标              （次）│  │
-│  └──────────────────────────────┘  │
-│  ┌──────────────────────────────┐  │
-│  │ 收起内容            （主·蓝） │  │ ← 全屏唯一实心主按钮
+│  │ [ 标题和图标 ] [ 收起内容·蓝 ]│  │ ← 一行并排：次在左、主（唯一实心）在右
 │  └──────────────────────────────┘  │
 ├────────────────────────────────────┤
 │ ② 灰度卡                            │ ↔ 胶囊「媒体」钮
@@ -86,9 +85,11 @@
 
 ### ① 面具卡
 - 卡头：**ready** 是「面具图标 + 按你的设置显示 + 开关」；**new** 是同一行位置放「面具图标 + 按你的设置显示」+ 卡内一行短说明（见 §四）。两态卡头高度、图标、文字完全一致，不跳动。
-- 卡内两颗按钮：
-  - 「标题和图标」= 次操作（浅灰底 + 控件色边框）。
-  - 「收起内容」= **主操作**（实心 `--pm-accent`），全弹窗唯一；放在卡内最后。蓝底保留，理由是「一屏一个主操作」的项目共识与四档按钮体系（`docs/design-ui.md` §一/§四）；用户问「为什么一直蓝色」，答案是它承担「没设置过时第一步做什么」的指路作用（`research-0.8.15-ui.md` §二.3）。
+- 卡内两颗按钮**排成一行**：左「标题和图标」= 次操作（浅灰底 + 控件色边框），右「收起内容」= **主操作**（实心 `--pm-accent`，全弹窗唯一），间距 8px，两颗等高 40px。
+  - 依据 `docs/design-ui.md` §五第 1/2/5 条「一屏一个主操作，永远在最右」「次操作在主操作的左边」「按钮间距 8」——竖排其实一直不符合这条项目共识；左→右也正好是用户要的「标题和图标在收起内容之前」，并与胶囊横向分段呼应。
+  - **v3 改并排的直接原因**：A 票实测中文 ready 态 590.3px，距 Chrome 弹窗 600px 上限只剩 9.7px，英文态说明更长且当时没有纵向断言。并排省下约一整行（40px），才有余量把主按钮恢复到「主要提交 40px」、把卡内说明统一到 13px 正文，同时给英文态留安全边际。
+  - 蓝底保留，理由是「一屏一个主操作」的项目共识与四档按钮体系（`docs/design-ui.md` §一/§四）；用户问「为什么一直蓝色」，答案是它承担「没设置过时第一步做什么」的指路作用（`research-0.8.15-ui.md` §二.3）。
+- 卡内说明统一用 13px 正文档（`--pm-font-size-body`）：三张卡 + 辅助行的说明不许出现 12px / 13px 分叉（AGENTS.md 整屏审查第 5 条）。
 - **两态、开关开或关，两颗都可点**。删掉 `:disabled="!switchOn"` 与 `disguiseOffHint`；`PopupBody.vue` 顶部那段「保持可点」的旧注释这次统一为最终结论。
 - 开关关着时，卡内不再出现「暂不可用」这类不实说明；如需解释开关管什么，用一句**肯定句**写清它管「收起的内容 + 标题和图标」，且灰度不受它管（自解释，见 §六）。
 
@@ -198,7 +199,8 @@
 | `popup.coverHint`（新） | 只是临时挡住，刷新或离开这个页面就还原，不会改你的设置。 | This only covers the page for now — reloading or leaving restores it and changes none of your settings. | 补上审计 §3-4「临时性界面零体现」 |
 | `popup.showToggleHint` | 关掉后，这个网站的页面上不再显示悬浮按钮；弹窗里的设置和「遮住这一页」快捷键照常可用。 | Turn it off and the floating button no longer appears on this site's pages. The popup settings and the "Cover this page" shortcut still work. | 正面说后果，不靠反推 |
 | `popup.showToggleHintNew`（新） | 添加设置后，页面上会出现悬浮按钮。 | Once this site is set up, a floating button appears on its pages. | new 态不放假开关，同位置放这句 |
-| `popup.replayIntro` | 查看使用说明 | View the guide | 头部小链接要短；`aria-label` 用全称「查看 PageMask 使用说明」/ "View the PageMask guide"；`onboarding-sync.test.ts` 只断言 testid 与 href，不断言文字 |
+| `popup.replayIntro` | 查看使用说明 | View the guide | 头部小链接要短；`onboarding-sync.test.ts` 只断言 testid 与 href，不断言文字 |
+| `popup.replayIntroAria`（新，v3 补录） | 查看 PageMask 使用说明 | View the PageMask guide | 头部短链接的读屏全称。v2 文案表要求 `aria-label` 用全称却没给键，A 票按「界面文案必须走 i18n」最小补齐，中英同增 |
 | `popup.error.editFailed` | 没能打开「标题和图标」。刷新这个页面后再试一次 | Couldn't open "Title & icon". Reload this page and try again | **硬违规必修**：「编辑面板」被 `GLOSSARY.md:92` 列入 _Avoid_ |
 | `toggle.coverAria` | 遮住这一页 | Cover this page | 消灭第三套叫法，与弹窗/欢迎页一致（审计 §2-B） |
 
@@ -234,6 +236,7 @@
 | `tests/e2e/check-media.mjs:275` | `media.hintNew` 的「访问权限」子串；若 A 票改这句要同步 |
 | `core/i18n.test.ts:56–75` | 中英键集合、函数参数个数、英文表不得残留中文 |
 | `tests/media-ui.test.ts:71–82` | `media.hint / hintShort` 等键中英都必须非空，不能删 |
+| `tests/e2e/check-language.mjs` | **v3 新增**：英文态只量了 320px 横向不溢出，纵向 600px 是覆盖盲点；补一条英文 ready 态 `popupHeight ≤600` 断言并实测（中文 ready 实测 590.3px，英文说明更长） |
 | `tests/e2e/check-i18n.mjs:52–57` | `_locales` 两份整串相等（本批不动 manifest 文案） |
 | `styles/tokens.css` + `tests/tokens-contrast.test.ts` | B 票：顶部对比度表注释与守门 |
 

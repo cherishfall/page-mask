@@ -60,6 +60,7 @@
               busy=""
               :covered="false"
               :cover-shortcut="coverShortcut"
+              preview
             />
           </div>
           <div v-else class="art-capsule">

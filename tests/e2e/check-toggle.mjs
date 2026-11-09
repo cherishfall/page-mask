@@ -303,14 +303,14 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      menuShape.items.join(' / ') === '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+      menuShape.items.join(' / ') === '标题和图标 / 收起内容 / 调整不透明度 / 删除这个网站的设置',
       `默认位（没存过坐标）时菜单四项，媒体开关在胶囊媒体钮上不再进菜单（#131，${menuShape.items.join(' / ')}）`,
     );
     check(menuShape.seps === 2, `菜单里两条分隔线：改内容 / 按钮自己 / 删除设置（0.8.0 媒体组退场，实际 ${menuShape.seps} 条）`);
     check(
       menuShape.order.join(' | ') ===
-        '收起内容 | 标题和图标 | --- | 调整不透明度 | --- | 删除这个网站的设置',
-      `分组顺序：改内容（收起内容在前，#80）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
+        '标题和图标 | 收起内容 | --- | 调整不透明度 | --- | 删除这个网站的设置',
+      `分组顺序：改内容（标题和图标在前，与弹窗一致，#148）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -588,7 +588,7 @@ async function main() {
     }, TOGGLE);
     check(
       movedMenu.items.join(' / ') ===
-        '收起内容 / 标题和图标 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
+        '标题和图标 / 收起内容 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
         movedMenu.seps === 2,
       `拖过之后菜单五项、两条分隔线（媒体开关在胶囊媒体钮上，#131；${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
     );
@@ -632,7 +632,7 @@ async function main() {
     }, TOGGLE);
     check(
       noRulesMenu.items.join(' / ') ===
-        '收起内容 / 标题和图标 / 调整不透明度 / 删除这个网站的设置',
+        '标题和图标 / 收起内容 / 调整不透明度 / 删除这个网站的设置',
       `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
