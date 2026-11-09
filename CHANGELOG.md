@@ -5,6 +5,26 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.14] - 2026-11-09
+
+会话保留的边界收口：删掉设置就清场，弹窗里重新打开悬浮按钮就真的出现。
+
+### 中文
+
+#### 修复
+
+- **删掉这个网站的设置后，页面彻底回到原样**：会话标记（这一页挂出过悬浮按钮）一并清掉——之后这个网站即便以「什么都没设置」的形态再出现，页面也不会莫名冒出悬浮按钮
+- **在弹窗里重新打开「悬浮按钮」，页面上真的会出现**：从「关」拨到「开」是明确要求这一页有按钮，页面照办（此前刷新过页面再打开开关会出现「弹窗说开着、页面没按钮」）
+- 顺手修掉两处会偶发变红的测试断言（等胶囊真的出现再断言、圆点判断改成精确匹配）
+
+### English
+
+#### Fixed
+
+- **Deleting this site’s settings now clears the page completely**: the keep-alive marker is dropped too, so the site coming back with nothing configured no longer makes a floating button appear out of nowhere
+- **Turning “Floating button” back on in the popup really brings it back**: switching from off to on explicitly asks for the button on that page, and the page complies (previously, after a reload the popup said “on” while the page had no button)
+- Two flaky test assertions fixed as well (wait for the button to actually appear; exact class matching for the step dots)
+
 ## [0.8.13] - 2026-11-09
 
 修好一个真机发现的毛病：只开了灰度的网站上，关掉灰度后遮住整页、再恢复，悬浮按钮不见了。

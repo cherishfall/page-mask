@@ -1116,7 +1116,7 @@ async function main() {
       '示意图能看不能点、读屏不重复朗读（inert + aria-hidden）',
     );
     check(await o.$eval('.dots', (d) => d.getAttribute('aria-hidden') === 'true'), '步骤圆点 aria-hidden');
-    check((await o.$$eval('.dots i', (els) => els.findIndex((e) => e.className.includes('on')))) === 2, '圆点停在第 3 步');
+    check((await o.$$eval('.dots i', (els) => els.findIndex((e) => e.classList.contains('on')))) === 2, '圆点停在第 3 步');
     await checkSchemes(o, '引导页', 'bgSubtle');
 
     // ---- 矮视口是欢迎页的一等约束（#108）：滚动在内容区，底栏固定、不压内容 ----

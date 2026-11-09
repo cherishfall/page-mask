@@ -242,6 +242,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
    *  遮住 → 恢复后胶囊消失） */
   let toggleShownThisPage = false;
 
+  /** 上次看到的「悬浮按钮」被关掉的状态（0.8.14，#144）：用来识别「由关变开」这次显式要求 */
+  let lastCapsuleHidden = false;
+
   function mountToggle(): void {
     // 幕布期间整根胶囊不渲染（#50）：恢复按钮在幕布宿主里，撤幕布时再由 hideCurtain 挂回来
     if (curtain.active) return;
@@ -757,6 +760,10 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     healthGen++;
     shield.release();
     unmountToggle();
+    // 会话保留的标记一并归零（0.8.14，#144）：配置没了 = 这个网站在这一页的会话结束。
+    // 不清的话，之后该站以「四项全空」形态再出现（导入合并写回）时，挂载门会因标记为真
+    // 而放行——胶囊挂到一个没有任何设置的网站上（违反 #67「四项全空才不显示」）
+    toggleShownThisPage = false;
     guard.restore();
     clearMasks();
     appliedKey = null;
@@ -779,6 +786,13 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     }
     if (resetting) return;
     profile = p;
+    // 「悬浮按钮」由关变开 = 用户明确要求这一页要有胶囊（0.8.14，#144）：弹窗里说「开」
+    // 却页面上没有按钮是自相矛盾——即使配置四项全空、刷新后标记已归零，也视为要求。
+    // 首次读到（没有上次值）不算转变，不会误触发。
+    if (lastCapsuleHidden && !p.capsuleHidden) {
+      toggleShownThisPage = true;
+    }
+    lastCapsuleHidden = p.capsuleHidden === true;
     syncToggleState();
     ensureCurtainSlotClaimed();
     // 接管旧控制器时它正遮着而 profile 还没就绪：现在补上（#107，遮住状态不因接管丢失）

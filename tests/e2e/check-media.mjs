@@ -321,7 +321,9 @@ async function main() {
     // 复现真机路径：先把灰度关掉（配置全空、胶囊按 #135 保留）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '关掉灰度（配置全空）');
-    check(!!(await page.$(TOGGLE)), '前置：胶囊按会话规则保留（#135）');
+    // 前置说明（不挂断言名：#135 的真锁在同文件更早的「页面恢复彩色」那条——
+    // 会话内不拆是 0.8.7 起的既有语义，这条只是确认状态确实到了「配置全空」）
+    check(!!(await page.$(TOGGLE)), '前置：配置已全空，胶囊仍在（会话保留）');
     // 遮住：胶囊合法卸掉（#50）；恢复：胶囊要挂回来——0.8.12 的「只看在场」实现在这里丢失
     await clickInShadow(page, TOGGLE, tid('pm-toggle-cover'));
     await page.waitForSelector('pagemask-curtain', { timeout: 8000 });
@@ -344,7 +346,39 @@ async function main() {
       sr?.querySelector('[data-testid="pm-wiz-exit-yes"]')?.click();
     });
     await waitFor(page, '向导退出', (h) => !document.querySelector(h), ['pagemask-wizard'], { timeout: 8000 });
-    check(!!(await page.$(TOGGLE)), '退出向导后胶囊挂回来（#143）');
+    // 胶囊的挂回来在「向导消失」之后的异步链上（setDraft → onDone → closeWizard →
+    // scheduleRefresh → syncFormalStyles → mountToggle）：必须等它出现，不能查一次就算
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    check(true, '退出向导后胶囊挂回来（#143）');
+
+    // ===================== 删除设置后标记要清（0.8.14，#144） =====================
+    console.log('\n--- 删掉这个网站的设置：会话标记一并清掉 ---');
+    // 后台发 siteReset → 页面 clearPageUi（卸胶囊 + 清标记）
+    await control.evaluate(async (o) => {
+      await chrome.tabs.query({ url: `${o}/*` }).then(async (tabs) => {
+        if (tabs[0]?.id) await chrome.tabs.sendMessage(tabs[0].id, { t: 'siteReset' });
+      });
+    }, ORIGIN);
+    await waitFor(page, '配置删除后胶囊卸掉', (h) => !document.querySelector(h), [TOGGLE], { timeout: 8000 });
+    check(true, '删掉设置：胶囊卸掉');
+    // 标记清干净后，该站若以「四项全空」形态再出现，胶囊不该挂出来（#67）
+    await control.evaluate(async (o) => {
+      const key = `profile:${o}`;
+      await chrome.storage.local.set({
+        [key]: {
+          formatVersion: 1,
+          origin: o,
+          switchState: 'original',
+          disguisedTitle: null,
+          icon: { kind: 'none' },
+          hideRules: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      });
+    }, ORIGIN);
+    await new Promise((res) => setTimeout(res, 900));
+    check(!(await page.$(TOGGLE)), '空配置回来：胶囊不挂（四项全空才不显示，#67/#144）');
   } finally {
     await ext.cleanup();
     await srv.close();

@@ -459,7 +459,7 @@ async function main() {
     await waitFor(
       oPage,
       '引导页切到第 2 步',
-      () => [...(document.querySelectorAll('.dots i') ?? [])].findIndex((e) => e.className.includes('on')) === 1,
+      () => [...(document.querySelectorAll('.dots i') ?? [])].findIndex((e) => e.classList.contains('on')) === 1,
     );
     check(true, '引导页步骤可切换');
     await oPage.close();
