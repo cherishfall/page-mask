@@ -203,6 +203,8 @@ export const zh = {
       tabMismatch: '页面已经换了。回到要设置的那个网站，再点一次 PageMask',
       notGranted: '还没拿到这个网站的访问权限。再点一次，在浏览器的提示里选「允许」',
       injectFailed: '没能在这个页面上启动。刷新页面后再试一次',
+      /** 存储读取失败（#168）：不永远停在「读取中」，落空态 + 这句话，重开弹窗可重试 */
+      loadFailed: '设置没有读出来。重新打开弹窗再试一次',
       denied: '要允许 PageMask 访问这个网站，才能改它的标题、收起内容。再点一次并选「允许」',
       gestureLost: '没能弹出权限提示，再点一次 PageMask',
       toggleFailed: '没能在「按设置」和「原样」之间切换，请稍后再试一次',
@@ -532,6 +534,8 @@ export const zh = {
   notice: {
     saveFailed,
     settingsFailed: '没能打开插件设置，请稍后再试一次',
+    /** 读配置失败时向导没有打开（#168）：点了没反应不如一句话 */
+    loadFailed: '设置没有读出来，收起内容没有打开。稍后再试一次',
   },
 
   /** 遮住整页后那颗「恢复」按钮（ui/curtain-restore） */

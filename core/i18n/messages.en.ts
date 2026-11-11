@@ -178,6 +178,8 @@ export const en: Messages = {
       tabMismatch: 'The page changed. Go back to the site you want to set up and click PageMask again',
       notGranted: 'The browser didn’t allow access to this site. Click again and choose “Allow”',
       injectFailed: 'Couldn’t start on this page. Reload it and try again',
+      /** Storage read failed (#168): never stuck on "loading" — fall to the empty state plus this line; reopening the popup retries */
+      loadFailed: 'Couldn’t read the settings. Reopen the popup and try again',
       denied: 'PageMask needs access to this site to change its title and hide things. Click again and choose “Allow”',
       gestureLost: 'Couldn’t open the permission prompt. Click PageMask again',
       toggleFailed: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
@@ -497,6 +499,8 @@ export const en: Messages = {
   notice: {
     saveFailed,
     settingsFailed: 'Couldn’t open the extension settings. Please try again',
+    /** Reading the profile failed and the wizard didn’t open (#168): one line beats a dead click */
+    loadFailed: 'Couldn’t read the settings, so “Hide items” didn’t open. Try again later',
   },
 
   curtain: {

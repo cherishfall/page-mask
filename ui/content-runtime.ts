@@ -444,8 +444,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (wizardActive || resetting || disposed) return;
     // 打开前重读一次配置（#81）：缓存要等 150ms 防抖刷新才跟上存储的变化，
     // 而 hasProfile / 草稿起点必须按当下事实算——配置刚在别处被删时，缓存还当它存在，
-    // 保存就会走错「已存在的配置」分支（E2E 模拟新站点正是这个时序）
-    profile = (await storage.getProfile(site)) ?? null;
+    // 保存就会走错「已存在的配置」分支（E2E 模拟新站点正是这个时序）。
+    // 读失败（#168）不能静默：给一句页内提示，别让用户点了没反应
+    try {
+      profile = (await storage.getProfile(site)) ?? null;
+    } catch (e) {
+      console.warn('PageMask: 读取设置失败，向导没有打开', e);
+      showPageNotice(ctx, t().notice.loadFailed);
+      return;
+    }
     wizardActive = true;
     healthGen++;
     hideCurtain(); // 进向导前先撤幕布（#45）

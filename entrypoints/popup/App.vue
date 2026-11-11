@@ -172,12 +172,21 @@ async function refresh() {
   const o = site.value;
   if (!o || !supported.value.ok) return;
   const storage = createPageMaskStorage(browser.storage.local);
-  const [p, patterns] = await Promise.all([
-    storage.getProfile(o),
-    grantedPatternsOfSite(browser, o).catch(() => []),
-  ]);
-  profile.value = p;
-  grantedPatterns.value = patterns;
+  try {
+    const [p, patterns] = await Promise.all([
+      storage.getProfile(o),
+      grantedPatternsOfSite(browser, o).catch(() => []),
+    ]);
+    profile.value = p;
+    grantedPatterns.value = patterns;
+  } catch (e) {
+    // 存储读取失败（损坏 / 配额 / 更新瞬间上下文失效）时不能永远停在「读取中」
+    //（#168）：落到「没设置过」的空态 + 一句错误，重开弹窗还能重试
+    console.warn('PageMask: 读取设置失败', e);
+    profile.value = null;
+    grantedPatterns.value = [];
+    errorCode.value = 'loadFailed';
+  }
   await refreshCurtain();
 }
 
