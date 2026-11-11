@@ -636,16 +636,16 @@ async function main() {
     );
     check((await rowHint(page, 1)) === '整块消失，下面的内容往上顶', `选中方式下面显示对应解释（${await rowHint(page, 1)}）`);
 
-    // 行内范围：三个按钮 + aria-pressed；摘要跟着变
-    const rowScopeTexts = await shadowTexts(page, `${tid('pm-draft-1-scope')} button`);
-    const rowScopePressed = await page.evaluate((h) => {
+    // 行内范围：与收起方式同构的原生单选分段（#142）；摘要跟着变
+    const rowScopeTexts = await shadowTexts(page, `${tid('pm-draft-1-scope')} .pm-wiz-seg-opt`);
+    const rowScopeChecked = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
-      return [...sr.querySelectorAll('[data-testid="pm-draft-1-scope"] button')].map((b) => b.getAttribute('aria-pressed'));
+      return [...sr.querySelectorAll('[data-testid="pm-draft-1-scope"] input[type="radio"]')].map((r) => r.checked);
     }, HOST);
     check(
       rowScopeTexts.join('|') === '整个网站|只在这类页面|除了这类页面' &&
-        rowScopePressed.join('|') === 'true|false|false',
-      `行内范围是三档按钮、当前档 aria-pressed=true（${rowScopeTexts.join(' / ')} / ${rowScopePressed.join(',')}）`,
+        rowScopeChecked.join('|') === 'true|false|false',
+      `行内范围是三档原生单选、当前档 checked=true（${rowScopeTexts.join(' / ')} / ${rowScopeChecked.join(',')}）`,
     );
     // 勾选框已搬进选内容清单的行内（#82）：看效果的「调整」里不再有它
     check(!(await shadowExists(page, HOST, tid('pm-draft-1-same-group'))), '看效果的「调整」里不再有同类勾选框（#82 移进选内容行内）');
@@ -1152,7 +1152,7 @@ async function main() {
     await waitVisible(page, '预览：卡片一被移除', C1, false);
     await openAdjust(page, 1);
     check(
-      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-scope-all"]')?.getAttribute('aria-pressed'), HOST)) === 'true',
+      (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-draft-1-scope-all"]')?.checked, HOST)) === true,
       '新选的项「在哪些页面收起」默认整个网站（#76）',
     );
     await clickInShadow(page, HOST, tid('pm-draft-1-scope-include'));
@@ -1847,8 +1847,10 @@ async function main() {
         const r = el.getBoundingClientRect();
         if (r.width > 0) rightMost = Math.max(rightMost, r.right);
       }
-      const scopeBtns = [...sr.querySelectorAll('[data-testid="pm-draft-1-scope"] .pm-wiz-scope-row button')];
-      const segSpans = [...sr.querySelectorAll('[data-testid="pm-draft-1-body"] .pm-wiz-seg-opt span')];
+      // #142 起范围与收起方式同构（原生单选分段）：两套分段各自判「同一行」
+      const segs = [...sr.querySelectorAll('[data-testid="pm-draft-1-body"] .pm-wiz-seg')];
+      const strategySpans = [...(segs[0]?.querySelectorAll('.pm-wiz-seg-opt span') ?? [])];
+      const scopeSpans = [...(segs[1]?.querySelectorAll('.pm-wiz-seg-opt span') ?? [])];
       const oneLine = (els) => {
         const tops = els.map((e) => Math.round(e.getBoundingClientRect().top));
         return els.length >= 2 && tops.every((t) => Math.abs(t - tops[0]) <= 1);
@@ -1856,8 +1858,8 @@ async function main() {
       return {
         w: tr.width, scrollWidth: tb.scrollWidth, clientWidth: tb.clientWidth,
         rightMost, toolbarRight: tr.right,
-        scopeOneLine: oneLine(scopeBtns), scopeCount: scopeBtns.length,
-        segOneLine: oneLine(segSpans), segCount: segSpans.length,
+        scopeOneLine: oneLine(scopeSpans), scopeCount: scopeSpans.length,
+        segOneLine: oneLine(strategySpans), segCount: strategySpans.length,
       };
     }, HOST);
     check(

@@ -425,11 +425,6 @@
   font-weight: var(--pm-font-weight-strong);
   color: var(--pm-fg);
 }
-.pm-wiz-scope-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--pm-space-1);
-}
 .pm-wiz-draft-actions {
   display: flex;
   flex-wrap: wrap;

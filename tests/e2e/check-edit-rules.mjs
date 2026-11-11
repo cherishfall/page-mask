@@ -348,7 +348,8 @@ async function main() {
     check(!(await shadowExists(page, HOST, tid('pm-draft-3-reselect'))), '展开区不再有「重新选」（换位置走上一步，#76）');
     check(await shadowExists(page, HOST, tid('pm-draft-3-advanced')), '展开区有「高级：选择器原文」');
     check(!(await shadowExists(page, HOST, tid('pm-draft-3-summary'))), '展开时摘要藏起来（控件本身就是信息，#76）');
-    const rowScope = await shadowTexts(page, `${tid('pm-draft-3-scope')} button`);
+    // #142 起范围是原生单选分段：三档文字在 .pm-wiz-seg-opt 里
+    const rowScope = await shadowTexts(page, `${tid('pm-draft-3-scope')} .pm-wiz-seg-opt`);
     check(rowScope.join('|') === '整个网站|只在这类页面|除了这类页面', `展开区有行内范围三档（${rowScope.join(' / ')}）`);
     await clickInShadow(page, HOST, tid('pm-draft-3-strategy-mask'));
     await waitFor(page, '改成盖住后元素可见、出现遮盖板', (h) => {

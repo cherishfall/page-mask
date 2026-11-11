@@ -325,35 +325,43 @@
 
               <fieldset class="pm-wiz-field" :data-testid="`pm-draft-${i + 1}-scope`">
                 <legend class="pm-wiz-field-title">{{ t.wizard.rowScopeLegend }}</legend>
-                <div class="pm-wiz-scope-row">
-                  <button
-                    type="button"
-                    class="pm-btn small"
-                    :aria-pressed="draftScopeType(d) === 'all'"
-                    :data-testid="`pm-draft-${i + 1}-scope-all`"
-                    @click="setDraftScope(d, 'all')"
-                  >
-                    {{ t.wizard.rowScopeAll }}
-                  </button>
+                <!-- 与「收起方式」同构的原生单选分段（#142）：同一 name = 一组、方向键可切、
+                     读屏统一报「N 选 1」——同屏不再有两种互斥语义（此前是 aria-pressed 按钮组） -->
+                <div class="pm-wiz-seg">
+                  <label class="pm-wiz-seg-opt">
+                    <input
+                      type="radio"
+                      :name="`pm-scope-${i + 1}`"
+                      value="all"
+                      :checked="draftScopeType(d) === 'all'"
+                      :data-testid="`pm-draft-${i + 1}-scope-all`"
+                      @change="setDraftScope(d, 'all')"
+                    />
+                    <span>{{ t.wizard.rowScopeAll }}</span>
+                  </label>
                   <template v-if="sitePattern">
-                    <button
-                      type="button"
-                      class="pm-btn small"
-                      :aria-pressed="draftScopeType(d) === 'include'"
-                      :data-testid="`pm-draft-${i + 1}-scope-include`"
-                      @click="setDraftScope(d, 'include')"
-                    >
-                      {{ t.wizard.rowScopeInclude }}
-                    </button>
-                    <button
-                      type="button"
-                      class="pm-btn small"
-                      :aria-pressed="draftScopeType(d) === 'exclude'"
-                      :data-testid="`pm-draft-${i + 1}-scope-exclude`"
-                      @click="setDraftScope(d, 'exclude')"
-                    >
-                      {{ t.wizard.rowScopeExclude }}
-                    </button>
+                    <label class="pm-wiz-seg-opt">
+                      <input
+                        type="radio"
+                        :name="`pm-scope-${i + 1}`"
+                        value="include"
+                        :checked="draftScopeType(d) === 'include'"
+                        :data-testid="`pm-draft-${i + 1}-scope-include`"
+                        @change="setDraftScope(d, 'include')"
+                      />
+                      <span>{{ t.wizard.rowScopeInclude }}</span>
+                    </label>
+                    <label class="pm-wiz-seg-opt">
+                      <input
+                        type="radio"
+                        :name="`pm-scope-${i + 1}`"
+                        value="exclude"
+                        :checked="draftScopeType(d) === 'exclude'"
+                        :data-testid="`pm-draft-${i + 1}-scope-exclude`"
+                        @change="setDraftScope(d, 'exclude')"
+                      />
+                      <span>{{ t.wizard.rowScopeExclude }}</span>
+                    </label>
                   </template>
                 </div>
                 <p v-if="!sitePattern && scopeHint" class="pm-wiz-hint">{{ scopeHint }}</p>
