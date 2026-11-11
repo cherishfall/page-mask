@@ -6,17 +6,19 @@
  * 长得不一样。按钮归幕布宿主所有，两条路径共用这同一份实现与 ui/toggle/toggle.css 里的
  * 同一套材质（--pm-bg / --pm-border-control / --pm-radius-pill / --pm-shadow-overlay）。
  *
- * - 视觉：常态全不透明（#87：遮住后唯一的出路，半透明会在白底幕布上把描边对比拉到 3:1 以下），
- *   只显示睁开的眼睛；悬停 / 键盘聚焦显出「恢复」两个字。
- *   「恢复」始终占位、只变透明度，所以出现文字时按钮不位移、不挤压
+ * - 视觉：常态全不透明（#87：遮住后唯一的出路，半透明会在白底幕布上把描边对比拉到 3:1 以下）。
+ *   「恢复」二字常显（#92：右侧留空看着像没渲染完整，唯一出路不该靠悬停才自我解释）；
+ *   文字始终占位，出现时按钮不位移、不挤压
  * - 拖动：按下并移动超过阈值（core/curtain.ts 的 isCurtainDrag）算拖动，松手不恢复；
  *   否则算点击（恢复）。用 setPointerCapture，指针被系统取消时同样收尾
+ * - 键盘（#171）：按钮聚焦后方向键移动，与胶囊、向导面板共用一份步长（core/button-pos）；
+ *   拖动功能有键盘等价，位置同样写回存储
  * - 位置：调用方给初始坐标（已添加站点取该站 capsule 的 floatingBtnPos，一次性脚本取全局位置），
  *   拖动结束后只回传坐标，写回存储的策略由调用方决定
  */
 import { isCurtainDrag } from '@/core/curtain';
 import { onLocaleChange, t } from '@/core/i18n';
-import { BUTTON_EDGE, clampPos } from '@/core/button-pos';
+import { BUTTON_EDGE, BUTTON_KEY_STEP, clampPos } from '@/core/button-pos';
 import type { ButtonPos } from '@/core/types';
 import { EYE_OUTLINE_PATH } from './icons/paths';
 import { adoptToggleStyles } from './toggle/toggle-styles';
@@ -193,12 +195,35 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
     place();
   }
 
+  /**
+   * 方向键移动（#171）：只在按钮自己聚焦时生效（按钮原生的键盘行为只有回车 / 空格 = 点击恢复）。
+   * 还没存过坐标（停在右下角）时，先按当前渲染位置算出左上角坐标，再按步长移动并落库——
+   * 与胶囊「拖过才有自由坐标」的模型一致。
+   */
+  function onKeydown(e: KeyboardEvent): void {
+    const dir: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    };
+    const d = dir[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const r = btn.getBoundingClientRect();
+    const current = pos ?? { x: r.left, y: r.top };
+    pos = clamp({ x: current.x + d[0] * BUTTON_KEY_STEP, y: current.y + d[1] * BUTTON_KEY_STEP });
+    place();
+    deps.onMove(pos);
+  }
+
   btn.addEventListener('pointerdown', onPointerDown, opts);
   btn.addEventListener('pointermove', onPointerMove, opts);
   btn.addEventListener('pointerup', endDrag, opts);
   btn.addEventListener('pointercancel', endDrag, opts);
   btn.addEventListener('lostpointercapture', endDrag, opts);
   btn.addEventListener('click', onClick, opts);
+  btn.addEventListener('keydown', onKeydown, opts);
   window.addEventListener('resize', onResize, opts);
 
   let destroyed = false;

@@ -126,7 +126,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { SiteProfile } from '@/core/types';
 import { type MediaFlagKey, type MediaToggles } from '@/core/media';
-import { BUTTON_EDGE, clampPos } from '@/core/button-pos';
+import { BUTTON_EDGE, BUTTON_KEY_STEP, clampPos } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
@@ -137,8 +137,8 @@ import MaskIcon from './icons/MaskIcon.vue';
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;
-/** 方向键每次移动的距离 */
-const KEY_STEP = 15;
+/** 方向键每次移动的距离（#171 起与向导面板、幕布恢复钮共用 core/button-pos 的一份） */
+const KEY_STEP = BUTTON_KEY_STEP;
 /** 按下后移动这么多像素才算拖动（不足是点击）：Motion 官方 3px / jQuery UI distance 同范式，
  *  取 8px 防手抖误拖——跨过阈值前绝不抢事件，按钮的 click 才能照常触发 */
 const DRAG_THRESHOLD = 8;

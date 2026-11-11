@@ -491,7 +491,7 @@ export const en: Messages = {
   },
 
   curtain: {
-    restoreAria: 'Remove the cover and go back to the page you were on',
+    restoreAria: 'Remove the cover and go back to the page you were on (press and drag it, or move it with arrow keys)',
     restore: 'Restore',
   },
 

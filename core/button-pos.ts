@@ -10,6 +10,9 @@
 /** 离视口边缘至少留这么多（两个控件同一口径） */
 export const BUTTON_EDGE = 8;
 
+/** 方向键移动的步长（#171 统一）：此前胶囊 15、向导面板 16，两个数没有语义差别 */
+export const BUTTON_KEY_STEP = 15;
+
 /** 视口内夹紧：左上角不出视口（右/下边留出控件本体与边缘距） */
 export function clampPos(
   x: number,

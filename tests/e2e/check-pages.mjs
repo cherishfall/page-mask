@@ -271,7 +271,7 @@ async function checkPopupChrome(popup, label) {
     `${label}：未遮住时开关写「遮住这一页」`,
   );
   // 快捷键提示（#101）：按钮上带当前平台的实际绑定
-  const coverKbd = await popup.evaluate((s) => document.querySelector(`${s} .popup-kbd`)?.textContent.trim() ?? '', tid('pm-popup-cover'));
+  const coverKbd = await popup.evaluate((s) => document.querySelector(`${s} .pm-kbd`)?.textContent.trim() ?? '', tid('pm-popup-cover'));
   check(coverKbd.length > 0, `${label}：遮住按钮带当前快捷键（${coverKbd}）`);
   const entries = await popup.evaluate(
     (s) =>

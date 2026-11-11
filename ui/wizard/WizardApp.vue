@@ -525,6 +525,7 @@
 <script setup lang="ts">
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { browser } from 'wxt/browser';
+import { BUTTON_KEY_STEP } from '@/core/button-pos';
 import { describeElement } from '@/core/naming';
 import { generateCandidates, selectorHitsElement } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
@@ -598,8 +599,8 @@ type Draft = DraftItem & {
 /** 行内草稿的 key 计数器（元素可能为 null，不能用元素本身当 key） */
 let draftKeySeq = 0;
 
-/** 方向键每次移动工具条的距离 */
-const KEY_STEP = 16;
+/** 方向键每次移动工具条的距离（#171 起与胶囊、幕布恢复钮共用一份步长） */
+const KEY_STEP = BUTTON_KEY_STEP;
 /** 拖到边上时与视口边缘保持的距离（#123，与 CSS 里窄屏留的 16 一致） */
 const TOOLBAR_INSET = 16;
 const ARROW_DIRS: Record<string, readonly [number, number]> = {

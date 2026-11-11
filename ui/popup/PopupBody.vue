@@ -159,7 +159,7 @@
             <template v-else>{{ covered ? t.popup.restorePage : t.popup.coverPage }}</template>
           </span>
           <!-- 快捷键提示（#101）：只显示当前平台的实际绑定；没绑定时整块不出现 -->
-          <kbd v-if="coverShortcut" class="popup-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
+          <kbd v-if="coverShortcut" class="pm-kbd" aria-hidden="true">{{ coverShortcut }}</kbd>
         </button>
         <p class="hint cover-hint">{{ t.popup.coverHint }}</p>
       </div>
@@ -407,16 +407,7 @@ const deleteLabel = deleteSiteHeading();
 .links > .popup-link:hover {
   color: var(--pm-fg);
 }
-/* 键帽：说明「这颗按钮还有一条键盘通路」，视觉上低于按钮文字 */
-.popup-kbd {
-  padding: 0 4px;
-  border: 1px solid var(--pm-border);
-  border-radius: 4px;
-  color: var(--pm-fg-muted);
-  font: inherit;
-  font-size: var(--pm-font-size-caption);
-  line-height: 16px;
-}
+/* 键帽样式走 styles/controls.css 的 .pm-kbd（#171 统一），这里不再各写一份 */
 /* 弹窗里的同源图标（#132）：闭眼 / 睁眼 / 媒体 / 面具，16 盒、随文字色。
    媒体图标跟胶囊「媒体」钮同一套状态表达：开 = 内容填实、外框描边（0.8.3）；
    面具图标跟胶囊主钮同态（#138）：开 = 填实，眼缝描弹窗底色读出挖孔（挖孔透出的是图标身后的表面）。

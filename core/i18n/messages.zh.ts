@@ -530,7 +530,7 @@ export const zh = {
 
   /** 遮住整页后那颗「恢复」按钮（ui/curtain-restore） */
   curtain: {
-    restoreAria: '取消遮住，回到刚才的页面',
+    restoreAria: '取消遮住，回到刚才的页面（按住拖动，或用方向键移动位置）',
     restore: '恢复',
   },
 

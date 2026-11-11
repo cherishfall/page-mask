@@ -215,7 +215,8 @@
   --pm-space-6: 24px; /* 页面边距 */
   --pm-space-8: 32px;
 
-  /* ── 圆角：控件 8 / 卡片与浮层 12 / 胶囊 999 ── */
+  /* ── 圆角：小件（键帽）4 / 控件 8 / 卡片与浮层 12 / 胶囊 999 ── */
+  --pm-radius-small: 4px;
   --pm-radius-control: 8px;
   --pm-radius-card: 12px;
   --pm-radius-pill: 999px;

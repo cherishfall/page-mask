@@ -233,3 +233,18 @@ a.button {
     min-block-size: var(--pm-control-lg);
   }
 }
+
+/* ── 键帽（#171 统一）：说明「这个动作还有一条键盘通路」。
+   弹窗（遮住钮旁）与插件设置（快捷键行）原来各写一份、圆角 4/6 两样，
+   现在只有这一份；圆角走 --pm-radius-small（键帽只有一行字高，8px 控件圆角会把它撑成胶囊），
+   颜色用 muted——它是按钮文字的附属说明，视觉上要退后一档 */
+.pm-kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-small);
+  background: var(--pm-bg-subtle);
+  color: var(--pm-fg-muted);
+  font: inherit;
+  font-size: var(--pm-font-size-caption);
+  line-height: 1.4;
+}

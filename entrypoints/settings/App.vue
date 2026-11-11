@@ -144,7 +144,7 @@
           <p class="hint">{{ t.settings.shortcutIntro }}</p>
           <div class="row">
             <span class="row-label">{{ t.settings.shortcutLabel }}</span>
-            <kbd v-if="shortcutLabel" class="shortcut-kbd" data-testid="pm-settings-shortcut-value">{{ shortcutLabel }}</kbd>
+            <kbd v-if="shortcutLabel" class="pm-kbd" data-testid="pm-settings-shortcut-value">{{ shortcutLabel }}</kbd>
             <span v-else-if="shortcutLoaded" class="pm-mark pm-mark-warning" data-testid="pm-settings-shortcut-unbound">
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
             </span>
@@ -524,16 +524,7 @@ function onReplaceClose() {
   font-variant-numeric: tabular-nums;
 }
 
-/* 键帽（#101）：一眼认得出「这是一个按键」，不用解释文字 */
-.shortcut-kbd {
-  padding: 2px 6px;
-  border: 1px solid var(--pm-border-control);
-  border-radius: 6px;
-  background: var(--pm-bg-subtle);
-  color: var(--pm-fg);
-  font: inherit;
-  font-size: var(--pm-font-size-caption);
-}
+/* 键帽样式走 styles/controls.css 的 .pm-kbd（#171 统一），这里不再各写一份 */
 
 .row input:not([type]) {
   flex: 1;
