@@ -1,7 +1,7 @@
 # 0.8.19 后「交互与显示细节」批次（进行中）
 
 最后更新：2026-11-11 傍晚
-**一句话现状：#161（`0123db3`）、#157（`a5733e1`）已完成并推送关票；下一张 #158。代码每票一提交一推送，进度见下表。**
+**一句话现状：#161（`0123db3`）、#157（`a5733e1`）、#158（`143ef62`）已完成并推送关票；下一张 #159。代码每票一提交一推送，进度见下表。**
 
 ## 本批票（#161 已完成，其余 OPEN）
 
@@ -9,8 +9,8 @@
 |---|---|---|---|
 | 1 | [#161](https://github.com/cherishfall/page-mask/issues/161) | 立「引导性文字什么时候露出」的整屏规矩；抽公共 ⓘ 并补自动断言，再收四处常驻说明 | ✅ `0123db3` 已关票 |
 | 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 | ✅ `a5733e1` 已关票 |
-| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | ⏳ 下一张 |
-| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | 待做 |
+| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | ✅ `143ef62` 已关票 |
+| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | ⏳ 下一张 |
 | 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` | 待做 |
 | 6 | [#162](https://github.com/cherishfall/page-mask/issues/162) | 站点身份改可注册域名 eTLD+1（微博裸域 / `s.weibo.com` 合一）；含旧配置迁移、权限多模式、文档与测试改造 | 待做（单独发版） |
 
@@ -50,8 +50,9 @@ issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入�
 
 - ✅ #161：`0123db3`（715 单测 / 9 个 E2E 935 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
 - ✅ #157：`a5733e1`（722 单测 / 9 个 E2E 942 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
-- 仓库干净，`HEAD a5733e1` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
-- 本批剩余 4 票全 OPEN；#159 已补 #53 冲突评论。
+- ✅ #158：`143ef62`（729 单测 / 9 个 E2E 965 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
+- 仓库干净，`HEAD 143ef62` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
+- 本批剩余 3 票全 OPEN；#159 已补 #53 冲突评论。
 
 ## #161 留给后续票的三条硬口径
 
