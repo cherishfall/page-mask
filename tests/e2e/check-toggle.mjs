@@ -529,7 +529,7 @@ async function main() {
     check(
       dlg?.heading === '保存后看不到效果' &&
         dlg.body === '「按你的设置显示」还关着，现在打开吗？' &&
-        dlg.buttons.map((b) => `${b.text}${b.primary ? '·实心' : ''}`).join('/') === '先保持原样/现在打开·实心' &&
+        dlg.buttons.map((b) => `${b.text}${b.primary ? '·实心' : ''}`).join('/') === '保存，先保持原样/保存，现在打开·实心' &&
         dlg.focus === 'pm-wiz-open-stay',
       `确认框文案、按钮顺序与默认焦点（${dlg?.heading} / ${dlg?.buttons.map((b) => b.text).join(' / ')} / 焦点 ${dlg?.focus}）`,
     );

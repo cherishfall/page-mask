@@ -159,6 +159,8 @@ export const zh = {
       other: '这类页面不让扩展改动',
     },
     pendingBadge: '需要允许访问',
+    /** 弹窗摘要里的失效条改成了可点（#175）：读屏名把去向说全，可见文字保持 common.staleCount 短名 */
+    staleAction: (n: number) => `${n} 项可能失效。点这里打开收起内容，重新选一次`,
     /** 没设置过时的一句话状态（#148）：一句就好，两个编辑入口就是第一步 */
     newSiteHint: '这个网站还没设置过。',
     pendingHint: '浏览器收回了这个网站的访问权限。你的设置都还在，重新允许访问就回来了。',
@@ -360,6 +362,7 @@ export const zh = {
     prev: '上一步',
     next: '下一步',
     start: '开始使用',
+    skip: '跳过引导',
     tip: '两个设置入口在弹窗最下面：全部网站设置、插件设置。',
     /** 读屏播报当前步（#108）：切步时更新，不抢焦点 */
     stepStatus: (n: number, m: number, title: string) => `第 ${n} 步，共 ${m} 步：${title}`,
@@ -473,8 +476,8 @@ export const zh = {
     /** 原样态保存前的一次选择（#159）：两条路都完成保存，只有「现在打开」才切开关 */
     openTitle: '保存后看不到效果',
     openBody: '「按你的设置显示」还关着，现在打开吗？',
-    openStay: '先保持原样',
-    openConfirm: '现在打开',
+    openStay: '保存，先保持原样',
+    openConfirm: '保存，现在打开',
     /** 保存后 0 条收起设置的轻提示 */
     zeroRuleNotice: (title: string) => `已保存，标签页名字换成「${title}」了`,
     titleResetNotice: '已恢复网站原来的标题和图标',
@@ -497,10 +500,10 @@ export const zh = {
     dragAria: '移动这个设置面板（也可以用方向键）',
     dragTitle: '拖动可以移动设置面板',
     /** 标题栏「收起 / 展开」（0.8.15，#150）：可见文字短，aria-label 写全称说清点下去会怎样 */
-    collapse: '收起',
-    expand: '展开',
-    collapseAria: '收起设置面板，让页面可以点选',
-    expandAria: '展开设置面板',
+    collapse: '收起面板',
+    expand: '展开面板',
+    collapseAria: '收起面板，让页面可以点选',
+    expandAria: '展开面板，回到完整的表单',
     /** 页面上号码牌的读屏名字 */
     badgeJump: (seq: number) => `跳到清单里的第 ${seq} 项`,
   },

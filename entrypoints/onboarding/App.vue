@@ -4,8 +4,13 @@
     <p class="visually-hidden" role="status">{{ stepStatus }}</p>
 
     <header class="head">
-      <h1 translate="no">{{ t.onboarding.title }}</h1>
-      <p class="sub">{{ t.onboarding.sub }}</p>
+      <div class="head-text">
+        <h1 translate="no">{{ t.onboarding.title }}</h1>
+        <p class="sub">{{ t.onboarding.sub }}</p>
+      </div>
+      <!-- 退路在最轻的位置（AGENTS 整屏审查第 4 条 / #175 视觉审查）：装完就绑定三步不合情理，
+           随时可以跳过；跳过与看完最后一步走同一个出口（关掉这一页），不丢任何东西 -->
+      <button type="button" class="ghost" data-testid="onboard-skip" @click="finish">{{ t.onboarding.skip }}</button>
     </header>
 
     <!-- 分步单屏（#139）：一次只显示当前步，内容列放宽到 720——
@@ -167,6 +172,14 @@ body {
 }
 .head {
   padding: calc(var(--pm-space-8) + var(--pm-space-4)) var(--pm-space-6) 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-space-4);
+}
+.head-text {
+  flex: 1;
+  min-width: 0;
 }
 h1 {
   font-size: var(--pm-font-size-heading);

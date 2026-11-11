@@ -129,14 +129,17 @@
         </p>
         <ul v-else class="rule-list" data-testid="pm-mgmt-rule-list">
           <li
-            v-for="r in profile.hideRules"
+            v-for="(r, i) in profile.hideRules"
             :key="r.id"
             class="rule-row"
             :data-rule-id="r.id"
             data-testid="pm-mgmt-rule-row"
           >
             <span class="rule-text">
-              <span class="rule-name">{{ r.elementName }}</span>
+              <!-- 序号（#175 视觉审查）：自动命名的同名条目（如三行「推荐卡片」）靠序号分辨，
+                   删除时不会张冠李戴——与向导清单 1. 2. 3. 同一惯例；aria-hidden，行内的
+                   名称与摘要已足够读屏理解，不把「1.」念出来 -->
+              <span class="rule-name"><span class="rule-num" aria-hidden="true">{{ i + 1 }}. </span>{{ r.elementName }}</span>
               <span class="rule-meta">
                 <span>{{ t.common.strategy[r.strategy] }}</span>
                 <span aria-hidden="true">·</span>
@@ -511,6 +514,11 @@ async function onRulesResetClosed(confirmed: boolean) {
 .rule-name {
   font-weight: var(--pm-font-weight-strong);
   overflow-wrap: anywhere;
+}
+.rule-num {
+  color: var(--pm-fg-muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .rule-meta {

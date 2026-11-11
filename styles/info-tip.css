@@ -70,6 +70,27 @@
 .pm-info-tip-bubble:hover {
   display: block;
 }
+/* 指向本行的下箭头（#175 视觉审查）：浮层横跨整行、向上弹出，会盖进上一张卡里，
+   此前没有任何元素把它和自己的行连起来，读起来像在解释上面的卡。双三角画法：
+   ::before 是描边色（比本体大 1px、压住气泡边框线），::after 是填充色。
+   气泡与行同宽，箭头指向「锚定它的那一行」，归属读得出来 */
+.pm-info-tip-bubble::before,
+.pm-info-tip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 6px solid transparent;
+  border-bottom: 0;
+}
+.pm-info-tip-bubble::before {
+  margin-top: 1px;
+  border-top-color: var(--pm-border-control);
+}
+.pm-info-tip-bubble::after {
+  border-top-color: var(--pm-bg);
+}
 /* Esc 撤下（WCAG 1.4.13 dismissible）：压过上面三条显隐规则，不移动指针也能收起；
    重新聚焦或鼠标离开后复位（组件里把 data-pm-info-dismissed 改回 false）。 */
 .pm-info-tip-trigger[data-pm-info-dismissed='true'] + .pm-info-tip-bubble,

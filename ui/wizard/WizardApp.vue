@@ -455,7 +455,9 @@
         <p>{{ exitBody }}</p>
         <div class="pm-wiz-actions">
           <button value="cancel" class="pm-btn" autofocus data-testid="pm-wiz-exit-no">{{ t.wizard.exitStay }}</button>
-          <button value="exit" class="pm-btn danger" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
+          <!-- 退出不是破坏性动作（草稿丢了可以重选，已保存的设置不动）：不用危险档（#175 视觉审查，
+               GOV.UK「危险色只给严重且不可撤销」） -->
+          <button value="exit" class="pm-btn" data-testid="pm-wiz-exit-yes">{{ t.wizard.exitConfirm }}</button>
         </div>
       </form>
     </dialog>

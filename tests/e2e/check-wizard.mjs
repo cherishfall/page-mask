@@ -722,19 +722,21 @@ async function main() {
       dialogText.includes('不会保存') && dialogText.includes('标签页会变回原来的名字'),
       `退出确认说清楚已选内容不保存、标签页会变回原来的名字（${dialogText.split('\n').join(' / ')}）`,
     );
-    // 两个按钮同一次级：继续设置是默认档，退出只是红字红边（不实心红——放弃的是还没保存的改动）
+    // 两个按钮同一档（#175 视觉审查）：退出不丢任何已保存的东西，草稿丢了可以重选——
+    // 不是「严重且不可撤销」的破坏动作，GOV.UK 的危险色不适用，两颗都是普通次按钮
     const dlgStay = await buttonLook(page, 'pm-wiz-exit-no');
     const dlgExit = await buttonLook(page, 'pm-wiz-exit-yes');
     check(
       dlgStay?.cls.includes('pm-btn') &&
         !dlgStay.cls.includes('danger') &&
-        dlgExit?.cls.includes('danger') &&
+        dlgExit?.cls.includes('pm-btn') &&
+        !dlgExit.cls.includes('danger') &&
         !dlgExit.cls.includes('primary'),
-      `退出确认沿用同一套档位：继续设置是次按钮、退出是红字红边的次按钮（${dlgStay?.cls} / ${dlgExit?.cls}）`,
+      `退出确认两颗都是次按钮：退出不属破坏动作，危险色退场（${dlgStay?.cls} / ${dlgExit?.cls}）`,
     );
     check(
-      dlgStay?.bg === dlgExit?.bg && dlgExit?.border > 0 && dlgExit?.color !== dlgStay?.color,
-      `「退出」不实心红：底色与「继续设置」一样，只把文字与描边换成危险色（${dlgExit?.bg} / ${dlgExit?.color}）`,
+      dlgStay?.bg === dlgExit?.bg && dlgExit?.border > 0 && dlgExit?.color === dlgStay?.color,
+      `「退出」与「继续设置」同款：同底色同文字色（${dlgExit?.bg} / ${dlgExit?.color}）`,
     );
     const focused = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
     check(focused === 'pm-wiz-exit-no', `退出确认默认聚焦「继续设置」（${focused}）`);
@@ -1174,10 +1176,10 @@ async function main() {
     check(
       openDlgState?.buttons.length === 2 &&
         openDlgState.buttons[0].testid === 'pm-wiz-open-stay' &&
-        openDlgState.buttons[0].text === '先保持原样' &&
+        openDlgState.buttons[0].text === '保存，先保持原样' &&
         openDlgState.buttons[0].primary === false &&
         openDlgState.buttons[1].testid === 'pm-wiz-open-yes' &&
-        openDlgState.buttons[1].text === '现在打开' &&
+        openDlgState.buttons[1].text === '保存，现在打开' &&
         openDlgState.buttons[1].primary === true,
       `两个按钮：左「先保持原样」次操作、右「现在打开」唯一主操作（${openDlgState?.buttons.map((b) => `${b.text}${b.primary ? '·实心' : ''}`).join(' / ')}）`,
     );
@@ -1732,8 +1734,8 @@ async function main() {
     }, HOST);
     check(
       collapseLook && collapseLook.expanded === 'true' && collapseLook.controlled &&
-        collapseLook.controls === 'pm-wiz-body' && /收起/.test(collapseLook.label) &&
-        collapseLook.text === '收起' && collapseLook.w >= 24 && collapseLook.h >= 24 && collapseLook.leftOfExit,
+        collapseLook.controls === 'pm-wiz-body' && /收起面板/.test(collapseLook.label) &&
+        collapseLook.text === '收起面板' && collapseLook.w >= 24 && collapseLook.h >= 24 && collapseLook.leftOfExit,
       `「收起」按钮初始展开、命中区 ${Math.round(collapseLook?.w ?? 0)}×${Math.round(collapseLook?.h ?? 0)} ≥24、在退出左侧、aria-expanded/controls/label 齐全且 controls 有落点（${collapseLook?.text}）`,
     );
 
@@ -1763,7 +1765,7 @@ async function main() {
       };
     }, HOST);
     check(
-      folded && folded.expanded === 'false' && folded.text === '展开' && /展开/.test(folded.label) &&
+      folded && folded.expanded === 'false' && folded.text === '展开面板' && /展开面板/.test(folded.label) &&
         folded.liveKept && folded.headVisible && folded.othersHidden && folded.exitPresent,
       `收起后只剩标题栏：${folded?.othersCount} 个内容节点 display:none、live region 与标题栏常驻、退出设置仍在、按钮变「展开」且 aria-expanded=false（高 ${Math.round(folded?.h ?? 0)}）`,
     );
@@ -1820,7 +1822,7 @@ async function main() {
       };
     }, HOST);
     check(
-      reopened && reopened.expanded === 'true' && reopened.text === '收起' &&
+      reopened && reopened.expanded === 'true' && reopened.text === '收起面板' &&
         reopened.footVisible && reopened.pickVisible && reopened.badges === 1 && reopened.previewText.includes('1'),
       `展开后内容还原（底栏 / 选内容区可见）、aria-expanded=true，已选 1 项还在（${reopened?.previewText.trim()}，号牌 ${reopened?.badges}）`,
     );

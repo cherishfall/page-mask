@@ -38,9 +38,17 @@
         <p v-if="hasProfile" class="meta">
           {{ ruleSummary }}<template v-if="staleCount > 0">
             ·
-            <span class="pm-mark pm-mark-danger" data-testid="pm-popup-stale">
+            <!-- 失效项给出去处（#175 视觉审查，Nielsen 错误可恢复）：点它 = 打开「收起内容」
+                 在页面上重新选一次；读屏名把动作说全，可见文字保持短名 -->
+            <button
+              type="button"
+              class="pm-mark pm-mark-danger stale-link"
+              data-testid="pm-popup-stale"
+              :aria-label="t.popup.staleAction(staleCount)"
+              @click="emit('setup')"
+            >
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount) }}
-            </span>
+            </button>
           </template>
         </p>
         <p v-else class="hint" data-testid="pm-popup-hint-new">{{ t.popup.newSiteHint }}</p>
@@ -512,7 +520,9 @@ const deleteLabel = deleteSiteHeading();
   flex-direction: column;
   gap: var(--pm-space-1);
 }
-/* 删除入口（#112）：最轻的一档——无框文字按钮、危险色；可点区仍够（min-block-size 由控件样式给） */
+/* 删除入口（#112）：最轻的一档——无框文字按钮、危险色；可点区仍够（min-block-size 由控件样式给）。
+   常态就带下划线（#175 视觉审查）：它上面两个入口都是下划线链接，唯独它没有下划线时
+   第一眼像警示标签而不是能点的入口（清单 #8「入口长得不像入口」） */
 .popup > .text-danger {
   border: none;
   background: none;
@@ -520,10 +530,30 @@ const deleteLabel = deleteSiteHeading();
   justify-content: flex-start;
   color: var(--pm-danger);
   text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .popup > .text-danger:hover:not(:disabled) {
   background: none;
   color: var(--pm-danger);
   text-decoration: underline;
+}
+/* 摘要里的失效条改成了可点（#175）：保持 pm-mark 的「圆点 + 文字」样子，
+   按钮的默认样式全退掉；悬停出下划线示意能点 */
+.stale-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.stale-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.stale-link:focus-visible {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+  border-radius: 2px;
 }
 </style>

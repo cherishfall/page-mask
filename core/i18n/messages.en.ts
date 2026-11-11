@@ -132,7 +132,12 @@ export const en: Messages = {
       other: 'Extensions can’t change this kind of page',
     },
     pendingBadge: 'Needs access',
-    /** One short line for an unset site; the blue primary button in the card is the first step (#148) */
+    /** The stale mark in the summary is now clickable (#175): the screen-reader name spells out where it goes, the visible text stays the short form */
+    staleAction: (n: number) =>
+      n === 1
+        ? '1 item may be broken. Open “Hide items” to pick it again'
+        : `${n} items may be broken. Open “Hide items” to pick it again`,
+    /** One short line for an unset site; the two edit buttons in the card are the first step (#148) */
     newSiteHint: 'This site isn’t set up yet.',
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
     /** The site was allowed, but this page isn’t covered (#162: allowed weibo.com, now on s.weibo.com) */
@@ -336,6 +341,7 @@ export const en: Messages = {
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
+    skip: 'Skip this guide',
     tip: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”.',
     /** Screen-reader announcement for the current step (#108): updated on step change, never steals focus */
     stepStatus: (n: number, m: number, title: string) => `Step ${n} of ${m}: ${title}`,
@@ -444,8 +450,8 @@ export const en: Messages = {
     /** Choice before saving on an as-is site (#159): both paths save; only “Turn it on” flips the switch */
     openTitle: 'You won’t see it after saving',
     openBody: '“Show this site your way” is off. Turn it on now?',
-    openStay: 'Keep as is',
-    openConfirm: 'Turn it on',
+    openStay: 'Save, keep as is',
+    openConfirm: 'Save, turn it on now',
     zeroRuleNotice: (title: string) => `Saved — the tab is now named “${title}”`,
     titleResetNotice: 'Back to the site’s own title and icon',
     /** Page notice after restoring hidden items (#160): the wizard is closed, so one short line says what just happened */
@@ -464,10 +470,10 @@ export const en: Messages = {
     noticeOk: 'Got it',
     dragAria: 'Move this panel (arrow keys work too)',
     dragTitle: 'Drag to move the panel',
-    collapse: 'Collapse',
-    expand: 'Expand',
-    collapseAria: 'Collapse the panel so you can click the page',
-    expandAria: 'Expand the panel',
+    collapse: 'Collapse panel',
+    expand: 'Expand panel',
+    collapseAria: 'Collapse panel so you can click the page',
+    expandAria: 'Expand panel to get the full form back',
     badgeJump: (seq: number) => `Jump to item ${seq} in the list`,
   },
 
