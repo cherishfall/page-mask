@@ -5,6 +5,21 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.19] - 2026-11-11
+
+「整页变灰」的图标与语义对齐：原来是「山 + 太阳」的图片符号，功能升级为整页后换成了灰度 / 对比度的通行符号。功能与权限不变。
+
+### 中文
+
+#### 改动
+
+- **「媒体」钮与弹窗开关行的图标换成对比度符（半填充圆）**：0.8.18 把功能从「图片和视频变灰」升级为「整页变灰」后，画着一张图片的图标已经答不上「这是什么东西」；半填充圆是灰度 / 对比度的通行符号（M3 的 contrast 符号、macOS 与 GNOME 的对比度设置同款）。关态 = 描边（圆 + 中线），开态 = 右半填实——与面具图标同一套「描边 / 填实」状态语言，关与开一眼可辨
+
+### English
+
+#### Changed
+
+- **The “Media” button and popup switch icon is now a contrast symbol (half-filled circle)**: after 0.8.18 upgraded the feature to “Turn the whole page gray”, the old picture glyph (mountain + sun) no longer answered “what is this”; the half-filled circle is the standard glyph for grayscale / contrast (M3's contrast symbol, also macOS and GNOME contrast settings). Off = outline (circle + midline), on = right half filled — the same outline / filled state language as the mask icon, clearly distinguishable at a glance
 ## [0.8.18] - 2026-11-11
 
 按用户提案把「图片和视频变灰」升级为「整页变灰」：一条 CSS 规则像素级覆盖整个页面，过去三轮返工的覆盖边界（背景图、canvas、iframe 内容、SVG）一次清零。开关的位置、记忆、与主开关的独立性都不变。
