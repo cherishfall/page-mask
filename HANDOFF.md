@@ -1,15 +1,15 @@
 # 0.8.19 后「交互与显示细节」批次（进行中）
 
 最后更新：2026-11-11 傍晚
-**一句话现状：#161 已完成并推送（`0123db3`，已关票）；下一张 #157。代码每票一提交一推送，进度见下表。**
+**一句话现状：#161（`0123db3`）、#157（`a5733e1`）已完成并推送关票；下一张 #158。代码每票一提交一推送，进度见下表。**
 
 ## 本批票（#161 已完成，其余 OPEN）
 
 | 顺序 | 票 | 一句话范围 | 状态 |
 |---|---|---|---|
 | 1 | [#161](https://github.com/cherishfall/page-mask/issues/161) | 立「引导性文字什么时候露出」的整屏规矩；抽公共 ⓘ 并补自动断言，再收四处常驻说明 | ✅ `0123db3` 已关票 |
-| 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 | ⏳ 下一张 |
-| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | 待做 |
+| 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 | ✅ `a5733e1` 已关票 |
+| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | ⏳ 下一张 |
 | 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | 待做 |
 | 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` | 待做 |
 | 6 | [#162](https://github.com/cherishfall/page-mask/issues/162) | 站点身份改可注册域名 eTLD+1（微博裸域 / `s.weibo.com` 合一）；含旧配置迁移、权限多模式、文档与测试改造 | 待做（单独发版） |
@@ -48,15 +48,17 @@ issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入�
 
 ## 进度与工作区状态
 
-- ✅ #161：`0123db3`（compile / 715 单测 / 9 个 E2E 935 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
-- 仓库干净，`HEAD 0123db3` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
-- 本批剩余 5 票全 OPEN；#159 已补 #53 冲突评论。
+- ✅ #161：`0123db3`（715 单测 / 9 个 E2E 935 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
+- ✅ #157：`a5733e1`（722 单测 / 9 个 E2E 942 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
+- 仓库干净，`HEAD a5733e1` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
+- 本批剩余 4 票全 OPEN；#159 已补 #53 冲突评论。
 
 ## #161 留给后续票的三条硬口径
 
 1. **a 类不许当 b 类收**：状态 / 后果 / 边界 / 完成操作必需 → 常驻一句短句。本轮子代理把站点设置页三条状态说明和向导「看效果」的操作说明收进 ⓘ，验收时改回；后面几票别再犯（详见 `docs/dev/DEVLOG.md` #161 条）。
 2. **ⓘ 跟对象同行**：卡片级说明的图标并进标题行（`class="card-head pm-info-head pm-info-anchor"`），不独占一行；行内说明跟控件标签。唯一外观在 `styles/info-tip.css`，别各写一套。
 3. **改文案先 grep `tests/`**：E2E 有按中文整串断言的旧例（`check-pages.mjs:815` 锁「工具栏上的 PageMask 图标」）。
+4. **动三处任一界面先看 `docs/design-surfaces.md`**：顺序 / 叫法 / 控件以那张表为准，`tests/surfaces.test.ts` 会同时校验模板、i18n 与三条 E2E；新增功能项先进「规范顺序」再进各处。胶囊**例外②**（空设置说明的形态）等 #158 落地后回填。
 
 ## 上一批遗留（不占本批票）
 
