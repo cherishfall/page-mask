@@ -459,6 +459,11 @@ export const zh = {
     exitStay: '继续设置',
     exitConfirm: '退出',
     notSavedTitle: '没有保存',
+    /** 原样态保存前的一次选择（#159）：两条路都完成保存，只有「现在打开」才切开关 */
+    openTitle: '保存后看不到效果',
+    openBody: '「按你的设置显示」还关着，现在打开吗？',
+    openStay: '先保持原样',
+    openConfirm: '现在打开',
     /** 保存后 0 条收起设置的轻提示 */
     zeroRuleNotice: (title: string) => `已保存，标签页名字换成「${title}」了`,
     titleResetNotice: '已恢复网站原来的标题和图标',

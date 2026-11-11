@@ -4,7 +4,7 @@
  */
 import { DEFAULT_TITLE_EN } from './titles';
 import { t } from './i18n';
-import type { HideRule, Scope, ScopePattern, StrategyId, TabIcon } from './types';
+import type { HideRule, Scope, ScopePattern, StrategyId, SwitchState, TabIcon } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -143,6 +143,34 @@ export interface TitleIconResetPatch {
 
 export function titleIconResetPatch(): TitleIconResetPatch {
   return { titleIconSet: false, disguisedTitle: null, icon: { kind: 'site' } };
+}
+
+// ---------- 保存前的开关状态（#159） ----------
+
+/** 点保存时从存储重读到的事实：站点是否已有配置 + 最新的开关状态（不是打开向导那一刻的） */
+export interface SaveSwitchContext {
+  /** 保存前站点是否已有配置：新站点保存即建站，不存在「开关关着」这回事 */
+  exists: boolean;
+  /** 最新的开关状态 */
+  state: SwitchState;
+}
+
+/**
+ * 原样态保存前要不要先问「现在打开」（#159）。
+ * 判断只有一条：已有站点的开关不是「按你的设置显示」。新站点保存即进入清爽态（#81），不问。
+ */
+export function saveAsksToOpen(ctx: SaveSwitchContext): boolean {
+  return ctx.exists && ctx.state !== 'disguised';
+}
+
+/**
+ * 保存后开关字段写什么；null = 保持原值（清爽态，或原样态选了「先保持原样」）。
+ * 新站点保存即建站，写清爽态（#81）。
+ */
+export function savedSwitchState(ctx: SaveSwitchContext, openNow: boolean): SwitchState | null {
+  if (!ctx.exists) return 'disguised';
+  if (ctx.state === 'disguised') return null;
+  return openNow ? 'disguised' : null;
 }
 
 // ---------- 选择集（顺序 = 序号牌编号） ----------
@@ -326,7 +354,7 @@ export function draftHitCounts(
   });
 }
 
-// ---------- 保存（#53：底部三选一 + 保存即完成） ----------
+// ---------- 保存（底部三选一；清爽态保存即完成，#53 / #159） ----------
 
 /** 这一步底部的「在哪些页面收起」三选一 */
 export type ScopeChoice = 'all' | 'include' | 'exclude';

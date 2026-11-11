@@ -10,6 +10,8 @@ import {
   reconcileDrafts,
   removeFromSelection,
   replaceInSelection,
+  saveAsksToOpen,
+  savedSwitchState,
   scopeFromChoice,
   selectionRows,
   titleFromInput,
@@ -209,6 +211,63 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
       disguisedTitle: '阅读',
       icon: { kind: 'preset', id: 'doc' },
       switchState: 'disguised',
+    });
+  });
+
+  describe('原样态保存前的开关选择（#159）', () => {
+    it('清爽态与新站点都不问：新站点保存即建站并写清爽态（#81）', () => {
+      expect(saveAsksToOpen({ exists: true, state: 'disguised' })).toBe(false);
+      expect(saveAsksToOpen({ exists: false, state: 'disguised' })).toBe(false);
+      expect(savedSwitchState({ exists: false, state: 'disguised' }, false)).toBe('disguised');
+    });
+
+    it('原样态问一次；「先保持原样」不写开关，「现在打开」写清爽态', () => {
+      const ctx = { exists: true, state: 'original' as const };
+      expect(saveAsksToOpen(ctx)).toBe(true);
+      expect(savedSwitchState(ctx, false)).toBeNull();
+      expect(savedSwitchState(ctx, true)).toBe('disguised');
+    });
+
+    it('清爽态已有站点保存不写开关字段（原值已经是清爽态）', () => {
+      expect(savedSwitchState({ exists: true, state: 'disguised' }, false)).toBeNull();
+      expect(savedSwitchState({ exists: true, state: 'disguised' }, true)).toBeNull();
+    });
+
+    it('判断用的是传入的最新状态：打开向导那一刻是原样、保存前别处已切清爽，就不再问', () => {
+      // initialState = original，点保存时从存储重读到 disguised（#159：必须用最新值）
+      expect(saveAsksToOpen({ exists: true, state: 'disguised' })).toBe(false);
+      // 反过来：打开时清爽、保存前被切回原样，就要问
+      expect(saveAsksToOpen({ exists: true, state: 'original' })).toBe(true);
+    });
+
+    it('两条路都写入收起内容，区别只在开关字段', () => {
+      const ctx = { exists: true, state: 'original' as const };
+      const incoming = [
+        {
+          sourceRuleId: null,
+          elementName: '广告位',
+          candidates: ['#ad'],
+          strategy: 'remove' as const,
+          scope: { type: 'all' as const },
+          onlyThis: true,
+        },
+      ];
+      const apply = (openNow: boolean) => {
+        const p = createEmptyProfile('https://example.test', 1);
+        p.switchState = 'original';
+        p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: [], now: 2, makeId: () => 'r_new' });
+        const next = savedSwitchState(ctx, openNow);
+        if (next) p.switchState = next;
+        return p;
+      };
+      const stay = apply(false);
+      const open = apply(true);
+      // 两条路都完成保存：规则落库
+      expect(stay.hideRules.map((r) => r.elementName)).toEqual(['广告位']);
+      expect(open.hideRules.map((r) => r.elementName)).toEqual(['广告位']);
+      // 只有「现在打开」顺手切开关
+      expect(stay.switchState).toBe('original');
+      expect(open.switchState).toBe('disguised');
     });
   });
 

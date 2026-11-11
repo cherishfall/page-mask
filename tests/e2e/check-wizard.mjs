@@ -22,7 +22,8 @@
  *   整组统一一条描边样式规则（小组与大组同一形态，#100；不为成员逐个建 DOM，滚动新出现的同类自动带上）；
  *   点已勾选的行切换亮着的组；
  *   点带标记的组员 = 取消那条规则，再点 = 按默认值加回；看效果不再有这道勾选框，勾了同类的行摘要报数
- * - 底部「在哪些页面收起」三选一；点保存直接落库并关掉向导，没有第二个确认框（#53）
+ * - 底部「在哪些页面收起」三选一；清爽态点保存直接落库并关掉向导，原样态先问一次
+ *   「保存后看不到效果」（#159：两条路都保存，只有「现在打开」切开关）
  * - 行内改名在清单重绘后保留；点 ✕ 删除这一项后选择集同步减少，删到 0 项回到点选阶段（N11）
  * - Esc：没有浮层时 Esc 弹出退出确认；确认框上 Esc = 继续设置（N9）
  * - 「上一步」后已改的方案与选项保留，只给新元素建草稿（N12）
@@ -106,6 +107,42 @@ const shadowTexts = (page, sel) =>
     HOST,
     sel,
   );
+
+/** 保存前确认框（#159）的状态：文案、按钮顺序与档位、默认焦点、aria-labelledby */
+const openDialogState = (page) =>
+  page.evaluate((h) => {
+    const sr = document.querySelector(h)?.shadowRoot;
+    const dlg = sr?.querySelector('[data-testid="pm-wizard-open-confirm"]');
+    if (!dlg) return null;
+    const heading = dlg.querySelector('h2');
+    return {
+      open: dlg.open,
+      tag: dlg.tagName,
+      label: dlg.getAttribute('aria-labelledby'),
+      headingId: heading?.id ?? null,
+      heading: heading?.textContent.trim() ?? '',
+      body: dlg.querySelector('p')?.textContent.trim() ?? '',
+      buttons: [...dlg.querySelectorAll('.pm-wiz-actions button')].map((b) => ({
+        testid: b.dataset.testid ?? null,
+        text: b.textContent.trim(),
+        primary: b.classList.contains('primary'),
+      })),
+      focus: sr.activeElement?.dataset.testid ?? null,
+    };
+  }, HOST);
+
+/** 保存前是否真的弹出过确认框（清爽态 / 新站点不该弹；用 open 属性的变更抓，不靠事后看不见） */
+async function watchOpenDialog(page) {
+  await page.evaluate((h) => {
+    window.__pmOpenDialogSeen = false;
+    const dlg = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-open-confirm"]');
+    if (!dlg) return;
+    new MutationObserver(() => {
+      if (dlg.open) window.__pmOpenDialogSeen = true;
+    }).observe(dlg, { attributes: true, attributeFilter: ['open'] });
+  }, HOST);
+}
+const sawOpenDialog = (page) => page.evaluate(() => window.__pmOpenDialogSeen === true);
 
 /**
  * 等第 seq 个标记的*框*与页面元素重合（标记跟随是逐帧的）。
@@ -1099,8 +1136,8 @@ async function main() {
     await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [HOST]);
     check(true, '确认后退出向导');
 
-    // ===================== 保存即完成：行内范围落库、没有第二个确认框（#53 / #76） =====================
-    console.log('\n--- 保存：范围在行内改，点保存直接落库并关掉向导 ---');
+    // ===================== 原样态保存先问一次（#159）：两条路都落库 =====================
+    console.log('\n--- 保存：范围在行内改；原样态先问「现在打开」，选「先保持原样」照常保存 ---');
     await openWizard();
     await clickEl(page, C1);
     await clickEl(page, C2);
@@ -1114,8 +1151,36 @@ async function main() {
     );
     await clickInShadow(page, HOST, tid('pm-draft-1-scope-include'));
     await clickInShadow(page, HOST, tid('pm-wiz-save'));
-    await waitFor(page, '点保存后向导直接关闭', (h) => !document.querySelector(h), [HOST]);
-    check(true, '点「保存」直接结束向导，没有第二个确认框');
+    await waitFor(
+      page,
+      '原样态点保存弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const openDlgState = await openDialogState(page);
+    check(
+      openDlgState?.tag === 'DIALOG' &&
+        openDlgState.label === 'pm-open-title' &&
+        openDlgState.headingId === 'pm-open-title' &&
+        openDlgState.heading === '保存后看不到效果' &&
+        openDlgState.body === '「按你的设置显示」还关着，现在打开吗？',
+      `确认框文案与 aria-labelledby（${openDlgState?.heading} / ${openDlgState?.body}）`,
+    );
+    check(
+      openDlgState?.buttons.length === 2 &&
+        openDlgState.buttons[0].testid === 'pm-wiz-open-stay' &&
+        openDlgState.buttons[0].text === '先保持原样' &&
+        openDlgState.buttons[0].primary === false &&
+        openDlgState.buttons[1].testid === 'pm-wiz-open-yes' &&
+        openDlgState.buttons[1].text === '现在打开' &&
+        openDlgState.buttons[1].primary === true,
+      `两个按钮：左「先保持原样」次操作、右「现在打开」唯一主操作（${openDlgState?.buttons.map((b) => `${b.text}${b.primary ? '·实心' : ''}`).join(' / ')}）`,
+    );
+    check(openDlgState?.focus === 'pm-wiz-open-stay', `默认焦点在「先保持原样」，防手滑回车打开开关（${openDlgState?.focus}）`);
+    await clickInShadow(page, HOST, tid('pm-wiz-open-stay'));
+    await waitFor(page, '选「先保持原样」后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    check(true, '「先保持原样」也完成保存并结束向导，不是取消保存');
     const savedProfile = await getProfile(ext.control, ORIGIN);
     const added = (savedProfile?.hideRules ?? []).filter((r) => r.id !== 'r_e2e_existing');
     const patternPrefix = `${ORIGIN}/wizard.html`;
@@ -1127,6 +1192,81 @@ async function main() {
         added[1].scope.type === 'all',
       `行内改的那条落库 include + 当前这类页面，没改的那条保持整个网站（${JSON.stringify(added.map((r) => r.scope))}）`,
     );
+    check(savedProfile?.switchState === 'original', `「先保持原样」不动开关（${savedProfile?.switchState}）`);
+    check(
+      !(await page.evaluate((h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-page-notice"]'), NOTICE)),
+      '原样态保存后不发页底轻提示（标题没换，那句话是假的）',
+    );
+
+    // ===================== 确认框：Esc / 点外面回向导；「现在打开」保存并切开关（#159） =====================
+    console.log('\n--- 原样态确认框：Esc / 点外面不保存，「现在打开」保存并切到按设置显示 ---');
+    const beforeAsk = await getProfile(ext.control, ORIGIN);
+    await openWizard();
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitForShadow(page, HOST, tid('pm-wiz-save'));
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '再次点保存弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await page.keyboard.press('Escape');
+    await waitFor(
+      page,
+      '确认框上 Esc 关掉确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === false,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const afterEsc = await getProfile(ext.control, ORIGIN);
+    check(
+      (await shadowExists(page, HOST, tid('pm-wiz-save'))) &&
+        !(await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, HOST)),
+      'Esc 只关确认框，回到向导（没有连带弹退出确认）',
+    );
+    check(
+      afterEsc.switchState === 'original' && afterEsc.updatedAt === beforeAsk.updatedAt,
+      `Esc 不保存、不开开关、不写存储（${afterEsc.switchState}，updatedAt ${beforeAsk.updatedAt} → ${afterEsc.updatedAt}）`,
+    );
+
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '点外面之前确认框已开',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await page.mouse.click(4, 4); // ::backdrop 区域
+    await waitFor(
+      page,
+      '点框外关掉确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === false,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const afterOutside = await getProfile(ext.control, ORIGIN);
+    check(
+      (await shadowExists(page, HOST, tid('pm-wiz-save'))) && afterOutside.updatedAt === beforeAsk.updatedAt,
+      '点框外也回到向导，不保存、不开开关',
+    );
+
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '第三次点保存弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await clickInShadow(page, HOST, tid('pm-wiz-open-yes'));
+    await waitFor(page, '「现在打开」后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    const opened = await getProfile(ext.control, ORIGIN);
+    check(opened.switchState === 'disguised', `「现在打开」保存并写 switchState=disguised（${opened.switchState}）`);
+    check(opened.hideRules.map((r) => r.id).join('|') === beforeAsk.hideRules.map((r) => r.id).join('|'), '「现在打开」没有把规则再写一遍');
+    await waitVisible(page, '现在打开后页面当场生效（卡片一被收起）', C1, false);
 
     // ===================== 新站点：无首次模式，「收起内容」直接进点选（#81） =====================
     console.log('\n--- 新站点：收起内容直接进点选（没有标题步骤），保存即建站 ---');
@@ -1154,8 +1294,10 @@ async function main() {
     await clickInShadow(pageNew, HOST, tid('pm-wiz-preview'));
     await waitForShadow(pageNew, HOST, tid('pm-wiz-save'));
     check((await progressOf(pageNew)) === '第 2 步 / 共 2 步', `看效果是第 2 步（${await progressOf(pageNew)}）`);
+    await watchOpenDialog(pageNew);
     await clickInShadow(pageNew, HOST, tid('pm-wiz-save'));
     await waitFor(pageNew, '保存后向导直接关闭', (h) => !document.querySelector(h), [HOST]);
+    check(!(await sawOpenDialog(pageNew)), '新站点保存即建站，不弹「现在打开」确认框（保存后页面当场变）');
     const newProfile = await getProfile(ext.control, NEW_ORIGIN);
     check(
       newProfile?.hideRules.length === 1 &&
@@ -1270,9 +1412,11 @@ async function main() {
     await pageOnly.keyboard.type('只看标题');
     await waitFor(pageOnly, '标题实时跟着变回「只看标题」', () => document.title === '只看标题');
 
-    // 保存：0 条规则 + 清爽态，向导直接关闭
+    // 保存：0 条规则 + 清爽态，向导直接关闭（新站点不弹「现在打开」）
+    await watchOpenDialog(pageOnly);
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-save'));
     await waitFor(pageOnly, '向导直接关闭（不弹保存对话框）', (h) => !document.querySelector(h), [HOST]);
+    check(!(await sawOpenDialog(pageOnly)), '新站点「标题和图标」保存直接完成，不弹确认框');
     // 0 条收起设置：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
     await waitForShadow(pageOnly, NOTICE, tid('pm-page-notice'));
     const notice = await pageOnly.evaluate((n) => {

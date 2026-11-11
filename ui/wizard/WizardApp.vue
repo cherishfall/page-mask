@@ -461,6 +461,26 @@
         </div>
       </form>
     </dialog>
+    <!-- 保存前的选择（#159）：已有站点处在原样态时，保存后页面看不到效果。
+         复用同一套 pm-wiz-dialog；默认焦点放在「先保持原样」，Esc / 点外面 = 回向导、不保存 -->
+    <dialog
+      ref="openDlg"
+      class="pm-wiz-dialog"
+      aria-labelledby="pm-open-title"
+      data-testid="pm-wizard-open-confirm"
+      @cancel="onOpenCancel"
+      @close="onOpenClose"
+      @click="onOpenDialogClick"
+    >
+      <form method="dialog">
+        <h2 id="pm-open-title">{{ t.wizard.openTitle }}</h2>
+        <p>{{ t.wizard.openBody }}</p>
+        <div class="pm-wiz-actions">
+          <button value="stay" class="pm-btn" autofocus data-testid="pm-wiz-open-stay">{{ t.wizard.openStay }}</button>
+          <button value="open" class="pm-btn primary" data-testid="pm-wiz-open-yes">{{ t.wizard.openConfirm }}</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -485,6 +505,8 @@ import {
   draftHitCounts,
   mergeEditDrafts,
   mergeSavedRules,
+  saveAsksToOpen,
+  savedSwitchState,
   selectionRows as buildSelectionRows,
   titleFromInput,
   titleIconResetPatch,
@@ -498,6 +520,7 @@ import {
   type DraftItem,
   type DraftRuleInput,
   type MarkerRect,
+  type SaveSwitchContext,
   type ScopeChoice,
   type SelectionRow,
   type WizardMode,
@@ -598,6 +621,7 @@ const toolbarEl = ref<HTMLElement | null>(null);
 const listEl = ref<HTMLElement | null>(null);
 const exitDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
+const openDlg = ref<HTMLDialogElement | null>(null);
 
 const follower = new ElementFollower();
 let pick: PickController;
@@ -774,7 +798,7 @@ function showInfo(text: string) {
 
 /** 是否有浮层打开（确认框）：有就让浮层自己按原生行为处理 Esc */
 function overlayOpen(): boolean {
-  return !!exitDlg.value?.open || !!noticeDlg.value?.open;
+  return !!exitDlg.value?.open || !!noticeDlg.value?.open || !!openDlg.value?.open;
 }
 
 function onKeyDown(e: KeyboardEvent) {
@@ -1186,9 +1210,23 @@ async function resetTitleIcon() {
 /**
  * 「标题和图标」的保存（#81）：写标题 / 图标 / 开关，不碰已有的收起规则，向导直接关闭。
  * 站点还没有配置时，这份配置在这里第一次写入（0 条规则 + 清爽态）。
+ * 已有站点处在原样态时，先问一次「现在打开」（#159）；两条路都完成保存。
  */
 async function saveTitleOnly() {
-  if (saving.value || finished) return;
+  if (saving.value || saveBusy || finished) return;
+  saveBusy = true;
+  try {
+    const ctx = await latestSwitchContext();
+    const choice = await askOpenIfNeeded(ctx);
+    if (choice === 'cancel') return; // 回向导：不保存、不开开关，预览还在
+    await persistTitleOnly(ctx, choice === 'open');
+  } finally {
+    saveBusy = false;
+  }
+}
+
+/** 真正写入「标题和图标」：先撤预览，再按用户的选择写开关，最后关向导 */
+async function persistTitleOnly(ctx: SaveSwitchContext, openNow: boolean) {
   saving.value = true;
   try {
     const cleared = await props.setDraft(null);
@@ -1198,12 +1236,14 @@ async function saveTitleOnly() {
     }
     const storage = createPageMaskStorage(browser.storage.local);
     const origin = new URL(props.url).origin;
+    // 清爽态不弹框、也不改开关；原样态按选择——「先保持原样」保持原值，「现在打开」写清爽态。
+    // 新站点保存即建站，走 titleOnlyPatch 的默认清爽态（#81）
+    const switchState = savedSwitchState(ctx, openNow) ?? ctx.state;
     const patch = titleOnlyPatch({
       title: titleInput.value,
       icon: iconData.value,
       fallbackTitle: props.initialTitle,
-      // 已添加的网站保持它现在的开关状态：改标题不该顺手打开清爽（#77）
-      keepState: props.hasProfile ? props.initialState : undefined,
+      keepState: ctx.exists ? switchState : undefined,
     });
     let saved;
     try {
@@ -1224,8 +1264,14 @@ async function saveTitleOnly() {
       noticeDlg.value?.showModal();
       return;
     }
-    // 0 条规则：关掉向导后给一句轻提示，说明生效的是标签页名字（#53）
-    await finish(true, t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle)));
+    // 0 条规则：清爽态保存后给一句轻提示，说明生效的是标签页名字（#53）。
+    // 原样态选了「先保持原样」时标题根本没换，这句话是假的，不发（#159）
+    await finish(
+      true,
+      switchState === 'disguised'
+        ? t.value.wizard.zeroRuleNotice(titleFromInput(titleInput.value, props.initialTitle))
+        : undefined,
+    );
   } finally {
     saving.value = false;
   }
@@ -1885,16 +1931,94 @@ watch(phase, () => {
   void nextTick(reclampToolbar);
 });
 
-// ---------- 保存（#53：点保存就是最后一下，不再弹第二个确认框） ----------
+// ---------- 保存（#159：原样态先问「现在打开」；清爽态点保存就是最后一下，同 #53） ----------
+
+/** 从点保存到写入完成只走一条路（含确认框），防重复点击 */
+let saveBusy = false;
+
+/** 读最新的开关状态：向导开着时别处可能已经切换过，不能拿打开那一刻的值判 */
+async function latestSwitchContext(): Promise<SaveSwitchContext> {
+  try {
+    const latest = await createPageMaskStorage(browser.storage.local).getProfile(new URL(props.url).origin);
+    return { exists: latest !== null, state: latest?.switchState ?? 'disguised' };
+  } catch (e) {
+    console.warn('[PageMask] 读取开关状态失败，按打开向导时的状态保存', e);
+    return { exists: props.hasProfile, state: props.initialState };
+  }
+}
+
+/** 确认框的三种结局：现在打开 / 先保持原样 / 取消（Esc、点外面） */
+type OpenChoice = 'open' | 'stay' | 'cancel';
+let resolveOpenChoice: ((choice: OpenChoice) => void) | null = null;
+
+function askOpenSwitch(): Promise<OpenChoice> {
+  const dlg = openDlg.value;
+  if (!dlg) return Promise.resolve('cancel');
+  return new Promise((resolve) => {
+    resolveOpenChoice = resolve;
+    dlg.showModal();
+  });
+}
+
+/** 落定用户的选择：只认第一次，后续 close 事件不重复处理 */
+function settleOpen(choice: OpenChoice) {
+  const resolve = resolveOpenChoice;
+  resolveOpenChoice = null;
+  resolve?.(choice);
+}
+
+/** Esc：按「取消」放行，不依赖 close 事件晚一拍才到达的时序 */
+function onOpenCancel() {
+  settleOpen('cancel');
+}
+
+function onOpenClose() {
+  const dlg = openDlg.value;
+  if (!dlg) return;
+  const choice = dlg.returnValue;
+  dlg.returnValue = ''; // Esc / 点外面不设返回值，重置以免沿用上一次
+  settleOpen(choice === 'open' || choice === 'stay' ? choice : 'cancel');
+}
+
+/** 点框外（::backdrop）也关：回到向导，不保存、不开开关（与空设置说明框同一套判定） */
+function onOpenDialogClick(e: MouseEvent) {
+  const dlg = openDlg.value;
+  if (!dlg || e.target !== dlg) return;
+  const r = dlg.getBoundingClientRect();
+  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  if (!inside) {
+    settleOpen('cancel');
+    dlg.close();
+  }
+}
+
+/** 原样态保存前问一次；清爽态 / 新站点不问（#159） */
+async function askOpenIfNeeded(ctx: SaveSwitchContext): Promise<OpenChoice | null> {
+  if (!saveAsksToOpen(ctx)) return null;
+  return askOpenSwitch();
+}
 
 async function doSave() {
-  if (saving.value || finished) return;
+  if (saving.value || saveBusy || finished) return;
   // 保存门槛：每条规则至少 1 个候选，空规则保存后什么也藏不掉
   const warn = unsavableDraftWarning(drafts.value);
   if (warn) {
     showWarn(warn);
     return;
   }
+  saveBusy = true;
+  try {
+    const ctx = await latestSwitchContext();
+    const choice = await askOpenIfNeeded(ctx);
+    if (choice === 'cancel') return; // 回向导：不保存、不开开关
+    await persistRules(ctx, choice === 'open');
+  } finally {
+    saveBusy = false;
+  }
+}
+
+/** 真正写入「收起内容」：先撤预览，再合并规则并按选择写开关，最后关向导 */
+async function persistRules(ctx: SaveSwitchContext, openNow: boolean) {
   saving.value = true;
   try {
     // 范围：从旧规则带进来的按它自己的；新选的默认整个网站（#76 起行内改）
@@ -1928,10 +2052,10 @@ async function doSave() {
           // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动。
           // 站点还没有配置时 initialIds 是空的，效果就是纯追加（#81 两条流程同一条保存路径）
           p.hideRules = mergeSavedRules(p.hideRules, incoming, { editIds: initialIds, now, makeId: newRuleId });
-          if (!props.hasProfile) {
-            // 新站点保存即建站并开启清爽（#81：标题和图标流程只改标题，「收起内容」流程不碰标题）
-            p.switchState = 'disguised';
-          }
+          // 开关和规则在同一次写入里落库：新站点保存即建站并开启清爽（#81）；
+          // 已有站点只在「现在打开」时切清爽，选「先保持原样」不动（#159）
+          const next = savedSwitchState(ctx, openNow);
+          if (next) p.switchState = next;
         },
         { create: !props.hasProfile },
       );
@@ -1946,7 +2070,7 @@ async function doSave() {
       noticeDlg.value?.showModal();
       return;
     }
-    // 保存即完成（#53）：不再弹第二个确认框
+    // 两条分支都已保存并结束向导；清爽态点保存仍是最后一下（#53 收窄到清爽态）
     await finish(true);
   } finally {
     saving.value = false;

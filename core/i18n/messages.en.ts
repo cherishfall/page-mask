@@ -428,6 +428,11 @@ export const en: Messages = {
     exitStay: 'Keep setting up',
     exitConfirm: 'Exit',
     notSavedTitle: 'Not saved',
+    /** Choice before saving on an as-is site (#159): both paths save; only “Turn it on” flips the switch */
+    openTitle: 'You won’t see it after saving',
+    openBody: '“Show this site your way” is off. Turn it on now?',
+    openStay: 'Keep as is',
+    openConfirm: 'Turn it on',
     zeroRuleNotice: (title: string) => `Saved — the tab is now named “${title}”`,
     titleResetNotice: 'Back to the site’s own title and icon',
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',

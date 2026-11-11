@@ -69,6 +69,52 @@ const toggleSettled = (h, ids, on) => {
   });
 };
 
+/** 保存前确认框（#159）是否真的弹过：抓 open 属性的变更，清爽态不该出现 */
+async function watchOpenDialog(page) {
+  await page.evaluate((h) => {
+    window.__pmOpenDialogSeen = false;
+    const dlg = document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-open-confirm"]');
+    if (!dlg) return;
+    new MutationObserver(() => {
+      if (dlg.open) window.__pmOpenDialogSeen = true;
+    }).observe(dlg, { attributes: true, attributeFilter: ['open'] });
+  }, WIZARD);
+}
+const sawOpenDialog = (page) => page.evaluate(() => window.__pmOpenDialogSeen === true);
+
+/** 在「标题和图标」表单里填入标题（触发 input，实时预览跟着走） */
+async function typeTitle(page, value) {
+  await page.evaluate(
+    (h, v) => {
+      const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
+      input.focus();
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    WIZARD,
+    value,
+  );
+}
+
+/** 原样态保存前的确认框（#159）：文案、按钮顺序 / 档位、默认焦点 */
+const openDialogState = (page) =>
+  page.evaluate((h) => {
+    const sr = document.querySelector(h)?.shadowRoot;
+    const dlg = sr?.querySelector('[data-testid="pm-wizard-open-confirm"]');
+    if (!dlg) return null;
+    return {
+      open: dlg.open,
+      heading: dlg.querySelector('h2')?.textContent.trim() ?? '',
+      body: dlg.querySelector('p')?.textContent.trim() ?? '',
+      buttons: [...dlg.querySelectorAll('.pm-wiz-actions button')].map((b) => ({
+        testid: b.dataset.testid ?? null,
+        text: b.textContent.trim(),
+        primary: b.classList.contains('primary'),
+      })),
+      focus: sr.activeElement?.dataset.testid ?? null,
+    };
+  }, WIZARD);
+
 /** 幕布宿主：遮住后「恢复」按钮住在这里（#50 起不再由胶囊渲染） */
 const CURTAIN = 'pagemask-curtain';
 const tid = (id) => `[data-testid="${id}"]`;
@@ -448,49 +494,85 @@ async function main() {
     check(page.url() === urlBefore, `就地打开，没有跳到别的标签页（地址仍是 ${new URL(page.url()).pathname}）`);
     // 实时预览：改标题 → 标签页当场改名（不等保存）
     const NEW_TITLE = '安静的标题';
-    await page.evaluate(
-      (h, v) => {
-        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
-        input.focus();
-        input.value = v;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      },
-      WIZARD,
-      NEW_TITLE,
-    );
+    await typeTitle(page, NEW_TITLE);
     await waitFor(page, '改标题实时预览', (t) => document.title === t, [NEW_TITLE], { timeout: 3000 });
+    // 清爽态：保存就是最后一下，不弹「现在打开」（#159 把 #53 的结论收窄到清爽态）
+    await watchOpenDialog(page);
     await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
     await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    check(!(await sawOpenDialog(page)), '清爽态保存不弹「现在打开」确认框');
     check((await getProfile(ext.control, ORIGIN)).disguisedTitle === NEW_TITLE, '标题写进存储');
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '保存后胶囊挂回来');
+    check((await page.title()) === NEW_TITLE, '清爽态保存后标签页当场换成新标题');
+    // 等前一句页底提示自己走完（4 秒），下面才断言原样态不会再发提示
+    await waitFor(page, '前一句页底提示消失', () => !document.querySelector('pagemask-notice'), [], { timeout: 6000 });
 
-    // 原样态：改标题不顺手打开清爽（#77）
-    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
-    await waitFor(page, '切到原样', (t) => document.title === t, ['Acme 阅读'], { timeout: 5000 });
-    const ORIGINAL_TITLE = '原样下改的标题';
+    // 原样态（#159）：打开向导时还是清爽态，保存前被别处切回原样 —— 必须读最新值才弹框
+    const STAY_TITLE = '原样下改的标题';
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
     await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
     await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
-    await page.evaluate(
-      (h, v) => {
-        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
-        input.focus();
-        input.value = v;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      },
-      WIZARD,
-      ORIGINAL_TITLE,
-    );
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await typeTitle(page, STAY_TITLE);
+    await waitFor(page, '原样态下输入标题仍实时预览', (t) => document.title === t, [STAY_TITLE], { timeout: 3000 });
     await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
-    await waitFor(page, '向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    await waitFor(
+      page,
+      '原样态点保存弹出确认框（用的是最新状态）',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [WIZARD],
+      { timeout: 3000 },
+    );
+    const dlg = await openDialogState(page);
+    check(
+      dlg?.heading === '保存后看不到效果' &&
+        dlg.body === '「按你的设置显示」还关着，现在打开吗？' &&
+        dlg.buttons.map((b) => `${b.text}${b.primary ? '·实心' : ''}`).join('/') === '先保持原样/现在打开·实心' &&
+        dlg.focus === 'pm-wiz-open-stay',
+      `确认框文案、按钮顺序与默认焦点（${dlg?.heading} / ${dlg?.buttons.map((b) => b.text).join(' / ')} / 焦点 ${dlg?.focus}）`,
+    );
+    await clickInShadow(page, WIZARD, tid('pm-wiz-open-stay'));
+    await waitFor(page, '「先保持原样」后向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
     const afterOriginal = await getProfile(ext.control, ORIGIN);
     check(
-      afterOriginal.disguisedTitle === ORIGINAL_TITLE && afterOriginal.switchState === 'original',
-      `原样态下只改标题，开关不被顺手打开（${afterOriginal.disguisedTitle} / ${afterOriginal.switchState}）`,
+      afterOriginal.disguisedTitle === STAY_TITLE && afterOriginal.switchState === 'original',
+      `「先保持原样」保存标题、开关不动（${afterOriginal.disguisedTitle} / ${afterOriginal.switchState}）`,
     );
     check((await page.title()) === 'Acme 阅读', '原样态下标签页仍是真名（保存不硬改）');
+    check(
+      !(await page.evaluate(() => !!document.querySelector('pagemask-notice'))),
+      '原样态「先保持原样」保存后没有页底提示（标题没换，那句话是假的）',
+    );
+
+    // 原样态（#159）：「现在打开」保存标题并当场切到按设置显示；清爽态的页底提示照旧
+    const OPEN_TITLE = '打开后再看的标题';
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
+    await waitForShadow(page, TOGGLE, tid('pm-toggle-menu'));
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-title'));
+    await waitForShadow(page, WIZARD, tid('pm-wizard-toolbar'), { timeout: 5000 });
+    await typeTitle(page, OPEN_TITLE);
+    await waitFor(page, '原样态下输入标题实时预览', (t) => document.title === t, [OPEN_TITLE], { timeout: 3000 });
+    await clickInShadow(page, WIZARD, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '再次弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [WIZARD],
+      { timeout: 3000 },
+    );
+    await clickInShadow(page, WIZARD, tid('pm-wiz-open-yes'));
+    await waitFor(page, '「现在打开」后向导关闭', (h) => !document.querySelector(h), [WIZARD], { timeout: 3000 });
+    const afterOpen = await getProfile(ext.control, ORIGIN);
+    check(
+      afterOpen.disguisedTitle === OPEN_TITLE && afterOpen.switchState === 'disguised',
+      `「现在打开」保存标题并写 switchState=disguised（${afterOpen.disguisedTitle} / ${afterOpen.switchState}）`,
+    );
+    await waitFor(page, '标签页当场换成新标题', (t) => document.title === t, [OPEN_TITLE], { timeout: 5000 });
+    await waitForShadow(page, 'pagemask-notice', tid('pm-page-notice'), { timeout: 5000 });
+    check(true, '清爽态（「现在打开」后）仍发那句页底提示，与改动前一致');
+
     // 复位：后面的幕布用例断言固定的清爽标题
     await patchProfile(ext.control, ORIGIN, { disguisedTitle: '低调阅读', switchState: 'disguised' });
     await waitFor(page, '复位到固定标题', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });

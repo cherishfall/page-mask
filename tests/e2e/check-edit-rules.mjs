@@ -23,6 +23,7 @@ import {
   getProfile,
   launchExtension,
   openPopup,
+  patchProfile,
   sendToBackground,
   sendToTab,
   tabIdOf,
@@ -486,6 +487,77 @@ async function main() {
     check((await visible(page, '#banner')) === true, '删掉的那项恢复可见（横幅）');
     check((await visible(page, '#promo')) === false, '重选后活动栏被收起');
     check((await visible(page, '.card:nth-child(1)')) === false, '新选的卡片一被收起');
+
+    // ===================== 原样态保存先问一次（#159）：弹窗两条入口 =====================
+    console.log('\n--- 原样态：弹窗「收起内容」先问「现在打开」，弹窗「标题和图标」也能打开开关 ---');
+    await patchProfile(ext.control, ORIGIN, { switchState: 'original' });
+    await waitVisible(page, '切到原样：活动栏恢复可见', '#promo');
+
+    // 入口一：弹窗「收起内容」→ 看效果 → 保存 → 先保持原样
+    const popupRules = await openPopup(ext, page);
+    await popupRules.waitForSelector(tid('pm-popup-setup'), { timeout: 5000 });
+    await popupRules.bringToFront();
+    await popupRules.click(tid('pm-popup-setup'));
+    await waitForShadow(page, HOST, tid('pm-wizard-toolbar'), { timeout: 8000 });
+    await clickInShadow(page, HOST, tid('pm-wiz-preview'));
+    await waitForShadow(page, HOST, tid('pm-wiz-save'));
+    const rulesBefore = await getProfile(ext.control, ORIGIN);
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '原样态点保存弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const dlgText = await shadowText(page, HOST, tid('pm-wizard-open-confirm'));
+    check(
+      dlgText.includes('保存后看不到效果') && dlgText.includes('「按你的设置显示」还关着，现在打开吗？'),
+      `弹窗「收起内容」入口同样先问一次（${dlgText.split('\n').join(' / ')}）`,
+    );
+    const dlgFocus = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid ?? null, HOST);
+    check(dlgFocus === 'pm-wiz-open-stay', `默认焦点在「先保持原样」（${dlgFocus}）`);
+    await clickInShadow(page, HOST, tid('pm-wiz-open-stay'));
+    await waitFor(page, '选「先保持原样」后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    const rulesAfter = await getProfile(ext.control, ORIGIN);
+    check(
+      rulesAfter.switchState === 'original' && rulesAfter.hideRules.length === rulesBefore.hideRules.length,
+      `「先保持原样」也完成保存，开关与规则都按预期（${rulesAfter.switchState}，${rulesAfter.hideRules.length} 条）`,
+    );
+
+    // 入口二：弹窗「标题和图标」→ 保存 → 现在打开
+    const OPEN_TITLE = '弹窗里改的标题';
+    const popupTitle = await openPopup(ext, page);
+    await popupTitle.waitForSelector(tid('pm-popup-title'), { timeout: 5000 });
+    await popupTitle.bringToFront();
+    await popupTitle.click(tid('pm-popup-title'));
+    await waitForShadow(page, HOST, tid('pm-wizard-toolbar'), { timeout: 8000 });
+    await page.evaluate(
+      (h, v) => {
+        const input = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-title-input"]');
+        input.focus();
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      HOST,
+      OPEN_TITLE,
+    );
+    await clickInShadow(page, HOST, tid('pm-wiz-save'));
+    await waitFor(
+      page,
+      '标题流程也弹出确认框',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-open-confirm"]')?.open === true,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await clickInShadow(page, HOST, tid('pm-wiz-open-yes'));
+    await waitFor(page, '「现在打开」后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    const titleOpen = await getProfile(ext.control, ORIGIN);
+    check(
+      titleOpen.switchState === 'disguised' && titleOpen.disguisedTitle === OPEN_TITLE,
+      `弹窗「标题和图标」入口：保存标题并切到按设置显示（${titleOpen.disguisedTitle} / ${titleOpen.switchState}）`,
+    );
+    await waitFor(page, '标签页当场换成新标题', (t) => document.title === t, [OPEN_TITLE], { timeout: 5000 });
   } catch (e) {
     r.fail(e);
   } finally {
