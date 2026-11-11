@@ -83,6 +83,10 @@
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
+.pm-tg-main:not([data-state='on']):active {
+  background: var(--pm-bg-control-active);
+  color: var(--pm-fg);
+}
 .pm-tg-main-icon {
   inline-size: 13px;
   block-size: 13px;
@@ -123,6 +127,10 @@
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
+.pm-tg-more:active {
+  background: var(--pm-bg-control-active);
+  color: var(--pm-fg);
+}
 
 /* ── 「遮住」按钮（图标即可，读屏文案「遮住整页」）：可点 24×24，图标 13 ── */
 .pm-tg-cover {
@@ -140,6 +148,10 @@
 }
 .pm-tg-cover:hover {
   background: var(--pm-bg-subtle);
+  color: var(--pm-fg);
+}
+.pm-tg-cover:active {
+  background: var(--pm-bg-control-active);
   color: var(--pm-fg);
 }
 .pm-tg-cover-icon {
@@ -323,6 +335,9 @@
 .pm-tg-item:hover {
   background: var(--pm-bg-subtle);
 }
+.pm-tg-item:active {
+  background: var(--pm-bg-control-active);
+}
 /* 三个媒体开关（#116）：勾选标记与文字分两栏，标记固定 12px 占位，拨动时文字不位移。
    外观仍是同一个 .pm-tg-item（同一套底色、字号、圆角、悬停），只多一列勾选 */
 .pm-tg-item.pm-tg-switch {
@@ -380,7 +395,8 @@
   user-select: text;
 }
 .pm-tg-dialog::backdrop {
-  background: rgb(0 0 0 / 0.35);
+  /* 与扩展页 dialog::backdrop 同一份 token（#170）：三处遮罩一个浓度，暗色自动加深 */
+  background: var(--pm-backdrop);
 }
 .pm-tg-dialog-title {
   margin: 0 0 var(--pm-space-2);

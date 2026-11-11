@@ -52,6 +52,9 @@
 .pm-tif-chip:hover {
   background: var(--pm-bg-subtle);
 }
+.pm-tif-chip:active {
+  background: var(--pm-bg-control-active);
+}
 
 .pm-tif-icon-row {
   display: flex;

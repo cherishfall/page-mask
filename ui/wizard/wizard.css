@@ -129,6 +129,10 @@
   /* hover 比常态再深一档，抓取区更可发现 */
   background: var(--pm-bg-control-active);
 }
+/* 按下（含触屏首触，不经 hover）：与 hover 同档——bg-control-active 已是最深一档 */
+.pm-wiz-handle:active {
+  background: var(--pm-bg-control-active);
+}
 /* 拖动中：光标停在把手（最内层）上时也要是「抓取中」，不能回退成 grab */
 .pm-wiz-head.dragging,
 .pm-wiz-head.dragging .pm-wiz-handle {
@@ -179,6 +183,10 @@
 .pm-wiz-collapse:focus-visible {
   color: var(--pm-fg);
   background: var(--pm-bg-subtle);
+}
+.pm-wiz-collapse:active {
+  color: var(--pm-fg);
+  background: var(--pm-bg-control-active);
 }
 .pm-wiz-sub {
   margin: 2px 0 0;
@@ -725,7 +733,8 @@ button.pm-wiz-badge {
 .pm-wiz-dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
-  background: rgb(0 0 0 / 0.32);
+  /* 与扩展页 dialog::backdrop 同一份 token（#170）：三处遮罩一个浓度，暗色自动加深 */
+  background: var(--pm-backdrop);
 }
 .pm-wiz-dialog h2 {
   margin: 0 0 var(--pm-space-3);

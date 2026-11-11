@@ -266,6 +266,10 @@ function onRowDelete() {
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
+.site-more:active {
+  background: var(--pm-bg-control-active);
+  color: var(--pm-fg);
+}
 
 /* 行尾菜单：与胶囊菜单同一套材质（popover 关着时 UA 设 display:none） */
 .site-menu {
@@ -296,6 +300,9 @@ function onRowDelete() {
 
 .site-menu-item:hover {
   background: var(--pm-bg-subtle);
+}
+.site-menu-item:active {
+  background: var(--pm-bg-control-active);
 }
 
 .site-menu-item.danger {
