@@ -179,11 +179,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     mediaGray: false,
     emptyNote: false,
   });
-  /**
-   * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
-   * 传一个响应式对象而不是字符串——手动 createApp 不会重渲染根组件，字符串快照永远停在打开那一刻
-   */
-  const pageState = reactive<{ url: string }>({ url: location.href });
   let toggleHost: PageHost | null = null;
   let toggleApp: App | null = null;
   /** 幕布上的「恢复」按钮（#50）：归幕布宿主所有，两条代码路径共用 ui/curtain-restore.ts */
@@ -458,7 +453,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     hideCurtain(); // 进向导前先撤幕布（#45）
     // 向导按打开这一刻的地址工作（页面地址在 SPA 换页后跟着变，先对齐，打开后不再改）
     const pageUrl = location.href;
-    pageState.url = pageUrl;
 
     // 排在进行中的状态刷新之后，避免刷新在向导打开后又把正式样式注回去
     await exclusive(async () => {
@@ -919,7 +913,6 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // SPA 路由变化（WXT 用 Navigation API 的 navigate 事件，没有轮询）：立即重评估生效范围、遮罩、体检；
     // 向导期间屏蔽（向导按打开时的地址工作，退出时会再刷新）
     ctx.addEventListener(window, 'wxt:locationchange', () => {
-      pageState.url = location.href; // 编辑面板里「本页生效的规则」跟着换页更新（N4）
       if (!wizardActive) void scheduleRefresh();
     });
     // bfcache 恢复：样式随文档一起被保存，但期间存储可能变了（另一个页面切了开关、改了规则），按新状态增删

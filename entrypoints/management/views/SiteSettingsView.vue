@@ -71,6 +71,7 @@
             id="pm-site-title-input"
             name="site-title"
             autocomplete="off"
+            maxlength="60"
             v-model="store.state.drafts[profile.origin]"
             class="title-input"
             data-testid="pm-mgmt-title"

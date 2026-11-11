@@ -584,3 +584,39 @@ describe('插件设置随导出 / 导入（#55）', () => {
     }
   });
 });
+
+describe('迁移与导入的坏数据边界（#177）', () => {
+  it('懒迁移：净化失败的旧 key 跳过删除，留着不碍事', async () => {
+    const area = memoryArea();
+    area.data.set('profile:https://good.com', { ...createEmptyProfile('https://good.com'), hideRules: [rule('r1')] });
+    // JSON 完整但字段畸形（origin 不是合法 key）：此前这类 key 会被无条件删掉
+    area.data.set('profile:https://broken.com', { formatVersion: 1, origin: 'not a key!!', hideRules: [] });
+    const store = createPageMaskStorage(area);
+    const list = await store.listProfiles();
+    expect(list.map((p) => p.origin)).toEqual(['good.com']);
+    // 坏 key 仍在（读路径忽略它）：将来修好校验逻辑还能恢复
+    expect(area.data.has('profile:https://broken.com')).toBe(true);
+    // 幂等：再读不再尝试迁移
+    await store.listProfiles();
+    expect(area.data.has('profile:https://broken.com')).toBe(true);
+  });
+
+  it('replace 导入的 removed 计数包含本地无效的 profile key（不再少报）', async () => {
+    const area = memoryArea();
+    seed(area, { ...createEmptyProfile('local.com') });
+    // 本地一条净化失败的坏 key：obsolete 应把它也算进 removed
+    area.data.set('profile:broken.local', { formatVersion: 1, origin: '!!!', hideRules: [] });
+    const store = createPageMaskStorage(area);
+    const res = await store.importBundle(bundleOf([createEmptyProfile('new.com')]), 'replace');
+    expect(res.removed).toBe(2);
+    expect(res.added).toBe(1);
+  });
+
+  it('sanitizeProfile：超长标题截断到 60（输入框同上限，导入不再无界）', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    const p = { ...createEmptyProfile('long.com'), disguisedTitle: '长'.repeat(500), titleIconSet: true };
+    await store.importBundle(bundleOf([p]));
+    const saved = await store.getProfile('long.com');
+    expect(saved!.disguisedTitle).toHaveLength(60);
+  });
+});

@@ -116,17 +116,21 @@ export function createPageMaskStorage(area: KVArea) {
 
     // 全部 profile 按站点 key 归并：裸域与子域合成一条，字段取舍复用导入同一条规则
     const merged = new Map<string, SiteProfile>();
+    const migratedLegacyKeys = new Set<string>();
     for (const k of profileKeys) {
       const s = sanitizeProfile(all[k]);
       if (!s) continue;
       const prev = merged.get(s.profile.origin);
       merged.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
+      // 只删成功迁移的旧 key（#177）：净化失败的坏数据留着不碍事（读路径本就忽略它），
+      // 先删掉的话将来修好校验逻辑也无从恢复
+      migratedLegacyKeys.add(k);
     }
     const writes: Record<string, unknown> = {};
     for (const [key, profile] of merged) writes[profileKey(key)] = profile;
     // 先写后删：即使删除失败，也只是多留旧数据，不会丢设置
     await area.set(writes);
-    await area.remove(legacyKeys);
+    await area.remove([...migratedLegacyKeys]);
   }
 
   /** 入参可以是站点 key，也可以是旧的 origin / 页面 URL；无法解析时返回 null */
@@ -342,7 +346,9 @@ export function createPageMaskStorage(area: KVArea) {
       // 先写后删：即使删除失败，也只是多留旧数据，不会丢数据
       const obsolete = mode === 'replace' ? localKeys.filter((k) => !(k in writes)) : [];
       if (obsolete.length) await area.remove(obsolete);
-      const removed = obsolete.filter((k) => local.has(k.slice(PROFILE_PREFIX.length))).length;
+      // replace 分支里 obsolete 与「被移除的本机站点」一一对应（#177）：
+      // 此前再过一遍 local.has 会漏掉本地已损坏的 profile key，确认框承诺与结果报告少报
+      const removed = obsolete.length;
       return { added, updated, removed, skipped, skippedRules, mode };
     });
   }

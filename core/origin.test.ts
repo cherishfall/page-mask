@@ -139,3 +139,16 @@ describe('前缀匹配带边界', () => {
     expect(urlMatchesPrefix('https://weread.qq.com/web/shelf', 'https://weread.qq.com/web/reader/')).toBe(false);
   });
 });
+
+describe('带非默认端口的站点：范围推导与匹配（#177 补盲区）', () => {
+  it('deriveScopePattern 对带端口站点给出带端口的 label 与 prefix', () => {
+    const p = deriveScopePattern('http://127.0.0.1:8080/web/reader/1');
+    expect(p?.prefix).toBe('http://127.0.0.1:8080/web/reader');
+    expect(p?.label).toContain('127.0.0.1:8080');
+  });
+  it('urlMatchesPattern：端口不同不算同一站点', () => {
+    const p = deriveScopePattern('http://127.0.0.1:8080/web');
+    expect(urlMatchesPattern('http://127.0.0.1:8080/web/reader', p!)).toBe(true);
+    expect(urlMatchesPattern('http://127.0.0.1:9999/web', p!)).toBe(false);
+  });
+});

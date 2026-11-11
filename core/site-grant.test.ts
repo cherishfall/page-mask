@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOriginCovered } from './site-grant';
+import { grantedPatternsOfSite, isOriginCovered, isSiteGranted } from './site-grant';
 import { sitePatterns } from './site-key';
 
 describe('isOriginCovered：当前页面是否被这批模式覆盖', () => {
@@ -68,5 +68,35 @@ describe('isOriginCovered：当前页面是否被这批模式覆盖', () => {
     expect(isOriginCovered('https://a.b.example/x', ['*://*/*'])).toBe(true);
     expect(isOriginCovered('http://127.0.0.1:3000/', ['*://*/*'])).toBe(true);
     expect(isOriginCovered('https://[::1]:8080/x', ['https://[::1]:8080/*'])).toBe(true);
+  });
+});
+
+describe('grantedPatternsOfSite：全站通配授权的 contains 兜底（#177 补盲区）', () => {
+  /** contains 替身：只认 canonical 两条，精确匹配（此前测试里的 stub 是精确匹配，兜底永远走不到） */
+  const browserWithWildcard = (canonical: string[]) => ({
+    permissions: {
+      getAll: async () => ({ origins: ['*://*/*'] }),
+      contains: async (p: { origins: string[] }) => p.origins.every((o) => canonical.includes(o)),
+    },
+  });
+
+  it('getAll 里只有全站通配时：按本站点的两条模式问 contains，命中即返回这两条', async () => {
+    const canonical = sitePatterns('weibo.com');
+    const browser = browserWithWildcard(canonical);
+    expect(await grantedPatternsOfSite(browser, 'weibo.com')).toEqual(canonical);
+    expect(await isSiteGranted(browser, 'weibo.com')).toBe(true);
+  });
+
+  it('contains 不认（非法站点 key 等异常路径）返回空——当作没授权', async () => {
+    const browser = {
+      permissions: {
+        getAll: async () => ({ origins: ['*://*/*'] }),
+        contains: async () => {
+          throw new Error('Invalid site key');
+        },
+      },
+    };
+    expect(await grantedPatternsOfSite(browser, 'weibo.com')).toEqual([]);
+    expect(await isSiteGranted(browser, 'weibo.com')).toBe(false);
   });
 });

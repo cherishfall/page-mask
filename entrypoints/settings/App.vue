@@ -108,7 +108,6 @@
             <FloatingToggle
               state="disguised"
               :position="null"
-              :mini="false"
               site-label="example.com"
               :opacity="previewOpacity"
               preview
