@@ -89,10 +89,17 @@
             role="switch"
             data-testid="pm-popup-switch"
             :checked="switchOn"
+            :aria-describedby="emptySettings ? 'pm-popup-switch-empty' : undefined"
             @change="emit('toggleSwitch', $event.target as HTMLInputElement)"
           />
         </div>
         <p v-if="!hasProfile" class="hint card-switch-hint">{{ t.popup.cardSwitchHintNew }}</p>
+        <!-- 空设置的事前说明（#158）：开关下面一句短句，说明打开后页面不会有变化。
+             判据是三处共用的 core/site-state.ts（不含灰度）；ready 态才可能为空，
+             new 态上面那句已经讲了设置好之后的事，两句不叠加。开关照常可拨，不禁用、不隐藏 -->
+        <p v-if="emptySettings" id="pm-popup-switch-empty" class="hint card-empty-hint" data-testid="pm-popup-switch-empty">
+          {{ t.common.switchNoEffectHint }}
+        </p>
         <div class="edit-actions">
           <button data-testid="pm-popup-title" @click="emit('editTitle')">
             {{ busy === 'edit' ? t.common.opening : t.popup.editTitle }}
@@ -226,6 +233,12 @@ const props = defineProps<{
   hasProfile: boolean;
   /** 「按你的设置显示」是否打开 */
   switchOn: boolean;
+  /**
+   * 这个网站还没有开关管得到的设置（#158）：收起的内容、标签页标题和图标都空。
+   * 由 core/site-state.ts 的 hasSwitchEffect 取反得来，三处共用同一个判断；只有灰度不算有。
+   * 成立时在开关下方说一句「打开后页面不变」，开关照常可拨。
+   */
+  emptySettings?: boolean;
   ruleSummary: string;
   staleCount: number;
   /** 失败时给用户看的一句话（父组件已按语言取好） */
@@ -472,6 +485,7 @@ const deleteLabel = deleteSiteHeading();
    <style> 不是 scoped、欢迎页第 2 步会嵌入同一份界面（0.8.11 #139 同款教训），
    新增类名一律用 .popup 限定，别用通用词压到欢迎页自己的 .head / .card 等元素。 */
 .popup .card-switch-hint,
+.popup .card-empty-hint,
 .popup .media-hint,
 .popup .media-notice,
 .popup .cover-hint,

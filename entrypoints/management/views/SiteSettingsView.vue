@@ -23,10 +23,17 @@
             role="switch"
             data-testid="pm-mgmt-switch"
             :checked="profile.switchState === 'disguised'"
+            :aria-describedby="switchEmpty ? 'pm-mgmt-switch-empty' : undefined"
             @change="onToggle"
           />
         </div>
       </div>
+
+      <!-- 空设置的事前说明（#158）：页头开关下面一句短句，与弹窗 / 胶囊同一句话、同一个判断。
+           只有灰度时仍然显示（灰度不受这个开关管）；有了收起内容或改过标题图标就自动消失 -->
+      <p v-if="switchEmpty" id="pm-mgmt-switch-empty" class="hint switch-empty-hint" data-testid="pm-mgmt-switch-empty">
+        {{ t.common.switchNoEffectHint }}
+      </p>
 
       <!-- 0 条规则时不写「已收起 0 项」：没有内容可收起是很正常的状态 -->
       <p class="state" data-testid="pm-mgmt-count">
@@ -223,6 +230,8 @@ import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
+// 空设置判据（#158）：三处主开关共用一份（弹窗 / 胶囊 / 这里）
+import { hasSwitchEffect } from '@/core/site-state';
 import { MEDIA_FLAG_KEYS, MEDIA_HINT_KEYS, type MediaFlagKey } from '@/core/media';
 import type { HideRule, TabIcon } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
@@ -241,6 +250,8 @@ const profile = computed(() => {
 
 const stale = computed(() => (profile.value ? staleRulesOf(profile.value) : []));
 const isPending = computed(() => (profile.value ? store.state.pendingOrigins.includes(profile.value.origin) : false));
+/** 开关管不到任何东西（#158）：收起的内容、标签页标题和图标都空。只有灰度仍算空（灰度独立于主开关） */
+const switchEmpty = computed(() => (profile.value ? !hasSwitchEffect(profile.value) : false));
 
 /** 站点没单独设置时的实际标题（全局默认 > 界面语言默认），用作输入框占位与提示 */
 const fallbackTitle = computed(() => (store.state.defaultTitle ?? '').trim() || store.languageDefaultTitle);
@@ -349,6 +360,11 @@ async function resetTitleIcon() {
   font-size: var(--pm-font-size-caption);
   color: var(--pm-fg-muted);
   margin: var(--pm-space-2) 0;
+}
+
+/* 空设置说明（#158）：跟着它解释的那个开关走，直接贴在页头下面；12px 由 .hint 给 */
+.switch-empty-hint {
+  margin: var(--pm-space-1) 0 0;
 }
 
 .pending {

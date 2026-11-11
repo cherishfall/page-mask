@@ -363,10 +363,11 @@
    popover：进 top layer，不会被页面浮层压住；位置由脚本按「⋯」的位置算（贴在上方、右对齐）。
    表单本身的样式在 ui/title-icon/fields.css，与向导第 1 步共用。 */
 
-/* ── 删除确认框（#56，ui/toggle/DeleteSiteDialog.vue） ──
-   原生模态 <dialog>：进 top layer，压得住页面里 z-index 再高的浮层；安全按钮「取消」默认聚焦，
-   危险按钮实底红。与向导 / 站点设置页的确认框同一套排版。 */
-.pm-tg-del {
+/* ── 胶囊里的对话框外壳（#56 删除确认 / #158 空设置说明） ──
+   原生模态 <dialog>：进 top layer，压得住页面里 z-index 再高的浮层；排版一份，两个框共用，
+   按钮外观走 styles/controls.css（.pm-btn）。删除框里安全按钮「取消」默认聚焦、危险按钮实底红；
+   说明框只有一个「知道了」并默认聚焦。 */
+.pm-tg-dialog {
   box-sizing: border-box;
   inline-size: min(420px, calc(100vw - 2 * var(--pm-space-3)));
   padding: var(--pm-space-4);
@@ -378,21 +379,21 @@
   -webkit-user-select: text;
   user-select: text;
 }
-.pm-tg-del::backdrop {
+.pm-tg-dialog::backdrop {
   background: rgb(0 0 0 / 0.35);
 }
-.pm-tg-del-title {
+.pm-tg-dialog-title {
   margin: 0 0 var(--pm-space-2);
   font-size: var(--pm-font-size-title);
   overflow-wrap: anywhere;
 }
-.pm-tg-del-text {
+.pm-tg-dialog-text {
   margin: 0;
   font-size: var(--pm-font-size-body);
   line-height: var(--pm-line-height);
 }
 /* 按钮外观在 styles/controls.css（确认框里两个按钮带 .pm-btn） */
-.pm-tg-del-actions {
+.pm-tg-dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--pm-space-2);

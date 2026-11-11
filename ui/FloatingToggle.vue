@@ -19,7 +19,9 @@
     <!-- 主按钮（0.8.6，#135）：面具图标取代「圆点 + 文字」——文字只为圆点不可读而存在。
          戴面具（填实）= 按你的设置显示，摘面具（描边）= 原样；状态用填实/描边 +
          aria-pressed 表达，不只靠颜色（WCAG 1.4.1）。悬停提示写全称。
-         管的是「收起的内容 + 标题图标」这组定制（灰度独立，见媒体钮） -->
+         管的是「收起的内容 + 标题图标」这组定制（灰度独立，见媒体钮）。
+         空设置时（#158）仍照常切换，同时弹一句「打开后页面不变」的说明框——
+         胶囊只有图标、放不下字，对话框是这一处的形态例外（docs/design-surfaces.md 例外②） -->
     <button
       type="button"
       class="pm-tg-main"
@@ -28,7 +30,7 @@
       :aria-label="tipText"
       :title="tipText"
       data-testid="pm-toggle-main"
-      @click="emit('toggle')"
+      @click="onMain"
     >
       <MaskIcon class="pm-tg-main-icon" :data-state="state === 'disguised' ? 'on' : 'off'" />
     </button>
@@ -113,6 +115,10 @@
       @confirm="onConfirmDelete"
       @cancel="deleteOpen = false"
     />
+
+    <!-- 空设置说明（#158）：点主按钮照常切换开关，同时把「打开后页面不变」讲清楚。
+         胶囊放不下文字，这里用与删除确认同款的原生模态对话框 -->
+    <EmptySettingsDialog v-if="emptyOpen" @dismiss="emptyOpen = false" />
   </div>
 </template>
 
@@ -124,6 +130,7 @@ import { BUTTON_EDGE, clampPos } from '@/core/button-pos';
 import { t } from '@/ui/i18n';
 import { adoptToggleStyles } from './toggle/toggle-styles';
 import DeleteSiteDialog from './toggle/DeleteSiteDialog.vue';
+import EmptySettingsDialog from './toggle/EmptySettingsDialog.vue';
 import EyeOffIcon from './icons/EyeOffIcon.vue';
 import MediaIcon from './icons/MediaIcon.vue';
 import MaskIcon from './icons/MaskIcon.vue';
@@ -148,6 +155,12 @@ const props = defineProps<{
   opacity?: number;
   /** 「整页变灰」的当前值（0.8.0）：媒体钮就地显示按下状态 */
   media?: MediaToggles;
+  /**
+   * 空设置（#158）：收起的内容与标签页标题图标都空（只有灰度不算）。
+   * 点主按钮时照常切换开关，同时用说明框讲一句「打开后页面不变」——判据由调用方从
+   * core/site-state.ts 取，这里只管显示。
+   */
+  emptyNote?: boolean;
   /**
    * 预览模式（#102 / 欢迎页）：静态展示用——不跟随页面定位（position: static）、不响应拖动。
    * 调用方再套一层 inert + aria-hidden，让示意图能看不能点。
@@ -179,6 +192,8 @@ const menuOpen = ref(false);
 const dragging = ref(false);
 /** 删除确认框开着 */
 const deleteOpen = ref(false);
+/** 空设置说明框开着（#158）：点主按钮时开，关掉即卸掉节点 */
+const emptyOpen = ref(false);
 /** 拖动中的实时位置（松手后交给存储） */
 const dragPos = ref<{ x: number; y: number } | null>(null);
 /** 窗口尺寸变化后重新夹紧的显示位置（不回写存储，只保证够得着） */
@@ -274,10 +289,10 @@ let captured = false;
 function onRootDown(e: PointerEvent) {
   if (props.preview) return;
   if (e.button !== 0 || !rootEl.value) return;
-  // 菜单与删除确认框不参与拖动：popover / <dialog> 在 top layer，各有「点外关闭」
-  // 与焦点行为，被捕获指针吞掉 click 会破坏它们（N1 同类教训，#136）
+  // 菜单与对话框（删除确认 / 空设置说明）不参与拖动：popover / <dialog> 在 top layer，各有
+  // 「点外关闭」与焦点行为，被捕获指针吞掉 click 会破坏它们（N1 同类教训，#136）
   const target = e.target as HTMLElement | null;
-  if (target?.closest?.('.pm-tg-menu, .pm-tg-del')) {
+  if (target?.closest?.('.pm-tg-menu, .pm-tg-dialog')) {
     pressed = false;
     return;
   }
@@ -397,6 +412,15 @@ function onDelete() {
 function onConfirmDelete() {
   deleteOpen.value = false;
   emit('deleteSite');
+}
+
+/**
+ * 主按钮：**先照常切换**（三处行为一致，没有「点了没反应」的开关），
+ * 空设置时再补一个说明框讲清「打开后页面不变」（#158）。
+ */
+function onMain() {
+  emit('toggle');
+  if (props.emptyNote) emptyOpen.value = true;
 }
 
 /**

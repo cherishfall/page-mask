@@ -29,7 +29,7 @@
  *
  * 不写截图、不留临时文件。
  */
-import { createReporter, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, exitWizardByButton, shadowText, waitForShadow } from './lib/shadow.mjs';
 import { loadSurfaces, menuOrder, menuRows } from './lib/surfaces.mjs';
@@ -766,6 +766,79 @@ async function main() {
     await waitFor(page, '恢复设置后胶囊挂回来', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });
     await page.waitForSelector(TOGGLE, { timeout: 5000 });
     check(true, '重新有设置后胶囊挂回来');
+
+    // ===================== 空设置时点主按钮：照常切换 + 一句说明（#158） =====================
+    console.log('\n--- 空设置时点主按钮：开关照常切换，另用说明框讲一句（#158） ---');
+    // 段末整份写回：后面幕布段有「存储里没有新字段」的断言，字段集合必须与进来时一模一样
+    const beforeEmptyNote = await getProfile(ext.control, ORIGIN);
+    // 只开灰度：主开关管不到灰度（ADR-0014）→ 算「空设置」；胶囊按 #116 仍要挂在页面上
+    await setProfile(ext.control, ORIGIN, {
+      ...profileOf(ORIGIN),
+      switchState: 'original',
+      disguisedTitle: null,
+      titleIconSet: false,
+      hideRules: [],
+      mediaGray: true,
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.bringToFront();
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    const noteStage = () =>
+      page.evaluate((h) => {
+        const sr = document.querySelector(h)?.shadowRoot;
+        const dlg = sr?.querySelector('[data-testid="pm-tg-empty-dialog"]');
+        return {
+          open: !!dlg?.matches(':modal'),
+          text: sr?.querySelector('[data-testid="pm-tg-empty-text"]')?.textContent.trim() ?? '',
+          focus: sr?.activeElement?.dataset?.testid ?? null,
+          buttons: dlg ? [...dlg.querySelectorAll('button')].map((b) => b.textContent.trim()) : [],
+        };
+      }, TOGGLE);
+    check(!(await noteStage()).open, '前置：空设置的站点平时没有说明框（只在点下去那一刻出现）');
+
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(page, '空设置说明框打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点主按钮仍照常切换开关');
+    check(true, '空设置时点主按钮：开关照常切到「按设置」（不是死按钮，三处行为一致）');
+    const note = await noteStage();
+    check(note.text === '打开后页面不变', `说明框写同一句话（${note.text}）`);
+    check(note.buttons.length === 1 && note.buttons[0] === '知道了', `只有一个「${note.buttons.join(' / ')}」，没有第二个选择`);
+    check(note.focus === 'pm-tg-empty-ok', `默认焦点在「知道了」上（${note.focus}）`);
+
+    // 回车关：焦点已在按钮上，回车即提交表单
+    await page.keyboard.press('Enter');
+    await waitFor(page, '回车关掉说明框', (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]'), [TOGGLE], { timeout: 3000 });
+    check(true, '回车关掉说明框');
+    check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '关掉说明框不会再多拨一次开关');
+
+    // Esc 关：原生 <dialog> 的 Esc 行为，关掉后节点一并卸掉
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(page, '说明框再次打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await waitFor(page, 'Esc 关掉说明框', (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]'), [TOGGLE], { timeout: 3000 });
+    check(true, 'Esc 关掉说明框');
+
+    // 点框外（幕布区域）关：纯说明不是要用户做选择，点外面即撤
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(page, '说明框第三次打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    await page.mouse.click(8, 8);
+    await waitFor(page, '点框外关掉说明框', (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]'), [TOGGLE], { timeout: 3000 });
+    check(true, '点框外关掉说明框');
+
+    // 有了收起内容 → 判据不成立：点主按钮只切换开关，不再弹说明（说明自动消失）
+    await patchProfile(ext.control, ORIGIN, { hideRules: RULES });
+    await waitFor(page, '广告位恢复收起（这条规则已生效）', () => getComputedStyle(document.querySelector('#ad')).display === 'none', [], { timeout: 5000 });
+    const before = (await getProfile(ext.control, ORIGIN)).switchState;
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState !== before, '有设置时点主按钮照常切换');
+    await new Promise((res) => setTimeout(res, 300));
+    check(!(await noteStage()).open, '有设置之后不再弹说明框（判据成立就消失）');
+
+    // 收尾：整份写回进来时的配置（字段集合不变）
+    await setProfile(ext.control, ORIGIN, beforeEmptyNote);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    await waitFor(page, '恢复基线：清爽态标题', (t) => document.title === t, ['低调阅读'], { timeout: 5000 });
 
     // ===================== 对比度：白底 / 深色 / 灰底 =====================
     console.log('\n--- 三种底色页面的对比度 ---');

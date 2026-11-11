@@ -130,6 +130,34 @@ describe('三处界面对照表（docs/design-surfaces.md）', () => {
     expect(menu.some((row) => row.item === '整页变灰'), '胶囊菜单不应重复整页变灰（例外①）').toBe(false);
   });
 
+  it('例外② 有结构保证：三处同一句话、同一个判断，胶囊用对话框说明', () => {
+    const popupSrc = read('../ui/popup/PopupBody.vue');
+    const siteSrc = read('../entrypoints/management/views/SiteSettingsView.vue');
+    const bodySrc = read('../ui/FloatingToggle.vue');
+    const noteSrc = read('../ui/toggle/EmptySettingsDialog.vue');
+    // 同一句话只存一份：三处都取 common.switchNoEffectHint，不各写一份文案
+    for (const [name, src] of [
+      ['弹窗', popupSrc],
+      ['站点设置页', siteSrc],
+      ['胶囊说明框', noteSrc],
+    ] as const) {
+      expect(src, `${name} 应取同一句文案（common.switchNoEffectHint）`).toContain('t.common.switchNoEffectHint');
+    }
+    // 同一个判断：判据在 core/site-state.ts，站点设置页直接用它；内容脚本的胶囊判据也复用它
+    expect(read('../core/site-state.ts')).toContain('export function hasSwitchEffect');
+    expect(siteSrc).toContain('hasSwitchEffect');
+    expect(read('../ui/content-runtime.ts')).toContain('hasSwitchEffect');
+    // 胶囊侧是对话框形态（例外②）：照常切换 + 复用现成外壳；不许退回「几秒就走的页底轻提示」
+    expect(bodySrc).toContain('EmptySettingsDialog');
+    expect(bodySrc).toMatch(/emit\('toggle'\)[\s\S]{0,120}emptyOpen\.value = true/);
+    expect(bodySrc, '胶囊侧不许用页底轻提示（用户说过看不见）').not.toContain('showPageNotice');
+    // 对照表把这条写成具体形态，不是「待落地」
+    const doc = read('../docs/design-surfaces.md');
+    expect(doc).toContain('例外②');
+    expect(doc).toContain('pm-tg-empty-dialog');
+    expect(doc, '例外② 应已回填，不再写「待 #158 落地」').not.toContain('待 #158 落地');
+  });
+
   it('三条 E2E 从同一张表派生，不再各写一份整串中文顺序', () => {
     const e2e = ['check-toggle.mjs', 'check-pages.mjs', 'check-media.mjs'].map((name) => [
       name,

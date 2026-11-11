@@ -515,6 +515,54 @@ async function main() {
       staleMark.classes.includes('pm-mark-danger') && staleMark.first === 'pm-mark-dot' && staleMark.dots === 1,
       `「可能失效」用统一标记：圆点在最前、文字跟上（${staleMark.classes.join('.')}）`,
     );
+    // ===================== popup：空设置时开关下的一句说明（#158） =====================
+    console.log('\n--- popup：空设置时主开关旁的一句说明（#158） ---');
+    // 只开灰度：主开关管不到灰度（ADR-0014）→ 仍算「空设置」，说明要出现
+    await patchProfile(ext.control, ORIGIN, { hideRules: [], disguisedTitle: null, titleIconSet: false, mediaGray: true });
+    await popup.waitForSelector(tid('pm-popup-switch-empty'), { timeout: 5000 });
+    const emptyHint = await popup.evaluate(
+      (s, sw) => {
+        const hint = document.querySelector(s);
+        const input = document.querySelector(sw);
+        const h = hint.getBoundingClientRect();
+        const i = input.getBoundingClientRect();
+        return {
+          text: hint.textContent.trim(),
+          belowSwitch: h.top >= i.bottom - 1,
+          inCard: !!hint.closest('[data-testid="pm-popup-disguise"]'),
+          disabled: input.disabled,
+          fontSize: getComputedStyle(hint).fontSize,
+          // 说明与开关关联（GOV.UK：hint 用 aria-describedby 挂在字段上，读屏一起播报）
+          describedby: input.getAttribute('aria-describedby') === hint.id && !!hint.id,
+        };
+      },
+      tid('pm-popup-switch-empty'),
+      tid('pm-popup-switch'),
+    );
+    check(emptyHint.text === '打开后页面不变', `空设置时开关下方写「${emptyHint.text}」（只有灰度也算空）`);
+    check(emptyHint.inCard && emptyHint.belowSwitch, '说明在面具卡内、开关下方（跟着它解释的那个开关走）');
+    check(emptyHint.disabled === false, '开关照常可拨：不禁用、不隐藏（GOV.UK 禁用态口径）');
+    check(emptyHint.fontSize === '13px', `说明与卡内其他说明同档 13px（${emptyHint.fontSize}）`);
+    check(emptyHint.describedby, '说明用 aria-describedby 挂在开关上（读屏一起播报）');
+    // 空设置时开关仍然照常写入存储（不是死开关）
+    await popup.click(tid('pm-popup-switch'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '空设置时开关仍能拨到「按设置」');
+    check(true, '空设置时开关照常切换');
+    // 有了一条收起内容 → 判据不成立，说明自动消失
+    await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'])] });
+    await waitFor(popup, '有了收起内容后说明消失', (s) => !document.querySelector(s), [tid('pm-popup-switch-empty')], { timeout: 5000 });
+    check(true, '有收起内容后说明自动消失');
+    // 改过标签页标题同样算「有设置」（只改图标同口径，单测覆盖四种情形）
+    await patchProfile(ext.control, ORIGIN, { hideRules: [], disguisedTitle: '阅读', titleIconSet: true });
+    await new Promise((res) => setTimeout(res, 250));
+    check(!(await popup.$(tid('pm-popup-switch-empty'))), '改过标题后说明也不出现');
+    // 复原成后续用例的基线（2 条规则、无灰度、原样态）
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await poll(async () => {
+      const p = await getProfile(ext.control, ORIGIN);
+      return p.hideRules.length === 2 && p.mediaGray === undefined && p.switchState === 'original';
+    }, '复原 popup 用例基线');
+
     await checkSchemes(popup, 'popup', 'bg');
     await checkPopupChrome(popup, '已添加');
     await coverAndRestore(ext, popup, site, '已添加的网站');
@@ -895,6 +943,30 @@ async function main() {
     await m.goto(`${extOrigin}/management.html${SITE_HASH}`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
     check((await hash()) === SITE_HASH, '直接粘贴站点设置地址能落在该站的设置页');
+
+    console.log('\n--- 管理页：空设置时页头开关下的一句说明（#158） ---');
+    // 只有灰度：灰度不受主开关管 → 说明仍在（灰-only 站点不该被当成「有设置」）
+    await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), hideRules: [], disguisedTitle: null, mediaGray: true });
+    await m.waitForSelector(tid('pm-mgmt-switch-empty'), { timeout: 5000 });
+    const mgmtEmpty = await m.evaluate(
+      (s, sw) => {
+        const hint = document.querySelector(s);
+        const input = document.querySelector(sw);
+        const h = hint.getBoundingClientRect();
+        const i = input.getBoundingClientRect();
+        return { text: hint.textContent.trim(), belowSwitch: h.top >= i.bottom - 1, disabled: input.disabled, describedby: input.getAttribute('aria-describedby') === hint.id && !!hint.id };
+      },
+      tid('pm-mgmt-switch-empty'),
+      tid('pm-mgmt-switch'),
+    );
+    check(mgmtEmpty.text === '打开后页面不变', `站点设置页同一句话（${mgmtEmpty.text}）`);
+    check(mgmtEmpty.belowSwitch, '说明在页头开关下方');
+    check(mgmtEmpty.disabled === false, '设置页开关照常可拨（不禁用、不隐藏）');
+    check(mgmtEmpty.describedby, '说明用 aria-describedby 挂在开关上（读屏一起播报）');
+    // 有收起内容 → 说明自动消失
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await waitFor(m, '有设置后站点设置页的说明消失', (s) => !document.querySelector(s), [tid('pm-mgmt-switch-empty')], { timeout: 5000 });
+    check(true, '有设置后站点设置页的说明自动消失');
 
     console.log('\n--- 管理页：0 条规则的站点 ---');
     await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), disguisedTitle: SITE_TITLE, hideRules: [] });

@@ -2,10 +2,10 @@
   <!-- 「删除这个网站的设置」的二次确认（#56）。原生模态 <dialog>：进 top layer，压得住页面里
        z-index 再高的浮层；安全按钮「取消」默认聚焦，危险按钮实底红、要用户自己去点。
        与站点设置页的确认框用同一套文案（core/site-delete.ts）。 -->
-  <dialog ref="dlg" class="pm-tg-del" aria-labelledby="pm-tg-del-title" data-testid="pm-tg-delete-dialog">
-    <h2 id="pm-tg-del-title" class="pm-tg-del-title" data-testid="pm-tg-delete-title">{{ deleteSiteTitle(label) }}</h2>
-    <p class="pm-tg-del-text" data-testid="pm-tg-delete-impact">{{ deleteSiteImpact() }}</p>
-    <form method="dialog" class="pm-tg-del-actions">
+  <dialog ref="dlg" class="pm-tg-dialog" aria-labelledby="pm-tg-del-title" data-testid="pm-tg-delete-dialog">
+    <h2 id="pm-tg-del-title" class="pm-tg-dialog-title" data-testid="pm-tg-delete-title">{{ deleteSiteTitle(label) }}</h2>
+    <p class="pm-tg-dialog-text" data-testid="pm-tg-delete-impact">{{ deleteSiteImpact() }}</p>
+    <form method="dialog" class="pm-tg-dialog-actions">
       <button type="submit" value="cancel" class="pm-btn" autofocus data-testid="pm-tg-delete-cancel">{{ t.common.cancel }}</button>
       <button type="submit" value="confirm" class="pm-btn primary danger" data-testid="pm-tg-delete-confirm">
         {{ deleteSiteAction() }}

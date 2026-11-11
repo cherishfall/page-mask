@@ -35,6 +35,8 @@ export const en: Messages = {
     clean: 'Your settings',
     original: 'As is',
     cleanMode: 'Show this site your way',
+    /** Hint beside the main switch when there is nothing for it to apply (#158); same meaning, not a literal translation */
+    switchNoEffectHint: 'Nothing changes on the page',
     quickTitle: 'Common titles',
     /** Accessible name for the ⓘ info tag (#161): shared key, used by popup / management / settings / wizard */
     infoLabel: 'More information',

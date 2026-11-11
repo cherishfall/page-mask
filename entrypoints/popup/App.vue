@@ -6,6 +6,7 @@
     :host="host"
     :has-profile="!!profile"
     :switch-on="profile?.switchState === 'disguised'"
+    :empty-settings="!!profile && !hasSwitchEffect(profile)"
     :rule-summary="ruleSummary"
     :stale-count="staleCount"
     :message="message"
@@ -57,6 +58,8 @@ import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site-delete';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage, normalizeOrigin } from '@/core/origin';
+// 空设置判据（#158）：三处主开关共用一份，别在这里另算一遍
+import { hasSwitchEffect } from '@/core/site-state';
 import { originPattern } from '@/core/registration';
 import { siteLabelOf } from '@/entrypoints/management/site';
 import type { SiteProfile } from '@/core/types';

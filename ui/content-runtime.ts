@@ -38,6 +38,7 @@ import { rulesApplicableAt } from '@/core/scope';
 import { buildDisguiseCss, maskRulesAt } from '@/core/css-builder';
 import { createDocStyles, type StyleRecord } from '@/core/doc-styles';
 import { applyKey } from '@/core/apply-key';
+import { hasSwitchEffect } from '@/core/site-state';
 import { TAKEOVER_EVENT, hostShieldPresent } from '@/core/host-shield';
 import { fromExtensionPage } from '@/core/messages';
 import type { Ack, BgRequest, ContentReply, CssAck, OpenIntent } from '@/core/messages';
@@ -168,11 +169,14 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     opacity: number;
     /** 整页变灰（0.8.0）：胶囊媒体钮的按下状态跟着存储走，别的入口拨了也会即时更新 */
     mediaGray: boolean;
+    /** 空设置（#158）：主按钮点了也翻不动页面上的东西——点它时照常切换，同时用说明框讲一句 */
+    emptyNote: boolean;
   }>({
     state: 'original',
     position: null,
     opacity: 1,
     mediaGray: false,
+    emptyNote: false,
   });
   /**
    * 编辑面板看的「当前页面地址」：SPA 换页后跟着变，面板里「本页生效的规则」随之刷新（N4）。
@@ -220,20 +224,18 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.position = profile?.floatingBtnPos ?? null;
     toggleState.opacity = settings.toggleOpacity; // 闲置不透明度（#110）：数值由 readSettings 归一化
     toggleState.mediaGray = profile?.mediaGray === true;
+    // 空设置（#158）：三处同一个判断（core/site-state.ts，不含灰度）
+    toggleState.emptyNote = !!profile && !hasSwitchEffect(profile);
   }
 
   /**
-   * 这个网站有没有任何设置（#67）：保存过的标题和图标、收起项任一非空。
+   * 这个网站有没有任何设置（#67）：保存过的标题和图标、收起项任一非空，或者开了灰度。
    * 只改过标题的网站也要看得见按钮——否则页面上一点痕迹都没有，用户下次想改只能靠记住工具栏图标。
+   * 开关管得到的那三样交给 core/site-state.ts（#158，三处共用）；灰度独立于主开关（ADR-0014），
+   * 但灰-only 的网站同样要有页面上的入口（#116 起），所以在这里补一项。
    */
   function hasSiteSettings(p: SiteProfile): boolean {
-    // 只开了媒体变灰、没有任何收起项也没改过标题的网站，同样要有页面上的入口（#116 起）
-    return (
-      p.titleIconSet === true ||
-      !!p.disguisedTitle ||
-      p.hideRules.length > 0 ||
-      p.mediaGray === true
-    );
+    return hasSwitchEffect(p) || p.mediaGray === true;
   }
 
   /** 这页的胶囊挂出过没有（0.8.13，#143）：页面生命周期的标记，挂载成功即置位。
@@ -276,6 +278,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           media: {
             mediaGray: toggleState.mediaGray,
           },
+          // 空设置（#158）：点主按钮仍照常切换，同时用说明框讲一句「打开后页面不变」
+          emptyNote: toggleState.emptyNote,
           siteLabel: siteLabelOf(origin),
           onToggle: handleToggle,
           onMoved: handleMoved,
