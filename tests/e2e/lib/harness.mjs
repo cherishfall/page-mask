@@ -83,6 +83,32 @@ export function resultsDir(name) {
 }
 
 /**
+ * 页面 origin → 站点 key（core/site-key.ts，#162）。
+ * E2E 夹具全部是 127.0.0.1:<端口>：IP 字面量保留端口，所以每个端口仍是独立站点。
+ * 用法：const key = siteKeyOf(srv.origin); // '127.0.0.1:54321'
+ */
+export function siteKeyOf(origin) {
+  try {
+    const u = new URL(origin);
+    return u.hostname + (u.port ? `:${u.port}` : '');
+  } catch {
+    return origin;
+  }
+}
+
+/**
+ * 站点 key → 规范匹配模式（与 core/site-key.ts 的 sitePatterns 一致）。
+ * 带端口的 key 不能写 `*://host:port/*`（Chrome 判 Invalid port），要拆成 http / https 两条。
+ * 用法：sitePatternsOf(srv.origin); // ['http://127.0.0.1:54321/*', 'https://127.0.0.1:54321/*']
+ */
+export function sitePatternsOf(origin) {
+  const key = siteKeyOf(origin);
+  if (key.lastIndexOf(':') > key.indexOf(']')) return [`http://${key}/*`, `https://${key}/*`];
+  if (key.includes(':') || key === 'localhost' || !key.includes('.')) return [`*://${key}/*`];
+  return [`*://${key}/*`, `*://*.${key}/*`];
+}
+
+/**
  * page.waitForFunction 的包装：超时时报出可读的说明，而不是裸 TimeoutError。
  * 用法：await waitFor(page, '标题变为 x', (t) => document.title === t, ['x']);
  */

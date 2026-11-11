@@ -2,7 +2,7 @@
  * 存储层：chrome.storage.local 封装（ADR-0004：仅本地存储，导出/导入代替自动同步）。
  * 通过注入 KVArea 接口解耦浏览器 API，纯逻辑可单测。
  *
- * 写入纪律（审查 S2）：站点配置只能经 updateProfile(origin, 改动函数) 修改——
+ * 写入纪律（审查 S2）：站点配置只能经 updateProfile(站点key, 改动函数) 修改——
  * 写前重读最新值、只改调用方关心的字段、写入前统一校验（core/validate.ts）。
  * 同一上下文内的所有写入按存储区串行执行，交错的修改不会互相覆盖。
  * 注意：chrome.storage 本身没有事务，跨上下文（popup 与页面）仍可能在"读→写"的极短窗口内交错；
@@ -10,7 +10,8 @@
  */
 import type { ButtonPos, ExportBundle, GlobalSettings, HideRule, SiteProfile } from './types';
 import { createEmptyProfile } from './types';
-import { isValidOrigin, readSettings, readStoredSettings, sanitizeProfile, toStoredSettings } from './validate';
+import { readSettings, readStoredSettings, sanitizeProfile, toStoredSettings } from './validate';
+import { siteKey } from './site-key';
 import { t } from './i18n';
 
 export interface KVArea {
@@ -27,7 +28,11 @@ export function invalidExportFile(): string {
   return t().errors.invalidExportFile;
 }
 
-export const profileKey = (origin: string) => PROFILE_PREFIX + origin;
+/**
+ * 存储 key = `profile:` + 站点 key（#162，如 `profile:weibo.com`）。
+ * SiteProfile.origin 字段名保留，值同样是站点 key。旧版 `profile:https://weibo.com` 由懒迁移改写。
+ */
+export const profileKey = (key: string) => PROFILE_PREFIX + key;
 
 export interface ImportResult {
   /** 本地原来没有、新加入的站点数 */
@@ -84,44 +89,97 @@ function clone<T>(v: T): T {
 }
 
 export function createPageMaskStorage(area: KVArea) {
-  async function readProfile(origin: string): Promise<SiteProfile | null> {
-    const key = profileKey(origin);
-    const obj = await area.get([key]);
-    const s = sanitizeProfile(obj[key]);
-    return s && s.profile.origin === origin ? s.profile : null;
+  /**
+   * 懒迁移（#162）：旧版 `profile:https://weibo.com` / `profile:https://s.weibo.com`
+   * 归一、合并成 `profile:weibo.com`，再删旧 key。
+   *
+   * 为什么读时迁移而不是 onInstalled.update：项目历史全是读时 / 净化时懒迁移，没有数据重写分支；
+   * onInstalled 只在升级那一刻跑一次，MV3 后台随时可能被回收，中途被杀就再也补不上。
+   * 读时迁移每次读都先过一遍，幂等、失败下次重试。
+   *
+   * 必须在 serialize 队列里调用（每个读 / 写方法的第一件事）：migrated 标记是实例内的，
+   * 同一队列里一次就够；失败时不置位，下一个操作自动重试。
+   */
+  let migrated = false;
+  async function ensureMigrated(): Promise<void> {
+    if (migrated) return;
+    await migrateLegacyProfiles();
+    migrated = true;
   }
 
-  async function getProfile(origin: string): Promise<SiteProfile | null> {
-    return readProfile(origin);
+  async function migrateLegacyProfiles(): Promise<void> {
+    const all = await area.get(null);
+    const profileKeys = Object.keys(all).filter((k) => k.startsWith(PROFILE_PREFIX));
+    // 旧 key 必含 '://'（站点 key 不含协议），零成本判断
+    const legacyKeys = profileKeys.filter((k) => k.slice(PROFILE_PREFIX.length).includes('://'));
+    if (legacyKeys.length === 0) return;
+
+    // 全部 profile 按站点 key 归并：裸域与子域合成一条，字段取舍复用导入同一条规则
+    const merged = new Map<string, SiteProfile>();
+    for (const k of profileKeys) {
+      const s = sanitizeProfile(all[k]);
+      if (!s) continue;
+      const prev = merged.get(s.profile.origin);
+      merged.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
+    }
+    const writes: Record<string, unknown> = {};
+    for (const [key, profile] of merged) writes[profileKey(key)] = profile;
+    // 先写后删：即使删除失败，也只是多留旧数据，不会丢设置
+    await area.set(writes);
+    await area.remove(legacyKeys);
+  }
+
+  /** 入参可以是站点 key，也可以是旧的 origin / 页面 URL；无法解析时返回 null */
+  function keyOf(input: string): string | null {
+    return siteKey(input);
+  }
+
+  async function readProfile(input: string): Promise<SiteProfile | null> {
+    const key = keyOf(input);
+    if (!key) return null;
+    const storageKey = profileKey(key);
+    const obj = await area.get([storageKey]);
+    const s = sanitizeProfile(obj[storageKey]);
+    return s && s.profile.origin === key ? s.profile : null;
+  }
+
+  async function getProfile(input: string): Promise<SiteProfile | null> {
+    return serialize(area, async () => {
+      await ensureMigrated();
+      return readProfile(input);
+    });
   }
 
   /**
    * 原子更新：排队 → 重读最新值 → 交给改动函数 → 校验 → 写回。
    * 返回写入后的最新配置；站点不存在且未要求新建时返回 null（不写入）。
+   * 入参站点身份可以是站点 key，也可以是旧 origin / 页面 URL（边界处归一的兜底）。
    */
-  function updateProfile(origin: string, mutate: ProfileMutator, opts: UpdateOptions = {}): Promise<SiteProfile | null> {
-    if (!isValidOrigin(origin)) return Promise.reject(new Error(t().errors.invalidOrigin(origin)));
+  function updateProfile(input: string, mutate: ProfileMutator, opts: UpdateOptions = {}): Promise<SiteProfile | null> {
+    const key = keyOf(input);
+    if (!key) return Promise.reject(new Error(t().errors.invalidOrigin(input)));
     return serialize(area, async () => {
-      const current = await readProfile(origin);
+      await ensureMigrated();
+      const current = await readProfile(key);
       if (!current && !opts.create) return null;
-      const draft = clone(current ?? createEmptyProfile(origin));
+      const draft = clone(current ?? createEmptyProfile(key));
       // 返回 false = 无需改动；但"不存在且要求新建"时仍要落库空配置
       if (mutate(draft) === false && current) return current;
       draft.formatVersion = 1;
-      draft.origin = origin;
+      draft.origin = key;
       if (opts.touch !== false || !current) draft.updatedAt = Date.now();
       const clean = sanitizeProfile(clone(draft));
       if (!clean) throw new Error(t().errors.invalidProfile);
-      await area.set({ [profileKey(origin)]: clean.profile });
+      await area.set({ [profileKey(key)]: clean.profile });
       return clean.profile;
     });
   }
 
   /** 体检回写：只改各规则的健康字段，不碰开关等其他字段，也不刷新用户修改时间 */
-  function updateRuleHealth(origin: string, results: HealthResult[], now = Date.now()): Promise<SiteProfile | null> {
+  function updateRuleHealth(input: string, results: HealthResult[], now = Date.now()): Promise<SiteProfile | null> {
     const byId = new Map(results.map((r) => [r.id, r.status]));
     return updateProfile(
-      origin,
+      input,
       (p) => {
         let changed = false;
         for (const r of p.hideRules) {
@@ -138,19 +196,27 @@ export function createPageMaskStorage(area: KVArea) {
     );
   }
 
-  function deleteProfile(origin: string): Promise<void> {
-    return serialize(area, () => area.remove([profileKey(origin)]));
+  function deleteProfile(input: string): Promise<void> {
+    const key = keyOf(input);
+    if (!key) return Promise.resolve();
+    return serialize(area, async () => {
+      await ensureMigrated();
+      await area.remove([profileKey(key)]);
+    });
   }
 
-  async function listProfiles(): Promise<SiteProfile[]> {
-    const all = await area.get(null);
-    const out: SiteProfile[] = [];
-    for (const [k, v] of Object.entries(all)) {
-      if (!k.startsWith(PROFILE_PREFIX)) continue;
-      const s = sanitizeProfile(v);
-      if (s && profileKey(s.profile.origin) === k) out.push(s.profile);
-    }
-    return out.sort((a, b) => a.origin.localeCompare(b.origin));
+  function listProfiles(): Promise<SiteProfile[]> {
+    return serialize(area, async () => {
+      await ensureMigrated();
+      const all = await area.get(null);
+      const out: SiteProfile[] = [];
+      for (const [k, v] of Object.entries(all)) {
+        if (!k.startsWith(PROFILE_PREFIX)) continue;
+        const s = sanitizeProfile(v);
+        if (s && profileKey(s.profile.origin) === k) out.push(s.profile);
+      }
+      return out.sort((a, b) => a.origin.localeCompare(b.origin));
+    });
   }
 
   async function getSettings(): Promise<GlobalSettings> {
@@ -195,9 +261,10 @@ export function createPageMaskStorage(area: KVArea) {
 
   /**
    * 导入：先完整校验并构建新数据集，再一次性写入；任何校验失败都不改动本地数据。
-   * - 合并（默认）：同源配置做规则并集（冲突规则以导入方为准），站点级字段取用户修改时间较新的一方；
+   * - 合并（默认）：同站点配置做规则并集（冲突规则以导入方为准），站点级字段取用户修改时间较新的一方；
    *   本地已设置过的全局设置保留
    * - 整体替换：以导入文件为准（含全局设置），本地多出的站点移除
+   * 站点身份按 sanitizeProfile 归一后的站点 key 归并（#162）：同一份文件里同时有裸域与子域时合成一条。
    * 旧导出文件（没有 settings 字段）只导网站，插件设置保持本机不变，不报错（#55）。
    * 两种模式下悬浮按钮坐标都保留本机的值（坐标与屏幕相关，不跨电脑），「遮住」按钮的全局位置同理；
    * 界面语言偏好（#57）也是本机偏好，导入不改它。
@@ -225,8 +292,9 @@ export function createPageMaskStorage(area: KVArea) {
         continue;
       }
       skippedRules += s.droppedRules;
-      const prev = incoming.get(s.profile.origin);
-      incoming.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
+      const key = s.profile.origin;
+      const prev = incoming.get(key);
+      incoming.set(key, prev ? mergeProfiles(prev, s.profile) : s.profile);
     }
     if (incoming.size === 0) {
       throw new Error(t().errors.noSitesInFile(invalidExportFile()));
@@ -236,6 +304,7 @@ export function createPageMaskStorage(area: KVArea) {
 
     // 2) 基于本地最新值构建新数据集，一次性写入
     return serialize(area, async () => {
+      await ensureMigrated();
       const all = await area.get(null);
       const localKeys = Object.keys(all).filter((k) => k.startsWith(PROFILE_PREFIX));
       const local = new Map<string, SiteProfile>();
@@ -247,8 +316,8 @@ export function createPageMaskStorage(area: KVArea) {
       const writes: Record<string, unknown> = {};
       let added = 0;
       let updated = 0;
-      for (const [origin, inc] of incoming) {
-        const mine = local.get(origin);
+      for (const [key, inc] of incoming) {
+        const mine = local.get(key);
         let next: SiteProfile;
         if (!mine) {
           next = { ...inc, floatingBtnPos: null };
@@ -257,7 +326,7 @@ export function createPageMaskStorage(area: KVArea) {
           next = mode === 'merge' ? mergeProfiles(mine, inc) : { ...inc, floatingBtnPos: mine.floatingBtnPos };
           updated++;
         }
-        writes[profileKey(origin)] = next;
+        writes[profileKey(key)] = next;
       }
       if (importedSettings && (mode === 'replace' || !(SETTINGS_KEY in all))) {
         // 本机界面状态（屏幕相关 / 本机偏好）：只换标题与图标，保留本机的坐标与界面语言
@@ -295,8 +364,9 @@ export function createPageMaskStorage(area: KVArea) {
 export type PageMaskStorage = ReturnType<typeof createPageMaskStorage>;
 
 /**
- * 合并两个同源站点配置：规则按 id 并集（冲突取导入方）；
+ * 合并两个同站点配置：规则按 id 并集（冲突取导入方）；
  * 站点级字段取用户修改时间（updatedAt）较新的一方；悬浮按钮坐标保留本地。
+ * origin 字段沿用本地那份（调用方保证两边都已是归一后的站点 key）。
  */
 export function mergeProfiles(local: SiteProfile, incoming: SiteProfile): SiteProfile {
   const newer = incoming.updatedAt >= local.updatedAt ? incoming : local;

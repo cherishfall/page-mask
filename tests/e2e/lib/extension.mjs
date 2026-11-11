@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { REPO_ROOT, launchWithExtension } from './browser.mjs';
-import { CheckError, poll } from './harness.mjs';
+import { CheckError, poll, siteKeyOf, sitePatternsOf } from './harness.mjs';
 import { removeTempDir } from './tmp.mjs';
 
 export const BUILD_DIR = path.join(REPO_ROOT, '.output/chrome-mv3');
@@ -44,7 +44,8 @@ export function prepareExtension({ hostOrigins = [], hostPatterns = [], extraPer
   fs.cpSync(srcDir, dir, { recursive: true });
   const manifestPath = path.join(dir, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  manifest.host_permissions = [...hostOrigins.map((o) => `${o}/*`), ...hostPatterns];
+  // hostOrigins 按站点 canonical 模式预授予（带端口的站点是 http + https 两条）
+  manifest.host_permissions = [...hostOrigins.flatMap(sitePatternsOf), ...hostPatterns];
   // 仅测试拷贝：例如 'tabs'，让用 action.openPopup() 打开的 popup 读得到当前标签页网址
   // （真实用户点工具栏图标时由 activeTab 提供；openPopup 不授予 activeTab）
   if (extraPermissions.length) manifest.permissions = [...new Set([...(manifest.permissions ?? []), ...extraPermissions])];
@@ -69,7 +70,7 @@ export async function launchExtension({
   args = [],
 } = {}) {
   const prepared = prepareExtension({ hostOrigins, hostPatterns, extraPermissions, srcDir });
-  const patterns = [...hostOrigins.map((o) => `${o}/*`), ...hostPatterns];
+  const patterns = [...hostOrigins.flatMap(sitePatternsOf), ...hostPatterns];
   const launched = await launchWithExtension({ extDir: prepared.dir, args });
   if (process.env.PM_E2E_DEBUG) {
     // PM_E2E_DEBUG=1：打印所有 target 变化，排查扩展页面/SW 生命周期问题
@@ -204,10 +205,13 @@ export async function reloadExtension(ctx) {
  * 用法：await removePermission(ext.control, 'http://127.0.0.1:1234');
  */
 export async function removePermission(control, origin) {
-  return control.evaluate(async (pattern) => {
-    await chrome.permissions.remove({ origins: [pattern] });
-    return chrome.permissions.contains({ origins: [pattern] });
-  }, `${origin}/*`);
+  // 收回的是「这个站点」，按 canonical 模式整体收（带端口的站点是 http + https 两条）
+  const patterns = sitePatternsOf(origin);
+  return control.evaluate(async (ps) => {
+    await chrome.permissions.remove({ origins: ps });
+    const left = await Promise.all(ps.map((p) => chrome.permissions.contains({ origins: [p] })));
+    return left.some(Boolean);
+  }, patterns);
 }
 
 /**
@@ -218,7 +222,8 @@ export async function removePermission(control, origin) {
  * 用法：await grantPermissions(ext, [origin]);
  */
 export async function grantPermissions(ctx, origins) {
-  const patterns = origins.map((o) => `${o}/*`);
+  // 授予整个站点：按 canonical 模式（带端口的站点是 http + https 两条）
+  const patterns = origins.flatMap(sitePatternsOf);
   const write = (hosts) => {
     const manifest = JSON.parse(fs.readFileSync(ctx.manifestPath, 'utf8'));
     if (hosts) manifest.host_permissions = hosts;
@@ -262,12 +267,12 @@ export async function permissionWarnings(control, manifest) {
 
 /** 读站点配置 */
 export async function getProfile(control, origin) {
-  return control.evaluate(async (key) => (await chrome.storage.local.get(key))[key] ?? null, `profile:${origin}`);
+  return control.evaluate(async (key) => (await chrome.storage.local.get(key))[key] ?? null, `profile:${siteKeyOf(origin)}`);
 }
 
 /** 写站点配置（整份覆盖） */
 export async function setProfile(control, origin, profile) {
-  await control.evaluate((key, p) => chrome.storage.local.set({ [key]: p }), `profile:${origin}`, profile);
+  await control.evaluate((key, p) => chrome.storage.local.set({ [key]: p }), `profile:${siteKeyOf(origin)}`, profile);
 }
 
 /**
@@ -280,7 +285,7 @@ export async function patchProfile(control, origin, patch) {
       const p = (await chrome.storage.local.get(key))[key];
       await chrome.storage.local.set({ [key]: { ...p, ...pt } });
     },
-    `profile:${origin}`,
+    `profile:${siteKeyOf(origin)}`,
     patch,
   );
 }

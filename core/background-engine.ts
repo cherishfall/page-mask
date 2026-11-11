@@ -27,9 +27,11 @@
 import type { Browser, WxtBrowser } from 'wxt/browser';
 import { PROFILE_PREFIX, createPageMaskStorage } from './storage';
 import { buildDisguiseCss } from './css-builder';
-import { CONTENT_SCRIPT_FILE, CURTAIN_ONESHOT_FILE, originPattern, registrationPlan } from './registration';
+import { CONTENT_SCRIPT_FILE, CURTAIN_ONESHOT_FILE, registrationPlan } from './registration';
 import { HOST_SHIELD_CSS } from './host-shield';
-import { planReconcile, type RegisteredScript } from './reconcile';
+import { grantedPatternsFor, planReconcile, type RegisteredScript } from './reconcile';
+import { allGrantedPatterns, grantedPatternsOfSite } from './site-grant';
+import { siteKey, sitePatterns } from './site-key';
 import type {
   Ack,
   BgRequest,
@@ -58,13 +60,9 @@ export const SITE_RESET_TIMEOUT_MS = 1500;
 
 const FORBIDDEN = { ok: false, error: 'forbidden', code: 'forbidden' } as const;
 
-function originOf(url: string | undefined): string | null {
-  if (!url) return null;
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
+/** 页面 URL → 站点 key（后台各处「这个标签页属于哪个网站」的唯一入口） */
+function siteKeyOfUrl(url: string | undefined): string | null {
+  return url ? siteKey(url) : null;
 }
 
 export function createBackground({ browser }: BackgroundDeps): void {
@@ -76,12 +74,13 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return isExtensionPageSender(sender, browser.runtime.id, extensionBase);
   }
 
-  async function isGranted(origin: string): Promise<boolean> {
-    try {
-      return await browser.permissions.contains({ origins: [originPattern(origin)] });
-    } catch {
-      return false; // 非法来源（旧版导入的脏数据）当作没授权
-    }
+  /**
+   * 一个站点当前有效的授权模式（为空 = 待授权）。判断逻辑在 core/site-grant.ts：
+   * 先按站点归并已授权的模式（迁移前只有旧的精确模式时，它们就是有效模式），
+   * 再处理「用户授了所有网站」的通配模式。
+   */
+  function grantedPatternsOf(key: string, all?: readonly string[]): Promise<string[]> {
+    return grantedPatternsOfSite(browser, key, all);
   }
 
   // ---------- 对账 ----------
@@ -99,11 +98,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
   async function reconcileOnce(): Promise<string[]> {
     const profiles = await storage.listProfiles();
     const configured = profiles.map((p) => p.origin);
-    const granted = (await Promise.all(configured.map(async (o) => ((await isGranted(o)) ? o : null)))).filter(
-      (o): o is string => o !== null,
-    );
+    const granted = await allGrantedPatterns(browser);
+    const grantedPatterns: string[] = [];
+    for (const key of configured) grantedPatterns.push(...(await grantedPatternsOf(key, granted)));
     const registered = (await browser.scripting.getRegisteredContentScripts()) as RegisteredScript[];
-    const plan = planReconcile({ configured, granted, registered });
+    const plan = planReconcile({ configured, grantedPatterns, registered });
 
     // 每一项独立处理：一项失败不影响其余站点
     const errors: unknown[] = [];
@@ -142,11 +141,16 @@ export function createBackground({ browser }: BackgroundDeps): void {
    * **这一行 permissions.request 必须同步执行**：用户手势从 popup / 管理页跨 runtime.sendMessage
    * 传到后台时只在同一个同步回合内有效，之前任何 await 都会让请求以「no user gesture」失败。
    * 权限框弹出会销毁 popup，所以「拿到权限之后」的一切都必须在这里跑完，不能指望 popup 继续。
+   *
+   * 申请的是 sitePatterns(key)：普通域名「裸域 + 子域」两条。只追加、不收回——
+   * 迁移前只持有旧精确模式的站点在申请失败时保持原样，什么都不写。
    */
   function requestPermissionThenEnable(msg: EnableSiteRequest): Promise<Reply> {
+    const key = siteKey(msg.origin);
+    if (!key) return Promise.resolve({ ok: false, code: 'notGranted', error: 'invalid site key' } satisfies EnableSiteResponse);
     let requested: Promise<boolean>;
     try {
-      requested = browser.permissions.request({ origins: [originPattern(msg.origin)] });
+      requested = browser.permissions.request({ origins: sitePatterns(key) });
     } catch (e) {
       if (/gesture/i.test(String(e))) {
         return Promise.resolve({ ok: false, code: 'gestureLost', error: String(e) } satisfies EnableSiteResponse);
@@ -155,7 +159,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
     return requested.then(
       (granted) =>
-        granted ? enableSite(msg) : ({ ok: false, code: 'denied', error: 'user denied site access' } satisfies EnableSiteResponse),
+        granted
+          ? enableSite({ ...msg, origin: key })
+          : ({ ok: false, code: 'denied', error: 'user denied site access' } satisfies EnableSiteResponse),
       // 手势丢失可能是同步抛出，也可能是 promise 拒绝；两者都要让 popup 知道可以「再点一次」
       (e: unknown) =>
         ({
@@ -167,17 +173,22 @@ export function createBackground({ browser }: BackgroundDeps): void {
   }
 
   async function enableSite(msg: EnableSiteRequest): Promise<EnableSiteResponse> {
-    const { origin, tabId } = msg;
+    const key = siteKey(msg.origin);
+    if (!key) return { ok: false, code: 'notGranted', error: 'invalid site key' };
+    const { tabId } = msg;
     const open: OpenIntent | undefined = msg.open === 'editTitle' || msg.open === 'editContent' ? msg.open : undefined;
-    // 核对标签页当前确实停在这个站点：popup 打开后页面可能已跳走，授权不能落到别的站点（REVIEW B27）
-    let tabOrigin: string | null = null;
+    // 核对标签页当前确实停在这个站点：popup 打开后页面可能已跳走，授权不能落到别的站点（REVIEW B27）。
+    // 按站点 key 比较：弹窗停在 weibo.com、标签页跳到 s.weibo.com 仍是同一个网站
+    let tabKey: string | null = null;
     try {
-      tabOrigin = originOf((await browser.tabs.get(tabId))?.url);
+      tabKey = siteKeyOfUrl((await browser.tabs.get(tabId))?.url);
     } catch {
       // 标签页已关闭
     }
-    if (tabOrigin !== origin) return { ok: false, code: 'tabMismatch', error: 'tab is not on this site' };
-    if (!(await isGranted(origin))) return { ok: false, code: 'notGranted', error: 'site access not granted' };
+    if (tabKey !== key) return { ok: false, code: 'tabMismatch', error: 'tab is not on this site' };
+    if ((await grantedPatternsOf(key)).length === 0) {
+      return { ok: false, code: 'notGranted', error: 'site access not granted' };
+    }
     try {
       // 已配置的站点在这里补注册；新站点没有配置，不注册（保存向导时写入配置，再由对账注册）
       await reconcile();
@@ -185,13 +196,13 @@ export function createBackground({ browser }: BackgroundDeps): void {
       // 路径运行时动态确定，超出 WXT 静态 ScriptPublicPath 联合类型，此处断言。
       await browser.scripting.executeScript({
         target: { tabId },
-        files: registrationPlan(origin).js as unknown as ScriptPublicPath[],
+        files: [CONTENT_SCRIPT_FILE] as unknown as ScriptPublicPath[],
       });
       // 灰-only 建站（0.8.5，#134）：popup 直接开灰度——授权并注入后补一份只带 mediaGray 的配置。
       // 必须由后台做：权限框已销毁 popup，没人能在 popup 里继续写配置。内容脚本靠休眠唤醒
       // （配置创建的 storage 事件）感知这份新配置并生效。
-      if (msg.initialMedia === true && !(await storage.getProfile(origin))) {
-        await storage.updateProfile(origin, (p) => {
+      if (msg.initialMedia === true && !(await storage.getProfile(key))) {
+        await storage.updateProfile(key, (p) => {
           p.mediaGray = true;
         }, { create: true });
       }
@@ -214,8 +225,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
       // 其余流程（开向导、重新授权）没有可延迟的配置，维持 injectFailed 原样。
       if (msg.initialMedia === true) {
         try {
-          if (!(await storage.getProfile(origin))) {
-            await storage.updateProfile(origin, (p) => {
+          if (!(await storage.getProfile(key))) {
+            await storage.updateProfile(key, (p) => {
               p.mediaGray = true;
             }, { create: true });
           }
@@ -340,16 +351,20 @@ export function createBackground({ browser }: BackgroundDeps): void {
    */
   async function reinjectOpenTabs(): Promise<void> {
     const profiles = await storage.listProfiles();
-    const origins = new Set<string>();
-    for (const p of profiles) if (await isGranted(p.origin)) origins.add(p.origin);
-    if (origins.size === 0) return;
+    const granted = await allGrantedPatterns(browser);
+    const keys = new Set<string>();
+    for (const p of profiles) {
+      if ((await grantedPatternsOf(p.origin, granted)).length > 0) keys.add(p.origin);
+    }
+    if (keys.size === 0) return;
     let tabs: Browser.tabs.Tab[] = [];
     try {
       tabs = await browser.tabs.query({});
     } catch {
       return;
     }
-    const targets = tabs.filter((t) => t.id !== undefined && !t.discarded && origins.has(originOf(t.url) ?? ''));
+    // 子域页面也属于同一个站点：按站点 key 比较，别漏掉 s.weibo.com 这类标签页
+    const targets = tabs.filter((t) => t.id !== undefined && !t.discarded && keys.has(siteKeyOfUrl(t.url) ?? ''));
     await Promise.allSettled(
       targets.map((t) =>
         browser.scripting.executeScript({
@@ -362,15 +377,15 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   // ---------- 一键清空 ----------
 
-  /** 通知某站点所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），带超时 */
-  async function restoreOpenTabs(origin: string): Promise<void> {
+  /** 通知某站点（含其子域）所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），带超时 */
+  async function restoreOpenTabs(key: string): Promise<void> {
     let tabs: Browser.tabs.Tab[] = [];
     try {
       tabs = await browser.tabs.query({});
     } catch {
       return;
     }
-    const targets = tabs.filter((t) => t.id !== undefined && originOf(t.url) === origin);
+    const targets = tabs.filter((t) => t.id !== undefined && siteKeyOfUrl(t.url) === key);
     await Promise.allSettled(
       targets.map((t) =>
         Promise.race([
@@ -382,20 +397,24 @@ export function createBackground({ browser }: BackgroundDeps): void {
   }
 
   /** 顺序：先还原已打开页面（此时仍有站点授权，样式才删得掉），再收回授权、注销、删配置（REVIEW B7） */
-  async function resetSite(origin: string): Promise<Ack> {
-    await restoreOpenTabs(origin);
+  async function resetSite(input: string): Promise<Ack> {
+    const key = siteKey(input);
+    if (!key) return { ok: false, error: 'invalid site key' };
+    const granted = await allGrantedPatterns(browser);
+    // 收回这个站点名下的全部模式：规范的两条 + 迁移前用户持有的旧精确模式
+    const patterns = [...new Set([...sitePatterns(key), ...grantedPatternsFor(key, granted)])];
+    await restoreOpenTabs(key);
     try {
-      // 非法 origin（如旧版导入的脏数据）会让这里抛错；不能因此删不掉配置
-      await browser.permissions.remove({ origins: [originPattern(origin)] });
+      await browser.permissions.remove({ origins: patterns });
     } catch {
       // 忽略
     }
     try {
-      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(origin).id] });
+      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
     } catch {
       // 未注册过时忽略
     }
-    await storage.deleteProfile(origin);
+    await storage.deleteProfile(key);
     return { ok: true };
   }
 
@@ -404,23 +423,25 @@ export function createBackground({ browser }: BackgroundDeps): void {
    * 只认网页标签页发来的消息，且只删它自己所在的站点（不信消息里的任何来源字段）。
    */
   async function resetSiteHere(sender: Sender): Promise<Ack> {
-    const origin = sender.tab ? originOf(sender.url) : null;
-    if (!origin) return { ok: false, error: 'no sender tab' };
-    return resetSite(origin);
+    const key = sender.tab ? siteKeyOfUrl(sender.url) : null;
+    if (!key) return { ok: false, error: 'no sender tab' };
+    return resetSite(key);
   }
 
   /** 向导取消且站点仍没有配置：收回刚给的授权与注册（有配置说明别处已保存，不动） */
   async function cancelNewSite(sender: Sender): Promise<Ack> {
-    const origin = sender.tab ? originOf(sender.url) : null;
-    if (!origin) return { ok: false, error: 'no sender tab' };
-    if (await storage.getProfile(origin)) return { ok: true };
+    const key = sender.tab ? siteKeyOfUrl(sender.url) : null;
+    if (!key) return { ok: false, error: 'no sender tab' };
+    if (await storage.getProfile(key)) return { ok: true };
+    const granted = await allGrantedPatterns(browser);
+    const patterns = [...new Set([...sitePatterns(key), ...grantedPatternsFor(key, granted)])];
     try {
-      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(origin).id] });
+      await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
     } catch {
       // 新站点本来就没注册
     }
     try {
-      await browser.permissions.remove({ origins: [originPattern(origin)] });
+      await browser.permissions.remove({ origins: patterns });
     } catch {
       // 忽略
     }
@@ -554,16 +575,21 @@ export function createBackground({ browser }: BackgroundDeps): void {
   /** 正式样式的目标文本：按存储里的站点配置与发送方文档的真实地址（sender.url）计算。
    *  0.8.3 起规则与灰度的生效条件在 buildDisguiseCss 内部分开：规则跟主开关，灰度独立于两态 */
   async function disguiseCssFor(url: string): Promise<string | null> {
-    const profile = await storage.getProfile(new URL(url).origin);
+    const key = siteKey(url);
+    if (!key) return null;
+    const profile = await storage.getProfile(key);
     return profile ? buildDisguiseCss(profile, url) : null;
   }
 
   /**
    * 判断生效范围用的地址：内容脚本报上来的本页地址（SPA 路由刚变化时 sender.url 可能还是旧的），
-   * 但只在与 sender.url 同源时采用——来源一律以浏览器给的 sender.url 为准
+   * 但只在与 sender.url 同站点时采用——来源一律以浏览器给的 sender.url 为准。
+   * 站点身份按 key 比较（#162）：同一网站内的子域不会再被当成"换了个站点"。
    */
   function scopeUrl(sender: Sender, claimed: unknown): string | undefined {
-    if (typeof claimed === 'string' && sender.url && originOf(claimed) === originOf(sender.url)) return claimed;
+    const claimedKey = typeof claimed === 'string' ? siteKey(claimed) : null;
+    const senderKey = sender.url ? siteKey(sender.url) : null;
+    if (claimedKey && senderKey && claimedKey === senderKey) return claimed as string;
     return sender.url;
   }
 

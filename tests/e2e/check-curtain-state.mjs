@@ -18,7 +18,7 @@
  *
  * 不写截图、不留临时文件。
  */
-import { createReporter, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, siteKeyOf, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, launchExtension, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
@@ -180,7 +180,7 @@ async function main() {
 
     // 真正的采纳路径：未添加的页面先被一次性脚本遮住，随后站点被添加、内容脚本注入——
     // 新运行时让位旧控制器（撤它的层、登记自己的），并接着遮（遮住状态不丢）
-    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), siteKeyOf(ORIGIN));
     await page.goto(`${ORIGIN}/`, { waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 800)); // 等内容脚本注销、页面进入「未添加」状态
     await injectOneshot();
@@ -200,7 +200,7 @@ async function main() {
 
     // ===================== 未添加网站：注入 → 撤 → 再遮（原缺陷场景） =====================
     console.log('\n--- 未添加网站：注入遮 → 消息撤 → 再遮（第 3 次必须成功） ---');
-    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), siteKeyOf(ORIGIN));
     await page.goto(`${ORIGIN}/`, { waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 800)); // 负向断言：等过内容脚本注入时机
     check(!(await page.$(TOGGLE)), '没添加的网站上没有悬浮按钮');

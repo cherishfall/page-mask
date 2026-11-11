@@ -15,7 +15,8 @@ import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } from '@/core/titles';
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile, TabIcon } from '@/core/types';
-import { originPattern } from '@/core/registration';
+import { sitePatterns } from '@/core/site-key';
+import { allGrantedPatterns, grantedPatternsOfSite } from '@/core/site-grant';
 import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
 import { hiddenItemsResetPatch, titleIconResetPatch } from '@/core/wizard-logic';
@@ -100,8 +101,9 @@ export function createManagementStore() {
 
   async function reload() {
     const [list, settings] = await Promise.all([storage.listProfiles(), storage.getSettings()]);
-    const granted = await Promise.all(
-      list.map((p) => browser.permissions.contains({ origins: [originPattern(p.origin)] }).catch(() => false)),
+    const granted = await allGrantedPatterns(browser);
+    const pending = await Promise.all(
+      list.map(async (p) => (await grantedPatternsOfSite(browser, p.origin, granted)).length === 0),
     );
     stored = { [DEFAULT_KEY]: settings.defaultTitle ?? '' };
     for (const p of list) stored[p.origin] = p.disguisedTitle ?? '';
@@ -110,7 +112,7 @@ export function createManagementStore() {
     state.defaultTitle = settings.defaultTitle;
     state.uiLanguage = settings.uiLanguage;
     state.toggleOpacity = settings.toggleOpacity;
-    state.pendingOrigins = list.filter((_, i) => !granted[i]).map((p) => p.origin);
+    state.pendingOrigins = list.filter((_, i) => pending[i]).map((p) => p.origin);
     state.loaded = true;
   }
 
@@ -190,9 +192,11 @@ export function createManagementStore() {
   /**
    * 授权并启用（单个站点或一次授权全部）：一次权限请求带上所有站点。
    * 权限请求必须处在点击手势的同步上下文中，所以它是本函数的第一条语句，之前不能有 await。
+   * 每个站点申请 sitePatterns：普通域名「裸域 + 子域」两条；只追加不收回，
+   * 迁移前只持有旧精确模式的站点保持原样（申请被拒时什么都不写）。
    */
-  function authorize(origins: string[]) {
-    const request = browser.permissions.request({ origins: origins.map(originPattern) });
+  function authorize(sites: string[]) {
+    const request = browser.permissions.request({ origins: sites.flatMap(sitePatterns) });
     state.authError = '';
     void (async () => {
       const ok = await request.catch(() => false);

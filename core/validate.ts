@@ -5,11 +5,12 @@
  * - 候选选择器：必须是单个合法选择器；块外不得出现 { } ; @、注释、顶层逗号，
  *   括号与引号必须闭合，再交给浏览器解析器做语法检测（无 DOM 的上下文只做词法检查）
  * - 标签页图标：三态白名单（site / none / preset + 已知编号），旧的上传字段一律丢掉
- * - origin：必须等于 normalizeOrigin 的结果（因此只能是 http/https）
- * - 生效范围 / 收起方案：白名单
+ * - origin（站点 key）：站点配置的身份字段是 eTLD+1（#162），旧版 origin 形态在这里归一
+ * - 生效范围 / 收起方案：白名单；范围前缀必须落在同一个站点内（仍按页面实际 URL 匹配）
  * - 全局设置：按 schema 读取，类型不对用默认值
  */
 import { normalizeOrigin } from './origin';
+import { isValidSiteKey, siteKey } from './site-key';
 import { isUiLanguage } from './i18n/locale';
 import { normalizeToggleOpacity } from './toggle-opacity';
 import { t } from './i18n';
@@ -108,17 +109,16 @@ export function sanitizeTabIcon(v: unknown): TabIcon {
   return { kind: 'none' };
 }
 
-/** origin 必须已是规范形式（只有 http/https，无路径、无默认端口） */
-export function isValidOrigin(v: unknown): v is string {
-  return typeof v === 'string' && normalizeOrigin(v) === v;
-}
-
 export function isValidStrategy(v: unknown): v is StrategyId {
   return typeof v === 'string' && (STRATEGY_IDS as readonly string[]).includes(v);
 }
 
-/** 校验并返回干净的生效范围副本；非法返回 null。给了 origin 时，前缀必须落在该站点内 */
-export function sanitizeScope(v: unknown, origin?: string): Scope | null {
+/**
+ * 校验并返回干净的生效范围副本；非法返回 null。
+ * 给了 site（站点 key）时，前缀必须属于同一个站点——合并后的站点配置里，
+ * weibo.com 与 s.weibo.com 的规则都算本站的；范围本身仍按页面实际 URL 匹配（core/origin.ts）。
+ */
+export function sanitizeScope(v: unknown, site?: string): Scope | null {
   if (!isObject(v)) return null;
   if (v.type === 'all') return { type: 'all' };
   if (v.type !== 'include' && v.type !== 'exclude') return null;
@@ -126,7 +126,7 @@ export function sanitizeScope(v: unknown, origin?: string): Scope | null {
   const patterns: ScopePattern[] = [];
   for (const p of v.patterns) {
     if (!isObject(p) || typeof p.label !== 'string' || typeof p.prefix !== 'string') return null;
-    const okPrefix = origin ? p.prefix.startsWith(`${origin}/`) : normalizeOrigin(p.prefix) !== null;
+    const okPrefix = site ? siteKey(p.prefix) === site : normalizeOrigin(p.prefix) !== null;
     if (!okPrefix) return null;
     // 匹配方式白名单：缺省（前缀）或 'exact'（精确页面）
     if (p.match !== undefined && p.match !== 'exact') return null;
@@ -135,8 +135,8 @@ export function sanitizeScope(v: unknown, origin?: string): Scope | null {
   return { type: v.type, patterns };
 }
 
-export function isValidScope(v: unknown, origin?: string): v is Scope {
-  return sanitizeScope(v, origin) !== null;
+export function isValidScope(v: unknown, site?: string): v is Scope {
+  return sanitizeScope(v, site) !== null;
 }
 
 /**
@@ -145,13 +145,13 @@ export function isValidScope(v: unknown, origin?: string): v is Scope {
  */
 export function sanitizeRule(
   v: unknown,
-  origin: string,
+  site: string,
   probe: SelectorProbe = defaultSelectorProbe,
 ): HideRule | null {
   if (!isObject(v)) return null;
   if (typeof v.id !== 'string' || !v.id) return null;
   if (!isValidStrategy(v.strategy)) return null;
-  const scope = sanitizeScope(v.scope, origin);
+  const scope = sanitizeScope(v.scope, site);
   if (!scope) return null;
   if (!Array.isArray(v.candidates)) return null;
   const candidates = v.candidates.filter((c) => isSafeSelector(c, probe)).map((c) => (c as string).trim());
@@ -177,20 +177,26 @@ export interface SanitizedProfile {
 }
 
 /**
- * 校验并返回干净的站点配置副本；身份字段（版本、origin、规则列表）不合法时返回 null。
+ * 校验并返回干净的站点配置副本；身份字段（版本、站点 key、规则列表）不合法时返回 null。
  * 次要字段不合法时回落到安全默认值（例如图标三态缺失 → 不显示图标）。
+ *
+ * 身份归一（#162）：`origin` 字段名保留，值改成站点 key。旧 v1 导出文件 / 旧存储里的
+ * `https://weibo.com` 在这里经 siteKey 归一，因此旧数据天然可读；同一份文件里的裸域与子域
+ * 会在导入路径按归一后的 key 合并成一条。
  */
 export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelectorProbe): SanitizedProfile | null {
   if (!isObject(v)) return null;
   if (v.formatVersion !== 1) return null;
-  if (!isValidOrigin(v.origin)) return null;
+  if (typeof v.origin !== 'string') return null;
+  // 旧版 origin 形如 https://weibo.com：先归一到站点 key；已经是 key 的必须本身就是合法 key
+  const key = v.origin.includes('://') ? siteKey(v.origin) : v.origin;
+  if (!key || !isValidSiteKey(key)) return null;
   if (!Array.isArray(v.hideRules)) return null;
-  const origin = v.origin;
   const hideRules: HideRule[] = [];
   const seen = new Set<string>();
   let droppedRules = 0;
   for (const r of v.hideRules) {
-    const rule = sanitizeRule(r, origin, probe);
+    const rule = sanitizeRule(r, key, probe);
     if (!rule || seen.has(rule.id)) {
       droppedRules++;
       continue;
@@ -206,7 +212,7 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
   const titleIconSet = v.titleIconSet === true ? true : v.titleIconSet === false ? false : !!disguisedTitle;
   const profile: SiteProfile = {
     formatVersion: 1,
-    origin,
+    origin: key,
     switchState: (SWITCH_STATES as readonly unknown[]).includes(v.switchState) ? (v.switchState as SwitchState) : 'original',
     titleIconSet,
     disguisedTitle,

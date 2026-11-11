@@ -22,7 +22,7 @@
  *   （WXT 在 runtime.id 消失时就地触发失效）；扩展更新后后台还会向已打开页面重新注入新脚本
  *
  * 入口核对（REVIEW B28）：注册的匹配模式不写端口时会命中该主机的所有端口，所以启动后先按
- * location.origin 读站点配置；没有配置（也不是正开着向导）就撤掉首屏遮挡、什么都不挂，保持休眠。
+ * 页面地址算出的站点 key 读站点配置；没有配置（也不是正开着向导）就撤掉首屏遮挡、什么都不挂，保持休眠。
  * 一键清空前后台发 siteReset，本页立即移除样式、还原标题图标、卸载所有界面；
  * 站点还没有配置时取消向导会通知后台收回授权（cancelNewSite）。
  */
@@ -30,6 +30,7 @@ import { createApp, h, reactive, type App } from 'vue';
 import { browser } from 'wxt/browser';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createPageMaskStorage, profileKey } from '@/core/storage';
+import { siteKey } from '@/core/site-key';
 import { TitleFaviconGuard, effectiveTitle } from '@/core/disguise';
 import { iconHref, TRANSPARENT_PNG } from '@/core/icon';
 import { curtainRestoreAction, curtainTitle } from '@/core/curtain';
@@ -117,7 +118,7 @@ const HEALTH_CONFIRM_DELAY_MS = 5000;
 const HEALTH_IDLE_TIMEOUT_MS = 2000;
 
 export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise<StyleRecord | undefined>): ContentRuntimeHandle {
-  const origin = location.origin;
+  const site = siteKey(location.href)!;
   /** 本扩展的页面根地址：判断消息是不是自己人发来的（core/messages.ts 的 fromExtensionPage） */
   const extensionBase = browser.runtime.getURL('/');
   // 扩展更新 / 重载后被重新注入：新旧实例不在同一个隔离环境（实测），旧实例交不出样式记录。
@@ -280,7 +281,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
           },
           // 空设置（#158）：点主按钮仍照常切换，同时用说明框讲一句「打开后页面不变」
           emptyNote: toggleState.emptyNote,
-          siteLabel: siteLabelOf(origin),
+          siteLabel: siteLabelOf(site),
           onToggle: handleToggle,
           onMoved: handleMoved,
           onEdit: handleEdit,
@@ -310,7 +311,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     const target = profile.switchState === 'disguised' ? 'original' : 'disguised';
     profile.switchState = target;
     syncToggleState();
-    await storage.updateProfile(origin, (p) => {
+    await storage.updateProfile(site, (p) => {
       p.switchState = target;
     });
   }
@@ -321,7 +322,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     toggleState.position = pos; // 菜单的「放回右下角」跟随实时位置（#90）
     // 坐标是本机界面状态，不算用户修改设置
     await storage.updateProfile(
-      origin,
+      site,
       (p) => {
         p.floatingBtnPos = pos;
       },
@@ -334,7 +335,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     profile.floatingBtnPos = null;
     syncToggleState();
     await storage.updateProfile(
-      origin,
+      site,
       (p) => {
         p.floatingBtnPos = null;
       },
@@ -354,7 +355,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     Object.assign(profile, mediaFlagPatch(key, on));
     syncToggleState();
     try {
-      await storage.updateProfile(origin, (p) => {
+      await storage.updateProfile(site, (p) => {
         Object.assign(p, mediaFlagPatch(key, on));
       });
     } catch {
@@ -444,7 +445,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     // 打开前重读一次配置（#81）：缓存要等 150ms 防抖刷新才跟上存储的变化，
     // 而 hasProfile / 草稿起点必须按当下事实算——配置刚在别处被删时，缓存还当它存在，
     // 保存就会走错「已存在的配置」分支（E2E 模拟新站点正是这个时序）
-    profile = (await storage.getProfile(origin)) ?? null;
+    profile = (await storage.getProfile(site)) ?? null;
     wizardActive = true;
     healthGen++;
     hideCurtain(); // 进向导前先撤幕布（#45）
@@ -732,7 +733,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
         probe: () => (profile ? probeRules(profile.hideRules, location.href, (sel) => countPageHits(document, sel)) : []),
         // 只回写健康字段：不会覆盖期间在 popup/管理页改过的开关、规则；结论没变时不写
         report: async (results) => {
-          if (current()) await storage.updateRuleHealth(origin, results);
+          if (current()) await storage.updateRuleHealth(site, results);
         },
       },
       { firstDelayMs: HEALTH_FIRST_DELAY_MS, confirmDelayMs: HEALTH_CONFIRM_DELAY_MS },
@@ -778,7 +779,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
 
   async function refreshState(): Promise<void> {
     if (wizardActive || disposed) return; // 向导期间不动样式，退出时会再刷新
-    const [p, s] = await Promise.all([storage.getProfile(origin), storage.getSettings()]);
+    const [p, s] = await Promise.all([storage.getProfile(site), storage.getSettings()]);
     settings = s;
     applySettingsLanguage(s); // 界面语言（#57）：设置变了所有页内界面立刻跟着换
     if (wizardActive || disposed) return;
@@ -847,7 +848,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     }
     if (wizardActive) return;
     const keys = Object.keys(changes);
-    if (!keys.some((k) => k === profileKey(origin) || k === 'settings')) return;
+    if (!keys.some((k) => k === profileKey(site) || k === 'settings')) return;
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = ctx.setTimeout(() => void scheduleRefresh(), 150);
   }
@@ -960,7 +961,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const onDormantStorageChanged = (changes: Record<string, unknown>, area: string): void => {
     if (area !== 'local' || disposed || active) return;
     const c = changes as Record<string, { newValue?: unknown } | undefined>;
-    if (c[profileKey(origin)]?.newValue) activate();
+    if (c[profileKey(site)]?.newValue) activate();
   };
   browser.storage.onChanged.addListener(onDormantStorageChanged);
   ctx.onInvalidated(() => {
@@ -975,7 +976,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   void (async () => {
     let configured = false;
     try {
-      configured = !!(await storage.getProfile(origin));
+      configured = !!(await storage.getProfile(site));
     } catch {
       // 读不到存储（扩展上下文已失效）按未配置处理
     }

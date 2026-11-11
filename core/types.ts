@@ -90,10 +90,14 @@ export interface ButtonPos {
   y: number;
 }
 
-/** 站点配置（按域名，一个网站一份） */
+/** 站点配置（按站点 key，一个网站一份；见 core/site-key.ts） */
 export interface SiteProfile {
   formatVersion: 1;
-  /** 形如 https://weread.qq.com（含端口，如非默认） */
+  /**
+   * 站点 key：可注册域名 eTLD+1（如 weibo.com），IP / localhost / 单标签主机名 /
+   * 带非默认端口的地址保留 host[:port]（如 127.0.0.1:8080）。
+   * 字段名沿用 origin；存储 key 是 `profile:` + 这个值。旧版的 `https://weibo.com` 由存储层懒迁移改写。
+   */
   origin: string;
   switchState: SwitchState;
   /**

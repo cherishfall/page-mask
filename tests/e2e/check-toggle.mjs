@@ -29,7 +29,7 @@
  *
  * 不写截图、不留临时文件。
  */
-import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, siteKeyOf, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, exitWizardByButton, shadowText, waitForShadow } from './lib/shadow.mjs';
 import { loadSurfaces, menuOrder, menuRows } from './lib/surfaces.mjs';
@@ -1435,7 +1435,7 @@ async function main() {
     // ===================== 幕布：未添加网站的一次性脚本（#46 / #50） =====================
     console.log('\n--- 幕布：未添加网站的一次性脚本（#46 / #50） ---');
     // 删掉配置：这个网站从此"没添加过"，页面里没有内容脚本、没有悬浮胶囊
-    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), siteKeyOf(ORIGIN));
     await page.goto(`${ORIGIN}/white`, { waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 800)); // 负向断言：等过注入时机
     check(!(await page.$(TOGGLE)), '没添加的网站上没有悬浮按钮');
@@ -1526,7 +1526,7 @@ async function main() {
     await clickInShadow(page, CURTAIN, tid('pm-curtain-restore'));
     await waitFor(page, '一次性幕布撤掉', (h) => !document.querySelector(h), [CURTAIN], { timeout: 3000 });
     check(
-      (await ext.control.evaluate(async (o) => (await chrome.storage.local.get(`profile:${o}`))[`profile:${o}`], ORIGIN)) === undefined,
+      (await ext.control.evaluate(async (o) => (await chrome.storage.local.get(`profile:${o}`))[`profile:${o}`], siteKeyOf(ORIGIN))) === undefined,
       '没有留下任何站点配置',
     );
     await injectOnce();
@@ -1549,7 +1549,7 @@ async function main() {
     check(pendingTitle === '这个网站自己的标题', `待授权站点遮住时用它自己设置的标题（${pendingTitle}）`);
 
     // 刷新后脚本随文档消失：即使之前遮住过，新文档也是干净的
-    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), siteKeyOf(ORIGIN));
     await page.reload({ waitUntil: 'load' });
     await new Promise((res) => setTimeout(res, 500));
     check(!(await page.$('pagemask-curtain')), '刷新后一次性幕布随之消失');

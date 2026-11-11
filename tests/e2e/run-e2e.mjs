@@ -12,7 +12,7 @@
  *   测试只断言按钮发起了正确的权限请求，授予改用 grantPermissions（重载 + manifest），弹窗部分人工验收
  */
 import { removeTempDir } from './lib/tmp.mjs';
-import { createReporter, poll, resultsDir, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, resultsDir, siteKeyOf, sitePatternsOf, startServer, waitFor } from './lib/harness.mjs';
 import {
   BUILD_DIR,
   getProfile,
@@ -215,7 +215,7 @@ async function main() {
     // 标题、图标、收起项全空才不挂胶囊（#67）：等隔离环境里的内容脚本就绪，而不是等页面上某个界面
     await poll(async () => evalInContentWorld(page, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false), '内容脚本就绪');
     // 模拟新站点：清掉配置（内容脚本已在，向导照常打开；保存时按「还没有配置」建站并自动清爽，#81）
-    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), ORIGIN);
+    await ext.control.evaluate((o) => chrome.storage.local.remove(`profile:${o}`), siteKeyOf(ORIGIN));
     await sendToTab(ext.control, tabId, { t: 'openWizard', mode: 'editContent' });
     await waitForShadow(page, WIZARD_HOST, tid('pm-wizard-toolbar'));
     check((await shadowText(page, WIZARD_HOST, tid('pm-wiz-progress'))).trim() === '第 1 步 / 共 2 步', '「收起内容」从点选开始，共 2 步（#81）');
@@ -794,7 +794,9 @@ async function main() {
     await waitFor(mgmtPage, '点击后发起权限请求', () => window.__pmRequests.length > 0);
     const batch = await mgmtPage.evaluate(() => window.__pmRequests);
     check(
-      batch.length === 1 && [...batch[0].origins].sort().join() === [`${ORIGIN}/*`, `${ORIGIN2}/*`].sort().join(),
+      batch.length === 1 &&
+        [...batch[0].origins].sort().join() ===
+          [...sitePatternsOf(ORIGIN), ...sitePatternsOf(ORIGIN2)].sort().join(),
       `一次权限请求带上全部需要允许访问的站点（${JSON.stringify(batch)}）`,
     );
     await mgmtPage.close().catch(() => undefined);
@@ -821,7 +823,8 @@ async function main() {
         ext.control,
         `${label}：内容脚本已注册`,
         (o) => chrome.scripting.getRegisteredContentScripts().then((list) => list.some((s) => s.id === `pagemask:${o}`)),
-        [origin],
+        // 站点 id 用站点 key（#162）：IP + 端口保留，所以 127.0.0.1:<端口> 就是 key
+        [siteKeyOf(origin)],
         { timeout: 8000 },
       );
       const p = await browser.newPage();
@@ -940,7 +943,7 @@ async function main() {
       // 删除后站点设置页自动回列表：先等地址变回列表，再等这一行消失
       // （不先等地址的话，停在设置页上「行不存在」会被误判成删除成功）
       await waitFor(m, '删除后回到网站列表', () => location.hash === '#/sites', [], { timeout: 5000 });
-      await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [origin]);
+      await waitFor(m, `管理页移除 ${origin}`, (o) => !document.querySelector(`li[data-origin="${o}"]`), [siteKeyOf(origin)]);
     }
 
     /** 通过「插件设置」页的文件选择框导入（默认合并模式，#55） */

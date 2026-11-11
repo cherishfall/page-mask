@@ -4,13 +4,13 @@ import {
   isSafeSelector,
   readStoredSettings,
   toStoredSettings,
-  isValidOrigin,
   isValidScope,
   isValidStrategy,
   readSettings,
   sanitizeProfile,
   sanitizeTabIcon,
 } from './validate';
+import { isValidSiteKey } from './site-key';
 import { createEmptyProfile } from './types';
 
 describe('候选选择器校验（表格驱动）', () => {
@@ -59,37 +59,43 @@ describe('候选选择器校验（表格驱动）', () => {
   });
 });
 
-describe('origin、范围、方案校验（表格驱动）', () => {
+describe('站点 key、范围、方案校验（表格驱动）', () => {
   const cases: [string, () => boolean, boolean][] = [
-    ['javascript: origin', () => isValidOrigin('javascript:alert(1)'), false],
-    ['ftp origin', () => isValidOrigin('ftp://x.com'), false],
-    ['带路径的 origin', () => isValidOrigin('https://x.com/a'), false],
-    ['带默认端口的 origin', () => isValidOrigin('https://x.com:443'), false],
-    ['规范 origin', () => isValidOrigin('https://weread.qq.com'), true],
-    ['非默认端口 origin', () => isValidOrigin('http://localhost:8080'), true],
+    ['javascript: 站点 key', () => isValidSiteKey('javascript:alert(1)'), false],
+    ['ftp 站点 key', () => isValidSiteKey('ftp://x.com'), false],
+    ['带协议的 origin（旧形态）', () => isValidSiteKey('https://x.com'), false],
+    ['带路径的 key', () => isValidSiteKey('x.com/a'), false],
+    ['带默认端口的 origin（旧形态）', () => isValidSiteKey('https://x.com:443'), false],
+    ['规范站点 key', () => isValidSiteKey('reader.example'), true],
+    ['带非默认端口的 key', () => isValidSiteKey('localhost:8080'), true],
     ['畸形 scope：include 缺 patterns', () => isValidScope({ type: 'include' }), false],
     ['畸形 scope：未知类型', () => isValidScope({ type: 'some' }), false],
     ['畸形 scope：patterns 为空', () => isValidScope({ type: 'exclude', patterns: [] }), false],
     ['畸形 scope：prefix 非字符串', () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 1 }] }), false],
     [
       '畸形 scope：prefix 不属于本站',
-      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://b.com/' }] }, 'https://a.com'),
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://b.com/' }] }, 'a.com'),
       false,
     ],
     ['scope：整站', () => isValidScope({ type: 'all' }), true],
     [
       'scope：仅这类页面',
-      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/r/' }] }, 'https://a.com'),
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/r/' }] }, 'a.com'),
+      true,
+    ],
+    [
+      'scope：子域页面属于同一个站点',
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://s.a.com/r/' }] }, 'a.com'),
       true,
     ],
     [
       'scope：仅首页（精确匹配）',
-      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'exact' }] }, 'https://a.com'),
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'exact' }] }, 'a.com'),
       true,
     ],
     [
       '畸形 scope：未知匹配方式',
-      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'regex' }] }, 'https://a.com'),
+      () => isValidScope({ type: 'include', patterns: [{ label: 'x', prefix: 'https://a.com/', match: 'regex' }] }, 'a.com'),
       false,
     ],
     ['未知收起方案', () => isValidStrategy('explode'), false],
@@ -112,8 +118,33 @@ describe('sanitizeProfile', () => {
 
   it('身份字段非法整体拒绝', () => {
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: 'javascript:alert(1)' })).toBeNull();
+    expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: 'not a key' })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), formatVersion: 2 })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), hideRules: {} })).toBeNull();
+  });
+
+  it('站点身份归一为 key（#162）：旧 origin 与子域都收成 eTLD+1，子域规则保留', () => {
+    const res = sanitizeProfile({
+      ...createEmptyProfile('https://www.weibo.com'),
+      hideRules: [
+        {
+          id: 'r1',
+          elementName: 'x',
+          candidates: ['#ok'],
+          strategy: 'remove',
+          scope: { type: 'include', patterns: [{ label: 'x', prefix: 'https://s.weibo.com/r/' }] },
+          onlyThis: false,
+          createdAt: 1,
+        },
+      ],
+    })!;
+    expect(res.profile.origin).toBe('weibo.com');
+    // 子域页面上的规则属于同一个站点，不能被静默丢掉
+    expect(res.profile.hideRules.map((r) => r.id)).toEqual(['r1']);
+    expect(res.droppedRules).toBe(0);
+    // 已是 key 的原样保留（含非默认端口 / IP）
+    expect(sanitizeProfile(createEmptyProfile('weibo.com'))!.profile.origin).toBe('weibo.com');
+    expect(sanitizeProfile(createEmptyProfile('127.0.0.1:8080'))!.profile.origin).toBe('127.0.0.1:8080');
   });
 
   it('次要字段回落安全默认值，畸形规则被丢弃并计数', () => {

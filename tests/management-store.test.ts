@@ -7,10 +7,10 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { AUTOSAVE_MS, createManagementStore, DEFAULT_KEY } from '@/entrypoints/management/store';
 import { t } from '@/core/i18n';
 import { createEmptyProfile, type SiteProfile } from '@/core/types';
+import { sitePatterns } from '@/core/site-key';
 
-const A = 'https://reader.example';
-const B = 'https://other.example';
-const pattern = (origin: string) => `${origin}/*`;
+const A = 'reader.example';
+const B = 'other.example';
 
 let granted: Set<string>;
 let request: ReturnType<typeof vi.fn>;
@@ -26,6 +26,7 @@ function stubBrowser() {
     return true;
   });
   Object.assign(fakeBrowser.permissions, {
+    getAll: vi.fn(async () => ({ origins: [...granted] })),
     contains: vi.fn(async ({ origins }: { origins: string[] }) => origins.every((o) => granted.has(o))),
     request,
     onAdded: fakeEvent(),
@@ -71,7 +72,7 @@ describe('管理页 store', () => {
 
   it('读取存储：站点列表、默认标题草稿与待授权站点', async () => {
     await seed([A, B], '我的标题');
-    granted.add(pattern(A));
+    granted.add(sitePatterns(A)[0]!);
 
     const store = createManagementStore();
     await store.reload();
@@ -152,7 +153,7 @@ describe('管理页 store', () => {
     store.authorize([A, B]);
 
     await vi.waitFor(() => expect(store.state.pendingOrigins).toEqual([]), { timeout: 1000, interval: 5 });
-    expect(request).toHaveBeenCalledWith({ origins: [pattern(A), pattern(B)] });
+    expect(request).toHaveBeenCalledWith({ origins: [...sitePatterns(A), ...sitePatterns(B)] });
   });
 
   it('授权被拒：保留设置并给出人话提示', async () => {

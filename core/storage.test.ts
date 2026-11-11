@@ -55,26 +55,98 @@ const bundleOf = (profiles: unknown[], extra: Record<string, unknown> = {}) => (
   ...extra,
 });
 
+describe('站点 key 与懒迁移（#162）', () => {
+  it('旧 key（含 ://）按站点归并成一条、删旧 key，幂等', async () => {
+    const area = memoryArea();
+    area.data.set(
+      'profile:https://weibo.com',
+      { ...createEmptyProfile('https://weibo.com', 100), hideRules: [rule('r1')], updatedAt: 100 },
+    );
+    area.data.set(
+      'profile:https://s.weibo.com',
+      {
+        ...createEmptyProfile('https://s.weibo.com', 50),
+        hideRules: [rule('r2')],
+        disguisedTitle: '微博',
+        updatedAt: 200,
+      },
+    );
+    let writes = 0;
+    const counting: KVArea = {
+      ...area,
+      set: async (items) => (writes++, area.set(items)),
+      remove: async (keys) => (writes++, area.remove(keys)),
+    };
+    const store = createPageMaskStorage(counting);
+    const list = await store.listProfiles();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.origin).toBe('weibo.com');
+    expect(list[0]!.hideRules.map((r) => r.id).sort()).toEqual(['r1', 'r2']);
+    expect(list[0]!.disguisedTitle).toBe('微博'); // 站点级字段取较新一方
+    expect([...area.data.keys()]).toEqual(['profile:weibo.com']);
+    expect(writes).toBe(2); // 一次 set + 一次 remove
+
+    // 幂等：再读不再写
+    await store.listProfiles();
+    await store.getProfile('weibo.com');
+    expect(writes).toBe(2);
+  });
+
+  it('迁移后旧配置可读可写；updateProfile 接受旧 origin 作兜底', async () => {
+    const area = memoryArea();
+    area.data.set('profile:https://x.com', createEmptyProfile('https://x.com', 100));
+    const store = createPageMaskStorage(area);
+    expect((await store.getProfile('x.com'))!.origin).toBe('x.com');
+    await store.updateProfile('https://x.com', (p) => void (p.disguisedTitle = '阅读'));
+    expect((await store.getProfile('x.com'))!.disguisedTitle).toBe('阅读');
+    expect(area.data.has('profile:https://x.com')).toBe(false);
+  });
+
+  it('导入：同一份文件里裸域与子域归并成一条', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    const bundle = bundleOf([
+      { ...createEmptyProfile('https://weibo.com'), hideRules: [rule('r1')], updatedAt: 100 },
+      { ...createEmptyProfile('https://s.weibo.com'), hideRules: [rule('r2')], updatedAt: 200 },
+    ]);
+    const res = await store.importBundle(bundle, 'merge');
+    expect(res.added).toBe(1);
+    expect(res.updated).toBe(0);
+    const list = await store.listProfiles();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.origin).toBe('weibo.com');
+    expect(list[0]!.hideRules.map((r) => r.id).sort()).toEqual(['r1', 'r2']);
+  });
+
+  it('导入：旧 v1 导出文件（origin 是 https://…）照常可读', async () => {
+    const store = createPageMaskStorage(memoryArea());
+    await store.importBundle(bundleOf([{ ...createEmptyProfile('https://reader.example'), hideRules: [rule('r1')] }]));
+    const p = await store.getProfile('reader.example');
+    expect(p).not.toBeNull();
+    expect(p!.origin).toBe('reader.example');
+    expect(p!.hideRules).toHaveLength(1);
+  });
+});
+
 describe('站点配置 CRUD', () => {
   it('增查改删与列表', async () => {
     const store = createPageMaskStorage(memoryArea());
-    expect(await store.getProfile('https://x.com')).toBeNull();
-    await store.updateProfile('https://x.com', (p) => void p.hideRules.push(rule('r1')), { create: true });
-    const got = await store.getProfile('https://x.com');
-    expect(got!.origin).toBe('https://x.com');
+    expect(await store.getProfile('x.com')).toBeNull();
+    await store.updateProfile('x.com', (p) => void p.hideRules.push(rule('r1')), { create: true });
+    const got = await store.getProfile('x.com');
+    expect(got!.origin).toBe('x.com');
     expect(got!.hideRules).toHaveLength(1);
-    await store.updateProfile('https://y.com', () => false, { create: true });
+    await store.updateProfile('y.com', () => false, { create: true });
     const list = await store.listProfiles();
-    expect(list.map((x) => x.origin)).toEqual(['https://x.com', 'https://y.com']);
-    await store.deleteProfile('https://x.com');
-    expect(await store.getProfile('https://x.com')).toBeNull();
+    expect(list.map((x) => x.origin)).toEqual(['x.com', 'y.com']);
+    await store.deleteProfile('x.com');
+    expect(await store.getProfile('x.com')).toBeNull();
     expect((await store.listProfiles()).length).toBe(1);
   });
 
   it('站点不存在且未要求新建时不写入（一键清空后不复活）', async () => {
     const area = memoryArea();
     const store = createPageMaskStorage(area);
-    const res = await store.updateProfile('https://x.com', (p) => void (p.switchState = 'disguised'));
+    const res = await store.updateProfile('x.com', (p) => void (p.switchState = 'disguised'));
     expect(res).toBeNull();
     expect(area.data.size).toBe(0);
   });
@@ -128,7 +200,7 @@ describe('站点配置 CRUD', () => {
     const area = memoryArea();
     const store = createPageMaskStorage(area);
     await store.importBundle(
-      bundleOf([createEmptyProfile('https://a.com')], { settings: { defaultTitle: '新建标签页' } }),
+      bundleOf([createEmptyProfile('a.com')], { settings: { defaultTitle: '新建标签页' } }),
       'replace',
     );
     expect((await store.getSettings()).defaultTitle).toBe('新建标签页');
@@ -136,9 +208,9 @@ describe('站点配置 CRUD', () => {
 
   it('读取时丢弃畸形规则，不让下游崩溃', async () => {
     const area = memoryArea();
-    const p = createEmptyProfile('https://x.com');
+    const p = createEmptyProfile('x.com');
     seed(area, { ...p, hideRules: [rule('ok'), { ...rule('bad'), scope: { type: 'include' } }] });
-    const got = await createPageMaskStorage(area).getProfile('https://x.com');
+    const got = await createPageMaskStorage(area).getProfile('x.com');
     expect(got!.hideRules.map((r) => r.id)).toEqual(['ok']);
   });
 });
@@ -146,17 +218,17 @@ describe('站点配置 CRUD', () => {
 describe('原子更新（S2：不丢更新）', () => {
   it('并发交错修改开关与规则，两者都保留', async () => {
     const area = memoryArea(2);
-    seed(area, createEmptyProfile('https://x.com'));
+    seed(area, createEmptyProfile('x.com'));
     // 两个独立实例（模拟同一上下文里 popup 逻辑与编辑面板各自 new 的 storage）
     const a = createPageMaskStorage(area);
     const b = createPageMaskStorage(area);
     await Promise.all([
-      a.updateProfile('https://x.com', (p) => void (p.switchState = 'disguised')),
-      b.updateProfile('https://x.com', (p) => void p.hideRules.push(rule('r1'))),
-      a.updateProfile('https://x.com', (p) => void p.hideRules.push(rule('r2'))),
-      b.updateProfile('https://x.com', (p) => void (p.disguisedTitle = '文档')),
+      a.updateProfile('x.com', (p) => void (p.switchState = 'disguised')),
+      b.updateProfile('x.com', (p) => void p.hideRules.push(rule('r1'))),
+      a.updateProfile('x.com', (p) => void p.hideRules.push(rule('r2'))),
+      b.updateProfile('x.com', (p) => void (p.disguisedTitle = '文档')),
     ]);
-    const got = (await a.getProfile('https://x.com'))!;
+    const got = (await a.getProfile('x.com'))!;
     expect(got.switchState).toBe('disguised');
     expect(got.disguisedTitle).toBe('文档');
     expect(got.hideRules.map((r) => r.id)).toEqual(['r1', 'r2']);
@@ -164,50 +236,50 @@ describe('原子更新（S2：不丢更新）', () => {
 
   it('体检回写不覆盖开关，也不刷新用户修改时间', async () => {
     const area = memoryArea(1);
-    seed(area, { ...createEmptyProfile('https://x.com', 100), switchState: 'disguised', hideRules: [rule('r1')] });
+    seed(area, { ...createEmptyProfile('x.com', 100), switchState: 'disguised', hideRules: [rule('r1')] });
     const page = createPageMaskStorage(area);
     const popup = createPageMaskStorage(area);
     // 页面拿着旧副本（伪装态）做体检；与此同时 popup 把开关切回原样
-    const stale = (await page.getProfile('https://x.com'))!;
+    const stale = (await page.getProfile('x.com'))!;
     await Promise.all([
-      popup.updateProfile('https://x.com', (p) => void (p.switchState = 'original')),
-      page.updateRuleHealth('https://x.com', stale.hideRules.map((r) => ({ id: r.id, status: 'stale' as const })), 500),
+      popup.updateProfile('x.com', (p) => void (p.switchState = 'original')),
+      page.updateRuleHealth('x.com', stale.hideRules.map((r) => ({ id: r.id, status: 'stale' as const })), 500),
     ]);
-    const got = (await page.getProfile('https://x.com'))!;
+    const got = (await page.getProfile('x.com'))!;
     expect(got.switchState).toBe('original');
     expect(got.hideRules[0]!.lastHealth).toBe('stale');
     expect(got.hideRules[0]!.lastHealthAt).toBe(500);
 
     const before = got.updatedAt;
-    await page.updateRuleHealth('https://x.com', [{ id: 'r1', status: 'ok' }], 600);
-    expect((await page.getProfile('https://x.com'))!.updatedAt).toBe(before);
+    await page.updateRuleHealth('x.com', [{ id: 'r1', status: 'ok' }], 600);
+    expect((await page.getProfile('x.com'))!.updatedAt).toBe(before);
   });
 
   it('体检结果没变化时不写入', async () => {
     const area = memoryArea();
-    seed(area, { ...createEmptyProfile('https://x.com'), hideRules: [rule('r1', { lastHealth: 'ok' })] });
+    seed(area, { ...createEmptyProfile('x.com'), hideRules: [rule('r1', { lastHealth: 'ok' })] });
     let writes = 0;
     const counting: KVArea = { ...area, set: async (items) => (writes++, area.set(items)) };
-    await createPageMaskStorage(counting).updateRuleHealth('https://x.com', [{ id: 'r1', status: 'ok' }]);
+    await createPageMaskStorage(counting).updateRuleHealth('x.com', [{ id: 'r1', status: 'ok' }]);
     expect(writes).toBe(0);
   });
 
   it('悬浮按钮坐标写入不刷新用户修改时间', async () => {
     const area = memoryArea();
-    seed(area, createEmptyProfile('https://x.com', 100));
+    seed(area, createEmptyProfile('x.com', 100));
     const store = createPageMaskStorage(area);
-    await store.updateProfile('https://x.com', (p) => void (p.floatingBtnPos = { x: 1, y: 2 }), { touch: false });
-    const got = (await store.getProfile('https://x.com'))!;
+    await store.updateProfile('x.com', (p) => void (p.floatingBtnPos = { x: 1, y: 2 }), { touch: false });
+    const got = (await store.getProfile('x.com'))!;
     expect(got.floatingBtnPos).toEqual({ x: 1, y: 2 });
     expect(got.updatedAt).toBe(100);
   });
 
   it('capsuleHidden 写入不刷新用户修改时间（#111，本机界面状态，不参与较新一方合并）', async () => {
     const area = memoryArea();
-    seed(area, createEmptyProfile('https://x.com', 100));
+    seed(area, createEmptyProfile('x.com', 100));
     const store = createPageMaskStorage(area);
-    await store.updateProfile('https://x.com', (p) => void (p.capsuleHidden = true), { touch: false });
-    const got = (await store.getProfile('https://x.com'))!;
+    await store.updateProfile('x.com', (p) => void (p.capsuleHidden = true), { touch: false });
+    const got = (await store.getProfile('x.com'))!;
     expect(got.capsuleHidden).toBe(true);
     expect(got.updatedAt).toBe(100);
   });
@@ -215,7 +287,7 @@ describe('原子更新（S2：不丢更新）', () => {
   it('写入前统一校验：危险候选与不认识的图标编号不会落库', async () => {
     const store = createPageMaskStorage(memoryArea());
     const got = await store.updateProfile(
-      'https://x.com',
+      'x.com',
       (p) => {
         p.hideRules.push(rule('r1', { candidates: ['x{} body{background:url(https://a)}', '#ok'] }));
         p.icon = { kind: 'preset', id: 'unknown' } as unknown as typeof p.icon;
@@ -230,7 +302,7 @@ describe('原子更新（S2：不丢更新）', () => {
 describe('导出/导入', () => {
   it('导出结构带 app 标识、版本号与全局设置（ADR-0004）', async () => {
     const store = createPageMaskStorage(memoryArea());
-    await store.updateProfile('https://x.com', () => false, { create: true });
+    await store.updateProfile('x.com', () => false, { create: true });
     await store.putSettings({ defaultTitle: '周报' });
     const bundle = await store.exportBundle();
     expect(bundle.app).toBe('pagemask');
@@ -243,29 +315,29 @@ describe('导出/导入', () => {
     const store = createPageMaskStorage(memoryArea());
     await expect(store.importBundle({})).rejects.toThrow(t().errors.invalidExportFile);
     await expect(store.importBundle(null)).rejects.toThrow(t().errors.invalidExportFile);
-    await expect(store.importBundle(bundleOf([createEmptyProfile('https://a.com')], { app: 'other' }))).rejects.toThrow(
+    await expect(store.importBundle(bundleOf([createEmptyProfile('a.com')], { app: 'other' }))).rejects.toThrow(
       t().errors.invalidExportFile,
     );
   });
 
   it('拒绝未知 formatVersion', async () => {
     const store = createPageMaskStorage(memoryArea());
-    const p = createEmptyProfile('https://a.com');
+    const p = createEmptyProfile('a.com');
     await expect(store.importBundle(bundleOf([p], { formatVersion: 2 }))).rejects.toThrow('更新版本');
     await expect(store.importBundle(bundleOf([p], { formatVersion: '1' }))).rejects.toThrow(t().errors.invalidExportFile);
   });
 
   it('全无效的文件做「整体替换」后本地数据原样保留', async () => {
     const area = memoryArea();
-    const local = { ...createEmptyProfile('https://old.com', 100), hideRules: [rule('r1')] };
+    const local = { ...createEmptyProfile('old.com', 100), hideRules: [rule('r1')] };
     seed(area, local);
     area.data.set(SETTINGS_KEY, { defaultTitle: '本地标题' });
     const snapshot = JSON.stringify([...area.data]);
     const store = createPageMaskStorage(area);
     const bundle = bundleOf([
-      { ...createEmptyProfile('https://new.com'), origin: 'javascript:alert(1)' },
-      { ...createEmptyProfile('https://new.com'), formatVersion: 9 },
-      { ...createEmptyProfile('https://new.com'), hideRules: 'nope' },
+      { ...createEmptyProfile('new.com'), origin: 'javascript:alert(1)' },
+      { ...createEmptyProfile('new.com'), formatVersion: 9 },
+      { ...createEmptyProfile('new.com'), hideRules: 'nope' },
       'garbage',
     ]);
     await expect(store.importBundle(bundle, 'replace')).rejects.toThrow('没有改动');
@@ -274,16 +346,16 @@ describe('导出/导入', () => {
 
   it('整体替换：只留导入内容，导入的全局设置生效，结果如实报告', async () => {
     const area = memoryArea();
-    seed(area, createEmptyProfile('https://old.com'));
-    seed(area, { ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 5, y: 6 } });
+    seed(area, createEmptyProfile('old.com'));
+    seed(area, { ...createEmptyProfile('keep.com'), floatingBtnPos: { x: 5, y: 6 } });
     area.data.set(SETTINGS_KEY, { defaultTitle: '本地标题' });
     const store = createPageMaskStorage(area);
     const res = await store.importBundle(
       bundleOf(
         [
-          createEmptyProfile('https://new.com'),
-          { ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 900, y: 900 } },
-          { ...createEmptyProfile('https://bad.com'), origin: 'https://bad.com/path' },
+          createEmptyProfile('new.com'),
+          { ...createEmptyProfile('keep.com'), floatingBtnPos: { x: 900, y: 900 } },
+          { ...createEmptyProfile('bad.com'), origin: 'bad.com/path' },
         ],
         { settings: { defaultTitle: '导入标题' } },
       ),
@@ -291,7 +363,7 @@ describe('导出/导入', () => {
     );
     expect(res).toMatchObject({ added: 1, updated: 1, removed: 1, skipped: 1, mode: 'replace' });
     const list = await store.listProfiles();
-    expect(list.map((p) => p.origin)).toEqual(['https://keep.com', 'https://new.com']);
+    expect(list.map((p) => p.origin)).toEqual(['keep.com', 'new.com']);
     expect(list[0]!.floatingBtnPos).toEqual({ x: 5, y: 6 }); // 坐标保留本机
     expect((await store.getSettings()).defaultTitle).toBe('导入标题');
   });
@@ -299,7 +371,7 @@ describe('导出/导入', () => {
   it('默认合并：同源规则并集，冲突取导入方；新站点不带外来坐标；跳过计数', async () => {
     const area = memoryArea();
     seed(area, {
-      ...createEmptyProfile('https://x.com'),
+      ...createEmptyProfile('x.com'),
       hideRules: [rule('r1'), rule('r2', { elementName: '本地版' })],
       updatedAt: 100,
       floatingBtnPos: { x: 1, y: 1 },
@@ -307,40 +379,40 @@ describe('导出/导入', () => {
     const store = createPageMaskStorage(area);
     const bundle = bundleOf([
       {
-        ...createEmptyProfile('https://x.com'),
+        ...createEmptyProfile('x.com'),
         hideRules: [rule('r2', { elementName: '导入版' }), rule('r3'), { ...rule('r4'), strategy: 'explode' }],
         updatedAt: 50,
         floatingBtnPos: { x: 999, y: 999 },
       },
-      { ...createEmptyProfile('https://new.com'), floatingBtnPos: { x: 7, y: 7 } },
+      { ...createEmptyProfile('new.com'), floatingBtnPos: { x: 7, y: 7 } },
       { formatVersion: 1, origin: 'ftp://x.com', hideRules: [] },
     ]);
     const res = await store.importBundle(bundle as unknown as ExportBundle, 'merge');
     expect(res).toMatchObject({ added: 1, updated: 1, removed: 0, skipped: 1, skippedRules: 1 });
-    const merged = (await store.getProfile('https://x.com'))!;
+    const merged = (await store.getProfile('x.com'))!;
     expect(merged.hideRules.map((r) => r.id).sort()).toEqual(['r1', 'r2', 'r3']);
     expect(merged.hideRules.find((r) => r.id === 'r2')!.elementName).toBe('导入版');
     expect(merged.floatingBtnPos).toEqual({ x: 1, y: 1 });
-    expect((await store.getProfile('https://new.com'))!.floatingBtnPos).toBeNull();
+    expect((await store.getProfile('new.com'))!.floatingBtnPos).toBeNull();
   });
 
   it('capsuleHidden 随 profile 管线走（#111）：导入带隐藏标记的文件保留，旧文件导入 = 显示', async () => {
     const area = memoryArea();
     const store = createPageMaskStorage(area);
     const bundle = bundleOf([
-      { ...createEmptyProfile('https://hidden.com'), capsuleHidden: true },
-      createEmptyProfile('https://shown.com'),
+      { ...createEmptyProfile('hidden.com'), capsuleHidden: true },
+      createEmptyProfile('shown.com'),
     ]);
     await store.importBundle(bundle as unknown as ExportBundle, 'merge');
-    expect((await store.getProfile('https://hidden.com'))?.capsuleHidden).toBe(true);
-    expect('capsuleHidden' in ((await store.getProfile('https://shown.com')) ?? {})).toBe(false);
+    expect((await store.getProfile('hidden.com'))?.capsuleHidden).toBe(true);
+    expect('capsuleHidden' in ((await store.getProfile('shown.com')) ?? {})).toBe(false);
     // 坏值不落字段
-    await store.importBundle(bundleOf([{ ...createEmptyProfile('https://bad.com'), capsuleHidden: 'yes' }]) as unknown as ExportBundle, 'merge');
-    expect('capsuleHidden' in ((await store.getProfile('https://bad.com')) ?? {})).toBe(false);
+    await store.importBundle(bundleOf([{ ...createEmptyProfile('bad.com'), capsuleHidden: 'yes' }]) as unknown as ExportBundle, 'merge');
+    expect('capsuleHidden' in ((await store.getProfile('bad.com')) ?? {})).toBe(false);
   });
 
   it('合并：本地已设置的全局设置保留；本地未设置时采用导入值', async () => {
-    const p = createEmptyProfile('https://a.com');
+    const p = createEmptyProfile('a.com');
     const withLocal = memoryArea();
     withLocal.data.set(SETTINGS_KEY, { defaultTitle: '本地标题' });
     const s1 = createPageMaskStorage(withLocal);
@@ -357,13 +429,13 @@ describe('导出/导入', () => {
     await store.importBundle(
       bundleOf([
         {
-          ...createEmptyProfile('https://a.com'),
+          ...createEmptyProfile('a.com'),
           icon: { kind: 'preset', id: 'unknown' },
           hideRules: [rule('r1', { candidates: ['a;b', '@import url(x)', '.ok'] }), rule('r2', { candidates: ['a{'] })],
         },
       ]),
     );
-    const got = (await store.getProfile('https://a.com'))!;
+    const got = (await store.getProfile('a.com'))!;
     expect(got.icon).toEqual({ kind: 'none' });
     expect(got.hideRules.map((r) => [r.id, r.candidates])).toEqual([['r1', ['.ok']]]);
   });
@@ -396,7 +468,7 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
     const area = memoryArea();
     const store = createPageMaskStorage(area);
     await store.setCurtainBtnPos({ x: 10, y: 20 });
-    const file = bundleOf([createEmptyProfile('https://a.com')], {
+    const file = bundleOf([createEmptyProfile('a.com')], {
       settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 900, y: 800 } },
     });
     await store.importBundle(file, 'merge');
@@ -409,7 +481,7 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
   it('本机还没有位置时导入也不会写入外来坐标（屏幕相关，不跨电脑）', async () => {
     const store = createPageMaskStorage(memoryArea());
     await store.importBundle(
-      bundleOf([createEmptyProfile('https://a.com')], {
+      bundleOf([createEmptyProfile('a.com')], {
         settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 900, y: 800 } },
       }),
       'replace',
@@ -429,8 +501,8 @@ describe('「遮住」按钮的全局位置（#50，本机界面状态）', () =
 
 describe('mergeProfiles 字段级取舍', () => {
   it('站点级字段取用户修改时间较新一方，坐标保留本地', () => {
-    const older = { ...createEmptyProfile('https://x.com', 100), disguisedTitle: '旧标题', floatingBtnPos: { x: 1, y: 2 } };
-    const newer = { ...createEmptyProfile('https://x.com', 200), disguisedTitle: '新标题', floatingBtnPos: { x: 9, y: 9 } };
+    const older = { ...createEmptyProfile('x.com', 100), disguisedTitle: '旧标题', floatingBtnPos: { x: 1, y: 2 } };
+    const newer = { ...createEmptyProfile('x.com', 200), disguisedTitle: '新标题', floatingBtnPos: { x: 9, y: 9 } };
     const merged = mergeProfiles(older, newer);
     expect(merged.disguisedTitle).toBe('新标题');
     expect(merged.floatingBtnPos).toEqual({ x: 1, y: 2 });
@@ -441,7 +513,7 @@ describe('mergeProfiles 字段级取舍', () => {
 describe('插件设置随导出 / 导入（#55）', () => {
   it('导出带插件设置与"导出时的插件版本号"，格式版本仍是 1', async () => {
     const store = createPageMaskStorage(memoryArea());
-    await store.updateProfile('https://x.com', () => false, { create: true });
+    await store.updateProfile('x.com', () => false, { create: true });
     await store.putSettings({ defaultTitle: '周报' });
 
     const bundle = await store.exportBundle('0.4.0');
@@ -457,19 +529,19 @@ describe('插件设置随导出 / 导入（#55）', () => {
     const area = memoryArea();
     area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', settingsVersion: 2 });
     const store = createPageMaskStorage(area);
-    const oldFile = bundleOf([createEmptyProfile('https://a.com')]); // 0.1.0 / 0.2.0 之前的形状，没有 settings
+    const oldFile = bundleOf([createEmptyProfile('a.com')]); // 0.1.0 / 0.2.0 之前的形状，没有 settings
 
     const merged = await store.importBundle(oldFile, 'merge');
     expect(merged.added).toBe(1);
     expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
 
-    const replaced = await store.importBundle(bundleOf([createEmptyProfile('https://b.com')]), 'replace');
+    const replaced = await store.importBundle(bundleOf([createEmptyProfile('b.com')]), 'replace');
     expect(replaced.removed).toBe(1);
     expect(await store.getSettings()).toEqual({ defaultTitle: '本机标题', curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
   });
 
   it('整体替换采用文件里的默认标题；合并时本地已设置过的保留', async () => {
-    const file = bundleOf([createEmptyProfile('https://a.com')], {
+    const file = bundleOf([createEmptyProfile('a.com')], {
       settings: { defaultTitle: '导入标题', curtainBtnPos: null },
     });
 
@@ -487,7 +559,7 @@ describe('插件设置随导出 / 导入（#55）', () => {
   it('文件里的插件设置缺字段时按默认值处理（不报错）', async () => {
     const store = createPageMaskStorage(memoryArea());
     await store.importBundle(
-      bundleOf([createEmptyProfile('https://a.com')], { settings: {} }),
+      bundleOf([createEmptyProfile('a.com')], { settings: {} }),
       'replace',
     );
     expect(await store.getSettings()).toEqual({ defaultTitle: null, curtainBtnPos: null, uiLanguage: 'auto', toggleOpacity: 1 });
@@ -495,19 +567,19 @@ describe('插件设置随导出 / 导入（#55）', () => {
 
   it('导入不覆盖本机的按钮坐标（网站级 floatingBtnPos 与全局 curtainBtnPos）', async () => {
     const area = memoryArea();
-    seed(area, { ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 5, y: 6 } });
+    seed(area, { ...createEmptyProfile('keep.com'), floatingBtnPos: { x: 5, y: 6 } });
     area.data.set(SETTINGS_KEY, { defaultTitle: '本机标题', curtainBtnPos: { x: 10, y: 20 }, settingsVersion: 2 });
     const store = createPageMaskStorage(area);
 
     for (const mode of ['merge', 'replace'] as const) {
       await store.importBundle(
         bundleOf(
-          [{ ...createEmptyProfile('https://keep.com'), floatingBtnPos: { x: 900, y: 900 } }],
+          [{ ...createEmptyProfile('keep.com'), floatingBtnPos: { x: 900, y: 900 } }],
           { settings: { defaultTitle: '导入标题', curtainBtnPos: { x: 800, y: 700 } } },
         ),
         mode,
       );
-      expect((await store.getProfile('https://keep.com'))!.floatingBtnPos).toEqual({ x: 5, y: 6 });
+      expect((await store.getProfile('keep.com'))!.floatingBtnPos).toEqual({ x: 5, y: 6 });
       expect((await store.getSettings()).curtainBtnPos).toEqual({ x: 10, y: 20 });
     }
   });

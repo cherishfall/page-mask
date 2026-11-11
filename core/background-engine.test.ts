@@ -9,11 +9,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { createBackground } from './background-engine';
 import { registrationPlan } from './registration';
+import { sitePatterns } from './site-key';
 import { createEmptyProfile, type SiteProfile } from './types';
 import { HOST_SHIELD_CSS } from './host-shield';
 
-const ORIGIN = 'https://reader.example';
-const OTHER = 'https://other.example';
+/** 站点 key（存储 key / 消息里的站点身份，#162） */
+const ORIGIN = 'reader.example';
+const OTHER = 'other.example';
+/** 页面地址（标签页 / 内容脚本所在文档） */
+const BASE = `https://${ORIGIN}`;
+const OTHER_BASE = `https://${OTHER}`;
 const TAB = { id: 7 } as const;
 const EXT_URL = 'chrome-extension://test-extension-id/';
 
@@ -59,6 +64,7 @@ function stubBrowser() {
   const onAdded = fakeEvent<[{ origins?: string[] }]>();
   const onRemoved = fakeEvent<[{ origins?: string[] }]>();
   const permissions = {
+    getAll: vi.fn(async () => ({ origins: [...granted] })),
     contains: vi.fn(async ({ origins }: { origins: string[] }) => origins.every((o) => granted.has(o))),
     remove: vi.fn(async ({ origins }: { origins: string[] }) => {
       for (const o of origins) granted.delete(o);
@@ -105,7 +111,7 @@ function stubBrowser() {
 }
 
 /** 内容脚本所在文档（后台按 sender 定位文档、判断生效范围） */
-const DOC_SENDER = { id: 'test-extension-id', tab: TAB, frameId: 0, documentId: 'doc-A', url: `${ORIGIN}/home` };
+const DOC_SENDER = { id: 'test-extension-id', tab: TAB, frameId: 0, documentId: 'doc-A', url: `${BASE}/home` };
 /** 扩展自己的页面（popup / 管理页；管理页以标签页打开，所以也可能带 tab） */
 const EXT_SENDER = { id: 'test-extension-id', url: `${EXT_URL}popup.html` };
 
@@ -138,7 +144,7 @@ function disguisedProfile(origin = ORIGIN): SiteProfile {
   return p;
 }
 
-const pattern = (o: string) => `${o}/*`;
+const pattern = (key: string) => sitePatterns(key)[0]!;
 const idOf = (o: string) => `pagemask:${o}`;
 
 describe('后台引擎（fakeBrowser）', () => {
@@ -150,7 +156,7 @@ describe('后台引擎（fakeBrowser）', () => {
     fakeBrowser.reset();
     stubs = stubBrowser();
     createBackground({ browser: fakeBrowser });
-    siteTabId = (await fakeBrowser.tabs.create({ url: `${ORIGIN}/book/1` })).id!;
+    siteTabId = (await fakeBrowser.tabs.create({ url: `${BASE}/book/1` })).id!;
   });
 
   async function configure(origin = ORIGIN, { grant = true } = {}) {
@@ -173,13 +179,13 @@ describe('后台引擎（fakeBrowser）', () => {
       await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update', previousVersion: '0.1.0' } as never);
 
       await eventually(() => expect([...stubs.registered.keys()].sort()).toEqual([idOf(OTHER), idOf(ORIGIN)]));
-      expect(stubs.registered.get(idOf(ORIGIN))).toEqual(registrationPlan(ORIGIN));
+      expect(stubs.registered.get(idOf(ORIGIN))).toEqual(registrationPlan(ORIGIN, [pattern(ORIGIN)]));
     });
 
     it('扩展更新 / 重载后向已配置且已授权站点的已打开标签页重新注入内容脚本（新实例接管，旧脚本收尾）', async () => {
       await configure(ORIGIN);
       await configure(OTHER, { grant: false });
-      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
+      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER_BASE}/x` })).id!;
       const portTab = (await fakeBrowser.tabs.create({ url: 'https://reader.example:8443/x' })).id!;
       await eventually(() => expect(stubs.registered.size).toBe(1));
       stubs.scripting.executeScript.mockClear();
@@ -199,7 +205,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
     it('重新注入失败（标签页已休眠 / 不可访问）不影响其余标签页', async () => {
       await configure(ORIGIN);
-      const second = (await fakeBrowser.tabs.create({ url: `${ORIGIN}/book/2` })).id!;
+      const second = (await fakeBrowser.tabs.create({ url: `${BASE}/book/2` })).id!;
       await eventually(() => expect(stubs.registered.size).toBe(1));
       stubs.scripting.executeScript.mockClear();
       stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Frame with ID 0 was removed'));
@@ -386,7 +392,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
     it('标签页已不在该站点（跳走了 / 传错了）：拒绝，不注入', async () => {
       stubs.granted.add(pattern(ORIGIN));
-      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
+      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER_BASE}/x` })).id!;
 
       const res = (await send({ t: 'enableSite', origin: ORIGIN, tabId: otherTab })) as { ok: boolean; code?: string };
 
@@ -465,7 +471,7 @@ describe('后台引擎（fakeBrowser）', () => {
       const res = await send({ t: 'enableSite', origin: ORIGIN, tabId: siteTabId, open: 'editContent', requestPermission: true });
 
       expect(res).toEqual({ ok: true });
-      expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
       const calls = stubs.scripting.executeScript.mock.calls.map(([inj]) => inj);
       expect(calls[0]).toEqual({ target: { tabId: siteTabId }, files: ['content-scripts/content.js'] });
       expect(calls[1]).toEqual(expect.objectContaining({ target: { tabId: siteTabId }, args: ['editContent'] }));
@@ -617,12 +623,12 @@ describe('后台引擎（fakeBrowser）', () => {
 
   it('applyDisguise：消息里的地址与 sender.url 同源时按它判断生效范围（SPA 路由刚变化，sender.url 可能还是旧的）', async () => {
     const p = disguisedProfile();
-    p.hideRules[0]!.scope = { type: 'include', patterns: [{ label: '书架', prefix: `${ORIGIN}/shelf` }] };
+    p.hideRules[0]!.scope = { type: 'include', patterns: [{ label: '书架', prefix: `${BASE}/shelf` }] };
     await fakeBrowser.storage.local.set({ [`profile:${ORIGIN}`]: p });
 
     const res = (await send(
-      { t: 'applyDisguise', prev: null, url: `${ORIGIN}/shelf/1` },
-      { ...DOC_SENDER, url: `${ORIGIN}/home` },
+      { t: 'applyDisguise', prev: null, url: `${BASE}/shelf/1` },
+      { ...DOC_SENDER, url: `${BASE}/home` },
     )) as { ok: boolean; css: string | null };
 
     expect(res.ok).toBe(true);
@@ -633,8 +639,8 @@ describe('后台引擎（fakeBrowser）', () => {
     await fakeBrowser.storage.local.set({ [`profile:${OTHER}`]: disguisedProfile(OTHER) });
 
     const res = (await send(
-      { t: 'applyDisguise', prev: null, url: `${OTHER}/home` },
-      { ...DOC_SENDER, url: `${ORIGIN}/home` },
+      { t: 'applyDisguise', prev: null, url: `${OTHER_BASE}/home` },
+      { ...DOC_SENDER, url: `${BASE}/home` },
     )) as { ok: boolean; css: string | null };
 
     expect(res).toEqual({ ok: true, css: null });
@@ -661,7 +667,7 @@ describe('后台引擎（fakeBrowser）', () => {
     const formal = ((await send({ t: 'applyDisguise', prev: null }, DOC_SENDER)) as { css: string }).css;
     stubs.scripting.insertCSS.mockClear();
 
-    const res = await send({ t: 'releaseOrphanCss', url: `${ORIGIN}/home` }, DOC_SENDER);
+    const res = await send({ t: 'releaseOrphanCss', url: `${BASE}/home` }, DOC_SENDER);
 
     expect(res).toEqual({ ok: true, css: null });
     expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
@@ -757,7 +763,7 @@ describe('后台引擎（fakeBrowser）', () => {
   });
 
   it('发送方没有 documentId（旧版浏览器）时退回按 frameId 定位', async () => {
-    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 0, url: `${ORIGIN}/home` });
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 0, url: `${BASE}/home` });
     expect(stubs.scripting.insertCSS).toHaveBeenCalledWith(
       expect.objectContaining({ target: { tabId: TAB.id, frameIds: [0] } }),
     );
@@ -773,7 +779,7 @@ describe('后台引擎（fakeBrowser）', () => {
   describe('resetSite（扩展页面发起的删除设置）', () => {
     it('先通知该站点已打开的标签页还原，再收回授权、注销、删配置', async () => {
       await configure(ORIGIN);
-      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER}/x` })).id!;
+      const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER_BASE}/x` })).id!;
       const order: string[] = [];
       stubs.sendMessage.mockImplementation(async (tabId: number) => {
         order.push(`siteReset:${tabId}`);
@@ -791,7 +797,7 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.sendMessage).not.toHaveBeenCalledWith(otherTab, expect.anything());
       expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
       expect(stubs.registered.size).toBe(0);
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
 
@@ -836,7 +842,7 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(await send({ t: 'resetSiteHere' }, DOC_SENDER)).toEqual({ ok: true });
 
       expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
       expect(stubs.registered.size).toBe(0);
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
@@ -847,7 +853,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
       await send({ t: 'resetSiteHere', origin: OTHER }, DOC_SENDER);
 
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
       expect(stubs.granted.has(pattern(OTHER))).toBe(true);
       expect(await fakeBrowser.storage.local.get(`profile:${OTHER}`)).not.toEqual({});
     });
@@ -871,7 +877,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
       expect(await send({ t: 'cancelNewSite' }, DOC_SENDER)).toEqual({ ok: true });
 
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
       expect(stubs.granted.has(pattern(ORIGIN))).toBe(false);
     });
 
@@ -901,7 +907,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
   describe('幕布快捷键（#101、#107）', () => {
     /** 当前活动标签页：默认停在可注入的普通网页；返回 restore 供用例结束时还原 */
-    function activeTab(url = `${ORIGIN}/book/1`) {
+    function activeTab(url = `${BASE}/book/1`) {
       const original = fakeBrowser.tabs.query;
       fakeBrowser.tabs.query = (async () => [{ id: 42, url }]) as never;
       return () => {
@@ -990,7 +996,7 @@ describe('后台引擎（fakeBrowser）', () => {
   // ---------- 幕布静音（0.8.0，#131，ADR-0013） ----------
 
   describe('幕布静音（0.8.0）', () => {
-    const tabSender = () => ({ id: 'test-extension-id', tab: { id: siteTabId }, url: `${ORIGIN}/home` });
+    const tabSender = () => ({ id: 'test-extension-id', tab: { id: siteTabId }, url: `${BASE}/home` });
 
     it('遮住即静音 sender 所在的标签页：不需要新权限、不依赖站点配置（未添加网站同样生效）', async () => {
       stubs.update.mockClear();
@@ -1038,7 +1044,7 @@ describe('后台引擎（fakeBrowser）', () => {
     it('SPA 站内换址（只有 url 变化、没有 loading）：幕布还开着，静音保持', async () => {
       await send({ t: 'curtainMute', muted: true }, tabSender());
       stubs.update.mockClear();
-      await fakeBrowser.tabs.onUpdated.trigger(siteTabId, { url: `${ORIGIN}/other` }, { url: `${ORIGIN}/other` } as never);
+      await fakeBrowser.tabs.onUpdated.trigger(siteTabId, { url: `${BASE}/other` }, { url: `${BASE}/other` } as never);
       await new Promise((r) => setTimeout(r, 20));
       expect(stubs.update).not.toHaveBeenCalled();
       expect(stubs.muted.get(siteTabId)).toMatchObject({ muted: true });

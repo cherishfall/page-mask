@@ -14,8 +14,9 @@ export type OpenIntent = 'editTitle' | 'editContent';
 /** 扩展页面 → 后台：为当前标签页的站点对账注册并立即注入内容脚本（可选随即打开向导） */
 export interface EnableSiteRequest {
   t: 'enableSite';
+  /** 站点 key（core/site-key.ts，如 weibo.com）；字段名沿用 origin */
   origin: string;
-  /** 需要立即注入内容脚本的已打开标签页（popup 当前标签）；后台会核对它的当前来源 */
+  /** 需要立即注入内容脚本的已打开标签页（popup 当前标签）；后台会核对它当前所在的站点 */
   tabId: number;
   /** 注入后直接打开的向导模式；不传则只注入 */
   open?: OpenIntent;
@@ -58,6 +59,7 @@ export interface EnableSiteResponse {
 /** 扩展页面 → 后台：一键清空某站点（先还原已打开页面，再收回授权、注销、删配置） */
 export interface ResetSiteRequest {
   t: 'resetSite';
+  /** 站点 key（core/site-key.ts）；字段名沿用 origin */
   origin: string;
 }
 

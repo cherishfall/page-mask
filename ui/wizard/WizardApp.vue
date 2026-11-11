@@ -528,6 +528,7 @@ import { browser } from 'wxt/browser';
 import { describeElement } from '@/core/naming';
 import { generateCandidates, selectorHitsElement } from '@/core/selectors';
 import { deriveScopePattern, scopeUnavailableHint } from '@/core/origin';
+import { siteKey } from '@/core/site-key';
 import { scopeHumanLabel } from '@/core/scope';
 import { isSafeSelector } from '@/core/validate';
 import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId, type TabIcon } from '@/core/types';
@@ -1234,10 +1235,10 @@ async function resetTitleIcon() {
   saving.value = true;
   try {
     const storage = createPageMaskStorage(browser.storage.local);
-    const origin = new URL(props.url).origin;
+    const site = siteKey(props.url)!;
     let saved;
     try {
-      saved = await storage.updateProfile(origin, (p) => {
+      saved = await storage.updateProfile(site, (p) => {
         Object.assign(p, titleIconResetPatch());
       });
     } catch (e) {
@@ -1286,10 +1287,10 @@ async function resetHiddenItems() {
       return;
     }
     const storage = createPageMaskStorage(browser.storage.local);
-    const origin = new URL(props.url).origin;
+    const site = siteKey(props.url)!;
     let saved;
     try {
-      saved = await storage.updateProfile(origin, (p) => {
+      saved = await storage.updateProfile(site, (p) => {
         Object.assign(p, hiddenItemsResetPatch());
       });
     } catch (e) {
@@ -1335,7 +1336,7 @@ async function persistTitleOnly(ctx: SaveSwitchContext, openNow: boolean) {
       return;
     }
     const storage = createPageMaskStorage(browser.storage.local);
-    const origin = new URL(props.url).origin;
+    const site = siteKey(props.url)!;
     // 清爽态不弹框、也不改开关；原样态按选择——「先保持原样」保持原值，「现在打开」写清爽态。
     // 新站点保存即建站，走 titleOnlyPatch 的默认清爽态（#81）
     const switchState = savedSwitchState(ctx, openNow) ?? ctx.state;
@@ -1349,7 +1350,7 @@ async function persistTitleOnly(ctx: SaveSwitchContext, openNow: boolean) {
     try {
       // 只改标题 / 图标 / 开关：不碰已有的收起规则（新站点本来就没有规则）
       saved = await storage.updateProfile(
-        origin,
+        site,
         (p) => {
           Object.assign(p, patch);
         },
@@ -2039,7 +2040,7 @@ let saveBusy = false;
 /** 读最新的开关状态：向导开着时别处可能已经切换过，不能拿打开那一刻的值判 */
 async function latestSwitchContext(): Promise<SaveSwitchContext> {
   try {
-    const latest = await createPageMaskStorage(browser.storage.local).getProfile(new URL(props.url).origin);
+    const latest = await createPageMaskStorage(browser.storage.local).getProfile(siteKey(props.url)!);
     return { exists: latest !== null, state: latest?.switchState ?? 'disguised' };
   } catch (e) {
     console.warn('[PageMask] 读取开关状态失败，按打开向导时的状态保存', e);
@@ -2141,12 +2142,12 @@ async function persistRules(ctx: SaveSwitchContext, openNow: boolean) {
     }
 
     const storage = createPageMaskStorage(browser.storage.local);
-    const origin = new URL(props.url).origin;
+    const site = siteKey(props.url)!;
     let saved;
     try {
       // 原子写入：基于最新存储值改。
       saved = await storage.updateProfile(
-        origin,
+        site,
         (p) => {
           // 有来源的原地更新（保留 id 与体检记录），没有的追加；
           // 本次打开时属于这个页面、但草稿里已经删掉的规则移除——只碰 initialIds 里的，别的页面的一概不动。

@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { REPO_ROOT } from './lib/browser.mjs';
 import { removeTempDir } from './lib/tmp.mjs';
-import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, siteKeyOf, sitePatternsOf, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, grantPermissions, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
 import { waitForShadow } from './lib/shadow.mjs';
 import { loadSurfaces } from './lib/surfaces.mjs';
@@ -780,7 +780,7 @@ async function main() {
       !(await m.$('nav[aria-label="管理页视图"]')) && !(await m.$(tid('pm-mgmt-tab-settings'))),
       '网站列表页没有页内 tab 切换（插件设置是独立页面，#55）',
     );
-    const rowText = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
+    const rowText = await m.$eval(`li[data-origin="${siteKeyOf(ORIGIN)}"]`, (e) => e.innerText);
     check(rowText.includes('原样') && rowText.includes('2 项收起设置'), `一行一站：${rowText.split('\n').join(' / ')}`);
     check((await m.$eval(tid('pm-mgmt-site-link'), (a) => a.getAttribute('href'))) === SITE_HASH, `行链接指向 ${SITE_HASH}`);
     // #113：行尾「⋯」收删除菜单；链接与按钮是兄弟不嵌套；读屏名带域名
@@ -1030,7 +1030,7 @@ async function main() {
     await m.evaluate(() => history.back());
     await poll(async () => (await hash()) === '#/sites', '浏览器后退回到 #/sites');
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
-    check((await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText)).includes('按设置'), '列表反映刚切换的状态');
+    check((await m.$eval(`li[data-origin="${siteKeyOf(ORIGIN)}"]`, (e) => e.innerText)).includes('按设置'), '列表反映刚切换的状态');
 
     // 直接打开带 hash 的地址（含站点设置页）
     await m.goto(`${extOrigin}/management.html${SITE_HASH}`, { waitUntil: 'load' });
@@ -1079,7 +1079,7 @@ async function main() {
       location.hash = '#/sites';
     });
     await m.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
-    const zeroRow = await m.$eval(`li[data-origin="${ORIGIN}"]`, (e) => e.innerText);
+    const zeroRow = await m.$eval(`li[data-origin="${siteKeyOf(ORIGIN)}"]`, (e) => e.innerText);
     check(
       zeroRow.includes('还没有收起设置') && !zeroRow.includes('0 项'),
       `列表行也不写「0 项」（${zeroRow.split('\n').join(' / ')}）`,
@@ -1122,7 +1122,7 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-reset-dialog'), { timeout: 3000 });
     await m.click(tid('pm-mgmt-reset-confirm'));
     await poll(async () => (await getProfile(ext.control, ORIGIN)) === null, '确认后配置删除');
-    await poll(async () => !(await m.$(`li[data-origin="${ORIGIN}"]`)), '列表行消失');
+    await poll(async () => !(await m.$(`li[data-origin="${siteKeyOf(ORIGIN)}"]`)), '列表行消失');
     check((await hash()) === '#/sites', '删除后仍留在列表');
     check(
       (await ext.control.evaluate(async (o) => chrome.permissions.contains({ origins: [`${o}/*`] }), ORIGIN)) === false,
@@ -1307,7 +1307,7 @@ async function main() {
         danger: shape(el.querySelector('[data-testid="pm-mgmt-row-stale"]')),
         warning: shape(el.querySelector('.pm-mark-warning')),
       };
-    }, `li[data-origin="${ORIGIN}"]`);
+    }, `li[data-origin="${siteKeyOf(ORIGIN)}"]`);
     check(
       marks.danger.classes.includes('pm-mark') && marks.warning.classes.includes('pm-mark') &&
         marks.danger.first === 'pm-mark-dot' && marks.warning.first === 'pm-mark-dot' &&
@@ -1339,7 +1339,7 @@ async function main() {
     await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
     const authReq = await m.evaluate(() => window.__pmRequests);
     check(
-      authReq.length === 1 && authReq[0].origins.includes(`${ORIGIN}/*`),
+      authReq.length === 1 && sitePatternsOf(ORIGIN).every((p) => authReq[0].origins.includes(p)),
       `「授权并启用」为这个站点发起了权限请求（${JSON.stringify(authReq[0]?.origins)}）`,
     );
     await m.evaluate(() => {

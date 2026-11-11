@@ -34,7 +34,7 @@
  *
  * 不写截图、不留临时文件。
  */
-import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, siteKeyOf, startServer, waitFor } from './lib/harness.mjs';
 import {
   getProfile,
   launchExtension,
@@ -1457,8 +1457,8 @@ async function main() {
     // 列表里能看到它
     const mgmt = await ext.browser.newPage();
     await mgmt.goto(`${ext.extOrigin}/management.html#/sites`, { waitUntil: 'load' });
-    await mgmt.waitForSelector(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, { timeout: 8000 });
-    const onlyRow = await mgmt.$eval(`li[data-origin="${TITLE_ONLY_ORIGIN}"]`, (e) => e.innerText);
+    await mgmt.waitForSelector(`li[data-origin="${siteKeyOf(TITLE_ONLY_ORIGIN)}"]`, { timeout: 8000 });
+    const onlyRow = await mgmt.$eval(`li[data-origin="${siteKeyOf(TITLE_ONLY_ORIGIN)}"]`, (e) => e.innerText);
     check(
       onlyRow.includes('按设置') && onlyRow.includes('还没有收起设置'),
       `列表里能看到这个只改标题的网站（${onlyRow.split('\n').join(' / ')}）`,

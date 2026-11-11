@@ -18,7 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { poll, resultsDir, startServer, waitFor } from './lib/harness.mjs';
+import { poll, resultsDir, siteKeyOf, startServer, waitFor } from './lib/harness.mjs';
 import { evalInContentWorld, launchExtension, openPopup, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
@@ -309,7 +309,7 @@ try {
   });
   for (const s of DEMO_SITES) {
     await control.evaluate(
-      async (o, t, n, stale) => {
+      async (k, t, n, stale) => {
         const stamp = Date.now();
         const names = ['页头导航', '推荐卡片', '横幅', '页脚', '侧栏'];
         const rules = Array.from({ length: n }, (_, i) => ({
@@ -323,9 +323,9 @@ try {
           lastHealth: i < stale ? 'stale' : 'ok',
         }));
         await chrome.storage.local.set({
-          [`profile:${o}`]: {
+          [`profile:${k}`]: {
             formatVersion: 1,
-            origin: o,
+            origin: k,
             switchState: 'disguised',
             disguisedTitle: t,
             icon: { kind: 'none' },
@@ -336,7 +336,7 @@ try {
           },
         });
       },
-      s.origin,
+      siteKeyOf(s.origin),
       s.title,
       s.rules,
       s.stale,

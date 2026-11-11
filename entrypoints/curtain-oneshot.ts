@@ -84,6 +84,7 @@ async function run(): Promise<void> {
     { fromExtensionPage },
     { TRANSPARENT_PNG },
     { registerCurtainController },
+    { siteKey },
   ] = await Promise.all([
     import('wxt/browser'),
     import('@/ui/curtain'),
@@ -96,6 +97,7 @@ async function run(): Promise<void> {
     import('@/core/messages'),
     import('@/core/icon'),
     import('@/ui/curtain-controller'),
+    import('@/core/site-key'),
   ]);
 
   const w = window as unknown as OneshotWindow;
@@ -108,7 +110,7 @@ async function run(): Promise<void> {
     return;
   }
 
-  const origin = location.origin;
+  const site = siteKey(location.href)!;
   const extensionBase = browser.runtime.getURL('/');
   const layer = new CurtainLayer({ createHost: () => createPageHost(null, 'curtain') });
   const guard = new TitleFaviconGuard(document);
@@ -145,7 +147,7 @@ async function run(): Promise<void> {
       void styles.syncShield(true);
       // 待授权站点已经有配置（只是权限被收回）：遮住时用它自己设置的标题，而不是全局默认（#50）
       const [profile, settings] = await Promise.all([
-        storage.getProfile(origin).catch(() => null),
+        storage.getProfile(site).catch(() => null),
         storage.getSettings().catch(() => null),
       ]);
       // 遮住时固定空白图标（#121）：不能按站点配置取图标，否则选「网站原来的图标」

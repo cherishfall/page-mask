@@ -26,14 +26,14 @@ const bundleOf = (profiles: unknown[], extra: Record<string, unknown> = {}) => (
 });
 
 describe('previewReplace', () => {
-  const local = [profile('https://a.com', 2), profile('https://b.com', 3), profile('https://c.com', 1)];
+  const local = [profile('a.com', 2), profile('b.com', 3), profile('c.com', 1)];
 
   it('列出会被彻底移除的站点与规则数，以及文件里的站点与规则数', () => {
-    const impact = previewReplace(local, bundleOf([profile('https://b.com', 1), profile('https://d.com', 4)]));
+    const impact = previewReplace(local, bundleOf([profile('b.com', 1), profile('d.com', 4)]));
     expect(impact).toEqual({
       localSites: 3,
       localRules: 6,
-      removedOrigins: ['https://a.com', 'https://c.com'],
+      removedOrigins: ['a.com', 'c.com'],
       removedRules: 3,
       incomingSites: 2,
       incomingRules: 5,
@@ -42,20 +42,20 @@ describe('previewReplace', () => {
   });
 
   it('文件带全局设置时提示默认标题也会被替换', () => {
-    const impact = previewReplace(local, bundleOf([profile('https://a.com', 1)], { settings: { defaultTitle: 'x' } }));
+    const impact = previewReplace(local, bundleOf([profile('a.com', 1)], { settings: { defaultTitle: 'x' } }));
     expect(impact?.replacesSettings).toBe(true);
   });
 
   it('跳过无效站点；文件无效或没有有效站点时返回 null', () => {
-    expect(previewReplace(local, bundleOf([{ origin: 'nope' }, profile('https://a.com', 1)]))?.incomingSites).toBe(1);
+    expect(previewReplace(local, bundleOf([{ origin: 'nope' }, profile('a.com', 1)]))?.incomingSites).toBe(1);
     expect(previewReplace(local, bundleOf([{ origin: 'nope' }]))).toBeNull();
     expect(previewReplace(local, { app: 'other', formatVersion: 1, profiles: [] })).toBeNull();
-    expect(previewReplace(local, bundleOf([profile('https://a.com', 1)], { formatVersion: 2 }))).toBeNull();
+    expect(previewReplace(local, bundleOf([profile('a.com', 1)], { formatVersion: 2 }))).toBeNull();
     expect(previewReplace(local, null)).toBeNull();
   });
 
   it('本机没有站点时影响为 0', () => {
-    expect(previewReplace([], bundleOf([profile('https://a.com', 1)]))).toMatchObject({
+    expect(previewReplace([], bundleOf([profile('a.com', 1)]))).toMatchObject({
       localSites: 0,
       localRules: 0,
       removedOrigins: [],

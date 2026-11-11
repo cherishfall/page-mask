@@ -21,7 +21,7 @@
  *
  * 不测：请求是否被拦（「看起来变灰 ≠ 不加载」）、iframe 内嵌播放器。
  */
-import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
+import { createReporter, poll, siteKeyOf, sitePatternsOf, startServer, waitFor } from './lib/harness.mjs';
 import {
   getProfile,
   grantPermissions,
@@ -501,12 +501,12 @@ async function main() {
     await waitFor(page, '配置删除后胶囊卸掉', (h) => !document.querySelector(h), [TOGGLE], { timeout: 8000 });
     check(true, '删掉设置：胶囊卸掉');
     // 标记清干净后，该站若以「四项全空」形态再出现，胶囊不该挂出来（#67）
-    await control.evaluate(async (o) => {
-      const key = `profile:${o}`;
+    await control.evaluate(async (k) => {
+      const key = `profile:${k}`;
       await chrome.storage.local.set({
         [key]: {
           formatVersion: 1,
-          origin: o,
+          origin: k,
           switchState: 'original',
           disguisedTitle: null,
           icon: { kind: 'none' },
@@ -515,7 +515,7 @@ async function main() {
           updatedAt: Date.now(),
         },
       });
-    }, ORIGIN);
+    }, siteKeyOf(ORIGIN));
     await new Promise((res) => setTimeout(res, 900));
     check(!(await page.$(TOGGLE)), '空配置回来：胶囊不挂（四项全空才不显示，#67/#144）');
 
@@ -543,10 +543,10 @@ async function main() {
     await errPage.goto(`${ORIGIN}/white`, { waitUntil: 'load' }).catch(() => undefined);
     // 错误页站点的授权还在，但注册表里的匹配模式是 127.0.0.1:9，正常页面不会注入——
     // 这里只验证建档与弹窗表现；「下次打开自动生效」由注册表匹配（registrationPlan）保证
-    await ext.control.evaluate(async (o) => {
-      await chrome.permissions.remove({ origins: [`${o}/*`] });
-      await chrome.storage.local.remove(`profile:${o}`);
-    }, errOrigin);
+    await ext.control.evaluate(async (patterns, k) => {
+      await chrome.permissions.remove({ origins: patterns });
+      await chrome.storage.local.remove(`profile:${k}`);
+    }, sitePatternsOf(errOrigin), siteKeyOf(errOrigin));
     await errPopup.close().catch(() => undefined);
     await errPage.close();
   } finally {

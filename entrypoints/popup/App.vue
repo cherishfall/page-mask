@@ -57,10 +57,11 @@ import { createPageMaskStorage } from '@/core/storage';
 import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
 import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site-delete';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
-import { isSupportedPage, normalizeOrigin } from '@/core/origin';
+import { isSupportedPage } from '@/core/origin';
+import { siteKey } from '@/core/site-key';
+import { grantedPatternsOfSite } from '@/core/site-grant';
 // 空设置判据（#158）：三处主开关共用一份，别在这里另算一遍
 import { hasSwitchEffect } from '@/core/site-state';
-import { originPattern } from '@/core/registration';
 import { siteLabelOf } from '@/entrypoints/management/site';
 import type { SiteProfile } from '@/core/types';
 import type {
@@ -102,10 +103,11 @@ const mediaToggles = computed(() => ({
 }));
 
 const supported = computed(() => (tab.value?.url ? isSupportedPage(tab.value.url) : { ok: false, reason: '' }));
-const origin = computed(() => (tab.value?.url ? normalizeOrigin(tab.value.url) : null));
+// 站点身份 = 可注册域名（#162）：weibo.com / s.weibo.com 是同一个网站
+const site = computed(() => (tab.value?.url ? siteKey(tab.value.url) : null));
 // 站点展示名与「全部网站设置」列表、悬浮按钮同一套规则（siteLabelOf：去 www、中文域名转回
 // Unicode、非默认端口带上）——0.8.16 发版审查：弹窗只显 hostname 时，本地端口站点在列表里对不上号
-const host = computed(() => (origin.value ? siteLabelOf(origin.value) : ''));
+const host = computed(() => (site.value ? siteLabelOf(site.value) : ''));
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
 /** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
 const ruleSummary = computed(() => {
@@ -119,7 +121,7 @@ const ruleSummary = computed(() => {
  */
 const phase = computed<'loading' | 'unsupported' | 'new' | 'pending' | 'ready'>(() => {
   if (!tabLoaded.value) return 'loading';
-  if (!supported.value.ok || !origin.value) return 'unsupported';
+  if (!supported.value.ok || !site.value) return 'unsupported';
   if (granted.value === null) return 'loading';
   if (!profile.value) return 'new';
   return granted.value ? 'ready' : 'pending';
@@ -153,15 +155,17 @@ async function refreshShortcut() {
 }
 
 async function refresh() {
-  const o = origin.value;
+  const o = site.value;
   if (!o || !supported.value.ok) return;
   const storage = createPageMaskStorage(browser.storage.local);
-  const [p, g] = await Promise.all([
+  const [p, ok] = await Promise.all([
     storage.getProfile(o),
-    browser.permissions.contains({ origins: [originPattern(o)] }).catch(() => false),
+    grantedPatternsOfSite(browser, o)
+      .then((list) => list.length > 0)
+      .catch(() => false),
   ]);
   profile.value = p;
-  granted.value = g;
+  granted.value = ok;
   await refreshCurtain();
 }
 
@@ -185,7 +189,7 @@ async function refreshCurtain() {
 }
 
 async function toggleSwitch(input: HTMLInputElement) {
-  if (!profile.value || !origin.value) return;
+  if (!profile.value || !site.value) return;
   // 上一个动作还没回来：忽略这一次拨动并拨回实际状态（不禁用开关，避免出现没有原因的禁用态）
   if (busy.value) {
     input.checked = profile.value.switchState === 'disguised';
@@ -197,7 +201,7 @@ async function toggleSwitch(input: HTMLInputElement) {
   errorCode.value = '';
   try {
     const storage = createPageMaskStorage(browser.storage.local);
-    profile.value = await storage.updateProfile(origin.value, (p) => {
+    profile.value = await storage.updateProfile(site.value, (p) => {
       p.switchState = target;
     });
   } catch {
@@ -235,7 +239,7 @@ async function enableSite(
  * 请求由后台在用户手势的同一个回合里发起（见 core/background-engine.ts）
  */
 function setup() {
-  const o = origin.value;
+  const o = site.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
   errorCode.value = '';
@@ -259,7 +263,7 @@ function setup() {
 
 /** 有配置、没授权：重新请求本站授权，拿到后让后台对账并注入当前页 */
 function reauthorize() {
-  const o = origin.value;
+  const o = site.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
   errorCode.value = '';
@@ -284,7 +288,7 @@ function reauthorize() {
  * 已配置的站点内容脚本可能还没在（页面刚打开、扩展刚更新）：发送失败时先让后台对账注入，再发一次
  */
 async function editTitle() {
-  const o = origin.value;
+  const o = site.value;
   const tabId = tab.value?.id;
   if (!o || tabId === undefined || busy.value) return;
   errorCode.value = '';
@@ -369,7 +373,7 @@ async function coverCurtain(tabId: number): Promise<boolean> {
   if (first?.covered) return true;
   // 有应答但拒遮（比如向导开着）：到此为止——重新注入会让旧实例收尾、把用户正开着的向导关掉
   if (first) return false;
-  const o = origin.value;
+  const o = site.value;
   if (profile.value && granted.value && o) {
     if ((await enableSite(tabId, o))?.ok && (await sendCurtain(tabId, { t: 'curtainCover' }))?.covered) return true;
   }
@@ -385,14 +389,14 @@ async function coverCurtain(tabId: number): Promise<boolean> {
  * 的残留，找回来时没有保留价值。一次 updateProfile 写完，touch:false（本机界面状态）。
  */
 async function toggleCapsule(input: HTMLInputElement) {
-  if (!profile.value || !origin.value) {
+  if (!profile.value || !site.value) {
     input.checked = true;
     return;
   }
   const show = input.checked;
   try {
     const updated = await createPageMaskStorage(browser.storage.local).updateProfile(
-      origin.value,
+      site.value,
       (p) => {
         p.capsuleHidden = show ? undefined : true;
         if (show) {
@@ -415,7 +419,7 @@ async function toggleCapsule(input: HTMLInputElement) {
  * 已配置的网站：一次只改拨动的那一个字段，写入失败就把开关拨回实际状态并给一句话。
  */
 async function toggleMedia(key: MediaFlagKey, input: HTMLInputElement) {
-  const o = origin.value;
+  const o = site.value;
   const tabId = tab.value?.id;
   if (!o) {
     input.checked = false;
@@ -490,7 +494,7 @@ async function onDeleteClose() {
   const confirmed = dialog?.returnValue === 'confirm';
   if (dialog) dialog.returnValue = ''; // Esc 等关闭方式不设返回值，重置以免沿用上一次（与管理页确认框同口径）
   if (!confirmed) return;
-  const o = origin.value;
+  const o = site.value;
   if (!o) return;
   busy.value = 'delete';
   deleteBusy.value = true;
