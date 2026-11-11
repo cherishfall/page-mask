@@ -7,8 +7,8 @@
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.19-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.8.19`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.19`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.0-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.9.0`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.0`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [x] 6 张截图与宣传图块已按 §8 重拍（0.8.10：胶囊 0.8.6–0.8.9 形态与状态、弹窗 0.8.10 卡片分组，`store-shots.mjs` 全量重生成）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -180,6 +180,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.9.0 | 2026-11-11 | 网站身份改成可注册域名（#162，ADR-0019）：`weibo.com` / `www.weibo.com` / `s.weibo.com` 是一个网站，一份设置、一次授权、列表一行；旧配置读时懒迁移（收起项取并集），旧精确授权继续有效，子域未覆盖时弹窗提示补授权；权限从单个 origin 变成「裸域 + 子域」两条模式。另含五处交互与文案修正（#157 三处界面对照表 + 自动检查、#158 空设置说明、#159 原样态保存前确认、#160 恢复网站原来的内容、#161 引导文字收口）。详见 `CHANGELOG.md` |
 | 0.8.19 | 2026-11-11 | 「整页变灰」的图标换成对比度符（半填充圆）——功能升级为整页后，原「山 + 太阳」图片符号与语义脱节；灰度 / 对比度的通行符号（M3 contrast、macOS / GNOME 对比度设置同款），关态描边（圆 + 中线）、开态右半填实。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.18 | 2026-11-11 | 整页变灰（#156，用户提案采纳，ADR-0018）：「图片和视频变灰」升级为「整页变灰」，一条 html{filter} 规则像素级覆盖整页（背景图 / canvas / iframe 内容 / SVG / 视频全部），过去三轮返工的覆盖边界一次清零；媒体控制器缩成视频自动播放压制；自家浮层随页面变黑（登记取舍）。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.17 | 2026-11-10 | 发版后深审查收尾（Web Interface Guidelines + 第二轮全量截图目检）：弹窗 ⓘ 信息标补 aria-describedby（读屏可达）、异步说明补 role=status、触屏点击灰闪关掉、删除确认框滚动隔离；两处措辞统一（点击放行视频、不透明度方向感）。功能与权限不变。详见 `CHANGELOG.md` |

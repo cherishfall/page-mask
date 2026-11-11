@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.0] - 2026-11-11
+
+主线是「网站按可注册域名识别」：`weibo.com`、`www.weibo.com`、`s.weibo.com` 从此算一个网站。其余五处是 0.8.19 之后报上来的交互与文案问题：收起内容多了对称的清空出口、原样态保存不再像没生效、空设置时开关旁写明后果、界面上的长说明收掉、三处界面立了唯一对照表并加了自动检查。
+
+### 中文
+
+#### 改动
+
+- **网站身份改成可注册域名（#162）**：`weibo.com`、`www.weibo.com`、`s.weibo.com` 现在是同一个网站——一份设置、一次授权、列表一行；`weibo.com` 与 `weibo.cn` 仍是两个。升级后第一次读到旧配置时自动合并：收起项取并集，冲突的取最近改过的那份，旧数据不丢。规则仍按每个页面的实际网址生效，「只在 weibo.com 首页收起」不会套到子域页面
+- **收起内容多了「恢复网站原来的内容」（#160）**：站点设置页「收起的内容」卡底部与向导的选内容步骤底部各一个入口，与「恢复网站原来的标题和图标」对称。只清收起项，标题、图标、开关、整页变灰一概不动；清之前先确认一次，并写明几项会没了
+- **原样态下点保存先问一句（#159）**：之前会静默保存、页面毫无变化，看着像没生效。现在弹一个框问「现在打开吗」——两条路都完成保存，不替你自动打开
+- **没有可生效的设置时，开关旁写明「打开后页面不变」（#158）**：弹窗、悬浮按钮、站点设置页三处同一句话、同一个判断；开关照常可拨，不再让人以为坏了
+- **界面上的长说明收掉（#161）**：只在前几次有用的引导文字收进 ⓘ 或折叠起来；状态、后果、边界这类「不知道就会做错」的话仍留在界面上，但压成一句
+- **三处界面对齐并加了自动检查（#157）**：弹窗、悬浮按钮菜单、站点设置页的排列顺序、叫法与控件来源统一，对照表是唯一权威——改一处漏两处会在提交前报出来；站点设置页的「整页变灰」卡归位，旧名「图片和视频」彻底退场
+
+#### 取舍（如实说明）
+
+- 同一注册域名下的不同子域共用一份设置与一次授权。这是「用户认为它们是一个网站」的直接后果：本来想分开配的两个子域会被合并
+- 只允许过 `weibo.com` 的老用户，打开 `s.weibo.com` 时弹窗会说「这个页面还没允许访问」，点一次「允许访问」补上——升级不会自动替你扩权
+- 迁移时新增的授权是「裸域 + 子域」两条模式；带非默认端口的站点用 http、https 两条精确模式（浏览器的匹配模式不支持 `*://主机:端口/*`）。IP 地址、`localhost` 与带端口的地址保持原样，不合并子域
+- 公共后缀表只内置常见子集（`com.cn` / `co.uk` / `github.io` 等）：表外的后缀会把同后缀的两个独立站点当成一个（共用设置与授权），不会丢数据
+
+### English
+
+#### Changed
+
+- **A site is now its registrable domain (#162)**: `weibo.com`, `www.weibo.com` and `s.weibo.com` are one site — one set of settings, one permission grant, one row in the list; `weibo.com` and `weibo.cn` remain two. Existing settings are merged the first time they are read after upgrading: hidden items are unioned and the more recently edited copy wins for shared fields, so nothing is lost. Rules still apply per page URL — “hide only on the weibo.com home page” does not leak onto subdomains
+- **“Use the site’s own content” for hidden items (#160)**: one entry at the bottom of the “Hidden items” card and one at the bottom of the wizard’s pick step, mirroring “Use the site’s own title and icon”. It clears hidden items only — title, icon, switch state and grayscale stay; a confirmation first says how many items will go
+- **Saving while the site shows “As is” now asks once (#159)**: previously it saved silently with nothing changing on the page, which looked broken. A dialog now asks whether to turn “Show this site your way” on; both answers save, and it never turns it on for you
+- **When nothing applies, the switch says “Nothing changes on the page” (#158)**: same sentence and same test in the popup, the floating button and the site settings page; the switch still works, so it no longer looks broken
+- **Long explanations trimmed (#161)**: guidance that only matters the first few times now lives behind an ⓘ or a disclosure; state, consequences and limits — the things you get wrong if you don’t know them — stay on screen, one short sentence each
+- **The three surfaces are aligned and checked automatically (#157)**: order, wording and control source for the popup, the floating menu and the site settings page now have a single authoritative table, and changing one but not the others fails before commit; the “Grayscale whole page” card moved back into place and the old name is gone
+
+#### Trade-offs (stated plainly)
+
+- Subdomains of one registrable domain share one set of settings and one grant. That is the direct consequence of treating them as one site: two subdomains you wanted to configure separately will be merged
+- If you only ever allowed `weibo.com`, opening `s.weibo.com` shows “This page isn’t allowed yet” with one “Allow access” button — upgrading does not widen permissions for you
+- A site is granted with two patterns (bare domain plus subdomains); sites on a non-default port use explicit http and https patterns, because match patterns do not support `*://host:port/*`. IP addresses, `localhost` and addresses with a port stay exact and do not merge subdomains
+- The public suffix list is a built-in subset (`com.cn`, `co.uk`, `github.io` and other common ones): an unknown suffix makes two independent sites on that suffix share settings and a grant. No data is lost
+
 ## [0.8.19] - 2026-11-11
 
 「整页变灰」的图标与语义对齐：原来是「山 + 太阳」的图片符号，功能升级为整页后换成了灰度 / 对比度的通行符号。功能与权限不变。
