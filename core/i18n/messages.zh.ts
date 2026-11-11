@@ -7,7 +7,7 @@
  * - 键按界面分组（common / popup / management / settings / onboarding / wizard / editor / toggle /
  *   notice / curtain / errors）。`common` 放跨界面共用的几个词（保存 / 取消 / 关闭…），
  *   避免同一个词在四个界面各写一份、改一处漏三处
- * - 界面用词以 GLOSSARY.md 为准：「收起项」「按设置 / 原样」「遮住」…
+ * - 界面用词以 GLOSSARY.md 为准：「收起设置」「按设置 / 原样」「遮住」…
  * - 本文件是键集合的**基准**：`Messages = typeof zh`，messages.en.ts 必须一一对应
  *   （单测 core/i18n.test.ts 会递归比较两边的键）
  *
@@ -15,7 +15,7 @@
  * - 说具体的动作与对象，不造抽象名词。每句话只回答「这是什么」「点下去会发生什么」
  * - 同一件事全项目只许一种叫法：两态固定写「按设置」「原样」（开关标签用全称「按你的设置显示」），范围固定写
  *   「整个网站 / 只在这类页面 / 除了这类页面」，不出现「整站」「仅」「除外」这类缩写
- * - 不出现「授权」「生效」「规则」「处理」这类行话：「允许访问」「起作用」「收起项」「改」
+ * - 不出现「授权」「生效」「规则」「处理」这类行话：「允许访问」「起作用」「收起设置」「改」
  * - 宁可长一点、朴素一点，也不要短得让人猜
  */
 /**
@@ -23,6 +23,12 @@
  * 收成一份出处；对象字面量里不能自引用，所以在对象外声明，三处用模板串插进去。
  */
 const titleBlankHint = '空白时 Chrome 会改成显示网址，所以这里不会真的留空。';
+
+/**
+ * 「没能保存」这句原来逐字重复在四个键里（media / notice / management.error.rules / common，
+ * #172）：en 侧还出现过直撇号与句尾句号两种微差。四键共用一份 const，一处改处处改。
+ */
+const saveFailed = '没能保存这次改动，请稍后再试一次';
 
 export const zh = {
   /** 跨界面共用的小词与通用标签 */
@@ -35,6 +41,7 @@ export const zh = {
     gotIt: '知道了',
     loading: '正在读取…',
     opening: '正在打开…',
+    saveFailed,
     /** 回退出口（#99）：两处同名同物，动作说清结果、不叫「重置」 */
     resetTitleIcon: '恢复网站原来的标题和图标',
     /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
@@ -139,7 +146,7 @@ export const zh = {
     hintNew: '打开时浏览器会先让你允许访问这个网站。',
     /** 胶囊「媒体」钮的悬停说明（读屏与悬停共用） */
     mediaTitle: '整页变灰',
-    saveFailed: '没能保存这次改动，请稍后再试一次',
+    saveFailed,
   },
 
   /** 插件弹窗（entrypoints/popup） */
@@ -263,14 +270,14 @@ export const zh = {
       action: '删除设置',
       title: (label: string) => `删除 ${label} 的设置？`,
       impact:
-        '标签页标题、图标、收起的内容都会删掉，浏览器给 PageMask 的访问权限也会收回，它会从列表里消失。',
+        '标签页标题、图标、收起的内容都会删掉，浏览器给 PageMask 的访问权限也会收回，这个网站会从列表里消失。',
     },
 
     /** 写入失败 / 允许被拒 */
     error: {
       auth: '没有拿到访问权限，网站设置还留着；需要时再点一次并选「允许」',
       toggle: '没能在「按设置」和「原样」之间切换，请稍后再试一次',
-      rules: '没能保存这次改动，请稍后再试一次',
+      rules: saveFailed,
       icon: '没能保存图标，请稍后再试一次',
     },
 
@@ -331,7 +338,7 @@ export const zh = {
 
     /** 界面语言（#57）：三选一，语言名各用本语言书写 */
     languageHeading: '界面语言',
-    languageIntro: '切换后立即生效；标签页的默认标题仍跟随浏览器语言。',
+    languageIntro: '切换后马上就换成新语言；标签页的默认标题仍跟随浏览器语言。',
     languageAuto: (current: string) => `自动（现在：${current}）`,
     languageZh: '简体中文',
     languageEn: 'English',
@@ -434,7 +441,7 @@ export const zh = {
     /** 失效那一行为什么可能没用了 */
     staleWhy: (name: string, scope: string) => `「${name}」最近找不到目标了，可能网站改版了。在哪些页面收起：${scope}`,
     /** 看效果一条都没有时（只剩失效项被删光） */
-    draftsEmpty: '这个页面上没有用得上的收起项。可以回到上一步再选一些内容。',
+    draftsEmpty: '这个页面上没有用得上的收起设置。可以回到上一步再选一些内容。',
     nameLabel: (seq: number) => `第 ${seq} 项的名称，留空就自动起名`,
     methodLegend: '收起方式',
     /** 一行勾选框回答一个是非题：页面上一样的要不要一起收（n 是「另外几个」，不含这一项本身）。
@@ -478,7 +485,7 @@ export const zh = {
     rulesResetNotice: '已恢复网站原来的内容',
     /** 运行中的提示条 */
     warnTooBig: '选到接近整页的内容了，可能不是你要的。试试「选小一点」',
-    warnUnstable: '切回去以后没法稳定找到这个元素，已经保留原来的设置',
+    warnUnstable: '这一组没法稳定找到，已经保持原来的勾选',
     warnUnsavable: (index: number) =>
       `第 ${index} 个元素很难稳定找到：点它右边的 ✕ 取消选中这一项，再用「选大一点」重新选`,
     warnPreviewFailed: '效果没有显示出来，再试一次',
@@ -520,7 +527,7 @@ export const zh = {
 
   /** 页内轻提示（ui/page-notice） */
   notice: {
-    saveFailed: '没能保存这次改动，请稍后再试一次',
+    saveFailed,
     settingsFailed: '没能打开插件设置，请稍后再试一次',
   },
 

@@ -19,6 +19,12 @@ import type { Messages } from './messages.zh';
  */
 const titleBlankHint = 'It never stays truly empty — Chrome would show the address instead.';
 
+/**
+ * "Couldn't save" was copy-pasted into four keys (media / notice / management.error.rules / common,
+ * #172) with small drift: a straight apostrophe here, a final period there. One shared const.
+ */
+const saveFailed = 'Couldn’t save this change. Please try again';
+
 export const en: Messages = {
   common: {
     save: 'Save',
@@ -29,6 +35,7 @@ export const en: Messages = {
     gotIt: 'Got it',
     loading: 'Loading…',
     opening: 'Opening…',
+    saveFailed,
     resetTitleIcon: 'Use the site’s own title and icon',
     shortcutBlocked: 'This page can’t be covered',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
@@ -64,7 +71,7 @@ export const en: Messages = {
     strategyHint: {
       remove: 'Gone, and the content below moves up',
       blank: 'Invisible, but the space stays',
-      mask: 'A block in the page colour sits on top',
+      mask: 'A block in the page color sits on top',
     },
     scope: {
       all: 'The whole site',
@@ -114,7 +121,7 @@ export const en: Messages = {
     hintNew: 'Turning it on first asks you to allow access to this site.',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn the whole page gray',
-    saveFailed: "Couldn't save this change. Please try again.",
+    saveFailed,
   },
 
   popup: {
@@ -208,7 +215,7 @@ export const en: Messages = {
 
     iconHeading: 'Tab icon',
     iconIntro: 'The tab uses this icon only when the switch above is on.',
-    iconSite: "The site's own icon",
+    iconSite: 'The site’s own icon',
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
     iconPickLabel: 'Pick an icon',
@@ -237,13 +244,13 @@ export const en: Messages = {
       action: 'Delete settings',
       title: (label: string) => `Delete the settings for ${label}?`,
       impact:
-        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and it will disappear from the list.',
+        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and the site will disappear from the list.',
     },
 
     error: {
       auth: 'Access wasn’t granted and your site settings are kept. Click again when needed and choose “Allow”',
       toggle: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
-      rules: 'Couldn’t save this change. Please try again',
+      rules: saveFailed,
       icon: 'Couldn’t save the icon. Please try again',
     },
 
@@ -276,7 +283,7 @@ export const en: Messages = {
     toggleHeading: 'Floating button',
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
-    toggleOpacityError: "Couldn't save the opacity, please try again.",
+    toggleOpacityError: 'Couldn’t save the opacity, please try again.',
     toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
     shortcutHeading: 'Keyboard shortcut',
@@ -445,7 +452,7 @@ export const en: Messages = {
     /** Page notice after restoring hidden items (#160): the wizard is closed, so one short line says what just happened */
     rulesResetNotice: 'Back to the site’s own content',
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',
-    warnUnstable: 'This element can’t be found reliably once switched back, so the previous setting was kept',
+    warnUnstable: 'This group can’t be found reliably, so the previous selection was kept',
     warnUnsavable: (index: number) =>
       `Item ${index} can’t be found reliably. Click the ✕ next to it to deselect it, then use “Bigger” to pick again`,
     warnPreviewFailed: 'The effect didn’t show up. Try again',
@@ -480,7 +487,7 @@ export const en: Messages = {
   },
 
   notice: {
-    saveFailed: 'Couldn’t save this change. Please try again',
+    saveFailed,
     settingsFailed: 'Couldn’t open the extension settings. Please try again',
   },
 
