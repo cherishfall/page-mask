@@ -55,3 +55,90 @@ export async function isSiteGranted(
 ): Promise<boolean> {
   return (await grantedPatternsOfSite(browser, key, all)).length > 0;
 }
+
+interface ParsedPattern {
+  /** '*'(http / https 都算) 或具体协议（不含冒号） */
+  scheme: string;
+  host: string;
+  port: string;
+  path: RegExp;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** match pattern 的路径是按 `*` 通配的 glob（Chrome 只在路径段支持 `*`） */
+function pathRegExp(glob: string): RegExp {
+  let out = '^';
+  for (const ch of glob) out += ch === '*' ? '.*' : escapeRegExp(ch);
+  return new RegExp(`${out}$`);
+}
+
+/** 拆 host[:port]，兼容 IPv6 字面量的方括号（[::1]:8080） */
+function splitHostPort(host: string): { host: string; port: string } {
+  if (host.startsWith('[')) {
+    const end = host.indexOf(']');
+    if (end < 0) return { host, port: '' };
+    const rest = host.slice(end + 1);
+    return { host: host.slice(0, end + 1), port: rest.startsWith(':') ? rest.slice(1) : '' };
+  }
+  const at = host.lastIndexOf(':');
+  return at < 0 ? { host, port: '' } : { host: host.slice(0, at), port: host.slice(at + 1) };
+}
+
+/**
+ * 解析本项目会用到的 match pattern：`<*|http|https>://<host><path>`。
+ * 只认 http / https / `*` 方案；`<all_urls>`、file / ftp 等返回 null（不参与页面覆盖判断）。
+ */
+function parsePattern(pattern: string): ParsedPattern | null {
+  const m = /^(\*|https?):\/\/([^/]*)(\/.*)?$/i.exec(pattern.trim());
+  if (!m) return null;
+  const { host, port } = splitHostPort(m[2]!.toLowerCase());
+  if (!host) return null;
+  return { scheme: m[1]!.toLowerCase(), host, port, path: pathRegExp(m[3] ?? '/*') };
+}
+
+/**
+ * 这个页面的 URL 是否被这批匹配模式覆盖（#162 第二阶段）。
+ *
+ * 站点已授权 ≠ 当前页面已覆盖：用户在 weibo.com 允许过访问、随后打开 s.weibo.com，
+ * 站点级判断说「已授权」，但内容脚本只注册在授权的那几条模式上，s.weibo.com 上什么都没跑。
+ * 弹窗据此决定显示「就绪」还是「这个页面还没允许访问」。
+ *
+ * 边界（与 Chrome 的 match pattern 同口径）：
+ * - `*` 方案覆盖 http 与 https，具体方案只覆盖自己；
+ * - `*.weibo.com` 覆盖子域、**不覆盖裸域 weibo.com**（两条都申请，不依赖这条边界，见 sitePatterns）；
+ * - 模式没写端口只匹配默认端口；写了端口只匹配该端口（带端口的站点用 http / https 两条）；
+ *   主机写成 `*` 时按「任意主机、任意端口」处理（全站通配授权）；
+ * - 路径按 `*` 通配做前缀匹配，匹配 pathname + 查询串（项目目前只用 `/*`，但不假设）。
+ *
+ * 无法解析的 URL、非 http(s) 页面、空模式列表一律 false。
+ */
+export function isOriginCovered(url: string, patterns: readonly string[]): boolean {
+  let page: URL;
+  try {
+    page = new URL(url);
+  } catch {
+    return false;
+  }
+  const protocol = page.protocol.toLowerCase();
+  if (protocol !== 'http:' && protocol !== 'https:') return false;
+  const pageHost = page.hostname.replace(/\.+$/, '').toLowerCase();
+  if (!pageHost) return false;
+  const pagePort = page.port; // URL 已去掉默认端口（80 / 443）
+  const pagePath = page.pathname + page.search;
+
+  for (const raw of patterns) {
+    const p = parsePattern(raw);
+    if (!p) continue;
+    if (p.scheme !== '*' && `${p.scheme}:` !== protocol) continue;
+    // 主机写成 `*` 是「任意主机」，端口也不限；具体主机则按端口严格比较
+    const anyHost = p.host === '*';
+    if (!anyHost && p.port !== pagePort) continue;
+    const hostOk = anyHost || (p.host.startsWith('*.') ? pageHost.endsWith(`.${p.host.slice(2)}`) : pageHost === p.host);
+    if (!hostOk) continue;
+    if (p.path.test(pagePath)) return true;
+  }
+  return false;
+}

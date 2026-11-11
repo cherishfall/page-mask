@@ -48,9 +48,12 @@
 
       <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
 
-      <!-- 待授权：有配置、没授权，配置还在，只是浏览器收回了访问权限 -->
+      <!-- 待授权：有配置、没授权，配置还在，只是浏览器收回了访问权限；
+           站点已授权但当前页面没被覆盖（#162）也走这一档，只把提示换成更具体的一句 -->
       <template v-if="phase === 'pending'">
-        <p class="hint" data-testid="pm-popup-pending">{{ t.popup.pendingHint }}</p>
+        <p class="hint" data-testid="pm-popup-pending">
+          {{ pageUncovered ? t.popup.pageNotAllowed : t.popup.pendingHint }}
+        </p>
         <!-- 处理中的按钮不禁用：点第二下由处理函数忽略，按钮文字自己写「正在等你允许…」 -->
         <button class="primary" data-testid="pm-popup-reauth" @click="emit('reauthorize')">
           {{ busy === 'reauth' ? t.popup.reauthorizing : t.popup.reauthorize }}
@@ -247,6 +250,11 @@ const props = defineProps<{
   busy: string;
   /** 当前标签页是否遮着 */
   covered: boolean;
+  /**
+   * 站点已授权、但当前页面不在授权模式的覆盖范围内（#162，例如只允许过 weibo.com、
+   * 当前停在 s.weibo.com）。为 true 时 pending 档的提示换成「这个页面还没允许访问」。
+   */
+  pageUncovered?: boolean;
   /** 弹窗上显示的快捷键（当前平台、已格式化；空串 = 没绑定，不显示） */
   coverShortcut: string;
   /** 右下角的小按钮在这个网站是否显示（#112：capsuleHidden 的反面）；只在 ready 出现 */

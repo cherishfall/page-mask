@@ -131,6 +131,8 @@ export const en: Messages = {
     /** One short line for an unset site; the blue primary button in the card is the first step (#148) */
     newSiteHint: 'This site isn’t set up yet.',
     pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
+    /** The site was allowed, but this page isn’t covered (#162: allowed weibo.com, now on s.weibo.com) */
+    pageNotAllowed: 'This page isn’t allowed yet',
     reauthorize: 'Allow access',
     reauthorizing: 'Waiting for you to allow…',
     setupMore: 'Hide items',

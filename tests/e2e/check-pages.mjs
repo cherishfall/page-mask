@@ -10,6 +10,10 @@
  * - popup 只留三件事（#54）：主按钮 + 编辑当前网站 + 遮住开关（遮住后写「恢复这一页」），
  *   底部一行「你添加的网站」「插件设置」各自落地；三种站点状态（未添加 / 已添加 / 待授权）都能遮住与恢复；
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
+ * - 站点已授权但当前页面没被覆盖（#162）：只授 https 模式、打开 http 页面时，弹窗走 pending 档、
+ *   提示「这个页面还没允许访问」+「允许访问」，不显示「就绪」；一条授权都没有时仍是原来的待授权提示
+ * - 存储懒迁移（#162）：旧 profile:<协议+主机> 键在管理页读取时合并成 profile:<站点 key>，旧键删除、
+ *   规则并集、站点级字段取较新者、列表只有一行
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
  *   站点设置页（#41 / #56 / #116 / #157）：五块标题与顺序从对照表取（标签页标题、标签页图标、
@@ -1355,6 +1359,75 @@ async function main() {
     await checkSchemes(m, '管理页 · 空状态', 'bgSubtle');
     await m.close();
 
+    // ===================== 存储懒迁移（#162：旧 profile:<origin> 键 → 站点 key） =====================
+    console.log('\n--- 存储：旧 profile:<origin> 键懒迁移到站点 key ---');
+    {
+      // 独立端口，避免与本文件里其它站点配置互相干扰
+      const srvLegacy = await startServer(handler);
+      const LEGACY = srvLegacy.origin; // 升级前写进 key 与 origin 字段的旧形态
+      const LEGACY_KEY = siteKeyOf(LEGACY); // 站点 key：保留端口、不含协议
+      const older = now - 60_000;
+      const legacyHttp = profileOf(LEGACY, {
+        hideRules: [rule('old-http', '页头', ['#site-header'])],
+        disguisedTitle: '旧标题',
+        createdAt: older,
+        updatedAt: older,
+      });
+      // 同站点的另一条旧协议键：合并后规则并集、站点级字段取较新者
+      const legacyHttps = profileOf(`https://${LEGACY_KEY}`, {
+        hideRules: [rule('old-https', '侧栏', ['#side'])],
+        disguisedTitle: '新标题',
+        createdAt: older,
+        updatedAt: now,
+      });
+      await ext.control.evaluate(
+        async (a, b, pa, pb) => {
+          await chrome.storage.local.clear();
+          await chrome.storage.local.set({ [a]: pa, [b]: pb });
+        },
+        `profile:${LEGACY}`,
+        `profile:https://${LEGACY_KEY}`,
+        legacyHttp,
+        legacyHttps,
+      );
+      let mm;
+      try {
+        // 管理页读列表时触发懒迁移（listProfiles → ensureMigrated）
+        mm = await browser.newPage();
+        await mm.goto(`${extOrigin}/management.html#/sites`, { waitUntil: 'load' });
+        await mm.waitForSelector(tid('pm-mgmt-site-link'), { timeout: 5000 });
+        const rows = await mm.$$eval(tid('pm-mgmt-site-link'), (els) => els.length);
+        check(rows === 1, `迁移后列表里只有这 1 个站点（实际 ${rows} 行）`);
+
+        const after = await ext.control.evaluate(
+          async (oldHttpKey, oldHttpsKey, newKey) => {
+            const all = await chrome.storage.local.get(null);
+            return {
+              oldHttp: oldHttpKey in all,
+              oldHttps: oldHttpsKey in all,
+              legacyProfile: all[newKey] ?? null,
+            };
+          },
+          `profile:${LEGACY}`,
+          `profile:https://${LEGACY_KEY}`,
+          `profile:${LEGACY_KEY}`,
+        );
+        check(!after.oldHttp && !after.oldHttps, '两条旧 origin 键都已删除');
+        check(after.legacyProfile !== null, `新键是 profile:${LEGACY_KEY}`);
+        const merged = after.legacyProfile;
+        check(merged?.origin === LEGACY_KEY, `合并后的 origin 字段是站点 key（${merged?.origin}）`);
+        check(
+          merged?.hideRules?.length === 2 && new Set(merged.hideRules.map((r) => r.id)).size === 2,
+          `规则取并集（${merged?.hideRules?.map((r) => r.id).join(' + ')}）`,
+        );
+        check(merged?.disguisedTitle === '新标题', `站点级字段取 updatedAt 较新的一方（标题：${merged?.disguisedTitle}）`);
+      } finally {
+        await mm?.close().catch(() => undefined);
+        await ext.control.evaluate(() => chrome.storage.local.clear()).catch(() => undefined);
+        await srvLegacy.close();
+      }
+    }
+
     // ===================== 旧入口清理（#56） =====================
     console.log('\n--- 旧地址 #/add 不再可达，落到网站列表 ---');
     await grantPermissions(ext, [ORIGIN, ORIGIN2]);
@@ -1510,6 +1583,60 @@ async function main() {
     await checkPopupChrome(popup, '待授权的网站');
     await coverAndRestore(ext, popup, site3, '待授权的网站');
     await site3.close();
+
+    // ===================== popup：站点已授权、当前页面未覆盖（#162） =====================
+    // 典型场景：只在 weibo.com 允许过访问，却打开 s.weibo.com——站点能找到配置、站点级也算已授权，
+    // 但内容脚本没在这个页面上。弹窗必须走 pending 档并说明是「这个页面」没允许。
+    // 独立实例：只授 https 模式，当前页面是 http，页面不在覆盖范围内。
+    console.log('\n--- popup：站点已授权但当前页面未覆盖（#162） ---');
+    {
+      const srvUncovered = await startServer(handler);
+      const UNCOVERED = srvUncovered.origin; // http://127.0.0.1:<端口>
+      const UNCOVERED_KEY = siteKeyOf(UNCOVERED);
+      const ext2 = await launchExtension({
+        hostPatterns: [`https://${UNCOVERED_KEY}/*`], // 只授 https，不授 http
+        extraPermissions: ['tabs'],
+      });
+      try {
+        await setProfile(ext2.control, UNCOVERED, profileOf(UNCOVERED));
+        const page2 = await ext2.browser.newPage();
+        await page2.goto(`${UNCOVERED}/index.html`, { waitUntil: 'load' });
+
+        let p2 = await openPopup(ext2, page2);
+        await p2.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
+        const uncoveredHint = await p2.$eval(tid('pm-popup-pending'), (e) => e.textContent.trim());
+        check(uncoveredHint === '这个页面还没允许访问', `未覆盖页面的提示是新的那一句（${uncoveredHint}）`);
+        const uncoveredBadge = await p2.$eval(tid('pm-popup-pending-badge'), (e) => e.textContent.trim());
+        check(uncoveredBadge === '需要允许访问', `徽标仍复用「需要允许访问」（${uncoveredBadge}）`);
+        check(
+          !!(await p2.$(tid('pm-popup-reauth'))) &&
+            (await p2.$eval(tid('pm-popup-reauth'), (e) => e.textContent.trim())) === '允许访问',
+          '未覆盖页面给出「允许访问」按钮',
+        );
+        // 不是「就绪」：没有主开关，也没有 new / ready 才有的功能卡
+        check(
+          !(await p2.$(tid('pm-popup-switch'))) && !(await p2.$(tid('pm-popup-disguise'))) && !(await p2.$(tid('pm-popup-media'))),
+          '未覆盖页面不显示「就绪」态的主开关与功能卡',
+        );
+        await checkPopupChrome(p2, '未覆盖的页面');
+        await p2.close();
+
+        // 回归：站点一条授权都没有时仍是原来的「浏览器收回了…」提示（两种情形要能区分）
+        await removePermission(ext2.control, UNCOVERED); // 按站点收 http + https 两条
+        p2 = await openPopup(ext2, page2);
+        await p2.waitForSelector(tid('pm-popup-pending-badge'), { timeout: 5000 });
+        const revokedHint = await p2.$eval(tid('pm-popup-pending'), (e) => e.textContent.trim());
+        check(
+          revokedHint.startsWith('浏览器收回了这个网站的访问权限'),
+          `站点一条授权都没有时仍是原来的待授权提示（${revokedHint.slice(0, 20)}…）`,
+        );
+        await p2.close();
+        await page2.close();
+      } finally {
+        await ext2.cleanup();
+        await srvUncovered.close();
+      }
+    }
 
     console.log(`\n用时 ${((Date.now() - t0) / 1000).toFixed(1)} 秒`);
   } catch (e) {

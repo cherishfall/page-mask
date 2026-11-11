@@ -1656,16 +1656,15 @@ async function main() {
     );
     await clickInShadow(pageOnly, HOST, tid('pm-wizard-rules-reset-confirm'));
     await waitFor(pageOnly, '确认后向导关闭', (h) => !document.querySelector(h), [HOST]);
-    // 页内提示的宿主常驻（内容换新）：等文字真的换成复位那一句，不只看节点在不在
+    // 页内提示的宿主常驻（内容换新）：等文字真的换成复位那一句，不只看节点在不在。
+    // 提示只活 4 秒，所以这里不再二次读文本——两次读之间它可能已经自己消失（偶发红的来源）
     await waitFor(
       pageOnly,
-      '页内提示换成复位那句',
+      '页内提示换成复位那句（已恢复网站原来的内容）',
       (n) => document.querySelector(n)?.shadowRoot?.querySelector('[data-testid="pm-page-notice"]')?.textContent.trim() === '已恢复网站原来的内容',
       [NOTICE],
       { timeout: 5000 },
     );
-    const rulesResetNotice = await shadowText(pageOnly, NOTICE, tid('pm-page-notice'));
-    check(rulesResetNotice.trim() === '已恢复网站原来的内容', `页内提示「${rulesResetNotice.trim()}」`);
     const afterRulesReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
     check(afterRulesReset?.hideRules.length === 0, '存储里的收起项已清空');
     check(

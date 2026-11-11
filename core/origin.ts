@@ -1,11 +1,12 @@
 /**
- * URL/origin 工具：站点身份、支持性判断、"这类页面"的零输入推导与匹配。
+ * URL/origin 工具：页面来源（协议 + 主机 + 端口）、支持性判断、"这类页面"的零输入推导与匹配。
+ * 站点身份（一个网站 = 可注册域名）在 core/site-key.ts；这里管的是「页面实际 URL」，范围判定仍按它。
  * 全部纯函数，vitest 可测。
  */
 import type { ScopePattern } from './types';
 import { t } from './i18n';
 
-/** 提取站点身份：scheme + host（+非默认端口）。如 https://weread.qq.com */
+/** 提取页面来源：scheme + host（+非默认端口）。如 https://weread.qq.com。站点身份见 core/site-key.ts */
 export function normalizeOrigin(url: string): string | null {
   try {
     const u = new URL(url);

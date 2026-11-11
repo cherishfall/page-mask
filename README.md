@@ -15,7 +15,7 @@
 
 ### 功能
 
-- **按网站生效**：只有你主动添加的网站才会被处理，其它网站完全不受影响
+- **按网站生效**：只有你主动添加的网站才会被处理，其它网站完全不受影响。一个网站 = 一个可注册域名（`weibo.com`、`www.weibo.com` 与 `s.weibo.com` 算同一个），规则仍按每个页面的实际网址生效
 - **零专业知识点选**：悬停高亮、点击选中（可连选），用「选大一点 / 选小一点」调整范围，不需要懂 CSS
 - **三种收起方式**：消失（整块不见，下面的内容往上顶）/ 留空（看不见了，但位置还占着）/ 盖住（不改网站自身样式，任何网站都可用）
 - **保存前预览**：每个元素都能单独换收起方式，满意再保存
@@ -104,7 +104,7 @@
   - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态，以及图片 / 视频 / 声音三个开关）
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
   - `activeTab`：打开弹窗时读取当前标签页的网址，用来判断是哪个网站、是否支持
-  - 可选主机权限：只在你点「收起内容」或「标题和图标」时按单个网站申请，用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
+  - 可选主机权限：只在你点「收起内容」或「标题和图标」时按站点申请（一个可注册域名，即裸域 + 子域两条模式；IP、`localhost` 与带端口的地址按原样精确匹配），用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
 - 收回访问权限：「全部网站设置」列表该行的「⋯」菜单点「删除这个网站的设置」，或在该网站的设置页点同名项，或用弹窗最底部的同名入口（会同时删掉该网站的设置），或在 Chrome 扩展详情页的「网站访问权限」里移除
 - 本仓库不作为任何配置分发通道，不提供预置规则
 
@@ -218,7 +218,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
   - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state, and the three picture/video/sound switches) on this device
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
   - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
-  - Optional host permissions: requested for a single origin only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), used to run the content script and apply your hiding styles and tab title/icon on that site
+  - Optional host permissions: requested for that site only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon) — one registrable domain, so the bare domain plus its subdomains (IP addresses, `localhost` and addresses with a port are kept exact); used to run the content script and apply your hiding styles and tab title/icon on that site
 - Revoking access: use 「删除这个网站的设置」 (Delete this site's settings) from the ⋯ menu of that row in 「全部网站设置」 (All site settings), on the site's settings page, or at the very bottom of the popup (this also deletes its settings), or remove it under "Site access" in Chrome's extension details page
 - This repository distributes no site presets or configurations
 

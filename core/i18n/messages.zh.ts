@@ -158,6 +158,8 @@ export const zh = {
     /** 没设置过时的一句话状态（#148）：一句就好，两个编辑入口就是第一步 */
     newSiteHint: '这个网站还没设置过。',
     pendingHint: '浏览器收回了这个网站的访问权限。你的设置都还在，重新允许访问就回来了。',
+    /** 站点已允许过、但当前页面不在覆盖范围（#162：只允许了 weibo.com，停在 s.weibo.com） */
+    pageNotAllowed: '这个页面还没允许访问',
     reauthorize: '允许访问',
     reauthorizing: '正在等你允许…',
     setupMore: '收起内容',

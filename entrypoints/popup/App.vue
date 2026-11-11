@@ -12,6 +12,7 @@
     :message="message"
     :busy="busy"
     :covered="covered"
+    :page-uncovered="pageUncovered"
     :cover-shortcut="coverShortcut"
     :show-toggle="profile?.capsuleHidden !== true"
     :media="mediaToggles"
@@ -59,7 +60,7 @@ import { deleteSiteAction, deleteSiteImpact, deleteSiteTitle } from '@/core/site
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import { isSupportedPage } from '@/core/origin';
 import { siteKey } from '@/core/site-key';
-import { grantedPatternsOfSite } from '@/core/site-grant';
+import { grantedPatternsOfSite, isOriginCovered } from '@/core/site-grant';
 // 空设置判据（#158）：三处主开关共用一份，别在这里另算一遍
 import { hasSwitchEffect } from '@/core/site-state';
 import { siteLabelOf } from '@/entrypoints/management/site';
@@ -79,8 +80,9 @@ const tab = ref<{ id?: number; url?: string } | null>(null);
 /** tabs.query 已返回（tab 可能仍为 null：没有活动标签页） */
 const tabLoaded = ref(false);
 const profile = ref<SiteProfile | null>(null);
-/** 当前网站的站点授权；null = 还没查 */
-const granted = ref<boolean | null>(null);
+/** 当前网站有效的授权模式；null = 还没查。弹窗要拿模式本身判断当前页面是否被覆盖 */
+const grantedPatterns = ref<string[] | null>(null);
+const granted = computed(() => (grantedPatterns.value?.length ?? 0) > 0);
 /** 当前标签页是否遮着（#54）：面板打开时问页面，问不到就当未遮住 */
 const covered = ref(false);
 /** 正在处理的操作：''=空闲；处理期间按钮禁用，防止重复点击 */
@@ -108,6 +110,17 @@ const site = computed(() => (tab.value?.url ? siteKey(tab.value.url) : null));
 // 站点展示名与「全部网站设置」列表、悬浮按钮同一套规则（siteLabelOf：去 www、中文域名转回
 // Unicode、非默认端口带上）——0.8.16 发版审查：弹窗只显 hostname 时，本地端口站点在列表里对不上号
 const host = computed(() => (site.value ? siteLabelOf(site.value) : ''));
+/**
+ * 当前页面是否被本站点的有效模式覆盖（#162）：站点授权覆盖的是整站，但用户可能只允许过
+ * weibo.com、当前却停在 s.weibo.com——这时内容脚本根本不在这个页面上，不能显示「就绪」。
+ */
+const pageCovered = computed(() => {
+  const url = tab.value?.url;
+  if (!url || !grantedPatterns.value) return false;
+  return isOriginCovered(url, grantedPatterns.value);
+});
+/** 有站点授权、但这个页面没被覆盖：pending 档换一句更具体的提示 */
+const pageUncovered = computed(() => granted.value && !pageCovered.value);
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
 /** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
 const ruleSummary = computed(() => {
@@ -117,14 +130,15 @@ const ruleSummary = computed(() => {
 
 /**
  * 界面状态：
- * loading 读取中 / unsupported 不支持的页面 / new 没有配置 / pending 有配置、没授权（待授权）/ ready 有配置、已授权
+ * loading 读取中 / unsupported 不支持的页面 / new 没有配置 / pending 有配置、没授权
+ * （或站点已授权但当前页面不在覆盖范围内）/ ready 有配置、已授权且当前页面被覆盖
  */
 const phase = computed<'loading' | 'unsupported' | 'new' | 'pending' | 'ready'>(() => {
   if (!tabLoaded.value) return 'loading';
   if (!supported.value.ok || !site.value) return 'unsupported';
-  if (granted.value === null) return 'loading';
+  if (grantedPatterns.value === null) return 'loading';
   if (!profile.value) return 'new';
-  return granted.value ? 'ready' : 'pending';
+  return granted.value && pageCovered.value ? 'ready' : 'pending';
 });
 
 onMounted(async () => {
@@ -158,14 +172,12 @@ async function refresh() {
   const o = site.value;
   if (!o || !supported.value.ok) return;
   const storage = createPageMaskStorage(browser.storage.local);
-  const [p, ok] = await Promise.all([
+  const [p, patterns] = await Promise.all([
     storage.getProfile(o),
-    grantedPatternsOfSite(browser, o)
-      .then((list) => list.length > 0)
-      .catch(() => false),
+    grantedPatternsOfSite(browser, o).catch(() => []),
   ]);
   profile.value = p;
-  granted.value = ok;
+  grantedPatterns.value = patterns;
   await refreshCurtain();
 }
 
@@ -275,7 +287,6 @@ function reauthorize() {
         errorCode.value = res?.code ?? 'injectFailed';
         return;
       }
-      granted.value = true;
       await refresh();
     } finally {
       busy.value = '';

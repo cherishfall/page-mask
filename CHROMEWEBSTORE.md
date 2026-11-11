@@ -126,9 +126,9 @@ NOTES
 - **storage**: Saves the user's settings for each site they add (which page elements to hide, how, on which pages, the tab title/icon they chose, the on/off state, and the per-site "Turn pictures & videos gray" switch) in `chrome.storage.local` on the device. Nothing is synced or sent anywhere.
 - **scripting**: For sites the user has explicitly enabled only: (1) registers PageMask's bundled content script for that site's pages, (2) runs it once in the already-open tab right after the user enables the site, and (3) inserts/removes the user's hiding stylesheet (`insertCSS`/`removeCSS`) when the user switches the site between clean and original. While the gray switch is on, the same stylesheet turns images and videos black & white, and the bundled content script holds videos that autoplay — all still local, with no remote code.
 - **activeTab**: When the user opens the popup, it reads the active tab's URL to show which site it is, whether it's supported (browser pages, local files and the Web Store are not), and whether it is already configured. No other tab is accessed.
-- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. When the user clicks 「收起内容」 ("Hide items") or 「标题和图标」 ("Title & icon"), PageMask calls `chrome.permissions.request` for that single origin (e.g. `https://example.com/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that origin. Deleting that site's settings (from the site's settings page, or the small button's ⋯ menu on the page) removes the origin's permission.
+- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. When the user clicks 「收起内容」 ("Hide items") or 「标题和图标」 ("Title & icon"), PageMask calls `chrome.permissions.request` for that site: the bare domain plus its subdomains (e.g. `*://example.com/*` and `*://*.example.com/*`). IP addresses, `localhost` and addresses with a port get exact patterns instead, and a site with a non-default port uses explicit `http://…:port/*` and `https://…:port/*` patterns (Chrome does not accept `*://host:port/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that site. Deleting that site's settings (from the site's settings page, or the small button's ⋯ menu on the page) removes that site's permission.
 
-**0.8.0 adds no permission.** Covering a page holds that tab's sound via `chrome.tabs.update(tabId, { muted })`, which changes Chrome's own tab-mute state and does not need the `tabs` permission (that permission is for reading `url` / `title` / `favIconUrl`). The gray switch needs no host access beyond the origin the user already granted, and makes no network requests — the black & white look is a stylesheet, so the image/video requests still happen.
+**0.8.0 adds no permission.** Covering a page holds that tab's sound via `chrome.tabs.update(tabId, { muted })`, which changes Chrome's own tab-mute state and does not need the `tabs` permission (that permission is for reading `url` / `title` / `favIconUrl`). The gray switch needs no host access beyond the site access the user already granted, and makes no network requests — the black & white look is a stylesheet, so the image/video requests still happen.
 
 ## 4. 单一用途（Single purpose）
 
@@ -156,7 +156,7 @@ Declutters websites the user chooses: it hides page elements the user picks and,
 ```
 What it does: lets the user hide page elements they pick on sites they explicitly add, turn pictures/videos gray per site, and set an optional custom tab title/icon for those sites. Covering a page ("Cover this page") also holds that tab's sound. UI is bilingual (Chinese and English; the interface language follows the browser and can be switched in Settings).
 
-Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that single origin; only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that origin) and inject the hiding styles there.
+Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that site — one registrable domain, so the bare domain and its subdomains (two patterns); only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that site) and inject the hiding styles there.
 
 Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. While the gray switch is on, the same stylesheet turns img/video elements black & white (keeping layout, size and links, leaving small icons alone) and the bundled content script holds videos that the site autoplays — a video the user clicks is allowed to play. Covering a page calls chrome.tabs.update({ muted }) — Chrome's own tab mute, no tabs permission — and the extension only unmutes a tab it muted itself (mutedInfo.reason === 'extension' and our extensionId); the mute lives exactly as long as the cover. The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off; switching to "As is" restores the colors as well.
 
@@ -238,6 +238,8 @@ Test steps (no login needed):
 ## 9. 已知限制（写给审核员，也写给用户）
 
 - 界面语言默认跟随浏览器（简体中文 / English 两套文案），可在插件设置里切换。
+- 同一个网站按可注册域名算：`weibo.com`、`www.weibo.com` 与 `s.weibo.com` 共用一份设置与一次授权；规则仍按每个页面的实际网址生效，「只在 weibo.com 首页收起」不会套到子域页面。IP 地址、`localhost` 与带非默认端口的地址按原样识别，不合并子域。
+- 公共后缀只内置常见子集（`com.cn` / `co.uk` / `github.io` 等）：不在表里的后缀按单段后缀识别（取最后两段），最坏情况是同一后缀下的两个独立站点被当成一个（共用设置与授权），但不会丢设置。
 - 「整页变灰」只去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具；一条 CSS 规则覆盖整个页面（背景图、`<canvas>`、iframe 内容、内联 SVG、视频都在内），本扩展自己的浮层也会跟着变黑；`<audio>` 与一切声音不参与。
 - 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响。
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
@@ -249,7 +251,7 @@ Test steps (no login needed):
 
 | 问题 | 回答 |
 |---|---|
-| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「收起内容」或「标题和图标」并选「允许」后，才按单个 origin 请求，代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「全部允许访问」也只是一个用户手势内的多 origin 请求，且只包含用户自己导入/已配置的站点）。 |
+| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「收起内容」或「标题和图标」并选「允许」后，才按站点请求（普通域名是裸域 + 子域两条模式），代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「全部允许访问」也只是一个用户手势内的多站点请求，且只包含用户自己导入/已配置的站点）。 |
 | 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
 | 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。变灰开关同样是一份用户样式表（grayscale 滤镜）；内容脚本只在变灰开关打开期间按住站点自动播放的视频（用户点过的放行）。不改网页原有 DOM、不发请求、不注入远程代码。 |
 | 变灰开关会拦网络请求吗？ | 不会。黑白观感是 `scripting.insertCSS` 的用户样式表（`grayscale(1)` 滤镜），图片 / 视频请求照发，因此也不省流量、不挡广告；扩展没有 `declarativeNetRequest` 权限，也没有拦截任何请求的代码。 |
@@ -284,7 +286,7 @@ Test steps (no login needed):
 | activeTab 用法正确 | ✅ 只用于 popup 读当前标签页网址；注入靠按站点授予的主机权限 |
 | 无多余权限 | ✅ 没有 `tabs`、`management`、`downloads` 等；幕布静音用 `tabs.update({muted})`，按官方文档不需要 `tabs` 权限，权限集未变 |
 | 安装时无权限警告 | ✅ E2E 里 `getPermissionWarningsByManifest` 返回 `[]` |
-| 主机权限逐项说明 | ✅ §3 第 4 条解释了为什么声明 `*://*/*`、实际只申请单个 origin |
+| 主机权限逐项说明 | ✅ §3 第 4 条解释了为什么声明 `*://*/*`、实际只按站点申请（普通域名是裸域 + 子域两条模式） |
 
 ### 商店文案
 
