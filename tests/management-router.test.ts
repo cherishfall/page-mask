@@ -57,6 +57,17 @@ describe('站点标识与展示名', () => {
     expect(siteHostOf('not a url')).toBe('not a url');
   });
 
+  it('#162 裸站点 key（host[:port]）原样通过：字母主机带端口曾被 new URL 当成 scheme 解析出空 host（#166）', () => {
+    expect(siteHostOf('localhost:3000')).toBe('localhost:3000');
+    expect(siteHostOf('example.com:8443')).toBe('example.com:8443');
+    expect(siteHostOf('127.0.0.1:8080')).toBe('127.0.0.1:8080');
+    expect(siteHostOf('[::1]:8080')).toBe('[::1]:8080');
+    expect(siteHostOf('weibo.com')).toBe('weibo.com');
+    // 端到端口径：列表链接的 hash 与设置页的路由参数对得上
+    expect(normalizeSiteHost(siteHostOf('localhost:3000'))).toBe('localhost:3000');
+    expect(normalizeSiteHost(siteHostOf('example.com:8443'))).toBe('example.com:8443');
+  });
+
   it('失效项只统计 lastHealth 为 stale 的规则', () => {
     const p = createEmptyProfile('https://reader.example');
     p.hideRules = [

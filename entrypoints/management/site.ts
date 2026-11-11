@@ -9,9 +9,13 @@ import { displayHost } from '@/core/origin';
 import type { HideRule, SiteProfile } from '@/core/types';
 
 /**
- * 站点 key → 路由参数。key 本身已经是规范形态，旧调用点传 origin 时退回 host 形式。
+ * 站点 key → 路由参数。key 本身已经是规范形态，原样返回；
+ * 旧调用点传完整 origin（带 scheme）时退回 host 形式。
+ * 注意不能直接 new URL(key)：`localhost:3000` 这类裸 key 会被当成
+ * scheme=localhost 的 opaque URL 解析出空 host（#166）。
  */
 export function siteHostOf(key: string): string {
+  if (!key.includes('://')) return key;
   try {
     return new URL(key).host;
   } catch {
