@@ -70,6 +70,21 @@ for (const abs of collectMarkdown(ROOT)) {
   }
 }
 
+/** 3. 版本三方一致性（#176）：package.json ↔ CHANGELOG ↔ CHROMEWEBSTORE 头部/版本史。
+ *  此前三处全靠手工对齐，0.8.14 期间商店材料头部就曾落后两个版本。 */
+const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
+const store = fs.readFileSync(path.join(ROOT, 'CHROMEWEBSTORE.md'), 'utf8');
+if (!new RegExp(`^## \\[${version.replace(/\./g, '\\.')}]`, 'm').test(changelog)) {
+  problems.push(`CHANGELOG.md 没有 ${version} 的条目（## [${version}] …）`);
+}
+if (!store.includes(`对应构建 **${version}**`)) {
+  problems.push(`CHROMEWEBSTORE.md 头部「对应构建」不是 ${version}（发版时同步更新）`);
+}
+if (!store.includes(`| ${version} |`)) {
+  problems.push(`CHROMEWEBSTORE.md §7 版本历史没有 ${version} 的行`);
+}
+
 if (problems.length) {
   console.error(`文档检查未通过（${problems.length} 项）：`);
   for (const p of problems) console.error(`  ✗ ${p}`);
