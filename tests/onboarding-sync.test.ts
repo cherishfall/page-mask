@@ -41,7 +41,7 @@ describe('欢迎页与当前功能集同步（#139）', () => {
       const required: Array<[string, string]> = [
         ['收起内容', m.popup.setupMore],
         ['标题和图标', m.popup.editTitle],
-        ['图片和视频变灰', m.media.mediaGray],
+        ['整页变灰', m.media.mediaGray],
         ['遮住这一页', m.popup.coverPage],
       ];
       for (const [what, label] of required) {

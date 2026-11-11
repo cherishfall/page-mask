@@ -7,8 +7,8 @@
 
 ## 0. 提交前清单
 
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.17-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.8.17`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.17`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.8.18-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.8.18`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.8.18`
 - [ ] 隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（仓库公开后可访问，提交前再点一次）
 - [x] 6 张截图与宣传图块已按 §8 重拍（0.8.10：胶囊 0.8.6–0.8.9 形态与状态、弹窗 0.8.10 卡片分组，`store-shots.mjs` 全量重生成）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -45,7 +45,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 三种收起方式：消失（整块不见，下面的内容往上顶）、留空（看不见了，但位置还占着）、盖住（原位盖一块和背景同色的方块，不改网站自身样式）
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一
-• 图片和视频变灰：按网站的一个开关（悬浮按钮上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清；小图标与表情保持原样。会自动播放的视频会被暂停，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。独立开关，不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走
+• 整页变灰：按网站的一个开关（悬浮按钮上的「媒体」钮、弹窗、站点设置页三处都能改）。整个页面变成黑白——文字、图片、视频、按钮、背景图全都一样，位置大小不变、链接还能点、文字照样读。会自动播放的视频会被暂停，点一下视频就能看。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。独立开关，不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时），并把这个标签页的声音一起静音；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；胶囊、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 • 胶囊可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
@@ -71,7 +71,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
-• 「图片和视频变灰」只是去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、canvas、内联 SVG；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
+• 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含（0.8.18 起）；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
 • 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
 • 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；iframe 和 shadow DOM 里的元素暂时无法选择
 • 反馈与支持：https://github.com/cherishfall/page-mask/issues
@@ -89,7 +89,7 @@ FEATURES
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page colour sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
-• Pictures & videos gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable; icons and emoji stay as they are. Videos that autoplay are held down; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites the user hasn't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
+• Whole-page gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable. Videos that autoplay are held down; click a video to watch that one. Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites the user hasn't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the capsule, the popup and the shortcut all work on the same state — any of them can undo any other
 • A capsule you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
@@ -115,7 +115,7 @@ PRIVACY & PERMISSIONS
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
-• "Turn pictures & videos gray" only removes the color: image and video requests still happen, so this is neither a data saver nor an ad blocker. Since 0.8.16, content images drawn as CSS background images turn gray as well; still not grayed: embedded players inside iframes, canvas and inline SVG; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
+• "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included (since 0.8.18); PageMask's own interface turns black & white with the page and keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
 • The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
 • Doesn't run on browser pages, local files or the Chrome Web Store; elements inside iframes/shadow DOM can't be picked yet
 • Support: https://github.com/cherishfall/page-mask/issues

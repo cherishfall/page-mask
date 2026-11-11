@@ -89,15 +89,15 @@ export const en: Messages = {
   /** Pictures & videos gray (0.8.0, #131): one set of labels shared by the capsule media button / popup / site settings */
   media: {
     heading: 'Pictures & videos',
-    mediaGray: 'Turn pictures & videos gray',
-    mediaGrayHint: 'Pictures and videos turn gray: same place, still readable, links still work. Videos that autoplay are paused; click a video to watch it.',
+    mediaGray: 'Turn the whole page gray',
+    mediaGrayHint: 'The whole page turns black & white — text, pictures, videos, buttons alike; same place, same size, links still work. Videos that autoplay are paused; click a video to watch it.',
     /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
-    hint: 'This switch works on its own — the switch above doesn’t control it: when the switch above is off, hidden items and the tab title and icon return to normal while pictures and videos stay gray. Images still load in the background — this only removes the color.',
+    hint: 'This switch works on its own — the switch above doesn’t control it: when the switch above is off, hidden items and the tab title and icon return to normal while the page stays black & white. The page still loads as usual — this only removes the color.',
     hintShort: 'Its own setting — the switch above doesn’t affect it.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on first asks you to allow access to this site.',
     /** Hover / screen-reader label for the capsule media button */
-    mediaTitle: 'Turn pictures & videos gray',
+    mediaTitle: 'Turn the whole page gray',
     saveFailed: "Couldn't save this change. Please try again.",
   },
 
@@ -123,9 +123,9 @@ export const en: Messages = {
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
     cardSwitchHintNew: 'Once set up, a switch appears here.',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
-    mediaTooltip: 'Once gray: same place, still readable, links still work. Autoplaying videos pause; click a video to watch it.',
+    mediaTooltip: 'The whole page turns black & white: same place, still readable, links still work. Autoplaying videos pause; click a video to watch it.',
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
-    mediaNotReady: 'This page hasn’t finished loading. Once it’s open, pictures and videos turn gray automatically.',
+    mediaNotReady: 'This page hasn’t finished loading. Once it’s open, the whole page turns gray automatically.',
     coverPage: 'Cover this page',
     /** Cover card: say this is temporary and changes no settings (#148) */
     coverHint: 'Temporary — reloading restores it. Changes no settings.',
@@ -335,7 +335,7 @@ export const en: Messages = {
         features: [
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Title & icon: give the tab a name and icon of your choosing.',
-          'Turn pictures & videos gray: pictures and videos across the page turn gray — same place, still readable. This switch works on its own; turn it on or off any time.',
+          'Turn the whole page gray: the page turns black & white — same place, still readable. This switch works on its own; turn it on or off any time.',
           'Cover this page: one click covers the page for now; click “Restore” or press the shortcut to bring it back. Reloading or leaving the page also restores it, without changing your settings.',
         ],
       },

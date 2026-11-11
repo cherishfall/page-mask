@@ -1204,7 +1204,7 @@ async function main() {
     check(!(await o.$(tid('pm-popup-replay-intro'))), '第 2 步示意图（preview）隐藏头部介绍链接');
     const featuresText = await o.$eval('.features', (e) => e.textContent ?? '');
     check(
-      ['收起内容', '标题和图标', '图片和视频变灰', '遮住这一页'].every((k) => featuresText.includes(k)),
+      ['收起内容', '标题和图标', '整页变灰', '遮住这一页'].every((k) => featuresText.includes(k)),
       `四件主要功能各说了一句（${featuresText.split('：').join(': ').slice(0, 60)}…）`,
     );
     await (await o.waitForSelector('xpath/.//button[normalize-space()="下一步"]')).click();

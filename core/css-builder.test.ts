@@ -65,14 +65,13 @@ describe('buildDisguiseCss 按页面范围与两态汇总（0.8.3）', () => {
   });
   it('灰度独立于两态：原样态 mediaGray 开着也输出媒体块', () => {
     const css = buildDisguiseCss(profileOf({ switchState: 'original', mediaGray: true }), 'https://x.com/')!;
-    expect(css).toContain('img:not(');
-    expect(css).toContain('filter: grayscale(1)');
+    expect(css).toContain('html { filter: grayscale(1) !important; }');
     expect(css).not.toContain('display: none');
   });
   it('清爽态 + 灰度：规则与媒体拼在同一份文本里，swapCss 只需维护一份记录', () => {
     const css = buildDisguiseCss(profileOf({ hideRules: [baseRule({})], mediaGray: true }), 'https://x.com/')!;
     expect(css).toContain('display: none');
-    expect(css).toContain(', video, [data-pm-media-bg]:not([data-pm-media-keep]) {');
+    expect(css).toContain('html { filter: grayscale(1) !important; }');
   });
   it('原样态 + 灰度关：返回 null', () => {
     expect(buildDisguiseCss(profileOf({ switchState: 'original' }), 'https://x.com/')).toBeNull();

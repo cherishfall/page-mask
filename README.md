@@ -22,7 +22,7 @@
 - **在哪些页面收起**：整个网站，或「只在这类页面 / 除了这类页面」（不用输入，从当前网址自动推导）
 - **只想改标题也可以**：不收起任何元素，只为某个网站换个标签页标题 / 图标，一样是一份正经设置
 - **标签页标题与图标**：可为该网站设置标签页标题（默认「阅读」）和图标；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一。网站自己改标题时会被自动改回
-- **图片和视频变灰**：按网站的一个开关（胶囊上的「媒体」钮、弹窗、站点设置页三处都能改）。图片和视频变成黑白的，位置不变、大小不变、链接还能点、截图里的字还能看清，整个页面像一篇图文资料；≤32px 的小图标与表情保持原样。会自动播放的视频会被暂停，点一下视频就能看（画面保持黑白）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。**独立开关**：不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走。**没配置过的网站也能直接用**：在弹窗里打开它，会像第一次设置一样申请这个网站的权限，然后只做灰度这一件事
+- **整页变灰**：按网站的一个开关（胶囊上的「媒体」钮、弹窗、站点设置页三处都能改）。整个页面变成黑白——文字、图片、视频、按钮、背景图全都一样，位置大小不变、链接还能点、文字照样读，页面像一篇黑白文档。会自动播放的视频会被暂停，点一下视频就能看（页面本来就是黑的）。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。**独立开关**：不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走。**没配置过的网站也能直接用**：在弹窗里打开它，会像第一次设置一样申请这个网站的权限，然后只做灰度这一件事
 - **设置分成两个页面**：「全部网站设置」是网站列表，点进去是一个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」
 - **每个网站一个开关**：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 - **失效提醒**：网站改版导致某一项找不到目标时，会用人话提醒你重新选一次
@@ -90,7 +90,7 @@
 ### 已知限制
 
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面
-- 「图片和视频变灰」只是**去掉颜色**：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具。0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、`<canvas>`、内联 SVG；`<audio>` 与一切声音不参与。「点击视频放行」按最近一次点击位置判断，在个别播放器结构特殊的站点可能需要直接点视频本体
+- 「整页变灰」只是**去掉颜色**：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含（0.8.18 起）；本扩展自己的悬浮按钮等界面也会跟着变黑白（页面上无法豁免，功能不受影响）；`<audio>` 与一切声音不参与。「点击视频放行」按最近一次点击位置判断，在个别播放器结构特殊的站点可能需要直接点视频本体
 - 幕布遮住时会把当前标签页连声音一起按住，恢复（或刷新、离开页面）时声音跟着回来；你自己用 Chrome 右键或播放器静音的不受影响
 - iframe 与 shadow DOM **内部**的元素暂时点不到（外层容器可以）
 - 标签页悬停缩略图、浏览器历史记录里的标题由浏览器自己绘制，扩展改不到
@@ -136,7 +136,7 @@ npm run test:e2e   # 真实 Chrome 全量 E2E（需 Chrome for Testing，见 tes
 - **Where it applies**: the whole site, or "only these pages / except these pages" (no typing — worked out from the current address)
 - **Title only is fine**: change just the tab title or icon of a site without hiding anything — that is a real, first-class setup too
 - **Tab title & icon**: set a tab title (default "Reading") and icon per site; the icon is one of three — the site's own icon, no icon, or one of 10 built-in icons. If the site rewrites its title, it is changed back automatically
-- **Turn pictures & videos gray**: one per-site switch, available in three places (the floating button's "Media" button, the popup and the site's settings page). Pictures and videos turn black & white — same place, same size, links still work, text in screenshots stays readable — and the whole page reads like a quiet article; icons and emoji up to 32px stay as they are. Videos that autoplay are paused; click a video to watch that one (it stays black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". **An independent switch**: it does not follow "Your settings" — switching to "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. **Works on sites you haven't set up either**: flip it in the popup and PageMask asks for that site's access, first-time-style, then does exactly one thing — the gray
+- **Turn the whole page gray**: one per-site switch, available in three places (the floating button's "Media" button, the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable, and the page reads like a quiet document. Videos that autoplay are paused; click a video to watch that one (the page is already black & white). Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". **An independent switch**: it does not follow "Your settings" — switching to "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. **Works on sites you haven't set up either**: flip it in the popup and PageMask asks for that site's access, first-time-style, then does exactly one thing — the gray
 - **Settings split into two pages**: "All site settings" lists the sites you have added; click one to open that site's settings page. "Settings" is its own page with the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page
 - **One switch per site**: a small button at the bottom-right flips between "Your settings" and "As is"; all tabs of that site switch together
 - **Broken-item notices**: when a site redesign means an item can no longer be found, you get a plain-language heads-up to pick it again
@@ -204,7 +204,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 ### Known limitations
 
 - Doesn't run on `chrome://` pages, `file://` local files or the Chrome Web Store
-- "Turn pictures & videos gray" only removes **the color**: image and video requests still happen, so this is neither a data saver nor an ad blocker. Since 0.8.16, content images drawn as CSS background images (book covers and the like) turn gray as well; still not grayed: embedded players inside iframes, `<canvas>` and inline SVG; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on sites with unusual player structures you may need to click the video itself
+- "Turn the whole page gray" only removes **the color**: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, `<canvas>`, iframe content, inline SVG and videos included (since 0.8.18); PageMask's own interface (the floating button and friends) turns black & white with the page — it cannot be exempted from a page-level filter, and it keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on sites with unusual player structures you may need to click the video itself
 - Covering the page also holds that tab's sound; uncovering, reloading or leaving the page brings it back. A mute you set yourself (Chrome's "Mute site" or the player) is not touched
 - Elements **inside** iframes and shadow DOM can't be picked yet (their outer container can)
 - Tab hover previews and the titles in browser history are drawn by the browser; the extension can't change them

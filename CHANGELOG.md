@@ -5,6 +5,35 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.8.18] - 2026-11-11
+
+按用户提案把「图片和视频变灰」升级为「整页变灰」：一条 CSS 规则像素级覆盖整个页面，过去三轮返工的覆盖边界（背景图、canvas、iframe 内容、SVG）一次清零。开关的位置、记忆、与主开关的独立性都不变。
+
+### 中文
+
+#### 改动
+
+- **「图片和视频变灰」→「整页变灰」（#156）**：打开后整个页面变成黑白——文字、图片、视频、按钮、背景图、canvas、连 iframe 里的内容全都一样；位置大小不变、链接还能点、文字照样读。此前按媒体类型灰度的路线修了三轮仍不断出现「某类图没灰」（书封走背景图的多抓鱼、登录态的推特），整页灰从机制上消灭这类问题。依据：iOS/macOS 系统灰度同为整屏方案，市面 grayscale 类扩展全部是一条 CSS 规则；技术实测 fixed 元素不受影响、文字保持可读
+- **叫法同步**：弹窗、站点设置页、欢迎页、悬浮按钮读屏名统一为「整页变灰」（中英同改）；开关的记忆、三处入口、与「按你的设置显示」的独立性全部不变
+
+#### 取舍（如实说明）
+
+- 本扩展自己的悬浮按钮等界面也会跟着页面变黑白（页面上无法豁免整页滤镜，功能不受影响——状态靠形状与明度仍然可辨，与 iOS 系统灰度对浮层的处理一致）
+- ≤32px 小图标豁免退场：页面自己的按钮图标也变灰
+- 自动播放视频的「点击放行」保留：放行的是播放动作，画面本来就是黑的
+
+### English
+
+#### Changed
+
+- **“Turn pictures & videos gray” → “Turn the whole page gray” (#156)**: flipping it turns the entire page black & white — text, pictures, videos, buttons, background images, `<canvas>`, even content inside iframes; same place, same size, links still work, text stays readable. The per-media approach kept hitting “this kind of image didn't turn gray” after three rounds of fixes (covers drawn as background images, logged-in X); whole-page gray eliminates that class of problem mechanically. Precedent: iOS/macOS system grayscale is a whole-screen toggle, and every grayscale extension is one CSS rule; verified that fixed-position elements stay put and text remains readable
+- **Naming synced**: popup, site settings, the guide and the floating button's accessible name all say “Turn the whole page gray” (Chinese and English); the switch's memory, its three entries and its independence from “Your settings” are unchanged
+
+#### Trade-offs (stated plainly)
+
+- PageMask's own interface (the floating button and friends) turns black & white with the page — a page-level filter cannot exempt it, and it keeps working (states stay distinguishable by shape and lightness, matching how iOS system grayscale treats overlays)
+- The ≤32px icon exemption is gone: the site's own button icons turn gray too
+- The click-to-allow rule for autoplaying videos stays: it releases the playback, and the picture is already black & white
 ## [0.8.17] - 2026-11-10
 
 0.8.16 发版后两轮深审查（Web Interface Guidelines 代码审查 + 第二轮全量截图目检）的收尾：读屏可达性补齐、触屏细节、两处措辞。功能与权限不变。

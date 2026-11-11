@@ -297,7 +297,7 @@ try {
     'screenshot-4-popup',
     `<div style="height:800px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#eef1f5">
        <img src="${dataUrl(popupFile)}" style="width:420px;display:block;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);border:1px solid #dfe3e8">
-       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 编辑收起的内容 · 图片和视频变灰 · 遮住这一页 / 恢复这一页</div>
+       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 编辑收起的内容 · 整页变灰 · 遮住这一页 / 恢复这一页</div>
        <div class="cap" style="font-size:18px;margin-top:-10px">底部两个入口：你添加的网站 · 插件设置</div>
      </div>`,
   );

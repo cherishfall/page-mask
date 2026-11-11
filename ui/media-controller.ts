@@ -1,36 +1,28 @@
 /**
- * 内容脚本侧：媒体变灰的两件 CSS 管不了的事（0.8.0，#131，ADR-0013）。
+ * 内容脚本侧：整页变灰唯一管不了的「动」（0.8.0 建立压制；0.8.18，#156 起这是本文件的唯一职责）。
  *
- * 1. 小图豁免：纯 CSS 没法按「渲染尺寸」选元素，所以只在「图片和视频变灰」打开期间，给 ≤32px 的
- *    图标 / 表情打一个 data-pm-media-keep 属性，core/media.ts 的选择器据此放行。
- * 1b. 背景图标记（0.8.16，#154，ADR-0017）：CSS 也选不出「带背景图的元素」，扫描后给
- *     background-image 带 url 的元素打 data-pm-media-bg，CSS 据此灰度（豁免同样打 keep）。
- *     多抓鱼等站点的封面全走背景图，不扫就永远灰不了。
- *    默认先全灰、小图确认后再放行——宁可多灰一帧，也不让大图露出来（首屏防闪优先）。
- * 2. 视频自动播放压制：灰度管不住「动」。站点脚本自己让视频播起来的（X 刷信息流的自动播放）
- *    一律按停；**用户点了视频区域就把那一个视频放行**，正常播放、画面保持灰度——
- *    「不显眼」要压的是没人看的自动播放，不该拦住主动想看的视频。
- *    **不写任何 muted、不碰 <audio>**：音量归播放器自己的按钮与 Chrome 右键静音（ADR-0013）。
+ * 背景：0.8.18 整页灰度用一条 CSS 规则覆盖一切像素（core/media.ts），此前的
+ * 小图豁免打标、背景图扫描、MutationObserver 全套随媒体路线退场——灰度不再需要
+ * 认识任何 DOM 元素。只剩 CSS 管不了的一件事：**动**。站点脚本自己让视频播起来的
+ * 一律按停；**用户点了视频区域就把那一个视频放行**，正常播放、画面保持黑白——
+ * 「不显眼」要压的是没人看的自动播放，不该拦住主动想看的视频。
+ * **不写任何 muted、不碰 <audio>**：音量归播放器自己的按钮与 Chrome 右键静音（ADR-0013）。
  *
  * 「用户点了」的判定：document 捕获阶段记录最近一次意图事件（pointerdown / 键盘 Enter、空格，
  * 键盘用户点不到播放钮也能放行），play 事件到来时看它是否落在视频本身或其三层祖先内、
  * 且在 10 秒内——播放按钮通常是视频元素的兄弟节点（X 的播放器覆盖层），只看视频内部会误拦。
  * 放行按文档生命周期记忆，本次页面里这个视频之后随便播。
  *
- * 生命周期：只有开关打开时才挂 MutationObserver 与三个 document 监听；关掉就断开、清掉标记。
+ * 生命周期：只有开关打开时才挂两个 document 监听；关掉就断开。
  * 被按停的视频不替网站恢复播放（切回原样后用户自己点播放，0.7.x 同款语义）。
- * 增量扫描按 rAF 分批，读写分两阶段，避免和站点框架互相触发重排。
  */
 import { isOwnUiNode } from '@/core/host-shield';
-import { MEDIA_BG_ATTR, MEDIA_KEEP_ATTR, shouldKeepMedia, type MediaFlags, type MediaSizeFacts } from '@/core/media';
-
-/** 每帧最多处理多少个新增节点：无限滚动一次插几百张图时不堵主线程 */
-const BATCH = 60;
+import type { MediaFlags } from '@/core/media';
 
 /** 意图事件还有效的窗口：点了播放钮后站点可能要缓冲几秒才真正 play */
 const INTENT_WINDOW_MS = 10_000;
 
-/** 视频向上找几层祖先来匹配「点的是播放器这块区域」：X 的播放钮与 video 隔两层左右 */
+/** 视频向上找几层祖先来匹配「点的是播放器区域」：X 的播放钮与 video 隔两层左右 */
 const ANCESTOR_DEPTH = 3;
 
 export interface MediaController {
@@ -38,66 +30,6 @@ export interface MediaController {
   sync(flags: MediaFlags): void;
   /** 内容脚本失效 / 卸载前的收尾 */
   dispose(): void;
-}
-
-function numberAttr(el: Element, name: string): number | undefined {
-  const raw = el.getAttribute(name);
-  if (!raw) return undefined;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
-}
-
-function baseFacts(el: HTMLImageElement): MediaSizeFacts {
-  return {
-    widthAttr: numberAttr(el, 'width'),
-    heightAttr: numberAttr(el, 'height'),
-    naturalWidth: el.naturalWidth,
-    naturalHeight: el.naturalHeight,
-    className: el.getAttribute('class') ?? '',
-    alt: el.getAttribute('alt') ?? '',
-    src: el.getAttribute('src') ?? '',
-  };
-}
-
-/**
- * 渲染尺寸说了算（#126 / #128）：属性写 16×16、却被 CSS 放大到 600px 的图不是小图标；
- * 反过来大图被缩小显示也放行——它在页面上只占那么点地方。
- *
- * rect 为 0×0（未布局 / display:none / 懒加载占位）时**不回退到属性 / 原始尺寸**：
- * CSS 随时能覆盖它们，回退等于把删掉的属性短路从判定函数内部复活，大图就露出来了。
- * 这时只按文字线索放行表情，其余先灰一帧（本来就是「宁可多灰一帧」的设计），
- * 等 load 或 class / style 变化后重判，小图标会补上标记。
- */
-function decideImage(img: HTMLImageElement): boolean {
-  const facts = baseFacts(img);
-  const rect = img.getBoundingClientRect();
-  if (rect.width > 0 && rect.height > 0) {
-    return shouldKeepMedia({ ...facts, renderedWidth: rect.width, renderedHeight: rect.height });
-  }
-  return shouldKeepMedia({ className: facts.className, alt: facts.alt, src: facts.src });
-}
-
-/**
- * 背景图判定（0.8.16，#154）：计算样式 background-image 带 url 才算——渐变（无 url）不算，
- * url("data:…") 也算（小尺寸豁免会放行绝大多数图标）。三态：null = 没有背景图；
- * true = 有但豁免（≤32px 小图 / 表情来源）；false = 灰。
- * 尺寸判定与 img 同口径：渲染尺寸说了算，0×0（未布局 / 隐藏）先按灰处理，样式变化后重判。
- */
-function decideBackground(el: HTMLElement): boolean | null {
-  const cs = getComputedStyle(el);
-  const bg = cs.backgroundImage;
-  if (!bg || bg === 'none' || !bg.includes('url(')) return null;
-  const rect = el.getBoundingClientRect();
-  const url = bg.slice(0, 300); // 表情豁免只看来源名，前 300 字符足够，不给超长 data URI 浪费
-  if (rect.width > 0 && rect.height > 0) {
-    return shouldKeepMedia({
-      renderedWidth: rect.width,
-      renderedHeight: rect.height,
-      className: el.getAttribute('class') ?? '',
-      src: url,
-    });
-  }
-  return shouldKeepMedia({ className: el.getAttribute('class') ?? '', src: url });
 }
 
 /** 最近一次用户意图事件：放行判定的唯一依据 */
@@ -122,9 +54,6 @@ function intentCoversVideo(intent: IntentMark, video: HTMLVideoElement): boolean
 export function createMediaController(doc: Document): MediaController {
   let wantMedia = false;
   let disposed = false;
-  let observer: MutationObserver | null = null;
-  let frame = 0;
-  const pending = new Set<Element>();
   /** 已被用户放行的视频：本次文档生命周期内不再压制 */
   const allowed = new Set<HTMLVideoElement>();
   /** 最近一次意图事件：pointerdown / Enter / 空格，捕获阶段记录 */
@@ -135,100 +64,6 @@ export function createMediaController(doc: Document): MediaController {
   function applyVideo(video: HTMLVideoElement): void {
     if (allowed.has(video)) return;
     if (!video.paused) video.pause();
-  }
-
-  /**
-   * 一批元素两阶段处理：先只读判定（含 rect），再统一写属性 / 按停，避免读写交替触发重排。
-   * img / video 走各自的判定；其余元素查计算样式的 background-image（#154）：
-   * 带 url 才入列——三态返回，null = 没有背景图（写阶段清掉旧标记）。
-   */
-  function processBatch(elements: Element[]): void {
-    const images: [HTMLImageElement, boolean][] = [];
-    const videos: HTMLVideoElement[] = [];
-    const bgs: [HTMLElement, boolean | null][] = [];
-    for (const el of elements) {
-      if (!el.isConnected) continue;
-      if (el.tagName === 'IMG' && wantMedia) {
-        const img = el as HTMLImageElement;
-        images.push([img, decideImage(img)]);
-      } else if (el.tagName === 'VIDEO') {
-        videos.push(el as HTMLVideoElement);
-      } else if (wantMedia && el instanceof HTMLElement && !isOwnUiNode(el)) {
-        bgs.push([el, decideBackground(el)]);
-      }
-    }
-    for (const [img, keep] of images) {
-      if (keep) img.setAttribute(MEDIA_KEEP_ATTR, '');
-      else img.removeAttribute(MEDIA_KEEP_ATTR);
-    }
-    for (const [el, keep] of bgs) {
-      if (keep === null) {
-        // 背景图没了（样式被换掉）：标记一并撤，别让灰度留在已经不图的元素上
-        el.removeAttribute(MEDIA_BG_ATTR);
-        el.removeAttribute(MEDIA_KEEP_ATTR);
-      } else {
-        el.setAttribute(MEDIA_BG_ATTR, '');
-        if (keep) el.setAttribute(MEDIA_KEEP_ATTR, '');
-        else el.removeAttribute(MEDIA_KEEP_ATTR);
-      }
-    }
-    for (const video of videos) applyVideo(video);
-  }
-
-  function flush(): void {
-    frame = 0;
-    if (disposed || pending.size === 0) return;
-    const batch = Array.from(pending).slice(0, BATCH);
-    for (const el of batch) pending.delete(el);
-    processBatch(batch);
-    if (pending.size) schedule();
-  }
-
-  function schedule(): void {
-    if (frame || disposed) return;
-    frame = requestAnimationFrame(flush) as unknown as number;
-  }
-
-  function collect(node: Node): void {
-    if (!(node instanceof Element)) return;
-    // 子树全扫（#154）：img / video 之外，带背景图的元素也要进待办——书封 / 封面这类
-    // 背景图元素在无限滚动站点里与新图一起插入。rAF 分批消化，不堵主线程
-    pending.add(node);
-    for (const el of node.querySelectorAll('*')) pending.add(el);
-  }
-
-  /** 子树被移出文档：把它从待办与放行集合里放掉，别让强引用钉住已被信息流替换掉的元素（#126 / #128）。
-   *  挪位置（isConnected 仍真）不当移除：换容器后渲染尺寸可能变，仍要重判一次（#129）。
-   *  放行记录一并清除：信息流把放行过的视频换掉后，同一个 <video> 元素再插回来按新的一轮算，
-   *  不会再被旧记录放行；这也是 allowed 集合唯一的瘦身路径，长会话信息流不会钉住已移除的元素。 */
-  function forget(node: Node): void {
-    if (!(node instanceof Element)) return;
-    if (node.isConnected) return;
-    pending.delete(node);
-    if (node.tagName === 'VIDEO') allowed.delete(node as HTMLVideoElement);
-    // 子树全扫对应的瘦身：移出文档的元素（含背景图元素）都从待办放掉，别钉住已替换的节点
-    for (const el of node.querySelectorAll('*')) {
-      pending.delete(el);
-      if (el.tagName === 'VIDEO') allowed.delete(el as HTMLVideoElement);
-    }
-  }
-
-  function onMutation(records: MutationRecord[]): void {
-    for (const r of records) {
-      if (r.type === 'childList') {
-        // 先忘掉真移除的、再收新增的：removedNodes 里若有「只是挪位置」的节点，forget() 会
-        // 按 isConnected 自己放行，这里再 collect 一次让它按新容器重判（#129）。
-        for (const n of r.removedNodes) forget(n);
-        for (const n of r.addedNodes) collect(n);
-      } else if (r.type === 'attributes' && r.target instanceof Element) {
-        // src / srcset 换了（懒加载占位换成真图），或 class / style 改了尺寸：重新判定一次。
-        // 背景图元素同样重判（#154）：class / style 变化会改它的渲染尺寸或换掉背景图
-        if (r.target.tagName === 'IMG' || (r.target instanceof HTMLElement && r.target.hasAttribute(MEDIA_BG_ATTR))) {
-          pending.add(r.target);
-        }
-      }
-    }
-    schedule();
   }
 
   function onPlay(e: Event): void {
@@ -257,66 +92,19 @@ export function createMediaController(doc: Document): MediaController {
     lastIntent = { target: e.target, at: Date.now() };
   }
 
-  function onLoad(e: Event): void {
-    if (!wantMedia) return;
-    const el = e.target as Element | null;
-    if (el?.tagName !== 'IMG') return;
-    // 图片加载完才知道真实尺寸：放进待办后必须自己排一帧（#128）。
-    // 0.7.0 这里只 add 不 schedule，重判全靠页面恰好还有别的变动顺带触发，
-    // 首屏那批懒加载小图标因此可能一直灰着。
-    pending.add(el);
-    schedule();
-  }
-
   function start(): void {
-    if (observer) return;
-    observer = new MutationObserver(onMutation);
-    observer.observe(doc, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      // class / style 会改变渲染尺寸（隐藏的小图被显示成大图、图标被 CSS 放大），
-      // 也要重判一次（#128）。只在开关打开期间观察，未开启的页面零开销。
-      attributeFilter: ['src', 'srcset', 'width', 'height', 'class', 'style'],
-    });
-    // 捕获阶段：play / load 不冒泡，但会经过 document；意图事件要抢在站点脚本前面记账
+    // 捕获阶段：play 不冒泡，但会经过 document；意图事件要抢在站点脚本前面记账
     doc.addEventListener('play', onPlay, true);
-    doc.addEventListener('load', onLoad, true);
     doc.addEventListener('pointerdown', onIntent, true);
     doc.addEventListener('keydown', onIntent, true);
+    // 开关打开的这一刻，页面上正在播的视频当场按停（自动播放压制对存量视频同样生效）
+    for (const video of doc.querySelectorAll('video')) applyVideo(video);
   }
 
   function stop(): void {
-    observer?.disconnect();
-    observer = null;
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
-    pending.clear();
     doc.removeEventListener('play', onPlay, true);
-    doc.removeEventListener('load', onLoad, true);
     doc.removeEventListener('pointerdown', onIntent, true);
     doc.removeEventListener('keydown', onIntent, true);
-  }
-
-  function clearKeepMarks(): void {
-    // img 的 keep 标记与背景图元素的两枚标记一并清（#154）：关掉灰度后页面不能留任何私有属性
-    for (const el of doc.querySelectorAll(`[${MEDIA_KEEP_ATTR}], [${MEDIA_BG_ATTR}]`)) {
-      el.removeAttribute(MEDIA_KEEP_ATTR);
-      el.removeAttribute(MEDIA_BG_ATTR);
-    }
-  }
-
-  function scanExisting(): void {
-    // 首帧不等 rAF：document_start 时页面刚开、元素还很少，当场处理（播放中的视频按停）。
-    // 会话中段打开灰度（弹窗 / 胶囊）时 DOM 可能已有几千个元素：全量同步扫会卡一拍，
-    // 改走待办队列按 rAF 分批消化（#154 子树全扫后的必要护栏）
-    const all = Array.from(doc.querySelectorAll('*'));
-    if (all.length <= 600) {
-      processBatch(all);
-      return;
-    }
-    for (const el of all) pending.add(el);
-    schedule();
   }
 
   return {
@@ -326,10 +114,9 @@ export function createMediaController(doc: Document): MediaController {
       if (next === wantMedia) return;
       wantMedia = next;
       if (!wantMedia) {
-        // 关掉：断监听、清标记。放行集合一并清掉；正在播的视频让它继续播，
+        // 关掉：断监听。放行集合一并清掉；正在播的视频让它继续播，
         // 被我们按停的不替网站恢复播放（用户自己点播放，ADR-0013）
         stop();
-        clearKeepMarks();
         allowed.clear();
         lastIntent = null;
         return;
@@ -337,13 +124,11 @@ export function createMediaController(doc: Document): MediaController {
       allowed.clear();
       lastIntent = null;
       start();
-      scanExisting();
     },
     dispose(): void {
       if (disposed) return;
       wantMedia = false;
       stop();
-      clearKeepMarks();
       allowed.clear();
       disposed = true;
     },

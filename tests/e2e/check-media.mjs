@@ -1,12 +1,12 @@
 /**
- * 0.8.0 真机验收（#131，ADR-0013）：按站点「图片和视频变灰」一处开关 + 幕布静音。
+ * 整页变灰真机验收（0.8.0 建立；0.8.18 #156 起为整页灰度，ADR-0018）：一处开关 + 幕布静音。
  *
  * 运行：npm run build && node tests/e2e/check-media.mjs
  * 也接在 npm run test:e2e 之后（见 package.json）。
  *
  * 覆盖：
  * - 弹窗：一行开关的叫法、默认关、点击写进站点配置；
- * - 页面效果：大图 grayscale(1)、≤32px 小图标留原样（豁免标记）、视频的 muted 全程没人动；
+ * - 页面效果：html 整页 grayscale(1)（0.8.18，#156）、视频的 muted 全程没人动；
  * - 自动播放压制：play 事件被按停（paused 变 true）；点击视频区域后放行（synthetic play 不再被按停）
  * - 胶囊媒体钮：全功能与 mini 形态都有、aria-pressed 与实心/描边两态、点一下写存储
  * - 站点设置页：「图片和视频」卡片、一行开关与说明、点击后页面效果即时变化
@@ -95,22 +95,14 @@ const handler = (_req, res) => {
   res.end(html);
 };
 
-/** 页面上媒体元素的实际状态（读计算样式与 DOM 属性，不看存储） */
+/** 页面上媒体的实际状态（0.8.18 整页灰：唯一观测点是 html 的计算 filter；元素自身 filter 恒 none） */
 const mediaState = (page) =>
   page.evaluate(() => {
-    const big = document.querySelector('#big');
-    const icon = document.querySelector('#icon');
     const vid = document.querySelector('#vid');
-    const bgcover = document.querySelector('#bgcover');
-    const bgsign = document.querySelector('#bgsign');
     return {
-      bigFilter: getComputedStyle(big).filter,
-      iconFilter: getComputedStyle(icon).filter,
-      iconKept: icon.hasAttribute('data-pm-media-keep'),
-      bgFilter: getComputedStyle(bgcover).filter,
-      bgMarked: bgcover.hasAttribute('data-pm-media-bg'),
-      bgsignFilter: getComputedStyle(bgsign).filter,
-      bgsignKept: bgsign.hasAttribute('data-pm-media-keep'),
+      htmlFilter: getComputedStyle(document.documentElement).filter,
+      // 媒体路线的打标属性已退场（#156）：确认页面上不再残留任何私有标记
+      anyKeepAttrs: document.querySelectorAll('[data-pm-media-keep], [data-pm-media-bg]').length,
       videoMuted: vid.muted,
       videoPaused: vid.paused,
     };
@@ -170,7 +162,7 @@ async function main() {
       role: row.querySelector('input')?.getAttribute('role'),
       checked: row.querySelector('input')?.checked,
     }));
-    check(popupSwitch.label === '图片和视频变灰', `开关叫法一致（${popupSwitch.label}）`);
+    check(popupSwitch.label === '整页变灰', `开关叫法一致（${popupSwitch.label}）`);
     check(popupSwitch.role === 'switch' && popupSwitch.checked === false, '读屏认得的开关，默认关');
     check(
       (await popup.$eval(tid('pm-popup-media'), (g) => g.getAttribute('role'))) === 'group',
@@ -178,15 +170,11 @@ async function main() {
     );
 
     await popup.click(tid('pm-popup-media-mediaGray'));
-    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '弹窗拨「图片和视频变灰」写入存储');
-    await waitFor(page, '大图变灰', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
-    await waitFor(page, '小图标被豁免', () => document.querySelector('#icon').hasAttribute('data-pm-media-keep'), [], { timeout: 8000 });
-    await waitFor(page, '背景图元素被标记（#154）', () => document.querySelector('#bgcover').hasAttribute('data-pm-media-bg'), [], { timeout: 8000 });
+    await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '弹窗拨「整页变灰」写入存储');
+    await waitFor(page, '整页变灰（html filter，0.8.18 #156）', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     const imageState = await mediaState(page);
-    check(grayed(imageState.bigFilter), `大图是灰度（filter=${imageState.bigFilter}）`);
-    check(imageState.iconKept && !grayed(imageState.iconFilter), `小图标留原样（filter=${imageState.iconFilter}）`);
-    check(grayed(imageState.bgFilter), `背景图封面变灰（书封走 CSS background-image 的站点，#154；filter=${imageState.bgFilter}）`);
-    check(imageState.bgsignKept && !grayed(imageState.bgsignFilter), `≤32px 背景小图标豁免（#154；filter=${imageState.bgsignFilter}）`);
+    check(grayed(imageState.htmlFilter), `整页灰生效（html filter=${imageState.htmlFilter}）`);
+    check(imageState.anyKeepAttrs === 0, '媒体路线的打标属性全部退场，页面上没有私有标记（#156）');
     check(imageState.videoMuted === false, '媒体层不写视频的 muted（声音归播放器与用户）');
 
     await popup.close();
@@ -256,7 +244,7 @@ async function main() {
 
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '媒体钮点一下写回存储（关）');
-    await waitFor(page, '关掉后大图恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '关掉后整页恢复彩色', () => !getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await page.mouse.move(300, 300); // 指针离开媒体钮：别把悬停底色读进「关闭态」断言（#137 / #149）
     await waitFor(page, '媒体钮关态计算样式落定（底色回透明 / color 回 muted，#152）', toggleSettled, [TOGGLE, ['pm-toggle-media'], false], { timeout: 8000 });
     const btnOff = await page.evaluate((h) => {
@@ -297,13 +285,13 @@ async function main() {
       hint: el.querySelector('.hint')?.textContent.trim() ?? '',
       checked: el.querySelector('input')?.checked,
     }));
-    check(row.label === '图片和视频变灰', '与弹窗同一个叫法');
+    check(row.label === '整页变灰', '与弹窗同一个叫法');
     check(row.hint.length > 0, '说明跟着开关走');
     check(row.checked === true, '三处界面读同一份存储：媒体钮拨回来的状态在设置页也是开');
-    check((await m.evaluate(() => document.body.innerText)).includes('图片其实还在加载'), '卡片底部如实说明「不是不加载」');
+    check((await m.evaluate(() => document.body.innerText)).includes('页面内容照常加载'), '卡片底部如实说明「不是不加载」');
     await m.click(tid('pm-mgmt-media-mediaGray'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '站点设置页关掉写入存储');
-    await waitFor(page, '大图恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '整页恢复彩色', () => !getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     check(true, '另一处入口拨动，页面效果即时跟着变');
     await m.click(tid('pm-mgmt-media-mediaGray'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '站点设置页拨回来');
@@ -332,21 +320,21 @@ async function main() {
     await page.bringToFront();
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main')); // 胶囊主按钮切到原样
     await poll(async () => (await getProfile(control, ORIGIN)).switchState === 'original', '切到「网站原样」');
-    // 灰度独立于两态（0.8.3）：原样态下灰度照常生效、小图标照常豁免、压制照常工作
-    await waitFor(page, '原样态灰度仍在', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    // 灰度独立于两态（0.8.3）：原样态下整页灰照常生效、压制照常工作
+    await waitFor(page, '原样态灰度仍在', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     const originalState = await mediaState(page);
-    check(grayed(originalState.bigFilter) && originalState.iconKept, '原样态：定制还原，灰度与小图标豁免照常');
+    check(grayed(originalState.htmlFilter), '原样态：定制还原，整页灰照常（灰度独立于两态，0.8.3）');
 
     // 独立性证明：原样态下关媒体钮，颜色立刻恢复（主开关不再压着灰度）
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '原样态下关媒体钮写入存储');
-    await waitFor(page, '关媒体钮后颜色恢复', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '关媒体钮后颜色恢复', () => !getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     check(true, '原样态下媒体钮有可见反应：灰度独立于主开关（不再有死按钮）');
 
     // 开回来，然后切回按设置
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === true, '媒体钮开回来');
-    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
     await poll(async () => (await getProfile(control, ORIGIN)).switchState === 'disguised', '切回「按你的设置显示」');
     await tryPlay(page, '#vid');
@@ -374,7 +362,7 @@ async function main() {
     await popupNew.click(tid('pm-popup-media-mediaGray'));
     await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '开灰度：授权 + 建 gray-only 配置');
     await poll(async () => (await getProfile(control, ORIGIN))?.switchState === 'original', 'gray-only 配置保持原样态');
-    await waitFor(page, '休眠唤醒后灰度生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '休眠唤醒后灰度生效', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     check(true, '胶囊挂载：媒体钮/遮住可用（休眠唤醒生效）');
     await popupNew.close().catch(() => {});
@@ -384,11 +372,11 @@ async function main() {
     await page.bringToFront();
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '胶囊媒体钮关掉灰度（gray-only 配置四项全空）');
-    await waitFor(page, '页面恢复彩色', () => !getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '页面恢复彩色', () => !getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     check(!!(await page.$(TOGGLE)), '配置变空胶囊不拆：页面上的入口留住（#135）');
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
     await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '胶囊还在，当场把灰度拨回来');
-    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
 
     // 刷新后按判据该藏就藏：先关掉再重载
     await clickInShadow(page, TOGGLE, tid('pm-toggle-media'));
@@ -403,7 +391,7 @@ async function main() {
     await popupRe.waitForSelector(tid('pm-popup-media'), { timeout: 5000 });
     await popupRe.click(tid('pm-popup-media-mediaGray'));
     await poll(async () => (await getProfile(control, ORIGIN))?.mediaGray === true, '弹窗重新开灰度');
-    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.querySelector('#big')).filter.includes('grayscale(1)'), [], { timeout: 8000 });
+    await waitFor(page, '灰度重新生效', () => getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     check(true, '弹窗重开灰度：胶囊挂回来');
     await popupRe.close().catch(() => {});
