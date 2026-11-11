@@ -35,7 +35,9 @@
  *   danger           on bg-subtle     浅 6.04  深 4.93  ≥4.5
  *   danger           on bg-control-hover  浅 5.67  深 5.48  ≥4.5
  *   danger           on bg-control-active 浅 5.22  深 5.91  ≥4.5
+ *   danger-hover     on bg            浅 7.52  深 6.89  ≥4.5
  *   on-danger        on danger        浅 6.47  深 5.71  ≥4.5
+ *   on-danger        on danger-hover  浅 7.52  深 6.89  ≥4.5
  *   on-danger        on danger-active 浅 8.31  深 8.31  ≥4.5
  *   fg               on bg-control-hover  浅 13.82 深 12.25 ≥4.5
  *   fg               on bg-control-active 浅 12.72 深 13.19 ≥4.5
@@ -114,6 +116,10 @@
 
   --pm-danger-light: #b91c1c;
   --pm-danger-dark: #f87171;
+  /* 实心红确认钮的悬停档（#169）：浅色取静止与按下之间的一档，深色同向提亮。
+     此前 hover 与静止同值，违反 design-ui「悬停与按下必须有可见变化」 */
+  --pm-danger-hover-light: #a51d1d;
+  --pm-danger-hover-dark: #fb8b8b;
   --pm-danger-active-light: #991b1b;
   --pm-danger-active-dark: #fca5a5;
   --pm-on-danger-light: #ffffff;
@@ -160,6 +166,7 @@
   --pm-border: var(--pm-border-light);
   --pm-border-control: var(--pm-border-control-light);
   --pm-danger: var(--pm-danger-light);
+  --pm-danger-hover: var(--pm-danger-hover-light);
   --pm-danger-active: var(--pm-danger-active-light);
   --pm-on-danger: var(--pm-on-danger-light);
   --pm-warning: var(--pm-warning-light);
@@ -238,6 +245,7 @@
     --pm-border: var(--pm-border-dark);
     --pm-border-control: var(--pm-border-control-dark);
     --pm-danger: var(--pm-danger-dark);
+    --pm-danger-hover: var(--pm-danger-hover-dark);
     --pm-danger-active: var(--pm-danger-active-dark);
     --pm-on-danger: var(--pm-on-danger-dark);
     --pm-warning: var(--pm-warning-dark);
@@ -272,6 +280,7 @@
     --pm-border: light-dark(var(--pm-border-light), var(--pm-border-dark));
     --pm-border-control: light-dark(var(--pm-border-control-light), var(--pm-border-control-dark));
     --pm-danger: light-dark(var(--pm-danger-light), var(--pm-danger-dark));
+    --pm-danger-hover: light-dark(var(--pm-danger-hover-light), var(--pm-danger-hover-dark));
     --pm-danger-active: light-dark(var(--pm-danger-active-light), var(--pm-danger-active-dark));
     --pm-on-danger: light-dark(var(--pm-on-danger-light), var(--pm-on-danger-dark));
     --pm-warning: light-dark(var(--pm-warning-light), var(--pm-warning-dark));
@@ -315,6 +324,7 @@
     --pm-shadow-near: transparent;
     --pm-shadow-far: transparent;
     --pm-danger: CanvasText;
+    --pm-danger-hover: CanvasText;
     --pm-danger-active: CanvasText;
     --pm-on-danger: Canvas;
     --pm-warning: CanvasText;

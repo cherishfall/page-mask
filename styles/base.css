@@ -149,9 +149,14 @@ input[type='checkbox'][switch]:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
-@media (prefers-reduced-motion: no-preference) {
+/* 动效按 design-ui §九：只动颜色类属性（圆点位置变化属布局，不补间），
+   150ms 标准曲线；reduced-motion 保留 120ms 颜色淡变，不置 0ms（#169） */
+input[type='checkbox'][switch]::before {
+  transition: background-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+@media (prefers-reduced-motion: reduce) {
   input[type='checkbox'][switch]::before {
-    transition: left 0.15s ease;
+    transition-duration: 120ms;
   }
 }
 @media (forced-colors: active) {

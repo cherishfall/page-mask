@@ -113,8 +113,8 @@ a.button {
 }
 :where(body) :where(button, .button).primary.danger:hover:not(:disabled),
 :where(.pm-btn).primary.danger:hover:not(:disabled) {
-  border-color: var(--pm-danger);
-  background: var(--pm-danger);
+  border-color: var(--pm-danger-hover);
+  background: var(--pm-danger-hover);
 }
 :where(body) :where(button, .button).primary.danger:active:not(:disabled),
 :where(.pm-btn).primary.danger:active:not(:disabled) {
