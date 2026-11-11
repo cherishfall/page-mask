@@ -33,11 +33,8 @@ const saveFailed = '没能保存这次改动，请稍后再试一次';
 export const zh = {
   /** 跨界面共用的小词与通用标签 */
   common: {
-    save: '保存',
     cancel: '取消',
-    delete: '删除',
     undo: '撤销',
-    close: '关闭',
     gotIt: '知道了',
     loading: '正在读取…',
     opening: '正在打开…',
@@ -139,9 +136,9 @@ export const zh = {
     mediaGrayHint: '整个页面变成黑白，位置不变、链接照常点；自动播放的视频会暂停，点一下就能看。',
     /** 必须常驻（#153 成文结论）：灰度独立于主开关 + 「不是不加载」两个边界。#161 压成一句短句，
      *  保留「页面内容照常加载」这个如实说法（tests/e2e/check-media.mjs 守着） */
-    hint: '这个开关单独起作用，上面的开关管不到它；页面内容照常加载，只是去掉颜色。',
+    hint: '这个开关单独起作用，「按你的设置显示」管不到它；页面内容照常加载，只是去掉颜色。',
     /** 弹窗里只留一行短句（0.8.16，#153）：灰度独立于主开关这一件事；被砍掉的细节移到弹窗 ⓘ 浮层 */
-    hintShort: '单独记，不受上面的开关影响。',
+    hintShort: '这个开关自己记自己，上面的开关管不到它。',
     /** 未配置网站上的说明：开 = 走第一次设置的流程并建一份只带灰度的配置（0.8.5，#134） */
     hintNew: '打开时浏览器会先让你允许访问这个网站。',
     /** 胶囊「媒体」钮的悬停说明（读屏与悬停共用） */
@@ -183,7 +180,7 @@ export const zh = {
     coverHint: '临时遮住，刷新就还原，不改设置。',
     /** 右下角的小按钮开关（#112）：标签 + 开关下的一行小字 */
     showToggle: '悬浮按钮',
-    showToggleHint: '关掉后，页面上不再显示悬浮按钮。',
+    showToggleHint: '关掉后，这个网站的页面上不再显示悬浮按钮。',
     /** ⓘ 浮层（0.8.16，#153）：悬浮按钮行被砍掉的细节移到这里 */
     showToggleTooltip: '弹窗里的设置和「遮住这一页」快捷键照常可用。',
     /** new 态不放假开关，同位置说明添加设置后才会出现（#148） */
@@ -303,7 +300,7 @@ export const zh = {
 
     titleHeading: '默认标题',
     titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住这一页时，没单独设过标题的网站也用它。',
-    titleLabel: '默认标签页标题',
+    titleLabel: '默认标题',
     titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随浏览器语言）。${titleBlankHint}`,
 
 
@@ -419,7 +416,7 @@ export const zh = {
     /** 行上的展开按钮：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
     adjust: '调整',
     /** 预览行里勾了同类的行：跳回点选阶段检查组员（#88） */
-    inspectSame: '检查同类',
+    inspectSame: '检查一样的',
     /** 失效行的摘要：说清它可能没用了 */
     staleSummary: '可能失效 · 在页面上找不到了',
     /** 失效行点「重新选」后的一句提示：下一个动作是什么 */
@@ -451,9 +448,9 @@ export const zh = {
     sameNavPosition: (i: number, n: number) => `第 ${i} / ${n} 个`,
     sameNavPrev: '上一个',
     sameNavNext: '下一个',
-    sameNavPrevAria: '上一个同类',
-    sameNavLive: (i: number, n: number) => `同类成员：第 ${i} / ${n} 个`,
-    sameNavNextAria: '下一个同类',
+    sameNavPrevAria: '上一个一样的',
+    sameNavLive: (i: number, n: number) => `一样的：第 ${i} / ${n} 个`,
+    sameNavNextAria: '下一个一样的',
     /** 勾了同类的行，看效果的摘要上报一次具体的个数（n 是连这一项一起的总数） */
     sameGroupSummary: (n: number) => `连一样的共 ${n} 个`,
     /** 用 # 区分页面的网站推不出「这类页面」时的一句说明 */

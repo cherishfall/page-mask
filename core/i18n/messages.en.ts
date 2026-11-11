@@ -27,11 +27,8 @@ const saveFailed = 'Couldn’t save this change. Please try again';
 
 export const en: Messages = {
   common: {
-    save: 'Save',
     cancel: 'Cancel',
-    delete: 'Delete',
     undo: 'Undo',
-    close: 'Close',
     gotIt: 'Got it',
     loading: 'Loading…',
     opening: 'Opening…',
@@ -44,7 +41,7 @@ export const en: Messages = {
     resetSiteContentHint: 'Only hidden items — the title and icon stay as they are.',
     resetSiteContentTitle: 'Use the site’s own content?',
     resetSiteContentImpact: (n: number) =>
-      n === 1 ? 'The 1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
+      n === 1 ? '1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
     resetSiteContentConfirm: 'Restore content',
     clean: 'Your settings',
     original: 'As is',
@@ -115,8 +112,8 @@ export const en: Messages = {
     /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
     mediaGrayHint: 'The whole page turns black & white, same place, links still work; autoplaying videos pause — click one to watch.',
     /** Must stay visible (#153): the gray switch is independent of the main switch + "not unloaded" boundary. #161 keeps it to one short sentence */
-    hint: 'This switch works on its own — the switch above doesn’t control it; the page still loads as usual, just without color.',
-    hintShort: 'Its own setting — the switch above doesn’t affect it.',
+    hint: 'This switch works on its own — “Show this site your way” doesn’t control it; the page still loads as usual, just without color.',
+    hintShort: 'This switch keeps its own setting — the switch above doesn’t control it.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on first asks you to allow access to this site.',
     /** Hover / screen-reader label for the capsule media button */
@@ -174,7 +171,7 @@ export const en: Messages = {
     settings: 'Settings',
     error: {
       tabMismatch: 'The page changed. Go back to the site you want to set up and click PageMask again',
-      notGranted: 'Access to this site wasn’t granted. Click again and choose “Allow”',
+      notGranted: 'The browser didn’t allow access to this site. Click again and choose “Allow”',
       injectFailed: 'Couldn’t start on this page. Reload it and try again',
       denied: 'PageMask needs access to this site to change its title and hide things. Click again and choose “Allow”',
       gestureLost: 'Couldn’t open the permission prompt. Click PageMask again',
@@ -227,7 +224,7 @@ export const en: Messages = {
       code: 'Code',
       meet: 'Meeting',
       chat: 'Chat',
-      drive: 'Drive',
+      drive: 'Cloud drive',
       book: 'Knowledge base',
       chart: 'Report',
     },
@@ -248,7 +245,7 @@ export const en: Messages = {
     },
 
     error: {
-      auth: 'Access wasn’t granted and your site settings are kept. Click again when needed and choose “Allow”',
+      auth: 'Access wasn’t allowed and your site settings are kept. Click again when needed and choose “Allow”',
       toggle: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
       rules: saveFailed,
       icon: 'Couldn’t save the icon. Please try again',
@@ -259,9 +256,11 @@ export const en: Messages = {
       partAdded: (n: number) => (n === 1 ? '1 site added' : `${n} sites added`),
       partUpdated: (n: number) => (n === 1 ? '1 site updated' : `${n} sites updated`),
       partRemoved: (n: number) => (n === 1 ? '1 local site removed' : `${n} local sites removed`),
-      partSkipped: (n: number) => (n === 1 ? '1 malformed site skipped' : `${n} malformed sites skipped`),
+      partSkipped: (n: number) => (n === 1 ? '1 site skipped (format not recognized)' : `${n} sites skipped (format not recognized)`),
       partSkippedRules: (n: number) =>
-        n === 1 ? '1 unreadable item set to hide ignored' : `${n} unreadable items set to hide ignored`,
+        n === 1
+          ? '1 item set to hide couldn’t be read and was skipped'
+          : `${n} items set to hide couldn’t be read and were skipped`,
       modeMerge: 'merged',
       modeReplace: 'replaced',
       cancelled: 'Import cancelled. Nothing on this computer changed',
@@ -275,7 +274,7 @@ export const en: Messages = {
 
     titleHeading: 'Default title',
     titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own.',
-    titleLabel: 'Default tab title',
+    titleLabel: 'Default title',
     titleFootnote: (fallback: string) =>
       `Leave it empty to use “${fallback}” (follows the browser language). ${titleBlankHint}`,
 
@@ -323,8 +322,8 @@ export const en: Messages = {
         `All ${sites} sites and ${rules} items set to hide on this computer will be replaced`,
       removed: (n: number, rules: number, list: string) =>
         `${n} of them are not in the file and will be dropped (${rules} items set to hide): ${list}`,
-      incoming: (sites: number, rules: number) => `Becomes the file’s ${sites} sites and ${rules} items set to hide`,
-      settings: 'The settings here (the default title) are replaced by the file’s too',
+      incoming: (sites: number, rules: number) => `Replaced by the ${sites} sites and ${rules} items set to hide in the file`,
+      settings: 'The settings here (the default title) are replaced with the ones in the file too',
       irreversible: 'This can’t be undone. If unsure, cancel first and use “Export all settings” for a copy',
       confirm: 'Replace',
     },
@@ -376,7 +375,7 @@ export const en: Messages = {
       `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
     pickLead: [
       'Click something on the page to pick it.',
-      'Click it again to unpick. You can pick several in a row.',
+      'Click it again to deselect it. You can pick several in a row.',
       'Everything you pick is listed below.',
     ],
     adjustGroup: 'Adjust the last pick',
@@ -395,7 +394,7 @@ export const en: Messages = {
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
-    inspectSame: 'Check matches',
+    inspectSame: 'Check the ones like it',
     staleSummary: 'May be broken · can’t be found on this page',
     /** Shown after tapping "Pick again" on a broken row: names the next action */
     reselectHint: 'Click where this item sits on the page now',
@@ -422,9 +421,9 @@ export const en: Messages = {
     sameNavPosition: (i: number, n: number) => `${i} of ${n}`,
     sameNavPrev: 'Previous',
     sameNavNext: 'Next',
-    sameNavPrevAria: 'Previous similar item',
-    sameNavLive: (i: number, n: number) => `Similar item: ${i} of ${n}`,
-    sameNavNextAria: 'Next similar item',
+    sameNavPrevAria: 'Previous one like it',
+    sameNavLive: (i: number, n: number) => `One like this: ${i} of ${n}`,
+    sameNavNextAria: 'Next one like it',
     /** Checked rows repeat the exact count in their summary (n = the whole group, this one included) */
     sameGroupSummary: (n: number) => `${n} in total with the others like it`,
     scopeHintHash: 'This site tells pages apart by what follows #, so for now the whole site is the only choice',
