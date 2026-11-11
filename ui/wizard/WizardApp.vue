@@ -110,7 +110,7 @@
               <template v-if="lastSel">
                 {{ t.wizard.adjustNow }}<strong>{{ t.wizard.adjustTarget(lastSelIndex + 1, lastSelName) }}</strong>
               </template>
-              <template v-else>{{ t.wizard.adjustEmpty }}</template>
+              <template v-else>{{ t.wizard.adjustPickFirst }}</template>
             </p>
             <div class="pm-wiz-group-row">
               <button
@@ -229,6 +229,8 @@
       </template>
 
       <template v-else>
+        <!-- #161：这一屏怎么操作（改名字、调范围）是「完成操作必需」，常驻但压成一句短句；
+             只有前几次才需要看的细节才进 ⓘ。 -->
         <p class="pm-wiz-sub">{{ t.wizard.previewHint }}</p>
         <ol v-if="drafts.length > 0" class="pm-wiz-drafts" :aria-label="t.wizard.draftsLabel" data-testid="pm-wiz-drafts">
           <li v-for="(d, i) in drafts" :key="d.key" :data-testid="`pm-draft-${i + 1}`">

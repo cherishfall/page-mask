@@ -2,7 +2,6 @@
   <div class="shell">
     <header class="masthead">
       <h1 translate="no">PageMask</h1>
-      <p class="sub">{{ t.management.appSub }}</p>
     </header>
 
     <main id="pm-main" ref="mainEl" tabindex="-1">
@@ -21,7 +20,6 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue';
-import { t } from '@/ui/i18n';
 import DeleteSiteDialog from './DeleteSiteDialog.vue';
 import SiteSettingsView from './views/SiteSettingsView.vue';
 import SitesView from './views/SitesView.vue';
@@ -67,11 +65,6 @@ watch(route, async () => {
 .masthead h1 {
   font-size: var(--pm-font-size-heading);
   margin: 0;
-}
-
-.sub {
-  color: var(--pm-fg-muted);
-  margin: var(--pm-space-1) 0 0;
 }
 
 main {

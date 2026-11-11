@@ -196,7 +196,9 @@
           {{ store.state.ruleError[profile.origin] }}
         </p>
 
-        <!-- 这一页只读清单：换成怎么收、重选元素都要页面上下文，所以指回页面（#71） -->
+        <!-- 这一页只读清单：换成怎么收、重选元素都要页面上下文，所以指回页面（#71）。
+             #161：这是「完成操作必需」的边界坑（a 类），常驻但压成一句短句；
+             Carbon 明确 pertinent 信息不进 tooltip，别收进 ⓘ。 -->
         <p class="hint" data-testid="pm-mgmt-edit-hint">{{ t.management.rulesEditHint }}</p>
       </section>
 

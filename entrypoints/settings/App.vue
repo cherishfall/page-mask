@@ -9,7 +9,6 @@
           {{ t.settings.back }}
         </a>
       </div>
-      <p class="sub">{{ t.settings.sub }}</p>
     </header>
 
     <main>
@@ -61,8 +60,10 @@
 
         <!-- 默认标题 -->
         <section class="card" aria-labelledby="pm-settings-title-heading">
-          <h2 id="pm-settings-title-heading">{{ t.settings.titleHeading }}</h2>
-          <p class="hint">{{ t.settings.titleIntro }}</p>
+          <div class="card-head pm-info-head pm-info-anchor">
+            <h2 id="pm-settings-title-heading">{{ t.settings.titleHeading }}</h2>
+            <InfoTip :text="t.settings.titleIntro" :label="t.common.infoLabel" />
+          </div>
           <div class="row">
             <label for="pm-settings-default-title">{{ t.settings.titleLabel }}</label>
             <input
@@ -99,8 +100,10 @@
         <!-- 右下角那颗小按钮（#110）：不透明度滑杆 + 真实胶囊预览。
              id="opacity" 是深链锚点（#120）：页面胶囊的「调整不透明度」跳到这一张 -->
         <section id="opacity" class="card" aria-labelledby="pm-settings-toggle-heading" data-testid="pm-settings-toggle">
-          <h2 id="pm-settings-toggle-heading">{{ t.settings.toggleHeading }}</h2>
-          <p class="hint">{{ t.settings.toggleIntro }}</p>
+          <div class="card-head pm-info-head pm-info-anchor">
+            <h2 id="pm-settings-toggle-heading">{{ t.settings.toggleHeading }}</h2>
+            <InfoTip :text="t.settings.toggleHint" :label="t.common.infoLabel" />
+          </div>
           <div class="toggle-preview" aria-hidden="true" inert>
             <FloatingToggle
               state="disguised"
@@ -133,7 +136,6 @@
             {{ t.settings.toggleOpacityLowHint }}
           </p>
           <p v-if="opacityError" class="hint error" role="alert" data-testid="pm-settings-opacity-error">{{ opacityError }}</p>
-          <p class="hint">{{ t.settings.toggleHint }}</p>
         </section>
 
         <!-- 快捷键（#101）：全产品只有幕布这一条命令；改键只能去 Chrome 自己的页面 -->
@@ -150,7 +152,6 @@
               {{ t.settings.shortcutChange }}
             </button>
           </div>
-          <p class="hint">{{ t.settings.shortcutHint }}</p>
           <p v-if="shortcutOpenFailed" class="hint error" role="alert" data-testid="pm-settings-shortcut-error">
             {{ t.settings.shortcutOpenFailed }}
           </p>
@@ -158,8 +159,10 @@
 
         <!-- 导出 / 导入 -->
         <section class="card" aria-labelledby="pm-settings-transfer-heading">
-          <h2 id="pm-settings-transfer-heading">{{ t.settings.transferHeading }}</h2>
-          <p class="hint">{{ t.settings.transferIntro }}</p>
+          <div class="card-head pm-info-head pm-info-anchor">
+            <h2 id="pm-settings-transfer-heading">{{ t.settings.transferHeading }}</h2>
+            <InfoTip :text="t.settings.transferIntro" :label="t.common.infoLabel" />
+          </div>
           <div class="row">
             <button type="button" class="primary" data-testid="pm-settings-export" @click="store.doExport">
               {{ t.settings.exportAll }}
@@ -260,6 +263,7 @@ import { browser } from 'wxt/browser';
 import { localeName } from '@/core/i18n';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import FloatingToggle from '@/ui/FloatingToggle.vue';
+import InfoTip from '@/ui/info-tip/InfoTip';
 import { ensureTogglePreviewStyles } from '@/ui/toggle/preview-style';
 import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 import { locale, t } from '@/ui/i18n';
@@ -438,11 +442,6 @@ function onReplaceClose() {
   margin: 0;
 }
 
-.sub {
-  color: var(--pm-fg-muted);
-  margin: var(--pm-space-1) 0 0;
-}
-
 .card {
   margin-top: var(--pm-space-3);
   /* 深链跳过来时别贴着视口边缘（#120） */
@@ -458,6 +457,15 @@ function onReplaceClose() {
 .card h2 {
   font-size: var(--pm-font-size-title);
   margin: 0 0 var(--pm-space-2);
+}
+
+/* #161：卡片级说明收进 ⓘ 时，图标跟标题同一行（与弹窗「标签 + ⓘ」同一形态）；
+   标题的下边距移到这一行上，避免图标独占一行还多出一段空白 */
+.card-head {
+  margin-bottom: var(--pm-space-2);
+}
+.card-head h2 {
+  margin: 0;
 }
 
 .row {

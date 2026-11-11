@@ -9,6 +9,7 @@
 @import './tokens.css';
 @import './controls.css';
 @import './marks.css';
+@import './info-tip.css';
 
 :root {
   /* 复选框、单选框、滑块等原生控件的强调色跟随主色 */

@@ -1,0 +1,78 @@
+/*
+ * ⓘ 信息标（#161）——「按需露出」的那类说明只有这一份外观。
+ *
+ * 两条注入通道，共用同一份文本（全局 <style> 穿不过 shadow boundary）：
+ *   - 扩展页面（popup / 管理页 / 插件设置 / 欢迎页）：styles/base.css @import 本文件；
+ *   - 页内 shadow root（向导）：ui/wizard/wizard-styles.ts 用 ?inline 把它接进 createStyleAdopter。
+ *
+ * 只用 --pm-* token；类名一律 pm-info-tip* / pm-info-anchor 前缀，不用裸通用类名
+ * （裸类名会串到管理页 scoped 元素，DEVLOG.md:66 记过同类事故）。
+ */
+.pm-info-anchor {
+  position: relative;
+}
+
+/* 卡片 / 分组级说明收进 ⓘ 时，图标跟在标题同一行（与弹窗「标签 + ⓘ」同一形态），
+   不独占一行；可及名称仍由标题元素提供，读屏不会把「更多信息」并进标题。 */
+.pm-info-head {
+  display: flex;
+  align-items: center;
+  gap: var(--pm-space-2);
+}
+
+.pm-info-tip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-inline: calc(var(--pm-space-1) * -1);
+  color: var(--pm-fg-muted);
+  border-radius: 50%;
+  cursor: help;
+}
+.pm-info-tip-icon {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.pm-info-tip-trigger:hover,
+.pm-info-tip-trigger:focus-visible {
+  color: var(--pm-fg);
+}
+.pm-info-tip-trigger:focus-visible {
+  outline: var(--pm-focus-ring);
+  outline-offset: var(--pm-focus-ring-offset);
+}
+
+/* 浮层锚定整行：弹窗/工具条窗口会裁掉越界内容，按图标居中或右对齐都会顶破边缘；
+   inset-inline:0 永远贴着内容边界（0.8.16 DEVLOG 的结论），顺带满足 WCAG 1.4.13 的 hoverable。 */
+.pm-info-tip-bubble {
+  display: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% + 6px);
+  box-sizing: border-box;
+  padding: var(--pm-space-2);
+  border: 1px solid var(--pm-border-control);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow-overlay);
+  font-size: var(--pm-font-size-caption);
+  line-height: var(--pm-line-height);
+  text-align: start;
+  cursor: auto;
+  z-index: 1;
+}
+/* hover / 键盘聚焦浮出；指针移到浮层上仍不消失（hoverable）；正文常驻 DOM，不用 v-if */
+.pm-info-tip-trigger:hover + .pm-info-tip-bubble,
+.pm-info-tip-trigger:focus + .pm-info-tip-bubble,
+.pm-info-tip-bubble:hover {
+  display: block;
+}
+/* Esc 撤下（WCAG 1.4.13 dismissible）：压过上面三条显隐规则，不移动指针也能收起；
+   重新聚焦或鼠标离开后复位（组件里把 data-pm-info-dismissed 改回 false）。 */
+.pm-info-tip-trigger[data-pm-info-dismissed='true'] + .pm-info-tip-bubble,
+.pm-info-tip-trigger[data-pm-info-dismissed='true'] + .pm-info-tip-bubble:hover {
+  display: none;
+}

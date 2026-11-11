@@ -47,6 +47,8 @@ export const zh = {
     cleanMode: '按你的设置显示',
     /** 输入框下面那几个常用标题的名字（#151：quickFill / quickTitle 两份同值键合并成一份） */
     quickTitle: '常用标题',
+    /** ⓘ 信息标的读屏名（#161）：公共键，弹窗 / 管理页 / 插件设置 / 向导共用，不绑死 popup.* */
+    infoLabel: '更多信息',
     /** 标题留空的坑提示，三处共用（见文件头的 const） */
     titleBlankHint,
     /** 坏数据里没有名字的收起项 */
@@ -115,9 +117,11 @@ export const zh = {
   media: {
     heading: '图片和视频',
     mediaGray: '整页变灰',
-    mediaGrayHint: '整个页面变成黑白——文字、图片、视频、按钮都一样，位置大小不变，链接照常点。会自动播放的视频会被暂停，点一下视频就能看。',
-    /** 站点设置页卡片底部：0.8.3 起灰度独立于主开关，把这条边界说清；「不是不加载」照旧如实讲 */
-    hint: '这个开关单独起作用，上面那颗开关管不到它——上面的开关关着时，收起的内容和标签页标题、图标会还原，整个页面仍是黑白的。页面内容照常加载，这里只是去掉颜色。',
+    /** 每行说明压成一句短句（#161）；跟着它解释的那个开关走，不收进 ⓘ */
+    mediaGrayHint: '整个页面变成黑白，位置不变、链接照常点；自动播放的视频会暂停，点一下就能看。',
+    /** 必须常驻（#153 成文结论）：灰度独立于主开关 + 「不是不加载」两个边界。#161 压成一句短句，
+     *  保留「页面内容照常加载」这个如实说法（tests/e2e/check-media.mjs 守着） */
+    hint: '这个开关单独起作用，上面的开关管不到它；页面内容照常加载，只是去掉颜色。',
     /** 弹窗里只留一行短句（0.8.16，#153）：灰度独立于主开关这一件事；被砍掉的细节移到弹窗 ⓘ 浮层 */
     hintShort: '单独记，不受上面的开关影响。',
     /** 未配置网站上的说明：开 = 走第一次设置的流程并建一份只带灰度的配置（0.8.5，#134） */
@@ -162,8 +166,6 @@ export const zh = {
     showToggleHint: '关掉后，页面上不再显示悬浮按钮。',
     /** ⓘ 浮层（0.8.16，#153）：悬浮按钮行被砍掉的细节移到这里 */
     showToggleTooltip: '弹窗里的设置和「遮住这一页」快捷键照常可用。',
-    /** ⓘ 信息标的读屏名（#153） */
-    infoLabel: '更多信息',
     /** new 态不放假开关，同位置说明添加设置后才会出现（#148） */
     showToggleHintNew: '添加设置后，页面上会出现悬浮按钮。',
     /** 头部「查看使用说明」小链接（0.8.11 #139 入口，0.8.15 #148 挪到标题右侧） */
@@ -193,7 +195,6 @@ export const zh = {
   /** 管理页：网站列表、站点设置页，以及它们共用的 store（entrypoints/management） */
   management: {
     pageTitle: 'PageMask · 全部网站设置',
-    appSub: '这里是你添加过的网站。点一个进去，改它的标签页标题、图标，或者看它收起的内容。',
 
     sitesTitle: '全部网站设置',
     sitesHint: '你没添加的网站，PageMask 完全不碰。',
@@ -212,14 +213,14 @@ export const zh = {
     missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它。',
 
     titleHeading: '标签页标题',
-    titleIntro: '保存后，这个网站的标签页就显示这段文字；上面的开关关着时，仍显示网站本来的标题。',
+    titleIntro: '上面的开关关着时，仍显示网站本来的标题。',
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
     titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题。',
     titleFootnote: (fallback: string) =>
       `停止输入后自动保存。留空就用「${fallback}」。${titleBlankHint}`,
 
     iconHeading: '标签页图标',
-    iconIntro: '上面的开关打开时，标签页用这里选的图标。',
+    iconIntro: '上面的开关打开时，标签页才用这里选的图标。',
     iconSite: '网站原来的图标',
     iconNone: '不显示图标',
     iconPreset: '换成别的图标',
@@ -241,7 +242,7 @@ export const zh = {
     rulesEmpty: '还没有收起设置。',
     ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了。打开这个网站重新选一次。`,
     /** 这一页只读清单；换成怎么收、重选元素都要页面上下文，所以指回页面（#71） */
-    rulesEditHint: '换收起方式或重新选一次，要在那个网站的页面上做：点工具栏上的 PageMask 图标，再点「收起内容」。',
+    rulesEditHint: '换收起方式或重选元素，要回网站页面上改：点工具栏上的 PageMask 图标，再点「收起内容」。',
 
     /** 站点设置页页脚与 ⋯ 菜单里的同一件事（改一处两处一起改） */
     deleteSite: {
@@ -278,7 +279,6 @@ export const zh = {
   settings: {
     pageTitle: 'PageMask · 插件设置',
     title: '插件设置',
-    sub: '这里管的是所有网站共用的一套设置。',
     back: '全部网站设置',
 
     titleHeading: '默认标题',
@@ -288,20 +288,16 @@ export const zh = {
 
 
     toggleHeading: '悬浮按钮',
-    toggleIntro: '「不透明度」调的是悬浮按钮闲着时有多淡；鼠标移上去、用键盘选中或拖动它时，会立刻变清楚。',
     toggleOpacityLabel: '不透明度',
     toggleOpacityLowHint: '调得太淡会不容易找到；把鼠标移到悬浮按钮原来的位置，它就会变清楚。',
     toggleOpacityError: '不透明度没有存上，请再试一次。',
     toggleHint: '调它闲着的时候有多淡（数值越小越淡），鼠标移上去立刻变清楚。遮住整页后出现的那颗按钮不受影响，一直看得清。',
 
     shortcutHeading: '快捷键',
-    shortcutIntro:
-      '按一下快捷键遮住这一页，再按一下恢复。遮住只在当前页面临时生效，刷新或离开页面就还原，不会改你的设置。',
+    shortcutIntro: '只在当前页面临时遮住，刷新或离开页面就还原，不改你的设置。',
     shortcutLabel: '遮住 / 恢复',
     shortcutUnbound: '没有绑定快捷键，可能被别的扩展占用了',
     shortcutChange: '在 Chrome 里更改',
-    shortcutHint:
-      'Windows / Linux 默认 Ctrl+Shift+X，Mac 默认 ⌘+Shift+X。改键在 Chrome 自己的快捷键页面，改完这里会跟着变。',
     shortcutOpenFailed: '这个浏览器不让扩展直接打开那一页，请在新标签页输入 chrome://extensions/shortcuts',
 
     transferHeading: '导出 / 导入',
@@ -322,7 +318,7 @@ export const zh = {
 
     /** 界面语言（#57）：三选一，语言名各用本语言书写 */
     languageHeading: '界面语言',
-    languageIntro: '切换后所有已经打开的 PageMask 页面马上变，不用刷新。标签页的默认标题仍然跟随浏览器语言。',
+    languageIntro: '切换后立即生效；标签页的默认标题仍跟随浏览器语言。',
     languageAuto: (current: string) => `自动（现在：${current}）`,
     languageZh: '简体中文',
     languageEn: 'English',
@@ -362,13 +358,13 @@ export const zh = {
         features: [
           '收起内容：点页面上不想要的部分，它们就消失。',
           '标题和图标：把标签页的名字和图标换成你设置的样子。',
-          '整页变灰：整个页面变成黑白，位置不变、还能看清；这个开关单独起作用，随时可以开、关。',
-          '遮住这一页：点一下临时遮住这一页，再点「恢复」或按快捷键就还原。刷新或离开页面也会自动还原，不会改你的设置。',
+          '整页变灰：整个页面变成黑白，位置不变。',
+          '遮住这一页：临时挡一下，刷新就还原。',
         ],
       },
       {
         title: '平时用页面上的悬浮按钮',
-        text: '在你添加过的网站上，页面上有悬浮按钮：点面具图标切换「按设置 / 原样」，点图片图标让图片和视频变灰，点闭眼图标遮住这一页，点 ⋯ 打开更多操作。按住它拖到页面任何位置，窗口大小变化后会自动收回屏幕内。',
+        text: '添加过的网站上会有悬浮按钮：点它切换「按设置 / 原样」，或遮住这一页。拖动能挪位置。',
         features: [],
       },
     ],
@@ -387,7 +383,8 @@ export const zh = {
     pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消选中。可以连着选好几个。', '选中的都列在下面。'],
     adjustGroup: '调整最后选中的那一项',
     adjustNow: '现在调的是',
-    adjustEmpty: '还没选中东西。先在页面上点一下要调整的那一项。',
+    /** #161：与清单空状态（listEmpty）重复的「还没选中东西」去掉，只留下一步动作这一句 */
+    adjustPickFirst: '先在页面上点一下要调整的那一项。',
     adjustTarget: (seq: number, name: string) => `第 ${seq} 项（${name}）`,
     bigger: '选大一点',
     smaller: '选小一点',
@@ -397,7 +394,7 @@ export const zh = {
     deleteOne: (seq: number, name: string) => `取消选中第 ${seq} 项：${name}`,
     /** 看效果：每行两行排版 */
     /** 看效果：每行两行排版。「同类一起」的勾选框住在选内容行内（#82），这里不再提 */
-    previewHint: '滚动页面看看效果。每一行可以直接改名字；点「调整」可以改收起方式和在哪些页面收起。',
+    previewHint: '每一行可以改名字；点「调整」改收起方式和在哪些页面收起。',
     draftsLabel: '这次要收起的内容',
     /** 行上的展开按钮：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
     adjust: '调整',

@@ -112,25 +112,15 @@
         :aria-label="t.media.heading"
         data-testid="pm-popup-media"
       >
-        <div class="switch-row">
+        <div class="switch-row pm-info-anchor">
           <label class="popup-row-label" for="pm-popup-media-mediaGray">
             <MediaIcon class="popup-row-icon" :data-state="media?.mediaGray === true ? 'on' : 'off'" />
             <span>{{ t.media.mediaGray }}</span>
           </label>
-          <!-- ⓘ 信息标（0.8.16，#153）：说明收短句，被砍掉的细节（黑白可读可点、自动播放暂停、
-               点击放行）移到这里，鼠标悬停 / 键盘聚焦时浮出（用户提的形态）。
-               聚焦即可见（键盘可达），Esc 撤下（WCAG 1.4.13 dismissible）；内容是补充说明，
-               关键的「单独记」已经写在卡内短句里。
-               aria-describedby 指向浮层正文（0.8.17 WIG 审查）：读屏聚焦时播报完整内容，
-               而不是只播报「更多信息」三个字 -->
-          <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" aria-describedby="pm-popup-tip-media" @keydown.capture="dismissInfoOnEsc">
-            <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
-              <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
-            </svg>
-            <span role="tooltip" id="pm-popup-tip-media" class="popup-info-tip">{{ t.popup.mediaTooltip }}</span>
-          </span>
+          <!-- ⓘ 信息标（#161 抽成公共组件）：说明收短句，被砍掉的细节移到这里按需读。
+               唯一 id / 常驻 DOM / 键盘聚焦 / 读屏 / Esc / shadow 内样式都归
+               ui/info-tip/InfoTip.ts 与 styles/info-tip.css；这里只传正文与公共读屏名。 -->
+          <InfoTip :text="t.popup.mediaTooltip" :label="t.common.infoLabel" />
           <input
             id="pm-popup-media-mediaGray"
             type="checkbox"
@@ -171,16 +161,9 @@
       <template v-if="phase === 'new' || phase === 'ready'">
         <div class="aux-row">
           <template v-if="hasProfile">
-            <div class="switch-row">
+            <div class="switch-row pm-info-anchor">
               <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
-              <span class="popup-info" tabindex="0" :aria-label="t.popup.infoLabel" aria-describedby="pm-popup-tip-toggle" @keydown.capture="dismissInfoOnEsc">
-                <svg class="popup-info-icon" viewBox="0 0 16 16" aria-hidden="true">
-                  <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3" />
-                  <line x1="8" y1="7.2" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                  <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
-                </svg>
-                <span role="tooltip" id="pm-popup-tip-toggle" class="popup-info-tip">{{ t.popup.showToggleTooltip }}</span>
-              </span>
+              <InfoTip :text="t.popup.showToggleTooltip" :label="t.common.infoLabel" />
               <input
                 id="pm-popup-capsule"
                 type="checkbox"
@@ -231,6 +214,7 @@ import EyeOffIcon from '@/ui/icons/EyeOffIcon.vue';
 import EyeOpenIcon from '@/ui/icons/EyeOpenIcon.vue';
 import MaskIcon from '@/ui/icons/MaskIcon.vue';
 import MediaIcon from '@/ui/icons/MediaIcon.vue';
+import InfoTip from '@/ui/info-tip/InfoTip';
 
 const props = defineProps<{
   /** loading 读取中 / unsupported 不支持的页面 / new 没有配置 / pending 待授权 / ready 就绪 */
@@ -283,12 +267,6 @@ const emit = defineEmits<{
 const ariaBusy = computed(() => props.phase === 'loading' || props.busy !== '');
 /** 删除入口用全名（与胶囊菜单 / 管理页 / 列表 ⋯ 菜单同一叫法）；确认框里的实心红按钮才是「删除设置」 */
 const deleteLabel = deleteSiteHeading();
-
-/** ⓘ 浮层的 Esc 撤下（WCAG 1.4.13 dismissible）：焦点还在 ⓘ 上时按 Esc，移走焦点浮层即收起 */
-function dismissInfoOnEsc(e: KeyboardEvent): void {
-  if (e.key !== 'Escape') return;
-  (e.currentTarget as HTMLElement).blur();
-}
 </script>
 
 <style>
@@ -357,7 +335,7 @@ function dismissInfoOnEsc(e: KeyboardEvent): void {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.switch-row {
+.popup .switch-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -365,7 +343,7 @@ function dismissInfoOnEsc(e: KeyboardEvent): void {
 }
 /* 只有真关联了开关的 label 才给指针样式与点击区补偿（#148）：new 态卡头的
    :for="undefined" 渲染后没有 for 属性，不该看着可点、点了没反应（方案 §四）。 */
-.switch-row label[for] {
+.popup .switch-row label[for] {
   cursor: pointer;
   /* 命中区补偿（WCAG 2.5.8）：开关本体 20px 高，把标签的点击区垫到 ≥24（负 margin 抵消，视觉不变） */
   padding: 3px 0;
@@ -451,55 +429,8 @@ function dismissInfoOnEsc(e: KeyboardEvent): void {
   align-items: center;
   gap: var(--pm-space-2);
 }
-/* ⓘ 信息标（0.8.16，#153）：短说明 + 浮层补细节。可聚焦（键盘可达）、悬停或聚焦时浮出，
-   Esc 撤下（dismissInfoOnEsc，WCAG 1.4.13 dismissible / persistent / hoverable）。
-   图标 14px、命中区 24px（WCAG 2.5.8）。
-   浮层锚定在整行（.switch-row 相对定位、inset-inline: 0 铺满行宽）而不是图标上：
-   弹窗窗口会裁掉越界内容，按图标居中 / 右对齐都会顶破左或右缘；铺满行宽永远贴着
-   内容边界，文字最多两行。浮层是行的子元素，指针移到浮层上仍是 :hover（hoverable） */
-.switch-row {
-  position: relative;
-}
-.popup-info {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 24px;
-  block-size: 24px;
-  margin-inline: calc(var(--pm-space-1) * -1);
-  color: var(--pm-fg-muted);
-  border-radius: 50%;
-  cursor: help;
-}
-.popup-info-icon {
-  inline-size: 14px;
-  block-size: 14px;
-}
-.popup-info:hover,
-.popup-info:focus-visible {
-  color: var(--pm-fg);
-}
-.popup-info-tip {
-  display: none;
-  position: absolute;
-  inset-inline: 0;
-  bottom: calc(100% + 6px);
-  padding: var(--pm-space-2);
-  border: 1px solid var(--pm-border-control);
-  border-radius: var(--pm-radius-control);
-  background: var(--pm-bg);
-  color: var(--pm-fg);
-  box-shadow: var(--pm-shadow-overlay);
-  font-size: var(--pm-font-size-caption);
-  line-height: var(--pm-line-height);
-  text-align: start;
-  cursor: auto;
-  z-index: 1;
-}
-.switch-row:hover .popup-info-tip,
-.switch-row:focus-within .popup-info-tip {
-  display: block;
-}
+/* ⓘ 信息标（#161）：外观收进 styles/info-tip.css 一份共享样式，这里不再写第二套；
+   浮层靠 .pm-info-anchor（模板加在带 ⓘ 的那一行）定位，全局样式只留布局。 */
 /* 遮住这一页：图标 + 文字 + 快捷键排一行（按钮本身走 controls.css 的次操作档） */
 .popup-cover {
   gap: var(--pm-space-2);

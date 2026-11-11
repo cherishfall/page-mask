@@ -36,6 +36,8 @@ export const en: Messages = {
     original: 'As is',
     cleanMode: 'Show this site your way',
     quickTitle: 'Common titles',
+    /** Accessible name for the ⓘ info tag (#161): shared key, used by popup / management / settings / wizard */
+    infoLabel: 'More information',
     /** Blank-title caveat shared by three keys (see the const above) */
     titleBlankHint,
     unnamedElement: 'Unnamed element',
@@ -90,9 +92,10 @@ export const en: Messages = {
   media: {
     heading: 'Pictures & videos',
     mediaGray: 'Turn the whole page gray',
-    mediaGrayHint: 'The whole page turns black & white — text, pictures, videos, buttons alike; same place, same size, links still work. Videos that autoplay are paused; click a video to watch it.',
-    /** Site settings card footnote: 0.8.3 — the gray switch is independent of the main switch; images still load, plain and honest */
-    hint: 'This switch works on its own — the switch above doesn’t control it: when the switch above is off, hidden items and the tab title and icon return to normal while the page stays black & white. The page still loads as usual — this only removes the color.',
+    /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
+    mediaGrayHint: 'The whole page turns black & white, same place, links still work; autoplaying videos pause — click one to watch.',
+    /** Must stay visible (#153): the gray switch is independent of the main switch + "not unloaded" boundary. #161 keeps it to one short sentence */
+    hint: 'This switch works on its own — the switch above doesn’t control it; the page still loads as usual, just without color.',
     hintShort: 'Its own setting — the switch above doesn’t affect it.',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on first asks you to allow access to this site.',
@@ -134,8 +137,6 @@ export const en: Messages = {
     showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages.',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here */
     showToggleTooltip: 'The popup settings and the “Cover this page” shortcut keep working.',
-    /** Accessible name for the ⓘ info tag (#153) */
-    infoLabel: 'More information',
     /** On an unset site there is no switch; say the button appears once set up (#148) */
     showToggleHintNew: 'Once this site is set up, a floating button appears on its pages.',
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
@@ -163,7 +164,6 @@ export const en: Messages = {
 
   management: {
     pageTitle: 'PageMask · All site settings',
-    appSub: 'These are the sites you added. Open one to change its tab title and icon, or to see its hidden items.',
 
     sitesTitle: 'All site settings',
     sitesHint: 'PageMask never touches sites you didn’t add.',
@@ -185,14 +185,14 @@ export const en: Messages = {
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
 
     titleHeading: 'Tab title',
-    titleIntro: 'Once saved, this site’s tab shows this text. When the switch above is off, the site’s own title comes back.',
+    titleIntro: 'When the switch above is off, the site’s own title comes back.',
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title.',
     titleFootnote: (fallback: string) =>
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'When the switch above is on, this site’s tab uses the icon you pick here.',
+    iconIntro: 'The tab uses this icon only when the switch above is on.',
     iconSite: "The site's own icon",
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -215,7 +215,7 @@ export const en: Messages = {
     ruleStaleNote: (name: string) =>
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
     rulesEditHint:
-      'To change the hide method or pick it again, do it on the site itself: click the PageMask icon in the toolbar, then “Hide items”.',
+      'To change the hide method or pick something again, do it on the site: click the PageMask icon, then “Hide items”.',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -249,7 +249,6 @@ export const en: Messages = {
   settings: {
     pageTitle: 'PageMask · Settings',
     title: 'Settings',
-    sub: 'These are shared by every site.',
     back: 'All site settings',
 
     titleHeading: 'Default title',
@@ -260,8 +259,6 @@ export const en: Messages = {
 
 
     toggleHeading: 'Floating button',
-    toggleIntro:
-      'Opacity sets how faint the floating button looks when idle; it turns fully clear as soon as you hover it, focus it with the keyboard, or drag it.',
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
     toggleOpacityError: "Couldn't save the opacity, please try again.",
@@ -269,12 +266,10 @@ export const en: Messages = {
 
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:
-      'Press the shortcut to cover this page, press it again to restore. The cover lasts only for this page — reloading or leaving restores it, without changing your settings.',
+      'Covers this page temporarily; reloading or leaving restores it without changing your settings.',
     shortcutLabel: 'Cover / restore',
     shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
     shortcutChange: 'Change in Chrome',
-    shortcutHint:
-      'Default: Ctrl+Shift+X on Windows/Linux, ⌘+Shift+X on Mac. Shortcuts are changed on Chrome’s own page; this line follows whatever you set there.',
     shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
 
     transferHeading: 'Export / Import',
@@ -295,7 +290,7 @@ export const en: Messages = {
 
     languageHeading: 'Language',
     languageIntro:
-      'Every open PageMask page switches right away — no reload needed. The default tab title still follows the browser language.',
+      'Applies immediately. The default tab title still follows the browser language.',
     languageAuto: (current: string) => `Automatic (now: ${current})`,
     languageZh: '简体中文',
     languageEn: 'English',
@@ -335,13 +330,13 @@ export const en: Messages = {
         features: [
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Title & icon: give the tab a name and icon of your choosing.',
-          'Turn the whole page gray: the page turns black & white — same place, still readable. This switch works on its own; turn it on or off any time.',
-          'Cover this page: one click covers the page for now; click “Restore” or press the shortcut to bring it back. Reloading or leaving the page also restores it, without changing your settings.',
+          'Turn the whole page gray: the page turns black & white, same place.',
+          'Cover this page: covers it for now; reloading restores it.',
         ],
       },
       {
         title: 'The floating button on the page',
-        text: 'On sites you’ve added, a floating button sits on the page: click the mask icon to switch “Your settings / As is”, the picture icon to turn pictures and videos gray, the closed-eye icon to cover this page, and ⋯ to open more actions. Drag it anywhere on the page; changing the window size pulls it back on screen.',
+        text: 'On sites you’ve added, a floating button sits on the page: click it to switch “Your settings / As is” or cover this page. Drag it to move it anywhere.',
         features: [],
       },
     ],
@@ -364,7 +359,8 @@ export const en: Messages = {
     ],
     adjustGroup: 'Adjust the last pick',
     adjustNow: 'Adjusting',
-    adjustEmpty: 'Nothing picked yet. Click the item you want to adjust on the page first.',
+    /** #161: drop the "nothing picked yet" line duplicated with listEmpty; keep only the next action */
+    adjustPickFirst: 'Click the item you want to adjust on the page first.',
     adjustTarget: (seq: number, name: string) => `Item ${seq} (${name})`,
     bigger: 'Bigger',
     smaller: 'Smaller',
@@ -373,7 +369,7 @@ export const en: Messages = {
     clearAll: 'Deselect all',
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
-      'Scroll the page to check the result (a covered element should scroll with it). Rename any row right here; open Adjust to change the hide method or where it applies.',
+      'Rename any row; use Adjust to change how it is hidden and where it applies.',
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
