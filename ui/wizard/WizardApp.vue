@@ -247,7 +247,12 @@
         <!-- #161：这一屏怎么操作（改名字、调范围）是「完成操作必需」，常驻但压成一句短句；
              只有前几次才需要看的细节才进 ⓘ。 -->
         <p class="pm-wiz-sub">{{ t.wizard.previewHint }}</p>
-        <ol v-if="drafts.length > 0" class="pm-wiz-drafts" :aria-label="t.wizard.draftsLabel" data-testid="pm-wiz-drafts">
+        <!-- 清单带总数（0.9.1 二轮目检）：行多时最后一行藏在滚动区里，没有总数容易漏掉——
+             与选内容步骤的「已选的 N 项」同一惯例 -->
+        <h3 v-if="drafts.length > 0" id="pm-wiz-drafts-title" class="pm-wiz-group-title" data-testid="pm-wiz-drafts-title">
+          {{ t.wizard.draftsLabel(drafts.length) }}
+        </h3>
+        <ol v-if="drafts.length > 0" class="pm-wiz-drafts" aria-labelledby="pm-wiz-drafts-title" data-testid="pm-wiz-drafts">
           <li v-for="(d, i) in drafts" :key="d.key" :data-testid="`pm-draft-${i + 1}`">
             <!-- 默认行：序号、名称、调整、删除（审查第 8 条：收起方式等控件折进「调整」，不摊在行上） -->
             <div class="pm-wiz-draft-head" :data-testid="`pm-draft-${i + 1}-head`">

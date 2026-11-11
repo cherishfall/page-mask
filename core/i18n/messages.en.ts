@@ -17,7 +17,7 @@ import type { Messages } from './messages.zh';
  * The "a title can't be blank" caveat used to be copy-pasted into three keys (0.8.15 #151).
  * One source of truth; declared outside the object because an object literal can't reference itself.
  */
-const titleBlankHint = 'truly blank tabs would show the address instead';
+const titleBlankHint = 'if you clear it completely, Chrome will show the address instead';
 
 /**
  * "Couldn't save" was copy-pasted into four keys (media / notice / management.error.rules / common,
@@ -295,7 +295,7 @@ export const en: Messages = {
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:
       'Covers this page temporarily; reloading or leaving restores it without changing your settings',
-    shortcutLabel: 'Cover / restore',
+    shortcutLabel: 'Cover / Restore',
     shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
     shortcutChange: 'Change in Chrome',
     shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
@@ -399,7 +399,7 @@ export const en: Messages = {
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
       'Rename any row; use Adjust to change how it is hidden and where it applies',
-    draftsLabel: 'What will be hidden',
+    draftsLabel: (n: number) => `What will be hidden (${n} ${n === 1 ? 'item' : 'items'})`,
     adjust: 'Adjust',
     /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
     inspectSame: 'Check the ones like it',
