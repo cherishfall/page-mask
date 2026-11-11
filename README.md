@@ -101,7 +101,7 @@
 
 - **不收集、不上传任何数据**。PageMask 自身不发起任何网络请求，没有统计，没有第三方代码。设置仅存在 `chrome.storage.local`
 - 权限逐项说明：
-  - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态，以及图片 / 视频 / 声音三个开关）
+  - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态，以及「整页变灰」开关）
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
   - `activeTab`：打开弹窗时读取当前标签页的网址，用来判断是哪个网站、是否支持
   - 可选主机权限：只在你点「收起内容」或「标题和图标」时按站点申请（一个可注册域名，即裸域 + 子域两条模式；IP、`localhost` 与带端口的地址按原样精确匹配），用于在该网站上运行内容脚本、应用你设置的收起样式与标题图标
@@ -197,7 +197,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon), and choose Allow in Chrome's prompt (asked once, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with 「保存」 (Save)
-3. To see the site as it is, click the small button at the bottom-right; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu next to the small button. To quiet the pictures and videos, click the floating button's 「媒体」 (Media) button, or flip the switch in the popup or in "Pictures & videos" on the site's settings page — all three are the same setting
+3. To see the site as it is, click the floating button; to change what's hidden or the title and icon, use the popup's two buttons or the 「⋯」 menu on the floating button. To turn the whole page black & white, click the floating button's 「媒体」 (Media) button, or flip the switch in the popup or in "Turn the whole page gray" on the site's settings page — all three are the same setting
 4. Two entries at the bottom of the popup: 「全部网站设置」 (All site settings — the site list and each site's settings page) and 「插件设置」 (Settings — default title, export / import, interface language, opacity)
 5. To cover the whole page, use 「遮住」 (Cover) in the popup or on the small button; click the small open-eye button on the page to restore
 
@@ -215,7 +215,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 
 - **No data collection, no uploads.** PageMask itself makes no network requests; there is no analytics and no third-party code. Settings live only in `chrome.storage.local`
 - Permissions, one by one:
-  - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state, and the three picture/video/sound switches) on this device
+  - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state, and the "Turn the whole page gray" switch) on this device
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured
   - `activeTab`: when you open the popup, reads the active tab's URL to identify the site and check whether it is supported
   - Optional host permissions: requested for that site only when you click 「收起内容」 (Hide items) or 「标题和图标」 (Title & icon) — one registrable domain, so the bare domain plus its subdomains (IP addresses, `localhost` and addresses with a port are kept exact); used to run the content script and apply your hiding styles and tab title/icon on that site

@@ -21,11 +21,11 @@ Only for sites you add, PageMask stores in your browser's local extension storag
 - the site's identity (its registrable domain, e.g. `weibo.com`; IP addresses, `localhost` and addresses with a port are kept as-is);
 - your hide rules: CSS selectors that identify the elements you picked, a short label (up to 8 characters taken from the element's text or accessibility label, which you can edit), the hiding method, and the pages it applies to (a URL path prefix, if you chose one);
 - the tab title and icon image you set for that site, and the site's on/off state;
-- one per-site switch for "Turn pictures & videos gray" (whether the media on that site is shown in black & white);
+- one per-site switch for "Turn the whole page gray" (whether the entire page is shown in black & white);
 - the position of the on-page button, and whether each rule still found its element the last time the page was opened (with a timestamp);
 - one global default tab title.
 
-To work, PageMask reads the page structure locally on sites you added (to let you pick elements, to check that rules still match, and — only while the gray switch is on — to tell small icons from large images and to hold videos that autoplay). That page content is not stored except for the short label above, and is never transmitted.
+To work, PageMask reads the page structure locally on sites you added (to let you pick elements, to check that rules still match, and — only while the gray switch is on — to hold videos that the site autoplays). That page content is not stored except for the short label above, and is never transmitted.
 
 Covering the page ("Cover this page") also mutes that tab using Chrome's own tab mute. That mute state is held by the browser on the tab, not stored by PageMask; it is not synced, not uploaded, and does not add a `tabs` permission. The mute lives exactly as long as the cover: uncovering, refreshing or leaving the page removes it. PageMask only removes the mute it set itself, and does not touch a mute you or another extension set.
 
