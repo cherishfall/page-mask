@@ -206,8 +206,9 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
   }
   const pos = v.floatingBtnPos;
   // 标题长度上限（#177）：输入框 maxlength=60，但导入/坏数据路径此前没有上限——
-  // 一份带 1MB 标题的文件会原样落库并写进 document.title。超长截断到同一上限
-  const disguisedTitle = typeof v.disguisedTitle === 'string' ? v.disguisedTitle.slice(0, 60) : null;
+  // 一份带 1MB 标题的文件会原样落库并写进 document.title。超长按码点截断到同一上限
+  // （0.9.1 二轮审查：slice 按 UTF-16 码元切会劈开代理对）
+  const disguisedTitle = typeof v.disguisedTitle === 'string' ? [...v.disguisedTitle].slice(0, 60).join('') : null;
   const icon = sanitizeTabIcon(v.icon);
   // 「保存过标题和图标」(#98)：显式值优先；旧数据按「有标题」推导——
   // 只有「标题和图标」那条流程会写这个字段，所以这个推断对 0.5.x 的存量是准确的

@@ -116,21 +116,29 @@ export function createPageMaskStorage(area: KVArea) {
 
     // 全部 profile 按站点 key 归并：裸域与子域合成一条，字段取舍复用导入同一条规则
     const merged = new Map<string, SiteProfile>();
-    const migratedLegacyKeys = new Set<string>();
     for (const k of profileKeys) {
       const s = sanitizeProfile(all[k]);
       if (!s) continue;
       const prev = merged.get(s.profile.origin);
       merged.set(s.profile.origin, prev ? mergeProfiles(prev, s.profile) : s.profile);
-      // 只删成功迁移的旧 key（#177）：净化失败的坏数据留着不碍事（读路径本就忽略它），
-      // 先删掉的话将来修好校验逻辑也无从恢复
-      migratedLegacyKeys.add(k);
     }
     const writes: Record<string, unknown> = {};
     for (const [key, profile] of merged) writes[profileKey(key)] = profile;
-    // 先写后删：即使删除失败，也只是多留旧数据，不会丢设置
-    await area.set(writes);
-    await area.remove([...migratedLegacyKeys]);
+    // 只删旧 key，且只删成功迁移进 writes 的那些（#177 回归审查）：
+    // 1) 净化失败的坏数据留着不碍事（读路径本就忽略它），删了将来修好校验逻辑也无从恢复；
+    // 2) 绝不能把新格式 key 圈进删除集合——混存场景（上次迁移 set 成功后、remove 前被杀，
+    //    或两个上下文并发首读）里新 key 就是用户现存的全部配置，先写后删会把它删光。
+    const removable = new Set(legacyKeys.filter((k) => {
+      const s = sanitizeProfile(all[k]);
+      return s && writes[profileKey(s.profile.origin)] !== undefined;
+    }));
+    if (removable.size) {
+      // 先写后删：即使删除失败，也只是多留旧数据，不会丢设置
+      await area.set(writes);
+      await area.remove([...removable]);
+    } else if (Object.keys(writes).length) {
+      await area.set(writes);
+    }
   }
 
   /** 入参可以是站点 key，也可以是旧的 origin / 页面 URL；无法解析时返回 null */

@@ -179,6 +179,9 @@ async function refresh() {
     ]);
     profile.value = p;
     grantedPatterns.value = patterns;
+    // 读取成功就清掉旧错误（0.9.1 回归审查）：onChanged / 权限变化都会自动 refresh，
+    // 恢复正常后那句「设置没有读出来」不能一直挂着
+    errorCode.value = '';
   } catch (e) {
     // 存储读取失败（损坏 / 配额 / 更新瞬间上下文失效）时不能永远停在「读取中」
     //（#168）：落到「没设置过」的空态 + 一句错误，重开弹窗还能重试

@@ -200,7 +200,9 @@ export class PickController {
   };
 }
 
-/** 点中的元素在 open shadow root 里（getRootNode 不是 document）或 iframe 里（另一个文档 / 就是 iframe 元素） */
+/** 点中的元素在 open shadow root 里（getRootNode 不是 document）或 iframe 里（另一个文档 / 就是 iframe 元素）。
+ *  ownerDocument 分支是防御性的：现行命中栈来自 document.elementsFromPoint，只会返回顶层文档元素；
+ *  iframe 内的点击实际命中的是 <iframe> 元素本身，由第三个分支拦下（0.9.1 回归审查留痕）。 */
 export function nestedKindOf(el: Element): 'shadow' | 'iframe' | null {
   if (el.ownerDocument !== document) return 'iframe';
   if (el.getRootNode() !== document) return 'shadow';

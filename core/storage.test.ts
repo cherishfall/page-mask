@@ -620,3 +620,36 @@ describe('迁移与导入的坏数据边界（#177）', () => {
     expect(saved!.disguisedTitle).toHaveLength(60);
   });
 });
+
+describe('懒迁移混存回归（0.9.1 二轮审查）', () => {
+  it('旧 key 与新 key 混存时：迁移只删旧 key，绝不删新 key（上次迁移写到一半被杀 / 并发首读的场景）', async () => {
+    const area = memoryArea();
+    // 混存：旧 key（上次迁移没来得及删）+ 新 key（归并结果已写入）
+    area.data.set('profile:https://weibo.com', { ...createEmptyProfile('https://weibo.com'), hideRules: [rule('r1')], updatedAt: 100 });
+    area.data.set('profile:weibo.com', { ...createEmptyProfile('weibo.com'), hideRules: [rule('r2')], updatedAt: 200 });
+    const store = createPageMaskStorage(area);
+    const list = await store.listProfiles();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.origin).toBe('weibo.com');
+    // 归并应取两边并集（新 key 是最新事实，不能被先写后删洗掉）
+    expect(list[0]!.hideRules.map((r) => r.id).sort()).toEqual(['r1', 'r2']);
+    // 旧 key 已删、新 key 必须还在
+    expect(area.data.has('profile:https://weibo.com')).toBe(false);
+    expect(area.data.has('profile:weibo.com')).toBe(true);
+  });
+
+  it('只有新 key 时迁移整体不写不删（幂等空转）', async () => {
+    const area = memoryArea();
+    seed(area, { ...createEmptyProfile('weibo.com'), hideRules: [rule('r1')] });
+    let writes = 0;
+    const counting: KVArea = {
+      ...area,
+      set: async (items) => (writes++, area.set(items)),
+      remove: async (keys) => (writes++, area.remove(keys)),
+    };
+    const store = createPageMaskStorage(counting);
+    await store.listProfiles();
+    await store.getProfile('weibo.com');
+    expect(writes).toBe(0);
+  });
+});
