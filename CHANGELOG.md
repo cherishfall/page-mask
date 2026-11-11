@@ -5,6 +5,52 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.1] - 2026-11-12
+
+上架前的全面质量批次：一次全方位审查（代码 / 文案中英 / 界面规范 / 无障碍 / 商店材料 / 全界面真实渲染目检）发现的问题全部修完。功能与权限不变——权限集合仍是 storage、scripting、activeTab 加按站点的可选主机权限。
+
+### 中文
+
+#### 修复
+
+- **带非默认端口的站点管理页打不开（#166，#162 遗留）**：`localhost:3000`、`example.com:8443` 这类站点在「全部网站设置」里点了没反应、手输地址也显示「没有这个网站的设置」。现在列表行能进、地址能直达
+- **向导点选嵌套内容给提示（#167）**：点中网页组件内部区域（shadow DOM）或网页里嵌的另一层页面（iframe）时，提示「收起设置管不到它，所以没有选中」并拒绝选中——这类选择生成的规则永远不生效，还可能误伤外层同名元素。设计文档承诺的提示从此兑现
+- **弹窗不再可能停在「读取中」（#168）**：设置读取失败时落到空态并给一句「重新打开弹窗再试一次」；点「收起内容」没反应时页面也给一句话
+
+#### 改动
+
+- **「在哪些页面收起」改成原生单选分段（#142）**：与「收起方式」同一套控件，读屏统一报「N 选 1」，同屏不再有两种互斥语义
+- **弹窗的失效提醒可以点了（#175）**：「N 项可能失效」现在是一个入口，点它直接打开「收起内容」重新选；原样态保存的确认按钮补了「保存」二字（「保存，先保持原样」/「保存，现在打开」）；设置面板的「收起 / 展开」改成「收起面板 / 展开面板」，不再与「收起内容」撞名；删除入口与失效项带下划线、看得出来能点；站点设置页的收起项清单加了序号，同名条目分得清；欢迎页可以「跳过引导」；向导「看效果」的清单带上总数（「这次要收起的内容（6 项）」），行多时最后一行藏在滚动区里也不会漏
+- **ⓘ 说明气泡加了指向箭头（#175）**：气泡与它解释的那一行连在一起，不再像在解释上一张卡
+- **文案全面梳理（#172 / #173 / #174）**：界面禁词（如「生效」）清零；同一概念全项目一种叫法（「检查一样的」「默认标题」「悬浮按钮」）；常驻提示一律不加句尾句号（立了成文规矩）；标题留空说明改成一句有因果的话（「留空就用「阅读」——如果清成完全空白再保存，Chrome 会改成显示网址」）；站点设置页灰度卡两段说明合并成「行内短句 + ⓘ」
+- **界面细节（#169 / #170 / #171）**：开关动效与悬停 / 按下态补齐并符合成文动效规矩；页内浮层遮罩统一一份浓度（暗色自动加深）；键帽样式两套合一；幕布上的恢复按钮补方向键移动（与胶囊同一份步长）
+
+#### 面向审阅者
+
+- 商店提交材料、README、隐私政策同步了 0.8.x 以来的旧名与过期状态（「整页变灰」口径、悬浮按钮叫法、插件设置内容清单），中英一致（#163）
+- CI 新增版本三方一致性校验（package.json / 更新日志 / 商店材料）（#176）
+
+### English
+
+#### Fixed
+
+- **Sites on a non-default port were unreachable from the list (#166, #162 regression)**: `localhost:3000`-style sites did nothing when clicked in “All site settings”, and typing the address directly showed “no settings for this site”. Both paths work now
+- **Picking nested content now explains itself (#167)**: clicking inside a widget’s inner area (shadow DOM) or a page embedded in the page (iframe) says hide settings can’t reach it and declines the pick — such rules could never work and could even hide look-alike elements in the outer document. This delivers what the design doc promised
+- **The popup can no longer get stuck on “Loading” (#168)**: if settings can’t be read, it falls to the empty state with “reopen the popup and try again”; a dead click on “Hide items” now shows a notice on the page instead
+
+#### Changed
+
+- **“Where it applies” is now a native radio segment (#142)**: the same control as the hide method — screen readers announce it as one-of-N, and the panel no longer mixes two kinds of exclusive choice
+- **The stale-items notice in the popup is actionable (#175)**: “N may be broken” now opens “Hide items” to pick again; the “As is” save dialog buttons say Save (“Save, keep as is” / “Save, turn it on now”); the panel labels are “Collapse panel / Expand panel” so they no longer collide with “Hide items”; the delete entry and stale marks are underlined and look clickable; hidden-item rows are numbered so look-alike names are tellable; the welcome page has “Skip this guide”; the wizard’s review list carries a total (“What will be hidden (6 items)”) so a long list can’t hide its last row from you
+- **ⓘ bubbles point at their row (#175)**: a small caret ties each bubble to the row it explains instead of the card above
+- **Copy pass across every surface (#172 / #173 / #174)**: banned words are gone; one concept one name everywhere; resident hints never end in a full stop (a written rule now); the blank-title note is one causal sentence (“Leave it empty to use “Reading” — if you clear it completely, Chrome will show the address instead”); the site-settings gray card carries one short line plus an ⓘ instead of two stacked paragraphs
+- **Interface details (#169 / #170 / #171)**: switch motion and hover/press states fixed to the written motion rules; in-page dialogs share one backdrop shade (darker in dark mode); keycap styles merged; the curtain’s restore button gains arrow-key movement with the same step as the floating button
+
+#### For reviewers
+
+- Store listing, README and the privacy policy are in sync with post-0.8.x naming and states (“Turn the whole page gray”, “floating button”, the Settings page contents), Chinese and English alike (#163)
+- CI now checks that package.json, the changelog and the store materials agree on the version (#176)
+
 ## [0.9.0] - 2026-11-11
 
 主线是「网站按可注册域名识别」：`weibo.com`、`www.weibo.com`、`s.weibo.com` 从此算一个网站。其余五处是 0.8.19 之后报上来的交互与文案问题：收起内容多了对称的清空出口、原样态保存不再像没生效、空设置时开关旁写明后果、界面上的长说明收掉、三处界面立了唯一对照表并加了自动检查。

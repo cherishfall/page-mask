@@ -3,13 +3,13 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-12 · 对应构建 **0.9.0**（`.output/page-mask-0.9.0-chrome.zip`）
+> 最后更新：2026-11-12 · 对应构建 **0.9.1**（`.output/page-mask-0.9.1-chrome.zip`）
 
 ## 0. 提交前清单
 
 - [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
-- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.0-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.9.0`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.0`
+- [x] `npm ci && npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.1-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.9.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.1`
 - [x] 6 张截图与宣传图块已按 §8 重拍（0.8.10：胶囊 0.8.6–0.8.9 形态与状态、弹窗 0.8.10 卡片分组，`store-shots.mjs` 全量重生成）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -180,6 +180,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.9.1 | 2026-11-12 | 上架前全面质量批次（全方位审查收口）：修复带非默认端口站点管理页打不开（#162 遗留）；向导对 shadow DOM / iframe 内点选给出提示并拒绝选中；弹窗读取失败不再停在「读取中」；「在哪些页面收起」改原生单选分段；弹窗失效提醒可点、保存确认带「保存」、ⓘ 气泡指向箭头；文案全面梳理（禁词清零、一种叫法、句号规矩）；界面细节（动效 / 悬停按下态 / 遮罩统一 / 键帽 / 幕布恢复钮方向键）；商店材料与 README / 隐私政策旧名清扫。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.9.0 | 2026-11-11 | 网站身份改成可注册域名（#162，ADR-0019）：`weibo.com` / `www.weibo.com` / `s.weibo.com` 是一个网站，一份设置、一次授权、列表一行；旧配置读时懒迁移（收起项取并集），旧精确授权继续有效，子域未覆盖时弹窗提示补授权；权限从单个 origin 变成「裸域 + 子域」两条模式。另含五处交互与文案修正（#157 三处界面对照表 + 自动检查、#158 空设置说明、#159 原样态保存前确认、#160 恢复网站原来的内容、#161 引导文字收口）。详见 `CHANGELOG.md` |
 | 0.8.19 | 2026-11-11 | 「整页变灰」的图标换成对比度符（半填充圆）——功能升级为整页后，原「山 + 太阳」图片符号与语义脱节；灰度 / 对比度的通行符号（M3 contrast、macOS / GNOME 对比度设置同款），关态描边（圆 + 中线）、开态右半填实。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.8.18 | 2026-11-11 | 整页变灰（#156，用户提案采纳，ADR-0018）：「图片和视频变灰」升级为「整页变灰」，一条 html{filter} 规则像素级覆盖整页（背景图 / canvas / iframe 内容 / SVG / 视频全部），过去三轮返工的覆盖边界一次清零；媒体控制器缩成视频自动播放压制；自家浮层随页面变黑（登记取舍）。功能与权限不变。详见 `CHANGELOG.md` |
