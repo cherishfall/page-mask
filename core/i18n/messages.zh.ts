@@ -485,6 +485,9 @@ export const zh = {
     rulesResetNotice: '已恢复网站原来的内容',
     /** 运行中的提示条 */
     warnTooBig: '选到接近整页的内容了，可能不是你要的。试试「选小一点」',
+    /** 嵌套区域检测（#167）：design.md「已知边界」承诺的提示。说清选不了、也别说行话 */
+    warnNestedShadow: '这一块嵌在网页组件的内部区域里，收起设置管不到它，所以没有选中',
+    warnNestedIframe: '这一块嵌在网页里另一层页面里，收起设置管不到它，所以没有选中',
     warnUnstable: '这一组没法稳定找到，已经保持原来的勾选',
     warnUnsavable: (index: number) =>
       `第 ${index} 个元素很难稳定找到：点它右边的 ✕ 取消选中这一项，再用「选大一点」重新选`,

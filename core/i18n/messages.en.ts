@@ -457,6 +457,9 @@ export const en: Messages = {
     /** Page notice after restoring hidden items (#160): the wizard is closed, so one short line says what just happened */
     rulesResetNotice: 'Back to the site’s own content',
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',
+    /** Nested-area detection (#167): the notice design.md promised. Say what happens, no jargon */
+    warnNestedShadow: 'This part sits inside a nested widget area. Hide settings can’t reach it, so it wasn’t picked',
+    warnNestedIframe: 'This part sits inside a page embedded in this page. Hide settings can’t reach it, so it wasn’t picked',
     warnUnstable: 'This group can’t be found reliably, so the previous selection was kept',
     warnUnsavable: (index: number) =>
       `Item ${index} can’t be found reliably. Click the ✕ next to it to deselect it, then use “Bigger” to pick again`,

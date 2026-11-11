@@ -23,6 +23,9 @@ export interface PickCallbacks {
   onHoverChange(el: Element | null): void;
   onSelectionChange(els: Element[]): void;
   onWarnTooBig(el: Element): void;
+  /** 点到了 shadow DOM 或 iframe 里的东西（#167）：design.md 承诺的「检测到时给出提示」；
+   *  这类规则在文档级样式表里永远命中不了，还可能误伤外层同名元素，所以拒绝选中 */
+  onWarnNested(kind: 'shadow' | 'iframe'): void;
 }
 
 export class PickController {
@@ -180,12 +183,29 @@ export class PickController {
     const target = this.elementUnderPoint(e.clientX, e.clientY);
     this.setHover(target);
     if (!target) return;
+    // 嵌套区域检测（#167）：elementsFromPoint 会穿透 open shadow root；
+    // iframe 里点到的命中栈上是 <iframe> 元素本身。这两类选择生成的选择器
+    // 走文档级 insertCSS 永远命中不了（shadow 边界进不去），还可能把外层
+    // 文档里的同名元素一起藏掉——design.md「已知边界」承诺给出提示，这里兑现
+    const kind = nestedKindOf(target);
+    if (kind) {
+      this.cb.onWarnNested(kind);
+      return;
+    }
     const adding = !this.selection.includes(target);
     if (adding && isTooBigForPick(target.getBoundingClientRect(), viewport())) this.cb.onWarnTooBig(target);
     this.selection = toggleSelection(this.selection, target);
     if (adding) this.lastEl = target;
     this.cb.onSelectionChange(this.selected);
   };
+}
+
+/** 点中的元素在 open shadow root 里（getRootNode 不是 document）或 iframe 里（另一个文档 / 就是 iframe 元素） */
+export function nestedKindOf(el: Element): 'shadow' | 'iframe' | null {
+  if (el.ownerDocument !== document) return 'iframe';
+  if (el.getRootNode() !== document) return 'shadow';
+  if (el.tagName === 'IFRAME') return 'iframe';
+  return null;
 }
 
 function viewport() {

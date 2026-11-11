@@ -786,6 +786,7 @@ onMounted(() => {
     onHoverChange: updateHoverBox,
     onSelectionChange: onSelectionChange,
     onWarnTooBig: () => showWarn(t.value.wizard.warnTooBig),
+    onWarnNested: (kind) => showWarn(kind === 'shadow' ? t.value.wizard.warnNestedShadow : t.value.wizard.warnNestedIframe),
   });
   pick.attach(pickLayer);
   // 一打开就用旧规则铺草稿起点（#69 / #81 无首次模式）：没有配置时是空清单，同一条路
