@@ -47,12 +47,18 @@ Carbon 要求 helper text 始终可得、NN/g 要求按需可得；自动隐藏�
 的 install 分支打开且不写任何 `seen` 标记。新增字段还要同步导出 / 导入，属于新功能而不是减字。
 **不做「记住已读后自动隐藏」**。
 
+**d. 常驻 hint 一律不加句尾句号（0.9.1，#174 立规矩；GOV.UK「without any full stops」）。**
+本文件二、a 的「一句短句」在标点上落成：hint / intro / 行说明结尾**不带句号**，分句之间用分号。
+句号保留给完整句的场合：对话框正文、错误消息（role=alert）、ⓘ 浮层内容、撤销条、导入结果。
+zh 与 en 同步执行；en 侧以弯撇号（’）为准，不用直撇号。
+
 ## 三、必须留下、不许收起（逐条有断言守着）
 
-`media.hint` / `media.hintShort`（灰度独立于主开关）、`popup.coverHint`（临时性）、
-`management.deleteSite.impact` 与 `settings.replaceDialog.*`（危险后果）、
-`common.titleBlankHint` 三处脚注（空白标题坑）、所有状态 / 错误 / 读屏文本。
-Carbon 的「pertinent 信息不进 tooltip」是这条的依据；`tests/media-ui.test.ts:71-82`
+灰度独立于主开关这件事（键：`media.hintShort` 行下短句、`media.hint` 收进 ⓘ——0.8.18 后
+站点设置页只有一个开关，「组级注脚」改行内 ⓘ，与弹窗同构，内容仍常驻 DOM 可查）、
+`popup.coverHint`（临时性）、`management.deleteSite.impact` 与 `settings.replaceDialog.*`
+（危险后果）、`common.titleBlankHint` 三处脚注（空白标题坑）、所有状态 / 错误 / 读屏文本。
+Carbon 的「pertinent 信息不进 tooltip」是这条的依据；`tests/media-ui.test.ts`
 与 `tests/copy-guidance.test.ts` 各守一份，不许推翻。
 
 ## 四、落地口径

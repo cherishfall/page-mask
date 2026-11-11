@@ -1549,7 +1549,7 @@ async function main() {
     check((await shadowExists(pageOnly, HOST, tid('pm-wiz-list-empty'))) === true, '前置：本页没有用得上的旧规则（清单为空）');
     const resetRowText = await shadowText(pageOnly, HOST, tid('pm-wiz-rules-reset-row'));
     check(
-      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响。'),
+      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响'),
       `复位行文字逐字对（${resetRowText.split('\n').join(' / ')}）`,
     );
     const resetRowPos = await pageOnly.evaluate((h) => {

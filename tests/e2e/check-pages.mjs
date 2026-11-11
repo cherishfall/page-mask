@@ -899,7 +899,7 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-rules-reset-row'), { timeout: 5000 });
     const resetRowText = await m.$eval(tid('pm-mgmt-rules-reset-row'), (e) => e.innerText.trim());
     check(
-      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响。'),
+      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响'),
       `有已保存的收起项时出现复位行，文字逐字对（${resetRowText.split('\n').join(' / ')}）`,
     );
     check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '复位行出现时清单仍是 2 行');

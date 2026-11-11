@@ -292,7 +292,14 @@ async function main() {
     check(row.label === MEDIA_LABEL, '与弹窗同一个叫法');
     check(row.hint.length > 0, '说明跟着开关走');
     check(row.checked === true, '三处界面读同一份存储：媒体钮拨回来的状态在设置页也是开');
-    check((await m.evaluate(() => document.body.innerText)).includes('页面内容照常加载'), '卡片底部如实说明「不是不加载」');
+    // 「不是不加载」这句话 0.9.1（#174）起住在灰度卡的行内 ⓘ 里（常驻 DOM、Esc 可撤）：
+    // innerText 不含 display:none 的气泡，所以这里查 role=tooltip 的 textContent
+    check(
+      await m.evaluate(() =>
+        [...document.querySelectorAll('[role="tooltip"]')].some((el) => el.textContent?.includes('页面内容照常加载')),
+      ),
+      '「不是不加载」如实说明在灰度卡的 ⓘ 里（#174 注脚改行内 ⓘ）',
+    );
     await m.click(tid('pm-mgmt-media-mediaGray'));
     await poll(async () => (await getProfile(control, ORIGIN)).mediaGray === undefined, '站点设置页关掉写入存储');
     await waitFor(page, '整页恢复彩色', () => !getComputedStyle(document.documentElement).filter.includes('grayscale(1)'), [], { timeout: 8000 });

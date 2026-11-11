@@ -17,7 +17,7 @@ import type { Messages } from './messages.zh';
  * The "a title can't be blank" caveat used to be copy-pasted into three keys (0.8.15 #151).
  * One source of truth; declared outside the object because an object literal can't reference itself.
  */
-const titleBlankHint = 'It never stays truly empty — Chrome would show the address instead.';
+const titleBlankHint = 'truly blank tabs would show the address instead';
 
 /**
  * "Couldn't save" was copy-pasted into four keys (media / notice / management.error.rules / common,
@@ -35,10 +35,10 @@ export const en: Messages = {
     saveFailed,
     resetTitleIcon: 'Use the site’s own title and icon',
     shortcutBlocked: 'This page can’t be covered',
-    resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
+    resetTitleIconHint: 'Only the title and icon — hidden items stay as they are',
     /** Back-out entry (#160), symmetric with #99; same action, same words in both places */
     resetSiteContent: 'Use the site’s own content',
-    resetSiteContentHint: 'Only hidden items — the title and icon stay as they are.',
+    resetSiteContentHint: 'Only hidden items — the title and icon stay as they are',
     resetSiteContentTitle: 'Use the site’s own content?',
     resetSiteContentImpact: (n: number) =>
       n === 1 ? '1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
@@ -110,12 +110,12 @@ export const en: Messages = {
     heading: 'Grayscale whole page',
     mediaGray: 'Turn the whole page gray',
     /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
-    mediaGrayHint: 'The whole page turns black & white, same place, links still work; autoplaying videos pause — click one to watch.',
+    mediaGrayHint: 'The whole page turns black & white, same place, links still work',
     /** Must stay visible (#153): the gray switch is independent of the main switch + "not unloaded" boundary. #161 keeps it to one short sentence */
-    hint: 'This switch works on its own — “Show this site your way” doesn’t control it; the page still loads as usual, just without color.',
-    hintShort: 'This switch keeps its own setting — the switch above doesn’t control it.',
+    hint: 'This switch works on its own — “Show this site your way” doesn’t control it; the page still loads as usual, just without color',
+    hintShort: 'This switch keeps its own setting — the switch above doesn’t control it',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
-    hintNew: 'Turning it on first asks you to allow access to this site.',
+    hintNew: 'Turning it on first asks you to allow access to this site',
     /** Hover / screen-reader label for the capsule media button */
     mediaTitle: 'Turn the whole page gray',
     saveFailed,
@@ -138,8 +138,8 @@ export const en: Messages = {
         ? '1 item may be broken. Open “Hide items” to pick it again'
         : `${n} items may be broken. Open “Hide items” to pick it again`,
     /** One short line for an unset site; the two edit buttons in the card are the first step (#148) */
-    newSiteHint: 'This site isn’t set up yet.',
-    pendingHint: 'The browser took away access to this site. Your settings are still here and come back once you allow access again.',
+    newSiteHint: 'This site isn’t set up yet',
+    pendingHint: 'The browser took away access to this site; your settings are still here and come back once you allow access again',
     /** The site was allowed, but this page isn’t covered (#162: allowed weibo.com, now on s.weibo.com) */
     pageNotAllowed: 'This page isn’t allowed yet',
     reauthorize: 'Allow access',
@@ -148,21 +148,21 @@ export const en: Messages = {
     /** The "Title & icon" entry: a one-step form, saved with Save (#81) */
     editTitle: 'Title & icon',
     /** Hint under the mask-card header: what the switch governs, and that gray is separate (#148) */
-    cardSwitchHintNew: 'Once set up, a switch appears here.',
+    cardSwitchHintNew: 'Once set up, a switch appears here',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
     mediaTooltip: 'The whole page turns black & white: same place, still readable, links still work. Autoplaying videos pause; click a video to watch it.',
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
     mediaNotReady: 'This page hasn’t finished loading. Once it’s open, the whole page turns gray automatically.',
     coverPage: 'Cover this page',
     /** Cover card: say this is temporary and changes no settings (#148) */
-    coverHint: 'Temporary — reloading restores it. Changes no settings.',
+    coverHint: 'Temporary — reloading restores it. Changes no settings',
     /** Show-capsule switch (#112): label + one-line hint under the switch */
     showToggle: 'Floating button',
-    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages.',
+    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages',
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here */
     showToggleTooltip: 'The popup settings and the “Cover this page” shortcut keep working.',
     /** On an unset site there is no switch; say the button appears once set up (#148) */
-    showToggleHintNew: 'Once this site is set up, a floating button appears on its pages.',
+    showToggleHintNew: 'Once this site is set up, a floating button appears on its pages',
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
     replayIntro: 'View the guide',
     /** Full accessible name for the short header link (#148) */
@@ -192,33 +192,33 @@ export const en: Messages = {
     pageTitle: 'PageMask · All site settings',
 
     sitesTitle: 'All site settings',
-    sitesHint: 'PageMask never touches sites you didn’t add.',
+    sitesHint: 'PageMask never touches sites you didn’t add',
     /** Row-end "more" button (#113): accessible name carries the host so rows never blur together */
     moreActions: (label: string) => `More actions: ${label}`,
-    sitesEmpty: 'No sites yet. Open a site you want to set up and click the PageMask icon in the toolbar to start.',
+    sitesEmpty: 'No sites yet. Open a site you want to set up and click the PageMask icon in the toolbar to start',
     pendingAll: (n: number) =>
       n === 1
-        ? '1 site hasn’t been allowed yet. Until you allow it, its settings do nothing.'
-        : `${n} sites haven’t been allowed yet. Until you allow them, their settings do nothing.`,
+        ? '1 site hasn’t been allowed yet; until you allow it, its settings do nothing'
+        : `${n} sites haven’t been allowed yet; until you allow them, their settings do nothing`,
     authorizeAll: 'Allow access to all',
     pendingBadge: 'Needs access',
-    pendingHint: 'The browser hasn’t allowed PageMask to open this site. Your settings are kept and apply once you allow it.',
+    pendingHint: 'The browser hasn’t allowed PageMask to open this site; your settings are kept and apply once you allow it',
     authorize: 'Allow access',
 
     back: '← All site settings',
     backShort: 'Back to all site settings',
     missingTitle: 'No settings for this site',
-    missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up.',
+    missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up',
 
     titleHeading: 'Tab title',
-    titleIntro: 'When the switch above is off, the site’s own title comes back.',
+    titleIntro: 'When the switch above is off, the site’s own title comes back',
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
-    titleFootnoteUnset: 'Type here and save, and this site starts using your title.',
+    titleFootnoteUnset: 'Type here and save, and this site starts using your title',
     titleFootnote: (fallback: string) =>
-      `Saved automatically once you stop typing. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
+      `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'The tab uses this icon only when the switch above is on.',
+    iconIntro: 'The tab uses this icon only when the switch above is on',
     iconSite: 'The site’s own icon',
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -237,11 +237,11 @@ export const en: Messages = {
     },
 
     rulesHeading: 'Hidden items',
-    rulesEmpty: 'Nothing set to hide.',
+    rulesEmpty: 'Nothing set to hide',
     ruleStaleNote: (name: string) =>
       `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
     rulesEditHint:
-      'To change the hide method or pick something again, do it on the site: click the PageMask icon, then “Hide items”.',
+      'To change the hide method or pick something again, do it on the site: click the PageMask icon, then “Hide items”',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -280,21 +280,21 @@ export const en: Messages = {
     back: 'All site settings',
 
     titleHeading: 'Default title',
-    titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own.',
+    titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own',
     titleLabel: 'Default title',
     titleFootnote: (fallback: string) =>
-      `Leave it empty to use “${fallback}” (follows the browser language). ${titleBlankHint}`,
+      `Leave it empty to use “${fallback}” (follows the browser language) — ${titleBlankHint}`,
 
 
     toggleHeading: 'Floating button',
     toggleOpacityLabel: 'Opacity',
-    toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear.',
+    toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear',
     toggleOpacityError: 'Couldn’t save the opacity, please try again.',
     toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:
-      'Covers this page temporarily; reloading or leaving restores it without changing your settings.',
+      'Covers this page temporarily; reloading or leaving restores it without changing your settings',
     shortcutLabel: 'Cover / restore',
     shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
     shortcutChange: 'Change in Chrome',
@@ -380,7 +380,7 @@ export const en: Messages = {
     },
     progress: (index: number, total: number) => `Step ${index} of ${total}`,
     titleHint: (fallback: string) =>
-      `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}”. ${titleBlankHint}`,
+      `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}” — ${titleBlankHint}`,
     pickLead: [
       'Click something on the page to pick it.',
       'Click it again to deselect it. You can pick several in a row.',
@@ -389,16 +389,16 @@ export const en: Messages = {
     adjustGroup: 'Adjust the last pick',
     adjustNow: 'Adjusting',
     /** #161: drop the "nothing picked yet" line duplicated with listEmpty; keep only the next action */
-    adjustPickFirst: 'Click the item you want to adjust on the page first.',
+    adjustPickFirst: 'Click the item you want to adjust on the page first',
     adjustTarget: (seq: number, name: string) => `Item ${seq} (${name})`,
     bigger: 'Bigger',
     smaller: 'Smaller',
     listTitle: (n: number) => (n > 0 ? `${n} picked` : 'Picked items'),
-    listEmpty: 'Nothing picked yet.',
+    listEmpty: 'Nothing picked yet',
     clearAll: 'Deselect all',
     deleteOne: (seq: number, name: string) => `Deselect item ${seq}: ${name}`,
     previewHint:
-      'Rename any row; use Adjust to change how it is hidden and where it applies.',
+      'Rename any row; use Adjust to change how it is hidden and where it applies',
     draftsLabel: 'What will be hidden',
     adjust: 'Adjust',
     /** Row in the preview with "similar" checked: jump back to picking to inspect the group (#88) */
@@ -420,7 +420,7 @@ export const en: Messages = {
     errorNoHit: (line: number) => `Line ${line} matches nothing on this page, so it can’t be saved`,
     staleWhy: (name: string, scope: string) =>
       `“${name}” can’t be found any more — the site may have changed. Where it applies: ${scope}`,
-    draftsEmpty: 'Nothing to hide on this page right now. Go back a step to pick some.',
+    draftsEmpty: 'Nothing to hide on this page right now. Go back a step to pick some',
     nameLabel: (seq: number) => `Name of item ${seq}; leave empty to name it automatically`,
     methodLegend: 'Hide method',
     /** Lives inline in the picked-items list since #82; checking lights up that one group at a time */

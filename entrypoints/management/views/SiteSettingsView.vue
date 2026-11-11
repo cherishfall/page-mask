@@ -211,6 +211,10 @@
           <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
             <div class="switch-row media-switch">
               <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
+              <!-- ⓘ（#174 / #175 视觉审查）：卡底那条「独立于主开关 + 不是不加载」的注脚改成行内 ⓘ，
+                   与弹窗同构——0.8.18 后卡里只有一个开关，「组级注脚」的定位已失，两段常驻说明叠加
+                   违反 design-copy「先删零风险重复」。media.hint 键与其内容保留（design-copy 必须留下清单） -->
+              <InfoTip :text="t.media.hint" :label="t.common.infoLabel" />
               <input
                 :id="`pm-mgmt-media-${key}`"
                 type="checkbox"
@@ -224,7 +228,6 @@
             <p class="hint">{{ t.media[MEDIA_HINT_KEYS[key]] }}</p>
           </div>
         </div>
-        <p class="hint media-footnote">{{ t.media.hint }}</p>
         <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-mgmt-media-error">{{ mediaError }}</p>
       </section>
 
@@ -251,6 +254,7 @@ import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
 // 空设置判据（#158）：三处主开关共用一份（弹窗 / 胶囊 / 这里）
 import { hasSwitchEffect } from '@/core/site-state';
 import { MEDIA_FLAG_KEYS, MEDIA_HINT_KEYS, type MediaFlagKey } from '@/core/media';
+import InfoTip from '@/ui/info-tip/InfoTip';
 import type { HideRule, TabIcon } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
@@ -474,12 +478,6 @@ async function onRulesResetClosed(confirmed: boolean) {
 }
 .media-row .hint {
   margin: var(--pm-space-1) 0 0;
-}
-/* 卡片底部这句讲整组三个开关，不是最后一行开关的注脚（#127）：细分隔把它与逐行说明分开 */
-.media-footnote {
-  margin-bottom: 0;
-  border-top: 1px solid var(--pm-border);
-  padding-top: var(--pm-space-2);
 }
 
 /* ── 收起项清单 ── */

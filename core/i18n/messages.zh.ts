@@ -22,7 +22,7 @@
  * 「标题不能留成空白」这句坑提示原本逐字重复在三个键里（0.8.15 #151）：改一处漏两处的风险。
  * 收成一份出处；对象字面量里不能自引用，所以在对象外声明，三处用模板串插进去。
  */
-const titleBlankHint = '空白时 Chrome 会改成显示网址，所以这里不会真的留空。';
+const titleBlankHint = '真空白的话，Chrome 会改成显示网址';
 
 /**
  * 「没能保存」这句原来逐字重复在四个键里（media / notice / management.error.rules / common，
@@ -43,10 +43,10 @@ export const zh = {
     resetTitleIcon: '恢复网站原来的标题和图标',
     /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
     shortcutBlocked: '这个页面不能遮住',
-    resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响。',
+    resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响',
     /** 回退出口（#160）：与 #99 对称，两处同名同物；只说「恢复内容」，不用「清空 / 重置」 */
     resetSiteContent: '恢复网站原来的内容',
-    resetSiteContentHint: '只恢复收起的内容，标题和图标不受影响。',
+    resetSiteContentHint: '只恢复收起的内容，标题和图标不受影响',
     resetSiteContentTitle: '恢复网站原来的内容？',
     /** 确认框正文：说清有几项会没了 */
     resetSiteContentImpact: (n: number) => `${n} 项收起设置会全部删除。`,
@@ -133,14 +133,14 @@ export const zh = {
     heading: '整页变灰',
     mediaGray: '整页变灰',
     /** 每行说明压成一句短句（#161）；跟着它解释的那个开关走，不收进 ⓘ */
-    mediaGrayHint: '整个页面变成黑白，位置不变、链接照常点；自动播放的视频会暂停，点一下就能看。',
+    mediaGrayHint: '整个页面变成黑白，位置不变、链接照常点',
     /** 必须常驻（#153 成文结论）：灰度独立于主开关 + 「不是不加载」两个边界。#161 压成一句短句，
      *  保留「页面内容照常加载」这个如实说法（tests/e2e/check-media.mjs 守着） */
-    hint: '这个开关单独起作用，「按你的设置显示」管不到它；页面内容照常加载，只是去掉颜色。',
+    hint: '这个开关单独起作用，「按你的设置显示」管不到它；页面内容照常加载，只是去掉颜色',
     /** 弹窗里只留一行短句（0.8.16，#153）：灰度独立于主开关这一件事；被砍掉的细节移到弹窗 ⓘ 浮层 */
-    hintShort: '这个开关自己记自己，上面的开关管不到它。',
+    hintShort: '这个开关自己记自己，上面的开关管不到它',
     /** 未配置网站上的说明：开 = 走第一次设置的流程并建一份只带灰度的配置（0.8.5，#134） */
-    hintNew: '打开时浏览器会先让你允许访问这个网站。',
+    hintNew: '打开时浏览器会先让你允许访问这个网站',
     /** 胶囊「媒体」钮的悬停说明（读屏与悬停共用） */
     mediaTitle: '整页变灰',
     saveFailed,
@@ -162,8 +162,8 @@ export const zh = {
     /** 弹窗摘要里的失效条改成了可点（#175）：读屏名把去向说全，可见文字保持 common.staleCount 短名 */
     staleAction: (n: number) => `${n} 项可能失效。点这里打开收起内容，重新选一次`,
     /** 没设置过时的一句话状态（#148）：一句就好，两个编辑入口就是第一步 */
-    newSiteHint: '这个网站还没设置过。',
-    pendingHint: '浏览器收回了这个网站的访问权限。你的设置都还在，重新允许访问就回来了。',
+    newSiteHint: '这个网站还没设置过',
+    pendingHint: '浏览器收回了这个网站的访问权限；你的设置都还在，重新允许访问就回来了',
     /** 站点已允许过、但当前页面不在覆盖范围（#162：只允许了 weibo.com，停在 s.weibo.com） */
     pageNotAllowed: '这个页面还没允许访问',
     reauthorize: '允许访问',
@@ -172,21 +172,21 @@ export const zh = {
     /** 「标题和图标」入口：进单步小表单，填完点「保存」（#81） */
     editTitle: '标题和图标',
     /** new 态卡头没开关，同位置说明设置好之后开关做什么（#148）；ready 态不再有说明行（#153） */
-    cardSwitchHintNew: '设置好之后，这里会出现开关。',
+    cardSwitchHintNew: '设置好之后，这里会出现开关',
     /** ⓘ 浮层（0.8.16，#153）：灰度卡被砍掉的细节移到这里，悬停 / 聚焦可见 */
     mediaTooltip: '整个页面变成黑白：位置不变、还能看清、链接照常点。自动播放的视频会暂停，点一下视频就能看。',
     /** 页面没加载好但配置已建档（0.8.16，#154）：说明而非错误，等页面打开灰度自动生效 */
     mediaNotReady: '这个页面还没加载好。打开之后，整个页面会自动变灰。',
     coverPage: '遮住这一页',
     /** 遮住卡的临时性说明（#148；#153 收短）：只是临时挡住，不改设置 */
-    coverHint: '临时遮住，刷新就还原，不改设置。',
+    coverHint: '临时遮住，刷新就还原，不改设置',
     /** 右下角的小按钮开关（#112）：标签 + 开关下的一行小字 */
     showToggle: '悬浮按钮',
-    showToggleHint: '关掉后，这个网站的页面上不再显示悬浮按钮。',
+    showToggleHint: '关掉后，这个网站的页面上不再显示悬浮按钮',
     /** ⓘ 浮层（0.8.16，#153）：悬浮按钮行被砍掉的细节移到这里 */
     showToggleTooltip: '弹窗里的设置和「遮住这一页」快捷键照常可用。',
     /** new 态不放假开关，同位置说明添加设置后才会出现（#148） */
-    showToggleHintNew: '添加设置后，页面上会出现悬浮按钮。',
+    showToggleHintNew: '添加设置后，页面上会出现悬浮按钮',
     /** 头部「查看使用说明」小链接（0.8.11 #139 入口，0.8.15 #148 挪到标题右侧） */
     replayIntro: '查看使用说明',
     /** 头部链接的读屏全称（#148）：短文字链接配一个说清对象的名字 */
@@ -218,30 +218,30 @@ export const zh = {
     pageTitle: 'PageMask · 全部网站设置',
 
     sitesTitle: '全部网站设置',
-    sitesHint: '你没添加的网站，PageMask 完全不碰。',
+    sitesHint: '你没添加的网站，PageMask 完全不碰',
     /** 行尾「⋯」按钮（#113）：读屏名带域名，一行一个互不混淆 */
     moreActions: (label: string) => `更多操作：${label}`,
-    sitesEmpty: '还没有添加任何网站。打开一个要设置的网站，点浏览器工具栏上的 PageMask 图标就能开始设置。',
-    pendingAll: (n: number) => `有 ${n} 个网站还没允许访问。在你允许之前，这些网站的设置不会起作用。`,
+    sitesEmpty: '还没有添加任何网站。打开一个要设置的网站，点浏览器工具栏上的 PageMask 图标就能开始设置',
+    pendingAll: (n: number) => `有 ${n} 个网站还没允许访问；在你允许之前，这些网站的设置不会起作用`,
     authorizeAll: '全部允许访问',
     pendingBadge: '需要允许访问',
-    pendingHint: '浏览器还没允许 PageMask 访问这个网站。设置都还在，允许之后就会按设置显示。',
+    pendingHint: '浏览器还没允许 PageMask 访问这个网站；设置都还在，允许之后就会按设置显示',
     authorize: '允许访问',
 
     back: '← 全部网站设置',
     backShort: '回到全部网站设置',
     missingTitle: '没有这个网站的设置',
-    missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它。',
+    missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它',
 
     titleHeading: '标签页标题',
-    titleIntro: '上面的开关关着时，仍显示网站本来的标题。',
+    titleIntro: '上面的开关关着时，仍显示网站本来的标题',
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
-    titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题。',
+    titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题',
     titleFootnote: (fallback: string) =>
-      `停止输入后自动保存。留空就用「${fallback}」。${titleBlankHint}`,
+      `停止输入后自动保存。留空就用「${fallback}」——${titleBlankHint}`,
 
     iconHeading: '标签页图标',
-    iconIntro: '上面的开关打开时，标签页才用这里选的图标。',
+    iconIntro: '上面的开关打开时，标签页才用这里选的图标',
     iconSite: '网站原来的图标',
     iconNone: '不显示图标',
     iconPreset: '换成别的图标',
@@ -260,10 +260,10 @@ export const zh = {
     },
 
     rulesHeading: '收起的内容',
-    rulesEmpty: '还没有收起设置。',
+    rulesEmpty: '还没有收起设置',
     ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了。打开这个网站重新选一次。`,
     /** 这一页只读清单；换成怎么收、重选元素都要页面上下文，所以指回页面（#71） */
-    rulesEditHint: '换收起方式或重选元素，要回网站页面上改：点工具栏上的 PageMask 图标，再点「收起内容」。',
+    rulesEditHint: '换收起方式或重选元素，要回网站页面上改：点工具栏上的 PageMask 图标，再点「收起内容」',
 
     /** 站点设置页页脚与 ⋯ 菜单里的同一件事（改一处两处一起改） */
     deleteSite: {
@@ -303,19 +303,19 @@ export const zh = {
     back: '全部网站设置',
 
     titleHeading: '默认标题',
-    titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住这一页时，没单独设过标题的网站也用它。',
+    titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住这一页时，没单独设过标题的网站也用它',
     titleLabel: '默认标题',
-    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随浏览器语言）。${titleBlankHint}`,
+    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随浏览器语言）——${titleBlankHint}`,
 
 
     toggleHeading: '悬浮按钮',
     toggleOpacityLabel: '不透明度',
-    toggleOpacityLowHint: '调得太淡会不容易找到；把鼠标移到悬浮按钮原来的位置，它就会变清楚。',
+    toggleOpacityLowHint: '调得太淡会不容易找到；把鼠标移到悬浮按钮原来的位置，它就会变清楚',
     toggleOpacityError: '不透明度没有存上，请再试一次。',
     toggleHint: '调它闲着的时候有多淡（数值越小越淡），鼠标移上去立刻变清楚。遮住整页后出现的那颗按钮不受影响，一直看得清。',
 
     shortcutHeading: '快捷键',
-    shortcutIntro: '只在当前页面临时遮住，刷新或离开页面就还原，不改你的设置。',
+    shortcutIntro: '只在当前页面临时遮住，刷新或离开页面就还原，不改你的设置',
     shortcutLabel: '遮住 / 恢复',
     shortcutUnbound: '没有绑定快捷键，可能被别的扩展占用了',
     shortcutChange: '在 Chrome 里更改',
@@ -339,7 +339,7 @@ export const zh = {
 
     /** 界面语言（#57）：三选一，语言名各用本语言书写 */
     languageHeading: '界面语言',
-    languageIntro: '切换后马上就换成新语言；标签页的默认标题仍跟随浏览器语言。',
+    languageIntro: '切换后马上就换成新语言；标签页的默认标题仍跟随浏览器语言',
     languageAuto: (current: string) => `自动（现在：${current}）`,
     languageZh: '简体中文',
     languageEn: 'English',
@@ -400,23 +400,23 @@ export const zh = {
       preview: '看效果',
     },
     progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
-    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到。留空就用「${fallback}」。${titleBlankHint}`,
+    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到。留空就用「${fallback}」——${titleBlankHint}`,
     /** 选内容这一步的说明：一行一件事 */
-    pickLead: ['点一下页面上的东西，就选中它。', '再点一下取消选中。可以连着选好几个。', '选中的都列在下面。'],
+    pickLead: ['点一下页面上的东西，就选中它', '再点一下取消选中。可以连着选好几个', '选中的都列在下面'],
     adjustGroup: '调整最后选中的那一项',
     adjustNow: '现在调的是',
     /** #161：与清单空状态（listEmpty）重复的「还没选中东西」去掉，只留下一步动作这一句 */
-    adjustPickFirst: '先在页面上点一下要调整的那一项。',
+    adjustPickFirst: '先在页面上点一下要调整的那一项',
     adjustTarget: (seq: number, name: string) => `第 ${seq} 项（${name}）`,
     bigger: '选大一点',
     smaller: '选小一点',
     listTitle: (n: number) => (n > 0 ? `已选的 ${n} 项` : '已选的内容'),
-    listEmpty: '还没有选任何东西。',
+    listEmpty: '还没有选任何东西',
     clearAll: '全部取消选择',
     deleteOne: (seq: number, name: string) => `取消选中第 ${seq} 项：${name}`,
     /** 看效果：每行两行排版 */
     /** 看效果：每行两行排版。「同类一起」的勾选框住在选内容行内（#82），这里不再提 */
-    previewHint: '每一行可以改名字；点「调整」改收起方式和在哪些页面收起。',
+    previewHint: '每一行可以改名字；点「调整」改收起方式和在哪些页面收起',
     draftsLabel: '这次要收起的内容',
     /** 行上的展开按钮：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
     adjust: '调整',
@@ -443,7 +443,7 @@ export const zh = {
     /** 失效那一行为什么可能没用了 */
     staleWhy: (name: string, scope: string) => `「${name}」最近找不到目标了，可能网站改版了。在哪些页面收起：${scope}`,
     /** 看效果一条都没有时（只剩失效项被删光） */
-    draftsEmpty: '这个页面上没有用得上的收起设置。可以回到上一步再选一些内容。',
+    draftsEmpty: '这个页面上没有用得上的收起设置。可以回到上一步再选一些内容',
     nameLabel: (seq: number) => `第 ${seq} 项的名称，留空就自动起名`,
     methodLegend: '收起方式',
     /** 一行勾选框回答一个是非题：页面上一样的要不要一起收（n 是「另外几个」，不含这一项本身）。

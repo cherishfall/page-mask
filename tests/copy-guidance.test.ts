@@ -345,8 +345,11 @@ describe('四处收口（验收 3 / 5）', () => {
     expect((settings.match(/class="card-head pm-info-head pm-info-anchor"/g) ?? []).length).toBe(3);
     expect(onboarding).toContain('features');
     // 站点设置页的三条都是「状态 / 完成操作必需」（a 类，Carbon：pertinent 信息不进 tooltip），
-    // 压成一句短句常驻；这一页没有 b 类长说明可收，不为了统一而硬放 ⓘ。
-    expect(site).not.toContain('<InfoTip');
+    // 压成一句短句常驻。0.9.1（#174）起本页只有一枚合法 ⓘ：灰度卡的 media.hint
+    // 从「组级注脚」改成行内 ⓘ（0.8.18 后卡里只有一个开关，注脚定位已失），
+    // 与弹窗同构；除它之外不许再出现第二枚。
+    expect(site).toContain(':text="t.media.hint"');
+    expect((site.match(/<InfoTip/g) ?? []).length).toBe(1);
     for (const k of ['t.management.titleIntro', 't.management.iconIntro', 't.management.rulesEditHint']) {
       expect(site, `${k} 应常驻`).toContain(`{{ ${k} }}`);
       expect(site, `${k} 不该被塞进 ⓘ`).not.toContain(`:text="${k}"`);
