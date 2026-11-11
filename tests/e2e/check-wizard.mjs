@@ -461,7 +461,7 @@ async function main() {
       `底栏只有按钮：选内容这一步只有前进（${JSON.stringify(footEmpty)}）`,
     );
     check((await shadowTexts(page, tid('pm-wiz-list-empty')))[0]?.includes('还没有选任何东西'), '0 项时清单是空状态');
-    check(!(await shadowExists(page, HOST, tid('pm-wiz-clear-all'))), '清单为空时不显示「全部删掉」');
+    check(!(await shadowExists(page, HOST, tid('pm-wiz-clear-all'))), '清单为空时不显示「全部取消选择」');
 
     // 选三张同类卡片：清单一行一项，序号与号码牌一致
     await clickEl(page, C1);
@@ -474,7 +474,7 @@ async function main() {
     check(rowNames.length === 3 && rowNames[0].includes('卡片一') && rowNames[2].includes('卡片三'), `每行显示元素名字（${rowNames.join(' / ')}）`);
     check(
       !!(await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-group-list"]').querySelector('[data-testid="pm-wiz-clear-all"]')?.classList.contains('pm-wiz-link'), HOST)),
-      '「全部删掉」在清单标题行里、是文字链接（不是按钮）',
+      '「全部取消选择」在清单标题行里、是文字链接（不是按钮）',
     );
     const listHeight = await shadowRect(page, tid('pm-wiz-selected'));
     const listScrollable = await page.evaluate((h) => {
@@ -521,17 +521,17 @@ async function main() {
     const delLabel = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-sel-2-remove"]').getAttribute('aria-label'), HOST);
     check(/取消选中第 2 项/.test(delLabel) && delLabel.includes('卡片三'), `删除按钮有读屏可读的名字（${delLabel}）`);
 
-    // 「全部删掉」：文字链接，一按全清，回到 0 项状态
+    // 「全部取消选择」：文字链接，一按全清，回到 0 项状态
     await clickInShadow(page, HOST, tid('pm-wiz-clear-all'));
-    await waitFor(page, '全部删掉后清单为空', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 0, [HOST]);
-    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 0, '全部删掉后页面上的号码牌也没了');
+    await waitFor(page, '全部取消选择后清单为空', (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 0, [HOST]);
+    check((await shadowTexts(page, '[data-testid^="pm-badge-"]')).length === 0, '全部取消选择后页面上的号码牌也没了');
     check(
       (await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-preview"]').disabled, HOST)) === true,
-      '全部删掉后前进按钮又变灰',
+      '全部取消选择后前进按钮又变灰',
     );
-    check(!(await shadowExists(page, HOST, tid('pm-wiz-next-hint'))), '全部删掉后底栏也没有多出说明文字');
+    check(!(await shadowExists(page, HOST, tid('pm-wiz-next-hint'))), '全部取消选择后底栏也没有多出说明文字');
     const focusAfterClear = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
-    check(focusAfterClear === 'pm-wiz-group-list', `全部删掉后焦点留在清单上（${focusAfterClear}）`);
+    check(focusAfterClear === 'pm-wiz-group-list', `全部取消选择后焦点留在清单上（${focusAfterClear}）`);
 
     // ===================== 序号重新编号（N6）、调整对象（N13） =====================
     await clickEl(page, C1);
@@ -1061,7 +1061,11 @@ async function main() {
       spacer.id = 'pm-probe-spacer';
       document.querySelector('#feed')?.appendChild(spacer); // 不依赖前情，保证内层有可滚高度
     });
-    await page.mouse.move(640, 400); // 滚轮落点要压在 #feed 上（它已是满屏滚动容器）
+    // 滚轮落点要在 #feed 上、同时避开底部的设置面板（#160 起面板多了一行复位出口，会更高一点）：
+    // 打在面板上滚的是面板自己，就测不到「捕获层不挡内层容器滚动」了
+    const tbInner = await shadowRect(page, tid('pm-wizard-toolbar'));
+    const wheelY = Math.max(24, Math.round((tbInner?.y ?? 400) - 40));
+    await page.mouse.move(640, wheelY);
     await page.mouse.wheel({ deltaY: 500 });
     await waitFor(page, '内层容器滚动了', () => (document.querySelector('#feed')?.scrollTop ?? 0) > 300);
     check(true, '点选阶段：内层容器的滚动不被捕获层挡住（#88）');
@@ -1500,6 +1504,188 @@ async function main() {
     // （与 check-toggle 的「中途清空配置：胶囊不拆」同一语义；「删除这个网站的设置」才清场）
     await waitFor(pageOnly, '恢复后胶囊仍在（会话保留）', (h) => !!document.querySelector(h), [TOGGLE], { timeout: 5000 });
     check(true, '恢复后胶囊保留：页面回到原样但入口留着（#143）');
+    // ===================== 回退出口：恢复网站原来的内容（#160） =====================
+    console.log('\n--- 恢复网站原来的内容：选内容底部有出口，只动收起项 ---');
+    const nowReset = Date.now();
+    // 两条规则都只作用于别的页面：本页 initialRules = 0，但网站已保存 2 项——
+    // 入口必须按「总数」出现，否则用户在这个页面上就没有出口（#160 的判据）
+    await setProfile(ext.control, TITLE_ONLY_ORIGIN, {
+      formatVersion: 1,
+      origin: TITLE_ONLY_ORIGIN,
+      switchState: 'disguised',
+      disguisedTitle: '工作台',
+      icon: { kind: 'preset', id: 'doc' },
+      titleIconSet: true,
+      mediaGray: true,
+      floatingBtnPos: null,
+      hideRules: [
+        {
+          id: 'r_rules_1',
+          elementName: '卡片',
+          candidates: ['.card'],
+          strategy: 'remove',
+          scope: { type: 'include', patterns: [{ label: '只在别处', prefix: `${TITLE_ONLY_ORIGIN}/never.html` }] },
+          onlyThis: false,
+          createdAt: nowReset,
+        },
+        {
+          id: 'r_rules_2',
+          elementName: '活动栏',
+          candidates: ['#promo'],
+          strategy: 'remove',
+          scope: { type: 'include', patterns: [{ label: '只在别处', prefix: `${TITLE_ONLY_ORIGIN}/never.html` }] },
+          onlyThis: false,
+          createdAt: nowReset,
+        },
+      ],
+      createdAt: nowReset,
+      updatedAt: nowReset,
+    });
+    await sendToTab(ext.control, onlyTabId, { t: 'openWizard', mode: 'editContent' });
+    await waitForShadow(pageOnly, HOST, tid('pm-wizard-toolbar'));
+    check((await shadowExists(pageOnly, HOST, tid('pm-wiz-rules-reset-row'))) === true, '有已保存的收起项：选内容底部出现复位行');
+    check((await shadowExists(pageOnly, HOST, tid('pm-wiz-list-empty'))) === true, '前置：本页没有用得上的旧规则（清单为空）');
+    const resetRowText = await shadowText(pageOnly, HOST, tid('pm-wiz-rules-reset-row'));
+    check(
+      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响。'),
+      `复位行文字逐字对（${resetRowText.split('\n').join(' / ')}）`,
+    );
+    const resetRowPos = await pageOnly.evaluate((h) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const row = sr?.querySelector('[data-testid="pm-wiz-rules-reset-row"]');
+      const list = sr?.querySelector('[data-testid="pm-wiz-group-list"]');
+      const footer = sr?.querySelector('.pm-wiz-footer');
+      if (!row || !list || !footer) return null;
+      return {
+        afterList: !!(list.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING),
+        beforeFooter: !!(row.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING),
+        inPick: !!row.closest('.pm-wiz-pick'),
+      };
+    }, HOST);
+    check(
+      resetRowPos?.inPick && resetRowPos.afterList && resetRowPos.beforeFooter,
+      '复位行在选内容底部：清单之后、footer 之前',
+    );
+
+    // 取消分支：文字与默认焦点；Esc 回向导，存储一点没动
+    const beforeRulesReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-rules-reset'));
+    await waitFor(
+      pageOnly,
+      '恢复内容确认框打开',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-rules-reset-dialog"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    const resetDlgInfo = await pageOnly.evaluate((h) => {
+      const sr = document.querySelector(h)?.shadowRoot;
+      const dlg = sr?.querySelector('[data-testid="pm-wizard-rules-reset-dialog"]');
+      return {
+        tag: dlg?.tagName,
+        heading: dlg?.querySelector('h2')?.textContent.trim(),
+        body: dlg?.querySelector('p')?.textContent.trim(),
+        buttons: [...(dlg?.querySelectorAll('.pm-wiz-actions button') ?? [])].map((b) => ({
+          testid: b.dataset.testid,
+          text: b.textContent.trim(),
+          danger: b.classList.contains('danger'),
+          primary: b.classList.contains('primary'),
+        })),
+        focus: sr.activeElement?.dataset.testid,
+      };
+    }, HOST);
+    check(
+      resetDlgInfo.tag === 'DIALOG' && resetDlgInfo.heading === '恢复网站原来的内容？' && resetDlgInfo.body === '2 项收起设置会全部删除。',
+      `确认框标题与正文逐字对（${resetDlgInfo.heading} / ${resetDlgInfo.body}）`,
+    );
+    const resetCancelBtn = resetDlgInfo.buttons.find((b) => b.testid === 'pm-wizard-rules-reset-cancel');
+    const resetConfirmBtn = resetDlgInfo.buttons.find((b) => b.testid === 'pm-wizard-rules-reset-confirm');
+    check(
+      resetCancelBtn?.text === '取消' && resetConfirmBtn?.text === '恢复内容' && resetConfirmBtn.danger && !resetConfirmBtn.primary,
+      `按钮文字逐字对，确认是红字红边、不填实心红（${resetCancelBtn?.text} / ${resetConfirmBtn?.text}）`,
+    );
+    check(resetDlgInfo.focus === 'pm-wizard-rules-reset-cancel', '默认焦点在「取消」');
+    await pageOnly.keyboard.press('Escape');
+    await waitFor(
+      pageOnly,
+      'Esc 关确认框、向导还在',
+      (h) => {
+        const sr = document.querySelector(h)?.shadowRoot;
+        return !!sr?.querySelector('[data-testid="pm-wizard-toolbar"]') && !sr.querySelector('[data-testid="pm-wizard-rules-reset-dialog"]').open;
+      },
+      [HOST],
+      { timeout: 3000 },
+    );
+    const afterRulesCancel = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
+    check(
+      afterRulesCancel.hideRules.length === 2 && afterRulesCancel.updatedAt === beforeRulesReset.updatedAt,
+      '取消：仍在向导里，收起项与 updatedAt 都没变',
+    );
+
+    // 复位行不进看效果步骤；选一项再进去看，回来时取消选择
+    await clickEl(pageOnly, C1);
+    await waitFor(
+      pageOnly,
+      '选内容：已选 1 项',
+      (h) => document.querySelector(h).shadowRoot.querySelectorAll('[data-testid="pm-wiz-selected"] > li').length === 1,
+      [HOST],
+    );
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-preview'));
+    await waitForShadow(pageOnly, HOST, tid('pm-wiz-save'));
+    check(!(await shadowExists(pageOnly, HOST, tid('pm-wiz-rules-reset-row'))), '看效果步骤里没有复位行（只属于选内容这一步）');
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-back'));
+    await waitForShadow(pageOnly, HOST, tid('pm-wiz-rules-reset-row'));
+
+    // 让页面上挂着「同类描边」草稿样式：复位前必须先清掉
+    await clickInShadow(pageOnly, HOST, tid('pm-sel-1-same-toggle'));
+    await waitFor(
+      pageOnly,
+      '勾上同类：另外两张卡片带描边',
+      (sel) => getComputedStyle(document.querySelector(sel)).outlineStyle === 'dashed',
+      [C2],
+      { timeout: 3000 },
+    );
+
+    // 确认分支：向导关闭、页内提示、只清 hideRules、草稿样式一并撤掉
+    await clickInShadow(pageOnly, HOST, tid('pm-wiz-rules-reset'));
+    await waitFor(
+      pageOnly,
+      '复位确认框再次打开',
+      (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-rules-reset-dialog"]').open,
+      [HOST],
+      { timeout: 3000 },
+    );
+    await clickInShadow(pageOnly, HOST, tid('pm-wizard-rules-reset-confirm'));
+    await waitFor(pageOnly, '确认后向导关闭', (h) => !document.querySelector(h), [HOST]);
+    // 页内提示的宿主常驻（内容换新）：等文字真的换成复位那一句，不只看节点在不在
+    await waitFor(
+      pageOnly,
+      '页内提示换成复位那句',
+      (n) => document.querySelector(n)?.shadowRoot?.querySelector('[data-testid="pm-page-notice"]')?.textContent.trim() === '已恢复网站原来的内容',
+      [NOTICE],
+      { timeout: 5000 },
+    );
+    const rulesResetNotice = await shadowText(pageOnly, NOTICE, tid('pm-page-notice'));
+    check(rulesResetNotice.trim() === '已恢复网站原来的内容', `页内提示「${rulesResetNotice.trim()}」`);
+    const afterRulesReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);
+    check(afterRulesReset?.hideRules.length === 0, '存储里的收起项已清空');
+    check(
+      afterRulesReset?.switchState === 'disguised' &&
+        afterRulesReset.titleIconSet === true &&
+        afterRulesReset.disguisedTitle === '工作台' &&
+        afterRulesReset.icon?.kind === 'preset' &&
+        afterRulesReset.icon.id === 'doc' &&
+        afterRulesReset.mediaGray === true,
+      `只动收起项：开关 / 标题图标 / 灰度原样（${JSON.stringify(afterRulesReset && { state: afterRulesReset.switchState, titleIconSet: afterRulesReset.titleIconSet, title: afterRulesReset.disguisedTitle, mediaGray: afterRulesReset.mediaGray })}）`,
+    );
+    check((await pageOnly.title()) === '工作台', `标签页标题不受影响（${await pageOnly.title()}）`);
+    await waitFor(
+      pageOnly,
+      '页面上的同类描边草稿样式已清空',
+      (c1, c2, c3) => [c1, c2, c3].every((s) => getComputedStyle(document.querySelector(s)).outlineStyle !== 'dashed'),
+      [C1, C2, C3],
+      { timeout: 3000 },
+    );
+    check(true, '页面上的同类描边草稿样式已清空');
     await pageOnly.close();
 
     // ===================== 0.8.15（#150）：工具条收窄 480 + 可收起 =====================

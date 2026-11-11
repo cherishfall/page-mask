@@ -882,6 +882,99 @@ async function main() {
       `撤销按原下标插回、id 不变（${restored.hideRules.map((x) => x.id).join('、')}）`,
     );
 
+    // ===================== 恢复网站原来的内容（#160） =====================
+    console.log('\n--- 站点设置页：恢复网站原来的内容（只动收起项） ---');
+    // 换成「只有收起项」的站点：标题图标空着、灰度与开关各有值，验证复位只碰 hideRules
+    await setProfile(ext.control, ORIGIN, {
+      ...profileOf(ORIGIN),
+      switchState: 'disguised',
+      disguisedTitle: null,
+      titleIconSet: false,
+      mediaGray: true,
+    });
+    await m.waitForSelector(tid('pm-mgmt-rules-reset-row'), { timeout: 5000 });
+    const resetRowText = await m.$eval(tid('pm-mgmt-rules-reset-row'), (e) => e.innerText.trim());
+    check(
+      resetRowText.includes('恢复网站原来的内容') && resetRowText.includes('只恢复收起的内容，标题和图标不受影响。'),
+      `有已保存的收起项时出现复位行，文字逐字对（${resetRowText.split('\n').join(' / ')}）`,
+    );
+    check((await m.$$eval(tid('pm-mgmt-rule-row'), (rows) => rows.length)) === 2, '复位行出现时清单仍是 2 行');
+
+    // 取消分支：标题 / 正文 / 按钮文字、默认焦点在「取消」；关闭后规则与 updatedAt 都不动
+    const beforeCancel = await getProfile(ext.control, ORIGIN);
+    await m.click(tid('pm-mgmt-rules-reset'));
+    await waitFor(m, '恢复内容确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-rules-reset-dialog')]);
+    const rulesResetInfo = await m.evaluate(
+      (dlgSel, cancelSel, confirmSel) => {
+        const d = document.querySelector(dlgSel);
+        const confirm = document.querySelector(confirmSel);
+        return {
+          focus: document.activeElement?.textContent?.trim(),
+          title: document.querySelector('[data-testid="pm-mgmt-rules-reset-title"]')?.textContent.trim() ?? '',
+          impact: document.querySelector('[data-testid="pm-mgmt-rules-reset-impact"]')?.textContent.trim() ?? '',
+          cancel: document.querySelector(cancelSel)?.textContent.trim() ?? '',
+          confirm: confirm?.textContent.trim() ?? '',
+          confirmDanger: confirm?.classList.contains('danger') === true,
+          confirmSolid: confirm?.classList.contains('primary') === true,
+        };
+      },
+      tid('pm-mgmt-rules-reset-dialog'),
+      tid('pm-mgmt-rules-reset-cancel'),
+      tid('pm-mgmt-rules-reset-confirm'),
+    );
+    check(rulesResetInfo.focus === '取消', `原生模态框，默认焦点在「${rulesResetInfo.focus}」`);
+    check(
+      rulesResetInfo.title === '恢复网站原来的内容？' && rulesResetInfo.impact === '2 项收起设置会全部删除。',
+      `确认框标题与正文逐字对（${rulesResetInfo.title} / ${rulesResetInfo.impact}）`,
+    );
+    check(
+      rulesResetInfo.cancel === '取消' && rulesResetInfo.confirm === '恢复内容' && rulesResetInfo.confirmDanger && !rulesResetInfo.confirmSolid,
+      `按钮文字逐字对，确认是红字红边、不填实心红（${rulesResetInfo.cancel} / ${rulesResetInfo.confirm}）`,
+    );
+    await m.click(tid('pm-mgmt-rules-reset-cancel'));
+    await waitFor(m, '取消后确认框关闭', (s) => !document.querySelector(s).open, [tid('pm-mgmt-rules-reset-dialog')]);
+    const afterCancel = await getProfile(ext.control, ORIGIN);
+    check(
+      afterCancel.hideRules.length === 2 && afterCancel.updatedAt === beforeCancel.updatedAt,
+      '取消：收起项与 updatedAt 都没变',
+    );
+    await poll(
+      async () => (await m.evaluate(() => document.activeElement?.textContent?.trim())) === '恢复网站原来的内容',
+      '取消后焦点回到触发按钮（原生 dialog 行为，不去抢）',
+    );
+
+    // 先删一条（撤销条挂着）→ 复位 → 撤销条消失，不能把那条插回空列表
+    await m.click(tid('pm-mgmt-rule-delete-r1'));
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).hideRules.length === 1, '删除一条后只剩 1 条');
+    await m.waitForSelector(tid('pm-mgmt-undo-btn'), { timeout: 3000 });
+    await m.click(tid('pm-mgmt-rules-reset'));
+    await waitFor(m, '复位确认框再次打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-rules-reset-dialog')]);
+    await m.click(tid('pm-mgmt-rules-reset-confirm'));
+    const cleared = await poll(async () => {
+      const p = await getProfile(ext.control, ORIGIN);
+      return p.hideRules.length === 0 ? p : null;
+    }, '确认后收起项清空');
+    check(
+      cleared.switchState === 'disguised' && cleared.titleIconSet === false && cleared.mediaGray === true,
+      `复位只动收起项：开关 / 标题图标 / 灰度原样（${JSON.stringify({ state: cleared.switchState, titleIconSet: cleared.titleIconSet, mediaGray: cleared.mediaGray })}）`,
+    );
+    await m.waitForSelector(tid('pm-mgmt-no-rules'), { timeout: 5000 });
+    check(!(await m.$(tid('pm-mgmt-rule-list'))), '清单消失，换成空状态');
+    check(!(await m.$(tid('pm-mgmt-rules-reset-row'))), '没有收起项后复位行自己消失');
+    const clearedCount = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
+    check(clearedCount.includes('还没有收起设置'), `计数改成「${clearedCount}」`);
+    const undoAfterReset = await m.$eval(tid('pm-mgmt-undo'), (e) => e.innerText.trim());
+    check(!undoAfterReset.includes('已删除'), `复位后撤销条消失（${undoAfterReset || '空'}）`);
+    // 标题图标都空着时，#158 那句「打开后页面不变」跟着出现
+    await m.waitForSelector(tid('pm-mgmt-switch-empty'), { timeout: 5000 });
+    check(true, '清到空设置后，开关旁那句「打开后页面不变」出现（#158）');
+    await poll(
+      async () => (await m.evaluate(() => document.activeElement?.textContent?.trim())) === '收起的内容',
+      '确认后焦点回到「收起的内容」卡标题（触发按钮已随列表消失）',
+    );
+    await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
+    await m.waitForSelector(tid('pm-mgmt-rules-reset-row'), { timeout: 5000 });
+
     // 这一页只读清单：不再有「在页面上编辑」，改成一句指回页面的话（#71）
     check(!(await m.$(tid('pm-mgmt-edit-on-page'))), '「在页面上编辑」已经拿掉（它不知道该去哪个页面）');
     const editHint = await m.$eval(tid('pm-mgmt-edit-hint'), (e) => e.textContent.trim());

@@ -18,6 +18,8 @@ export interface RuleUndoState {
   remove: (rules: readonly HideRule[], ruleId: string) => void;
   /** 把最近删掉的那条插回原位置 */
   undo: () => void;
+  /** 放弃这次撤销机会（清掉 pending 与定时器，不写存储）：整份清空之前必须先调它 */
+  cancel: () => void;
 }
 
 export function useRuleUndo(apply: RuleListWriter): RuleUndoState {
@@ -51,6 +53,16 @@ export function useRuleUndo(apply: RuleListWriter): RuleUndoState {
     apply((current) => reattachRule(current, entry));
   }
 
+  /**
+   * 「恢复网站原来的内容」前先作废未到期的撤销（#160）：
+   * 否则清空之后再点撤销，会把刚删掉的那条插回空列表——清空就不成立了。
+   * 只清界面状态与定时器，不写存储（删除已经落库）。
+   */
+  function cancel() {
+    pending.value = null;
+    stopTimer();
+  }
+
   onBeforeUnmount(stopTimer);
-  return { pending, remove, undo };
+  return { pending, remove, undo, cancel };
 }

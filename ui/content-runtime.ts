@@ -476,6 +476,9 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       initialRules: initialRulesFor(pageUrl),
       hasProfile: !!profile,
       titleIconSet: profile?.titleIconSet === true,
+      // 「恢复网站原来的内容」的入口判据（#160）：用这个网站已保存的总数，不是本页用得上的条数——
+      // 规则都作用于别的页面时，入口也该在（否则用户在这个页面上就没有出口了）
+      savedRuleCount: profile?.hideRules.length ?? 0,
       initialTitle: fallbackTitle,
       initialIcon: profile?.icon ?? { kind: 'site' },
       initialState: profile?.switchState ?? 'disguised',

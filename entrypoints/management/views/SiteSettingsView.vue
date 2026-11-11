@@ -113,7 +113,7 @@
       </section>
 
       <!-- 回退出口（#99）：保存过标题和图标才出现；只撤销这两项，不动收起的内容 -->
-      <div v-if="profile.titleIconSet" class="row title-reset" data-testid="pm-mgmt-title-reset-row">
+      <div v-if="profile.titleIconSet" class="row reset-row" data-testid="pm-mgmt-title-reset-row">
         <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="resetTitleIcon">
           {{ t.common.resetTitleIcon }}
         </button>
@@ -122,7 +122,7 @@
 
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card" data-testid="pm-mgmt-card-rules">
-        <h3>{{ t.management.rulesHeading }}</h3>
+        <h3 ref="rulesHeading" tabindex="-1" data-testid="pm-mgmt-rules-heading">{{ t.management.rulesHeading }}</h3>
 
         <p v-if="profile.hideRules.length === 0" class="hint" data-testid="pm-mgmt-no-rules">
           {{ t.management.rulesEmpty }}
@@ -178,6 +178,20 @@
           {{ store.state.ruleError[profile.origin] }}
         </p>
 
+        <!-- 回退出口（#160）：与 #99 那颗对称，只在确实有已保存的收起项时出现；
+             确认后整份列表清空，所以触发按钮自己也会随之消失 -->
+        <div v-if="profile.hideRules.length > 0" class="row reset-row" data-testid="pm-mgmt-rules-reset-row">
+          <button type="button" class="ghost" data-testid="pm-mgmt-rules-reset" @click="rulesResetOpen = true">
+            {{ t.common.resetSiteContent }}
+          </button>
+          <span class="hint">{{ t.common.resetSiteContentHint }}</span>
+        </div>
+        <ClearRulesDialog
+          v-if="rulesResetOpen"
+          :count="profile.hideRules.length"
+          @closed="onRulesResetClosed"
+        />
+
         <!-- 这一页只读清单：换成怎么收、重选元素都要页面上下文，所以指回页面（#71）。
              #161：这是「完成操作必需」的边界坑（a 类），常驻但压成一句短句；
              Carbon 明确 pertinent 信息不进 tooltip，别收进 ⓘ。 -->
@@ -225,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
@@ -237,6 +251,7 @@ import type { HideRule, TabIcon } from '@/core/types';
 import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
 import IconPicker from '@/ui/title-icon/IconPicker.vue';
+import ClearRulesDialog from '../ClearRulesDialog.vue';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
 
@@ -266,10 +281,15 @@ const iconError = ref('');
 /** 三个媒体开关写入失败时的一句话，显示在这张卡里 */
 const mediaError = ref('');
 // 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
-const { pending: undo, remove, undo: undoDelete } = useRuleUndo((update) => {
+const { pending: undo, remove, undo: undoDelete, cancel: cancelUndo } = useRuleUndo((update) => {
   const p = profile.value;
   if (p) void store.updateRules(p.origin, update);
 });
+
+/** 「收起的内容」卡标题：确认框关了之后焦点落在这里（触发按钮会随列表清空消失） */
+const rulesHeading = ref<HTMLElement | null>(null);
+/** 「恢复网站原来的内容」确认框是否打开（只在本视图挂一个实例） */
+const rulesResetOpen = ref(false);
 
 function onToggle(e: Event) {
   if (profile.value) void store.toggleSite(profile.value, e);
@@ -316,6 +336,22 @@ async function onMediaChange(key: MediaFlagKey, e: Event) {
 async function resetTitleIcon() {
   if (!profile.value) return;
   await store.resetTitleIcon(profile.value.origin);
+}
+
+/**
+ * 恢复网站原来的内容（#160）：确认框关了之后收尾。
+ * 确认时先作废未到期的单条撤销——否则清空后再点撤销，会把刚删掉的那条插回空列表。
+ * 触发按钮会随列表一起消失，焦点交给卡片标题，不能掉回 body。
+ */
+async function onRulesResetClosed(confirmed: boolean) {
+  rulesResetOpen.value = false;
+  const p = profile.value;
+  // 取消：焦点由浏览器还给触发按钮，这里不要抢
+  if (!confirmed || !p) return;
+  cancelUndo();
+  await store.resetHideRules(p.origin);
+  await nextTick();
+  rulesHeading.value?.focus();
 }
 </script>
 
@@ -396,17 +432,17 @@ async function resetTitleIcon() {
   margin: var(--pm-space-2) 0;
 }
 
-/* 回退出口（#99）：不是卡片标题下的字段，单独一行，和上下两张卡都留出距离。
+/* 回退出口（#99 / #160）：不是卡片标题下的字段，单独一行，和上下内容都留出距离。
    0.8.16 发版审查：.ghost 无底无边、颜色与旁边说明同档，扫一眼分不清哪半句能点——
-   补下划线（与向导「标题和图标」里的同一个入口同款，看得出能点） */
-.title-reset {
+   补下划线（与向导里同一个入口同款，看得出能点）。两处共用这一份样式，不复制。 */
+.reset-row {
   margin: var(--pm-space-2) 0 var(--pm-space-3);
 }
-.title-reset .ghost {
+.reset-row .ghost {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.title-reset .hint {
+.reset-row .hint {
   margin: 0;
 }
 

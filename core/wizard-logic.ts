@@ -4,7 +4,7 @@
  */
 import { DEFAULT_TITLE_EN } from './titles';
 import { t } from './i18n';
-import type { HideRule, Scope, ScopePattern, StrategyId, SwitchState, TabIcon } from './types';
+import type { HideRule, Scope, ScopePattern, SiteProfile, StrategyId, SwitchState, TabIcon } from './types';
 
 /** 选到接近整页的元素时防呆提示（不阻止，只提示） */
 export function isTooBigForPick(rect: { width: number; height: number }, viewport: { width: number; height: number }): boolean {
@@ -143,6 +143,14 @@ export interface TitleIconResetPatch {
 
 export function titleIconResetPatch(): TitleIconResetPatch {
   return { titleIconSet: false, disguisedTitle: null, icon: { kind: 'site' } };
+}
+
+/**
+ * 「恢复网站原来的内容」（#160）：与 #99 对称，只动这一个字段。
+ * 开关状态、标题图标、灰度、按钮位置与站点授权一概不碰——它只撤销「收起的内容」这一项定制。
+ */
+export function hiddenItemsResetPatch(): Pick<SiteProfile, 'hideRules'> {
+  return { hideRules: [] };
 }
 
 // ---------- 保存前的开关状态（#159） ----------

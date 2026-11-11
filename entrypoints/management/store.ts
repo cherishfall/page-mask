@@ -18,7 +18,7 @@ import type { HideRule, SiteProfile, TabIcon } from '@/core/types';
 import { originPattern } from '@/core/registration';
 import type { Ack, ReconcileResponse } from '@/core/messages';
 import { syncDrafts } from '@/core/drafts';
-import { titleIconResetPatch } from '@/core/wizard-logic';
+import { hiddenItemsResetPatch, titleIconResetPatch } from '@/core/wizard-logic';
 import { DEFAULT_TOGGLE_OPACITY, normalizeToggleOpacity } from '@/core/toggle-opacity';
 import { importErrorText, previewReplace, type ReplaceImpact } from '@/core/import-preview';
 import { exportFileName } from '@/core/export-file';
@@ -277,6 +277,14 @@ export function createManagementStore() {
   }
 
   /**
+   * 恢复网站原来的内容（#160）：只把收起项置空，标题 / 图标 / 开关 / 灰度 / 按钮位置一概不碰。
+   * 走 updateRules 这条已有通道：按存储里的最新列表原子写入，失败原因落在 ruleError（同一句提示）。
+   */
+  async function resetHideRules(origin: string): Promise<void> {
+    await updateRules(origin, () => hiddenItemsResetPatch().hideRules);
+  }
+
+  /**
    * 界面语言偏好（#57）：写进全局设置，所有打开的页面（含本页）通过 storage.onChanged
    * 即时切换，不需要刷新。
    */
@@ -399,6 +407,7 @@ export function createManagementStore() {
     setMedia,
     setIcon,
     resetTitleIcon,
+    resetHideRules,
     setUiLanguage,
     setToggleOpacity,
     askReset,

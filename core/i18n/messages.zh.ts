@@ -40,6 +40,13 @@ export const zh = {
     /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
     shortcutBlocked: '这个页面不能遮住',
     resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响。',
+    /** 回退出口（#160）：与 #99 对称，两处同名同物；只说「恢复内容」，不用「清空 / 重置」 */
+    resetSiteContent: '恢复网站原来的内容',
+    resetSiteContentHint: '只恢复收起的内容，标题和图标不受影响。',
+    resetSiteContentTitle: '恢复网站原来的内容？',
+    /** 确认框正文：说清有几项会没了 */
+    resetSiteContentImpact: (n: number) => `${n} 项收起设置会全部删除。`,
+    resetSiteContentConfirm: '恢复内容',
     /** 两个状态的名字（GLOSSARY「清爽态 / 原样态」）：短名，用在胶囊与列表上，不用来解释动作 */
     clean: '按设置',
     original: '原样',
@@ -451,8 +458,6 @@ export const zh = {
     exit: '退出设置',
     exitTitle: '退出设置？',
     exitBodySelected: (n: number) => `已经选的 ${n} 项不会保存。退出后标签页会变回原来的名字，页面也变回设置前的样子。`,
-    /** 草稿全被去掉了、但有改动时的退出确认：说清退出 = 放弃这次修改 */
-    exitBodyRemoved: '这次去掉的收起项还留在原来的设置里。退出后标签页会变回原来的名字，页面也变回设置前的样子。',
     exitBodyPlain: '改过的标题和图标不会保存。退出后标签页会变回原来的名字，页面也变回设置前的样子。',
     /** 点「退出设置」但这次什么都没改（#123）：如实说明为什么还要问这一次 */
     exitBodyNoChanges: '这次还没有未保存的改动，退出不会影响已有的设置。',
@@ -467,6 +472,8 @@ export const zh = {
     /** 保存后 0 条收起设置的轻提示 */
     zeroRuleNotice: (title: string) => `已保存，标签页名字换成「${title}」了`,
     titleResetNotice: '已恢复网站原来的标题和图标',
+    /** 恢复收起内容后的页内提示（#160）：向导已关，用一句轻提示说清刚发生了什么 */
+    rulesResetNotice: '已恢复网站原来的内容',
     /** 运行中的提示条 */
     warnTooBig: '选到接近整页的内容了，可能不是你要的。试试「选小一点」',
     warnUnstable: '切回去以后没法稳定找到这个元素，已经保留原来的设置',

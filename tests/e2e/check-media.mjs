@@ -33,7 +33,7 @@ import {
   sendToTab,
   tabIdOf,
 } from './lib/extension.mjs';
-import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
+import { clickInShadow } from './lib/shadow.mjs';
 import { loadSurfaces } from './lib/surfaces.mjs';
 
 const r = createReporter();
@@ -435,6 +435,60 @@ async function main() {
     // scheduleRefresh → syncFormalStyles → mountToggle）：必须等它出现，不能查一次就算
     await page.waitForSelector(TOGGLE, { timeout: 8000 });
     check(true, '退出向导后胶囊挂回来（#143）');
+
+    // ===================== 复位到空设置（#160）：#135 的会话保留不变 =====================
+    console.log('\n--- 恢复网站原来的内容清到空设置：胶囊当页仍挂着，刷新后才不挂（#135）---');
+    const nowRules = Date.now();
+    await setProfile(control, ORIGIN, {
+      formatVersion: 1,
+      origin: ORIGIN,
+      switchState: 'original',
+      disguisedTitle: null,
+      icon: { kind: 'none' },
+      hideRules: [
+        {
+          id: 'r_media_keep',
+          elementName: '大图',
+          candidates: ['#big'],
+          strategy: 'remove',
+          scope: { type: 'all' },
+          onlyThis: false,
+          createdAt: nowRules,
+        },
+      ],
+      floatingBtnPos: null,
+      createdAt: nowRules,
+      updatedAt: nowRules,
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.bringToFront();
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    const rulesTabId = await tabIdOf(control, `${ORIGIN}/*`);
+    await sendToTab(control, rulesTabId, { t: 'openWizard', mode: 'editContent' });
+    await page.waitForSelector('pagemask-wizard', { timeout: 8000 });
+    await clickInShadow(page, 'pagemask-wizard', tid('pm-wiz-rules-reset'));
+    await waitFor(
+      page,
+      '复位确认框打开',
+      (h) => document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-wizard-rules-reset-dialog"]')?.open === true,
+      ['pagemask-wizard'],
+      { timeout: 3000 },
+    );
+    await clickInShadow(page, 'pagemask-wizard', tid('pm-wizard-rules-reset-confirm'));
+    await waitFor(page, '复位后向导关闭', (h) => !document.querySelector(h), ['pagemask-wizard'], { timeout: 8000 });
+    const emptied = await poll(async () => {
+      const p = await getProfile(control, ORIGIN);
+      return p?.hideRules.length === 0 ? p : null;
+    }, '复位后收起项清空');
+    check(emptied.titleIconSet !== true && emptied.disguisedTitle === null && emptied.mediaGray === undefined, '前置：复位后四项全空');
+    // 会话保留（#135）：清空的这一刻胶囊不拆，页面上的入口留住
+    await page.waitForSelector(TOGGLE, { timeout: 8000 });
+    check(true, '复位到空设置：胶囊当页仍挂着（会话保留，#135）');
+    // 刷新后才按 hasSiteSettings 不挂（判据只在页面加载时决定胶囊生死）
+    await page.reload({ waitUntil: 'load' });
+    await page.bringToFront();
+    await new Promise((res) => setTimeout(res, 600));
+    check(!(await page.$(TOGGLE)), '刷新后空设置不再挂胶囊（#135 语义不变）');
 
     // ===================== 删除设置后标记要清（0.8.14，#144） =====================
     console.log('\n--- 删掉这个网站的设置：会话标记一并清掉 ---');

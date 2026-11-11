@@ -134,7 +134,7 @@
             </div>
           </div>
 
-          <!-- 分组二：已选清单，一行一项、一行一个删除；右上角「全部删掉」只是文字链接 -->
+          <!-- 分组二：已选清单，一行一项、一行一个删除；右上角「全部取消选择」只是文字链接 -->
           <section
             ref="listEl"
             class="pm-wiz-group"
@@ -225,6 +225,21 @@
             </ol>
             <p v-else class="pm-wiz-group-note" data-testid="pm-wiz-list-empty">{{ t.wizard.listEmpty }}</p>
           </section>
+
+          <!-- 回退出口（#160）：与「标题和图标」底部那颗对称。按这个网站已保存的**总数**出现，
+               不是按本页用得上的条数——否则在规则都作用于别的页面时入口会莫名消失 -->
+          <div v-if="props.savedRuleCount > 0" class="pm-wiz-reset" data-testid="pm-wiz-rules-reset-row">
+            <button
+              type="button"
+              class="pm-wiz-link plain"
+              data-testid="pm-wiz-rules-reset"
+              :disabled="saving"
+              @click="askRulesReset"
+            >
+              {{ t.common.resetSiteContent }}
+            </button>
+            <p class="pm-wiz-reset-hint">{{ t.common.resetSiteContentHint }}</p>
+          </div>
         </div>
       </template>
 
@@ -481,6 +496,29 @@
         </div>
       </form>
     </dialog>
+
+    <!-- 恢复网站原来的内容（#160）：破坏性动作走二次确认；确认按钮红字红边（实心红只留给删站点）。
+         默认焦点在「取消」；Esc = 取消，回向导继续设置 -->
+    <dialog
+      ref="rulesResetDlg"
+      class="pm-wiz-dialog"
+      aria-labelledby="pm-rules-reset-title"
+      data-testid="pm-wizard-rules-reset-dialog"
+      @close="onRulesResetClose"
+    >
+      <form method="dialog">
+        <h2 id="pm-rules-reset-title">{{ t.common.resetSiteContentTitle }}</h2>
+        <p>{{ t.common.resetSiteContentImpact(props.savedRuleCount) }}</p>
+        <div class="pm-wiz-actions">
+          <button value="cancel" class="pm-btn" autofocus data-testid="pm-wizard-rules-reset-cancel">
+            {{ t.common.cancel }}
+          </button>
+          <button value="confirm" class="pm-btn danger" data-testid="pm-wizard-rules-reset-confirm">
+            {{ t.common.resetSiteContentConfirm }}
+          </button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -503,6 +541,7 @@ import {
   badgePlacement,
   clampToViewport,
   draftHitCounts,
+  hiddenItemsResetPatch,
   mergeEditDrafts,
   mergeSavedRules,
   saveAsksToOpen,
@@ -578,6 +617,12 @@ const props = defineProps<{
   hasProfile: boolean;
   /** 这个网站保存过「标题和图标」（#98）：只有保存过才显示「恢复原来的标题和图标」（#99） */
   titleIconSet: boolean;
+  /**
+   * 这个网站已保存的收起项**总数**（含只作用于别的页面的，即 profile.hideRules.length）。
+   * 不能用 initialRules.length——那是「这个页面上用得上的」：规则都作用于别的页面时，
+   * 入口会在这类页面上该有的时候消失，不该有的时候（别的页面的规则在本页命中）又出现。
+   */
+  savedRuleCount: number;
   /** 标题输入框的默认值（全局默认 > 界面语言默认，永不为空白） */
   initialTitle: string;
   /** 站点现有的图标（新站点默认「网站原来的图标」） */
@@ -622,6 +667,7 @@ const listEl = ref<HTMLElement | null>(null);
 const exitDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
 const openDlg = ref<HTMLDialogElement | null>(null);
+const rulesResetDlg = ref<HTMLDialogElement | null>(null);
 
 const follower = new ElementFollower();
 let pick: PickController;
@@ -798,7 +844,9 @@ function showInfo(text: string) {
 
 /** 是否有浮层打开（确认框）：有就让浮层自己按原生行为处理 Esc */
 function overlayOpen(): boolean {
-  return !!exitDlg.value?.open || !!noticeDlg.value?.open || !!openDlg.value?.open;
+  return (
+    !!exitDlg.value?.open || !!noticeDlg.value?.open || !!openDlg.value?.open || !!rulesResetDlg.value?.open
+  );
 }
 
 function onKeyDown(e: KeyboardEvent) {
@@ -1207,6 +1255,58 @@ async function resetTitleIcon() {
   }
 }
 
+/** 打开复位确认框：连点两次不重复 showModal（对已打开的 dialog 再调会抛错） */
+function askRulesReset() {
+  if (saving.value || finished) return;
+  const dlg = rulesResetDlg.value;
+  if (dlg && !dlg.open) dlg.showModal();
+}
+
+/** 确认框关了：只有点「恢复内容」才真正写；Esc / 点外面 = 回向导继续设置 */
+function onRulesResetClose() {
+  const dlg = rulesResetDlg.value;
+  if (!dlg) return;
+  const confirmed = dlg.returnValue === 'confirm';
+  dlg.returnValue = ''; // Esc 不设置返回值，必须清掉上一次的
+  if (confirmed) void resetHiddenItems();
+}
+
+/**
+ * 「恢复网站原来的内容」（#160）：只把 hideRules 置空，标题 / 图标 / 开关 / 灰度一概不动。
+ * 先撤掉选内容阶段注入的「同类描边」草稿样式——finish(true) 只负责结束向导，不会替我们清，
+ * 留着的话页面上会有一圈描边悬在那儿。
+ */
+async function resetHiddenItems() {
+  if (saving.value || finished) return;
+  saving.value = true;
+  try {
+    const cleared = await props.setDraft(null);
+    if (!cleared.ok) {
+      showWarn(t.value.wizard.warnNotCleared);
+      return;
+    }
+    const storage = createPageMaskStorage(browser.storage.local);
+    const origin = new URL(props.url).origin;
+    let saved;
+    try {
+      saved = await storage.updateProfile(origin, (p) => {
+        Object.assign(p, hiddenItemsResetPatch());
+      });
+    } catch (e) {
+      showWarn(t.value.wizard.warnSaveFailed(e instanceof Error ? e.message : String(e)));
+      return;
+    }
+    if (!saved) {
+      noticeText.value = t.value.wizard.noticeGoneRules;
+      noticeDlg.value?.showModal();
+      return;
+    }
+    await finish(true, t.value.wizard.rulesResetNotice);
+  } finally {
+    saving.value = false;
+  }
+}
+
 /**
  * 「标题和图标」的保存（#81）：写标题 / 图标 / 开关，不碰已有的收起规则，向导直接关闭。
  * 站点还没有配置时，这份配置在这里第一次写入（0 条规则 + 清爽态）。
@@ -1312,7 +1412,7 @@ async function removeSelected(row: SelectionRow<Element>) {
   toolbarEl.value?.querySelector<HTMLElement>(`[data-testid="pm-sel-${nextSeq}-remove"]`)?.focus();
 }
 
-/** 清单右上角「全部删掉」：去掉全部已选，仍留在点选模式（不想一个个点掉时的出口） */
+/** 清单右上角「全部取消选择」：去掉全部已选，仍留在点选模式（不想一个个点掉时的出口） */
 async function clearSelection() {
   pick.clear(); // 选择集变化会经 onSelectionChange 同步序号牌与工具条
   await nextTick();

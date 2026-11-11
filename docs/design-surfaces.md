@@ -89,7 +89,7 @@
 |---:|---|---|---|---|---|---|
 | 1 | 标题和图标 | pm-mgmt-card-title | 标签页标题 | Tab title | management.titleHeading | 同一项拆成两张卡的第一张 |
 | 1 | 标题和图标 | pm-mgmt-card-icon | 标签页图标 | Tab icon | management.iconHeading | 同一项拆成两张卡的第二张 |
-| 2 | 收起内容 | pm-mgmt-card-rules | 收起的内容 | Hidden items | management.rulesHeading | 只读清单 |
+| 2 | 收起内容 | pm-mgmt-card-rules | 收起的内容 | Hidden items | management.rulesHeading | 只读清单；卡内底部有「恢复网站原来的内容」出口（#160），不是新的功能项，不加行 |
 | 5 | 整页变灰 | pm-mgmt-card-media | 整页变灰 | Grayscale whole page | media.heading | 开关标签取 media.mediaGray，中文同名 |
 | 7 | 删除这个网站的设置 | pm-mgmt-card-delete | 删除这个网站的设置 | Delete this site’s settings | management.deleteSite.heading | 页脚危险区 |
 

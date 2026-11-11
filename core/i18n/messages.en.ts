@@ -32,6 +32,13 @@ export const en: Messages = {
     resetTitleIcon: 'Use the site’s own title and icon',
     shortcutBlocked: 'This page can’t be covered',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are.',
+    /** Back-out entry (#160), symmetric with #99; same action, same words in both places */
+    resetSiteContent: 'Use the site’s own content',
+    resetSiteContentHint: 'Only hidden items — the title and icon stay as they are.',
+    resetSiteContentTitle: 'Use the site’s own content?',
+    resetSiteContentImpact: (n: number) =>
+      n === 1 ? 'The 1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
+    resetSiteContentConfirm: 'Restore content',
     clean: 'Your settings',
     original: 'As is',
     cleanMode: 'Show this site your way',
@@ -420,8 +427,6 @@ export const en: Messages = {
     exitTitle: 'Exit setup?',
     exitBodySelected: (n: number) =>
       `The ${n} picked items won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.`,
-    exitBodyRemoved:
-      'The items you removed are still in your settings. After you exit, the tab goes back to its real name and the page to its original look.',
     exitBodyPlain:
       'The title and icon you changed won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.',
     exitBodyNoChanges: 'Nothing here is unsaved yet — exiting won’t change your current settings.',
@@ -435,6 +440,8 @@ export const en: Messages = {
     openConfirm: 'Turn it on',
     zeroRuleNotice: (title: string) => `Saved — the tab is now named “${title}”`,
     titleResetNotice: 'Back to the site’s own title and icon',
+    /** Page notice after restoring hidden items (#160): the wizard is closed, so one short line says what just happened */
+    rulesResetNotice: 'Back to the site’s own content',
     warnTooBig: 'That’s almost the whole page — probably not what you want. Try “Smaller”',
     warnUnstable: 'This element can’t be found reliably once switched back, so the previous setting was kept',
     warnUnsavable: (index: number) =>

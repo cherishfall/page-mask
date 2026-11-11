@@ -3,6 +3,7 @@ import {
   badgePlacement,
   clampToViewport,
   draftHitCounts,
+  hiddenItemsResetPatch,
   isTooBigForPick,
   mergeEditDrafts,
   mergeSavedRules,
@@ -291,6 +292,29 @@ describe('「标题和图标」保存 0 条规则（#81）', () => {
     expect(profile.hideRules.map((r) => r.id)).toEqual(['r1']);
     expect(profile.switchState).toBe('disguised');
     expect(profile.floatingBtnPos).toEqual({ x: 12, y: 34 });
+  });
+
+  it('恢复网站原来的内容：只碰 hideRules，开关 / 标题图标 / 灰度一概不动（#160）', () => {
+    const profile = createEmptyProfile('https://example.test', 1);
+    profile.switchState = 'disguised';
+    profile.titleIconSet = true;
+    profile.disguisedTitle = '阅读';
+    profile.icon = { kind: 'preset', id: 'doc' };
+    profile.mediaGray = true;
+    profile.hideRules = [
+      { id: 'r1', elementName: '横幅', candidates: ['#b'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false, createdAt: 1 },
+      { id: 'r2', elementName: '侧栏', candidates: ['#s'], strategy: 'mask', scope: { type: 'all' }, onlyThis: true, createdAt: 2 },
+    ];
+
+    Object.assign(profile, hiddenItemsResetPatch());
+
+    expect(profile.hideRules).toEqual([]);
+    // 其余设置原封不动（与 #99 的字段纪律对称）
+    expect(profile.switchState).toBe('disguised');
+    expect(profile.titleIconSet).toBe(true);
+    expect(profile.disguisedTitle).toBe('阅读');
+    expect(profile.icon).toEqual({ kind: 'preset', id: 'doc' });
+    expect(profile.mediaGray).toBe(true);
   });
 });
 
