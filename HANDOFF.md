@@ -1,18 +1,18 @@
 # 0.8.19 后「交互与显示细节」批次（进行中）
 
-最后更新：2026-11-11 下午
-**一句话现状：用户报完 6 个问题，两轮深度调查做完、6 张 issue 全发出；代码一行未动、无 commit、无 push。等用户说开工，按下表顺序一张一张做。**
+最后更新：2026-11-11 傍晚
+**一句话现状：#161 已完成并推送（`0123db3`，已关票）；下一张 #157。代码每票一提交一推送，进度见下表。**
 
-## 本批票（全部 OPEN）
+## 本批票（#161 已完成，其余 OPEN）
 
-| 顺序 | 票 | 一句话范围 |
-|---|---|---|
-| 1 | [#161](https://github.com/cherishfall/page-mask/issues/161) | 立「引导性文字什么时候露出」的整屏规矩；先抽公共 ⓘ 组件并补自动断言，再收四处常驻说明 |
-| 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 |
-| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） |
-| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 |
-| 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` |
-| 6 | [#162](https://github.com/cherishfall/page-mask/issues/162) | 站点身份改可注册域名 eTLD+1（微博裸域 / `s.weibo.com` 合一）；含旧配置迁移、权限多模式、文档与测试改造 |
+| 顺序 | 票 | 一句话范围 | 状态 |
+|---|---|---|---|
+| 1 | [#161](https://github.com/cherishfall/page-mask/issues/161) | 立「引导性文字什么时候露出」的整屏规矩；抽公共 ⓘ 并补自动断言，再收四处常驻说明 | ✅ `0123db3` 已关票 |
+| 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 | ⏳ 下一张 |
+| 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | 待做 |
+| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | 待做 |
+| 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` | 待做 |
+| 6 | [#162](https://github.com/cherishfall/page-mask/issues/162) | 站点身份改可注册域名 eTLD+1（微博裸域 / `s.weibo.com` 合一）；含旧配置迁移、权限多模式、文档与测试改造 | 待做（单独发版） |
 
 issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入库）。#159 已补 [#53 成文冲突评论](https://github.com/cherishfall/page-mask/issues/159#issuecomment-6790252195)。
 
@@ -46,12 +46,17 @@ issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入�
 - `gh` 命令必须带 `HTTPS_PROXY=http://127.0.0.1:7890`。
 - 发版：版本号 → CHANGELOG → push → annotated tag（中文 changelog 小节）→ `gh release create` 附 `.output/*.zip`。
 
-## 开工前状态
+## 进度与工作区状态
 
-- 仓库干净，`HEAD 4c8c7bf` = `origin/master`；最新 tag `v0.8.19`。
-- 无源码改动、无 commit、无 push、未跑测试。
-- 本批 6 票全 OPEN；#159 已补冲突评论，#161 §「与本批新增文案的边界」引用它。
-- **用户尚未说「开工」**（此前明确要求「先不要开工呀，我还没报完呢」）；最新指令只到「再深度调查一次，并且发 issue」。
+- ✅ #161：`0123db3`（compile / 715 单测 / 9 个 E2E 935 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
+- 仓库干净，`HEAD 0123db3` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
+- 本批剩余 5 票全 OPEN；#159 已补 #53 冲突评论。
+
+## #161 留给后续票的三条硬口径
+
+1. **a 类不许当 b 类收**：状态 / 后果 / 边界 / 完成操作必需 → 常驻一句短句。本轮子代理把站点设置页三条状态说明和向导「看效果」的操作说明收进 ⓘ，验收时改回；后面几票别再犯（详见 `docs/dev/DEVLOG.md` #161 条）。
+2. **ⓘ 跟对象同行**：卡片级说明的图标并进标题行（`class="card-head pm-info-head pm-info-anchor"`），不独占一行；行内说明跟控件标签。唯一外观在 `styles/info-tip.css`，别各写一套。
+3. **改文案先 grep `tests/`**：E2E 有按中文整串断言的旧例（`check-pages.mjs:815` 锁「工具栏上的 PageMask 图标」）。
 
 ## 上一批遗留（不占本批票）
 
