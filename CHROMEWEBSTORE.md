@@ -61,7 +61,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 1. 打开要设置的网站，点工具栏的 PageMask 图标
 2. 第一次用：在 Chrome 的提示里点「允许」——点「收起内容」或「标题和图标」时都会问这一次
 3. 「收起内容」分两步：在页面上点选要收起的内容 → 「看效果」确认，保存即完成；「标题和图标」填完点「保存」
-4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「收起内容」「标题和图标」，或悬浮按钮旁边的「⋯」菜单；想让图片视频变低调，点胶囊上的「媒体」钮，或在弹窗、站点设置页的「图片和视频」里拨开关，三处是同一组设置
+4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「收起内容」「标题和图标」，或悬浮按钮旁边的「⋯」菜单；想让整个页面变黑白，点胶囊上的「媒体」钮，或在弹窗、站点设置页的「整页变灰」里拨开关，三处是同一组设置
 
 【隐私与权限】
 • 只对你添加的网站生效；没添加的网站，PageMask 不会运行任何内容
@@ -144,7 +144,7 @@ Declutters websites the user chooses: it hides page elements the user picks and,
    - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最多 8 字符）会存在本机。
    - Web history：站点配置里保存了网站地址与生效页面的路径前缀。
    - 勾选后需要在「隐私政策」中说明用途；`PRIVACY.md` 已写明「只存本机、不上传」。
-   - 0.8.0 的「图片和视频变灰」只是同一份站点配置里的一个布尔值；幕布静音是浏览器记在标签页上的状态，不是扩展采集的数据，**不新增数据类型勾选**。
+   - 0.8.0 的「整页变灰」（当时叫「图片和视频变灰」）只是同一份站点配置里的一个布尔值；幕布静音是浏览器记在标签页上的状态，不是扩展采集的数据，**不新增数据类型勾选**。
 2. **三条证明**（与是否收集无关，**全部勾选**）：
    - 不出售或转让给第三方（批准的用途除外）
    - 不用于与单一用途无关的目的
@@ -169,12 +169,12 @@ Test steps (no login needed):
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it ("Reading" / «阅读» when left empty and Chrome's UI language is Chinese).
 5. Click the small button at the bottom-right to switch the site back to "As is": the element reappears and the title reverts.
 6. Click 「⋯」 on the small button. By default the menu has four items in three groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, a fifth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that second group. The button itself carries a 「媒体」 (Media) button that turns the site's pictures & videos black & white in one click.
-7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「收起内容」 / 「标题和图标」, the 「图片和视频变灰」 ("Turn pictures & videos gray") switch with the same Media icon as the floating button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Pictures & videos" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
-8. Pictures & videos gray (no new permission): turn it on with the floating button's 「媒体」 (Media) button, in the popup, or in the 「图片和视频」 card on the site's settings page — the places stay in sync. Pictures and videos turn black & white, stay in place, keep their size and links, and small icons stay as they are. Videos that the site autoplays are held; click a video and that one plays (still black & white). The gray switch is independent of the 「按你的设置显示」 / 「原样」 switch: flipping that switch restores the hidden parts and the tab title/icon while the gray stays as set. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
+7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「收起内容」 / 「标题和图标」, the 「整页变灰」 ("Turn the whole page gray") switch with the same Media icon as the floating button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Grayscale whole page" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
+8. Whole-page grayscale (no new permission): turn it on with the floating button's 「媒体」 (Media) button, in the popup, or in the 「整页变灰」 card on the site's settings page — the places stay in sync. The whole page turns black & white (text, pictures, videos, backgrounds, canvas, iframe content), stays in place and keeps its links; videos that the site autoplays are held, and clicking one lets that one play (still black & white). The gray switch is independent of the 「按你的设置显示」 / 「原样」 switch: flipping that switch restores the hidden parts and the tab title/icon while the gray stays as set. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.8.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对胶囊「媒体」钮与「遮住」钮、弹窗新排版（媒体开关一行 + 带图标的「遮住这一页」）、站点设置页「图片和视频」卡、第 8 步的自动播放压制 / 点击放行，以及幕布静音（遮住即哑、恢复有声、标签页斜线小喇叭）。自动化已按新语义全量跑过（0.8.0，#131/#132）：单测 692 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测变灰开关与幕布静音（含小图标豁免、播放压制与点击放行、静音归属、原样态还原、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
+**0.8.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对胶囊「媒体」钮与「遮住」钮、弹窗新排版（媒体开关一行 + 带图标的「遮住这一页」）、站点设置页「整页变灰」卡、第 8 步的自动播放压制 / 点击放行，以及幕布静音（遮住即哑、恢复有声、标签页斜线小喇叭）。自动化已按新语义全量跑过（0.8.0，#131/#132）：单测 692 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测变灰开关与幕布静音（含小图标豁免、播放压制与点击放行、静音归属、原样态还原、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
 
 ## 7. 版本历史
 
@@ -220,7 +220,7 @@ Test steps (no login needed):
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：三步设置第 2 步（点选，选中项列成清单）与第 3 步（看效果，逐项编辑 + 在哪些页面收起）并排 |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
-| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 已按 0.8.10 重拍 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 收起内容 / 标题和图标；灰度卡：图片和视频变灰；悬浮按钮卡；带闭眼图标的遮住这一页；底部两个入口） |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ⚠️ 已按 0.8.10 重拍 1280×800，但截图里灰度卡仍是旧名「图片和视频变灰」（0.8.19 文案已统一为「整页变灰」，**商店提交前需重拍**）：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 收起内容 / 标题和图标；灰度卡；悬浮按钮卡；带闭眼图标的遮住这一页；底部两个入口） |
 | 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
 | 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 已按 0.8.10 重拍 1280×800：胶囊（面具主钮 / 媒体钮 / 遮住钮 / ⋯，无把手、选中态整钮填实）与「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」） |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
@@ -238,7 +238,7 @@ Test steps (no login needed):
 ## 9. 已知限制（写给审核员，也写给用户）
 
 - 界面语言默认跟随浏览器（简体中文 / English 两套文案），可在插件设置里切换。
-- 「图片和视频变灰」只去掉颜色：图片 / 视频请求照发，既不省流量，也不代替广告过滤工具；0.8.16 起用 CSS 背景图画的内容图（书封、封面那类）也会一并变灰；仍不变灰的：iframe 内嵌播放器、`<canvas>`、内联 SVG；`<audio>` 与一切声音不参与。
+- 「整页变灰」只去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具；一条 CSS 规则覆盖整个页面（背景图、`<canvas>`、iframe 内容、内联 SVG、视频都在内），本扩展自己的浮层也会跟着变黑；`<audio>` 与一切声音不参与。
 - 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响。
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
 - iframe 与 shadow DOM 内部的元素暂时无法点选。

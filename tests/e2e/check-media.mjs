@@ -9,7 +9,7 @@
  * - 页面效果：html 整页 grayscale(1)（0.8.18，#156）、视频的 muted 全程没人动；
  * - 自动播放压制：play 事件被按停（paused 变 true）；点击视频区域后放行（synthetic play 不再被按停）
  * - 胶囊媒体钮：全功能与 mini 形态都有、aria-pressed 与实心/描边两态、点一下写存储
- * - 站点设置页：「图片和视频」卡片、一行开关与说明、点击后页面效果即时变化
+ * - 站点设置页：「整页变灰」卡片、一行开关与说明、点击后页面效果即时变化
  * - 幕布静音：遮住即静音（reason=extension）、恢复即还原；媒体层不写 muted
  * - 两态边界（0.8.3）：切「网站原样」定制还原、灰度独立照常生效；原样态下媒体钮有可见反应；
  *   切回来压制照常
@@ -34,11 +34,15 @@ import {
   tabIdOf,
 } from './lib/extension.mjs';
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
+import { loadSurfaces } from './lib/surfaces.mjs';
 
 const r = createReporter();
 const { check } = r;
 const tid = (id) => `[data-testid="${id}"]`;
 const TOGGLE = 'pagemask-toggle';
+/** 三处界面的唯一对照表（docs/design-surfaces.md）：叫法只从这一份取（#157） */
+const SURFACES = loadSurfaces();
+const MEDIA_LABEL = SURFACES.popup.find((row) => row.item === '整页变灰').labelZh;
 
 /**
  * 状态过渡落定的等待条件（#149；0.8.16 #152 改选中底口径）：交给项目 waitFor 在页面内轮询
@@ -162,7 +166,7 @@ async function main() {
       role: row.querySelector('input')?.getAttribute('role'),
       checked: row.querySelector('input')?.checked,
     }));
-    check(popupSwitch.label === '整页变灰', `开关叫法一致（${popupSwitch.label}）`);
+    check(popupSwitch.label === MEDIA_LABEL, `开关叫法一致（${popupSwitch.label}）`);
     check(popupSwitch.role === 'switch' && popupSwitch.checked === false, '读屏认得的开关，默认关');
     check(
       (await popup.$eval(tid('pm-popup-media'), (g) => g.getAttribute('role'))) === 'group',
@@ -279,13 +283,13 @@ async function main() {
     await m.goto(`${extOrigin}/management.html#/sites/${HOST}`, { waitUntil: 'load' });
     await m.waitForSelector(tid('pm-mgmt-media-mediaGray'), { timeout: 8000 });
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
-    check(sections.includes('图片和视频'), `站点设置页有「图片和视频」卡片（${sections.join(' / ')}）`);
+    check(sections.includes(MEDIA_LABEL), `站点设置页有「${MEDIA_LABEL}」卡片（${sections.join(' / ')}）`);
     const row = await m.$eval('.media-row', (el) => ({
       label: el.querySelector('label')?.textContent.trim() ?? '',
       hint: el.querySelector('.hint')?.textContent.trim() ?? '',
       checked: el.querySelector('input')?.checked,
     }));
-    check(row.label === '整页变灰', '与弹窗同一个叫法');
+    check(row.label === MEDIA_LABEL, '与弹窗同一个叫法');
     check(row.hint.length > 0, '说明跟着开关走');
     check(row.checked === true, '三处界面读同一份存储：媒体钮拨回来的状态在设置页也是开');
     check((await m.evaluate(() => document.body.innerText)).includes('页面内容照常加载'), '卡片底部如实说明「不是不加载」');

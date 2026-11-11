@@ -238,7 +238,7 @@ const props = defineProps<{
   coverShortcut: string;
   /** 右下角的小按钮在这个网站是否显示（#112：capsuleHidden 的反面）；只在 ready 出现 */
   showToggle?: boolean;
-  /** 「图片和视频变灰」的当前值（0.8.0）；欢迎页示意图不传时按未开渲染，new / ready 都显示这一行 */
+  /** 「整页变灰」的当前值（0.8.0）；欢迎页示意图不传时按未开渲染，new / ready 都显示这一行 */
   media?: MediaToggles;
   /** 开关写入失败时的一句话，显示在这一组下面（role=alert） */
   mediaError?: string;
@@ -258,7 +258,7 @@ const emit = defineEmits<{
   toggleCurtain: [];
   /** 拨动「右下角的小按钮」开关（#112） */
   toggleCapsule: [input: HTMLInputElement];
-  /** 拨动「图片和视频变灰」开关（0.8.0）：只带键与输入元素，方向由父组件读 checked */
+  /** 拨动「整页变灰」开关（0.8.0）：只带键与输入元素，方向由父组件读 checked */
   toggleMedia: [key: MediaFlagKey, input: HTMLInputElement];
   /** 点了「删除这个网站的设置」：确认框由父组件（entrypoints/popup）打开 */
   deleteSite: [];

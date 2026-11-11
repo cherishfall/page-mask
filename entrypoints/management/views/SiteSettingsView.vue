@@ -55,7 +55,7 @@
       <p v-if="isPending && store.state.authError" class="hint error" role="alert">{{ store.state.authError }}</p>
 
       <!-- 标签页标题 -->
-      <section class="card">
+      <section class="card" data-testid="pm-mgmt-card-title">
         <h3>{{ t.management.titleHeading }}</h3>
         <p class="hint">{{ t.management.titleIntro }}</p>
         <div class="row">
@@ -93,7 +93,7 @@
       </section>
 
       <!-- 标签页图标（#121）：三态选择器，与向导共用同一个组件 -->
-      <section class="card">
+      <section class="card" data-testid="pm-mgmt-card-icon">
         <h3>{{ t.management.iconHeading }}</h3>
         <p class="hint">{{ t.management.iconIntro }}</p>
         <IconPicker
@@ -113,33 +113,8 @@
         <span class="hint">{{ t.common.resetTitleIconHint }}</span>
       </div>
 
-      <!-- 图片、视频和声音（#116）：三个开关按站点记，与弹窗 / 悬浮按钮菜单共用同一份键与文案。
-           每行说明紧跟它解释的那一个开关，卡片底部再把三行共有的边界一次说清 -->
-      <section class="card" aria-labelledby="pm-site-media-heading">
-        <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
-        <div class="media-rows" role="group" :aria-label="t.media.heading">
-          <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
-            <div class="switch-row media-switch">
-              <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
-              <input
-                :id="`pm-mgmt-media-${key}`"
-                type="checkbox"
-                switch
-                role="switch"
-                :data-testid="`pm-mgmt-media-${key}`"
-                :checked="profile[key] === true"
-                @change="onMediaChange(key, $event)"
-              />
-            </div>
-            <p class="hint">{{ t.media[MEDIA_HINT_KEYS[key]] }}</p>
-          </div>
-        </div>
-        <p class="hint media-footnote">{{ t.media.hint }}</p>
-        <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-mgmt-media-error">{{ mediaError }}</p>
-      </section>
-
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
-      <section class="card">
+      <section class="card" data-testid="pm-mgmt-card-rules">
         <h3>{{ t.management.rulesHeading }}</h3>
 
         <p v-if="profile.hideRules.length === 0" class="hint" data-testid="pm-mgmt-no-rules">
@@ -202,8 +177,34 @@
         <p class="hint" data-testid="pm-mgmt-edit-hint">{{ t.management.rulesEditHint }}</p>
       </section>
 
+      <!-- 整页变灰（0.8.0 #131；0.8.18 #156 升级为整页灰）：一个开关按站点记，与弹窗 / 胶囊媒体钮
+           共用同一份键与文案。#157 起排在「收起的内容」之后、危险区之前——三处相对顺序统一，
+           权威对照表见 docs/design-surfaces.md；卡片标题与开关同叫法（t.media.heading）。 -->
+      <section class="card" aria-labelledby="pm-site-media-heading" data-testid="pm-mgmt-card-media">
+        <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
+        <div class="media-rows" role="group" :aria-label="t.media.heading">
+          <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
+            <div class="switch-row media-switch">
+              <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
+              <input
+                :id="`pm-mgmt-media-${key}`"
+                type="checkbox"
+                switch
+                role="switch"
+                :data-testid="`pm-mgmt-media-${key}`"
+                :checked="profile[key] === true"
+                @change="onMediaChange(key, $event)"
+              />
+            </div>
+            <p class="hint">{{ t.media[MEDIA_HINT_KEYS[key]] }}</p>
+          </div>
+        </div>
+        <p class="hint media-footnote">{{ t.media.hint }}</p>
+        <p v-if="mediaError" class="hint error" role="alert" data-testid="pm-mgmt-media-error">{{ mediaError }}</p>
+      </section>
+
       <!-- 页脚：删除这个网站的设置（与页面右下角 ⋯ 菜单里的那一项是同一件事、同一个叫法） -->
-      <footer class="danger-zone">
+      <footer class="danger-zone" data-testid="pm-mgmt-card-delete">
         <h3>{{ deleteSiteHeading() }}</h3>
         <p class="hint">{{ deleteSiteImpact() }}</p>
         <!-- 确认框在 App.vue（#113：列表页与详情页共用一个实例），这里只发起 -->

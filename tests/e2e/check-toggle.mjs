@@ -32,11 +32,14 @@
 import { createReporter, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, launchExtension, patchProfile, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
 import { clickInShadow, exitWizardByButton, shadowText, waitForShadow } from './lib/shadow.mjs';
+import { loadSurfaces, menuOrder, menuRows } from './lib/surfaces.mjs';
 
 const r = createReporter();
 const { check } = r;
 const TOGGLE = 'pagemask-toggle';
 const WIZARD = 'pagemask-wizard';
+/** 三处界面的唯一对照表（docs/design-surfaces.md）：条目顺序与叫法只从这一份取（#157） */
+const SURFACES = loadSurfaces();
 /**
  * 状态过渡落定的等待条件（#149；0.8.16 #152 改选中底口径）：交给项目 waitFor 在页面内轮询
  * 「会因过渡而变的观测量」，取代固定 250ms sleep。DEVLOG 0.8.14「断言的等待条件要落在会因
@@ -229,6 +232,34 @@ async function main() {
       `全功能胶囊高 ${fullPill.h.toFixed(1)} ≈ 26（可点区 24 + 上下边框）`,
     );
     check(fullPill.w >= 96 && fullPill.w <= 106, `全功能胶囊宽 ${Math.round(fullPill.w)} 收到约 101（四段全图标钮，把手退场 #136）`);
+    // 胶囊本体：渲染后的按钮顺序与叫法必须等于对照表（#157）。顺序从 DOM 里取，不是源码字符串。
+    const bodyContracts = await page.evaluate(
+      ({ h, controls }) => {
+        const sr = document.querySelector(h).shadowRoot;
+        const order = [...sr.querySelectorAll('[data-testid]')]
+          .map((el) => el.getAttribute('data-testid'))
+          .filter((id) => controls.includes(id));
+        const labels = Object.fromEntries(
+          controls.map((id) => {
+            const el = sr.querySelector(`[data-testid="${id}"]`);
+            return [id, (el?.getAttribute('aria-label') || el?.textContent || '').trim()];
+          }),
+        );
+        return { order, labels };
+      },
+      { h: TOGGLE, controls: SURFACES.capsuleBody.map((row) => row.control) },
+    );
+    check(
+      bodyContracts.order.join(' / ') === SURFACES.capsuleBody.map((row) => row.control).join(' / '),
+      `胶囊本体按钮顺序与对照表一致（${bodyContracts.order.join(' / ')}）`,
+    );
+    for (const row of SURFACES.capsuleBody) {
+      if (row.labelZh === '—') continue; // 主按钮是图标钮，读屏名随状态变
+      check(
+        bodyContracts.labels[row.control] === row.labelZh,
+        `胶囊「${row.item}」与三处同叫法（${bodyContracts.labels[row.control]}）`,
+      );
+    }
     const pillFont = await page.evaluate((h) => {
       const sr = document.querySelector(h).shadowRoot;
       let min = Infinity;
@@ -332,15 +363,20 @@ async function main() {
         danger,
       };
     }, TOGGLE);
+    const defaultMenuItems = menuRows(SURFACES, false).map((row) => row.labelZh);
+    const defaultMenuOrder = menuOrder(SURFACES, false);
+    const defaultMenuSeps = new Set(menuRows(SURFACES, false).map((row) => row.group)).size - 1;
     check(
-      menuShape.items.join(' / ') === '标题和图标 / 收起内容 / 调整不透明度 / 删除这个网站的设置',
-      `默认位（没存过坐标）时菜单四项，媒体开关在胶囊媒体钮上不再进菜单（#131，${menuShape.items.join(' / ')}）`,
+      menuShape.items.join(' / ') === defaultMenuItems.join(' / '),
+      `默认位（没存过坐标）时菜单项与对照表一致、媒体开关在胶囊媒体钮上不进菜单（#131，${menuShape.items.join(' / ')}）`,
     );
-    check(menuShape.seps === 2, `菜单里两条分隔线：改内容 / 按钮自己 / 删除设置（0.8.0 媒体组退场，实际 ${menuShape.seps} 条）`);
     check(
-      menuShape.order.join(' | ') ===
-        '标题和图标 | 收起内容 | --- | 调整不透明度 | --- | 删除这个网站的设置',
-      `分组顺序：改内容（标题和图标在前，与弹窗一致，#148）/ 按钮（不透明度，#120）/ 删除设置（${menuShape.order.join(' | ')}）`,
+      menuShape.seps === defaultMenuSeps,
+      `菜单分隔线条数与对照表的分组数一致（${defaultMenuSeps} 条，实际 ${menuShape.seps} 条）`,
+    );
+    check(
+      menuShape.order.join(' | ') === defaultMenuOrder.join(' | '),
+      `分组顺序与对照表一致：改内容 / 按钮 / 删除设置（${menuShape.order.join(' | ')}）`,
     );
     check(
       menuShape.deleteColor === menuShape.danger,
@@ -646,11 +682,11 @@ async function main() {
         seps: menu.querySelectorAll('.pm-tg-sep').length,
       };
     }, TOGGLE);
+    const movedItems = menuRows(SURFACES, true).map((row) => row.labelZh);
     check(
-      movedMenu.items.join(' / ') ===
-        '标题和图标 / 收起内容 / 调整不透明度 / 按钮放回右下角 / 删除这个网站的设置' &&
-        movedMenu.seps === 2,
-      `拖过之后菜单五项、两条分隔线（媒体开关在胶囊媒体钮上，#131；${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
+      movedMenu.items.join(' / ') === movedItems.join(' / ') &&
+        movedMenu.seps === new Set(menuRows(SURFACES, true).map((row) => row.group)).size - 1,
+      `拖过之后菜单项与对照表一致、两条分隔线（媒体开关在胶囊媒体钮上，#131；${movedMenu.items.join(' / ')}，${movedMenu.seps} 条）`,
     );
     await clickInShadow(page, TOGGLE, tid('pm-toggle-reset'));
     const reset = await (async () => {
@@ -691,9 +727,8 @@ async function main() {
       };
     }, TOGGLE);
     check(
-      noRulesMenu.items.join(' / ') ===
-        '标题和图标 / 收起内容 / 调整不透明度 / 删除这个网站的设置',
-      `0 条收起项时菜单不变：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
+      noRulesMenu.items.join(' / ') === menuRows(SURFACES, false).map((row) => row.labelZh).join(' / '),
+      `0 条收起项时菜单与对照表一致：收起内容这时就是纯添加（#90/#120：上一用例已归位、默认位时无「放回右下角」，${noRulesMenu.items.join(' / ')}）`,
     );
     await page.keyboard.press('Escape');
 

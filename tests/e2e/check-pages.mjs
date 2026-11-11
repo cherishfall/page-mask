@@ -12,8 +12,8 @@
  *   不再有「设置标题和图标」；三个状态下高度都不超过 600px
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
- *   站点设置页（#41 / #56 / #116）：五块标题与页面 ⋯ 菜单同名（标签页标题 / 标签页图标 /
- *   图片、视频和声音 / 收起的内容 / 删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
+ *   站点设置页（#41 / #56 / #116 / #157）：五块标题与顺序从对照表取（标签页标题、标签页图标、
+ *   收起的内容、整页变灰、删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
  *   人话范围）、删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
  *   页脚「删除这个网站的设置」与二次确认（标题带域名、默认聚焦「取消」、危险按钮实底红）、
  *   0 条规则时不出现「0 项」；列表行上没有删除入口；
@@ -37,11 +37,14 @@ import { removeTempDir } from './lib/tmp.mjs';
 import { createReporter, poll, startServer, waitFor } from './lib/harness.mjs';
 import { getProfile, getSettings, grantPermissions, launchExtension, openPopup, patchProfile, patchSettings, removePermission, setProfile } from './lib/extension.mjs';
 import { waitForShadow } from './lib/shadow.mjs';
+import { loadSurfaces } from './lib/surfaces.mjs';
 
 const r = createReporter();
 const { check } = r;
 const tid = (id) => `[data-testid="${id}"]`;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+/** 三处界面的唯一对照表（docs/design-surfaces.md）：顺序与叫法只从这一份取（#157） */
+const SURFACES = loadSurfaces();
 
 /** 面板自身的内容高度（px）：Chrome 弹窗上限 600，超了就要滚动 */
 const popupHeight = (page) => page.$eval('main.popup', (m) => m.getBoundingClientRect().height);
@@ -334,9 +337,13 @@ async function checkPopupChrome(popup, label) {
         hasSwitch: !!document.querySelector('[data-testid="pm-popup-switch"]'),
       };
     });
+    // 弹窗条目顺序从对照表派生（#157）：不再各写一份中文串 / testid 顺序
+    const popupEditOrder = SURFACES.popup
+      .filter((row) => row.item === '标题和图标' || row.item === '收起内容')
+      .map((row) => row.control);
     check(
-      layout.btns[0] === 'pm-popup-title' && layout.btns[1] === 'pm-popup-setup',
-      `${label}：两颗编辑入口「标题和图标」在前、「收起内容」在后（${layout.btns.join(' → ')}）`,
+      layout.btns.join(' / ') === popupEditOrder.join(' / '),
+      `${label}：面具卡内两颗编辑入口的顺序与对照表一致（${layout.btns.join(' → ')}）`,
     );
     check(layout.topDelta < 1.5, `${label}：两颗编辑入口并排同一行（top 差 ${layout.topDelta.toFixed(1)}px）`);
     check(
@@ -350,6 +357,19 @@ async function checkPopupChrome(popup, label) {
     check(layout.forLabel === layout.hasSwitch, `${label}：卡头 label[for] 只在有开关时出现（new 态不放假可点 label）`);
     check(layout.auxNoCard, `${label}：辅助行（悬浮按钮）无卡片框，只用分隔线与四块功能分开`);
   }
+  // 弹窗整体顺序（#157）：渲染后的条目先后必须与对照表一致；只在场的项参与比较（new 态没有删除入口）
+  const popupOrder = await popup.evaluate(
+    (controls) =>
+      [...document.querySelectorAll('[data-testid]')]
+        .map((el) => el.getAttribute('data-testid'))
+        .filter((id) => controls.includes(id)),
+    SURFACES.popup.map((row) => row.control),
+  );
+  const popupExpected = SURFACES.popup.map((row) => row.control).filter((id) => popupOrder.includes(id));
+  check(
+    popupOrder.join(' / ') === popupExpected.join(' / '),
+    `${label}：弹窗条目顺序与对照表一致（${popupOrder.join(' / ')}）`,
+  );
 }
 
 /**
@@ -727,7 +747,7 @@ async function main() {
     );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
-    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、图片视频声音、收起的内容、删除设置） ---');
+    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、收起的内容、整页变灰、删除设置） ---');
     await m.click(tid('pm-mgmt-site-link'));
     await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
@@ -735,11 +755,17 @@ async function main() {
     const mgmtSwitch = await findSwitch(m);
     check(mgmtSwitch.node?.name === '按你的设置显示', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
-    // 五块与页面右下角 ⋯ 菜单用同一批名字（#56；媒体卡 0.8.0 改名「图片和视频」，#131）
+    // 五块标题与顺序从对照表派生（#157；不再各写一份中文串）
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
+    const expectedSections = SURFACES.siteSettings.map((row) => row.labelZh);
     check(
-      sections.join(' / ') === '标签页标题 / 标签页图标 / 图片和视频 / 收起的内容 / 删除这个网站的设置',
-      `站点设置页五块标题与菜单同名（${sections.join(' / ')}）`,
+      sections.join(' / ') === expectedSections.join(' / '),
+      `站点设置页五块标题与顺序来自对照表（${sections.join(' / ')}）`,
+    );
+    const cardOrder = await m.$$eval('[data-testid^="pm-mgmt-card-"]', (els) => els.map((el) => el.getAttribute('data-testid')));
+    check(
+      cardOrder.join(' / ') === SURFACES.siteSettings.map((row) => row.control).join(' / '),
+      `站点设置页区块渲染顺序与对照表一致（${cardOrder.join(' / ')}）`,
     );
     const bodyText = await m.evaluate(() => document.body.innerText);
     check(

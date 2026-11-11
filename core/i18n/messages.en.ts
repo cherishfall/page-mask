@@ -88,9 +88,13 @@ export const en: Messages = {
     hiddenNone: 'Nothing set to hide',
   },
 
-  /** Pictures & videos gray (0.8.0, #131): one set of labels shared by the capsule media button / popup / site settings */
+  /**
+   * Whole-page grayscale (0.8.0, #131; upgraded to whole-page gray in 0.8.18, #156): one set of
+   * labels shared by the capsule media button / popup / site settings.
+   * `heading` is the card / group name and must name the same thing as the `mediaGray` switch label.
+   */
   media: {
-    heading: 'Pictures & videos',
+    heading: 'Grayscale whole page',
     mediaGray: 'Turn the whole page gray',
     /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
     mediaGrayHint: 'The whole page turns black & white, same place, links still work; autoplaying videos pause — click one to watch.',

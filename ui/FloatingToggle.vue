@@ -33,7 +33,7 @@
       <MaskIcon class="pm-tg-main-icon" :data-state="state === 'disguised' ? 'on' : 'off'" />
     </button>
 
-    <!-- 图片和视频变灰（0.8.0，#131）：「媒体」钮。
+    <!-- 整页变灰（0.8.0，#131）：「媒体」钮。
          0.8.3 起排在「遮住」前面：媒体是随看随切的状态开关（高频），遮住是应急动作（低频、
          最该离主按钮远）。一点就生效（按站点记忆，页面效果由 storage → applyAll 统一重应用）。
          按下状态用内容填实 / 全描边两态 + aria-pressed，不只靠颜色（WCAG 1.4.1）；
@@ -146,7 +146,7 @@ const props = defineProps<{
    * 所以「淡」只在用户不碰它的时候存在。
    */
   opacity?: number;
-  /** 「图片和视频变灰」的当前值（0.8.0）：媒体钮就地显示按下状态 */
+  /** 「整页变灰」的当前值（0.8.0）：媒体钮就地显示按下状态 */
   media?: MediaToggles;
   /**
    * 预览模式（#102 / 欢迎页）：静态展示用——不跟随页面定位（position: static）、不响应拖动。
@@ -368,7 +368,7 @@ function onMenuToggle() {
   menuOpen.value = !!menuEl.value?.matches(':popover-open');
 }
 
-/** 「图片和视频变灰」的按下状态（0.8.0）：媒体钮的实心 / 描边与 aria-pressed 跟着它走 */
+/** 「整页变灰」的按下状态（0.8.0）：媒体钮的实心 / 描边与 aria-pressed 跟着它走 */
 const mediaOn = computed(() => props.media?.mediaGray === true);
 
 /** 点菜单项：先关菜单再执行，焦点回到「⋯」 */

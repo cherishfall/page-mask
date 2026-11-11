@@ -166,7 +166,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     position: SiteProfile['floatingBtnPos'];
     /** 整颗胶囊的不透明度（#102）：闲置值，悬停 / 聚焦 / 拖动时由 CSS 回到 1 */
     opacity: number;
-    /** 图片和视频变灰（0.8.0）：胶囊媒体钮的按下状态跟着存储走，别的入口拨了也会即时更新 */
+    /** 整页变灰（0.8.0）：胶囊媒体钮的按下状态跟着存储走，别的入口拨了也会即时更新 */
     mediaGray: boolean;
   }>({
     state: 'original',
@@ -339,7 +339,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   }
 
   /**
-   * 胶囊媒体钮 / 各处开关拨动「图片和视频变灰」：与悬浮按钮开关同一套写法——先就地反映，
+   * 胶囊媒体钮 / 各处开关拨动「整页变灰」：与悬浮按钮开关同一套写法——先就地反映，
    * 再按最新存储只改这一个字段；写入失败拨回并给一句页内提示。页面效果不在这里做：
    * storage.onChanged → applyKey 变化 → applyAll / restoreAll 统一重应用，
    * 弹窗与站点设置页的拨动走的是同一条路。
