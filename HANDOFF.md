@@ -1,7 +1,7 @@
 # 0.8.19 后「交互与显示细节」批次（进行中）
 
 最后更新：2026-11-11 傍晚
-**一句话现状：#161（`0123db3`）、#157（`a5733e1`）、#158（`143ef62`）已完成并推送关票；下一张 #159。代码每票一提交一推送，进度见下表。**
+**一句话现状：#161（`0123db3`）、#157（`a5733e1`）、#158（`143ef62`）、#159（`d113585`）已完成并推送关票；下一张 #160。代码每票一提交一推送，进度见下表。**
 
 ## 本批票（#161 已完成，其余 OPEN）
 
@@ -10,8 +10,8 @@
 | 1 | [#161](https://github.com/cherishfall/page-mask/issues/161) | 立「引导性文字什么时候露出」的整屏规矩；抽公共 ⓘ 并补自动断言，再收四处常驻说明 | ✅ `0123db3` 已关票 |
 | 2 | [#157](https://github.com/cherishfall/page-mask/issues/157) | 三处（弹窗 / 胶囊 / 站点设置页）唯一对照表 + 跨三处自动检查；站点设置页灰度卡归位、旧叫法「图片和视频」改「整页变灰」 | ✅ `a5733e1` 已关票 |
 | 3 | [#158](https://github.com/cherishfall/page-mask/issues/158) | 空设置时主开关旁一句 `打开后页面不变`，三处共用同一共享判据（不含 `mediaGray`） | ✅ `143ef62` 已关票 |
-| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | ⏳ 下一张 |
-| 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` | 待做 |
+| 4 | [#159](https://github.com/cherishfall/page-mask/issues/159) | 原样态点保存弹确认框（复用 `pm-wiz-dialog`），两条路都保存；撤掉原样态 4 秒页底提示 | ✅ `d113585` 已关票 |
+| 5 | [#160](https://github.com/cherishfall/page-mask/issues/160) | 收起内容补「一次清空已保存收起项」，与 #99 对称；两处入口同名同物，只置空 `hideRules` | ⏳ 下一张 |
 | 6 | [#162](https://github.com/cherishfall/page-mask/issues/162) | 站点身份改可注册域名 eTLD+1（微博裸域 / `s.weibo.com` 合一）；含旧配置迁移、权限多模式、文档与测试改造 | 待做（单独发版） |
 
 issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入库）。#159 已补 [#53 成文冲突评论](https://github.com/cherishfall/page-mask/issues/159#issuecomment-6790252195)。
@@ -25,7 +25,12 @@ issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入�
 - **界面不是小作文**：必要 / 状态 / 危险 / 边界说明留下但只许一句短句；只在前几次有用的引导文字收进 ⓘ / `<details>`；**不做「记住已读后自动隐藏」**。`media.hint`、`popup.coverHint`、`management.deleteSite.impact`、替换确认、空白标题脚注必须常驻（#153 成文结论，有断言）。
 - **收起内容对称功能**：两处入口同名同物，只置空 `hideRules`，不动其他字段与授权；避开 `一键清空` / `清空这个网站` / `重置` / `清空` / `恢复` 等禁用或已占用词。0 项不进下一步的现状不改，「允许空保存」不采纳（`mergeSavedRules` 只删当前网址适用的规则，清不干净）。
 - **站点身份**：按可注册域名 eTLD+1，忽略协议与端口，不跨不同注册域名合并，不给用户加「精确 / 宽松」选项；旧配置必须迁移。依据 Bitwarden 默认 Base domain、1Password 默认 eTLD+1 + PSL。
-- **#53 冲突**：`docs/design.md:75`「保存即完成」与 `WizardApp.vue:1886/1947` 注释「不再弹第二个确认框」在 #159 收窄为「只适用清爽态」，实现时同步修订文字与注释、DEVLOG 留痕。
+- **#53 冲突**（#159 已处理完毕）：`docs/design.md`「保存即完成」与 `WizardApp.vue` 注释已收窄为「只适用清爽态」，勿再改回。
+
+## #159 留给后续票的两条口径
+
+1. **新站点保存不弹框**：`saveAsksToOpen` 用 `exists && state !== 'disguised'`。没有 profile 时保存即建站、进入清爽态，页面当场会变，别给它加「先保持原样」分支。
+2. **保存前重读 state**：`latestSwitchContext()` 从 storage 现取，不信任界面上的快照。后面动保存流程（#160 的清空也在向导里）沿用这个模式。
 
 ## 为什么这个顺序
 
@@ -51,8 +56,9 @@ issue 正文草稿在 `tmp/issue-157.md` … `tmp/issue-162.md`（`tmp/` 不入�
 - ✅ #161：`0123db3`（715 单测 / 9 个 E2E 935 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
 - ✅ #157：`a5733e1`（722 单测 / 9 个 E2E 942 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
 - ✅ #158：`143ef62`（729 单测 / 9 个 E2E 965 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
-- 仓库干净，`HEAD 143ef62` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
-- 本批剩余 3 票全 OPEN；#159 已补 #53 冲突评论。
+- ✅ #159：`d113585`（734 单测 / 9 个 E2E 987 项 0 失败 / check:docs / check:package 全过），已推送、已关票。
+- 仓库干净，`HEAD d113585` = `origin/master`；最新 tag 仍 `v0.8.19`（本批未发版）。
+- 本批剩余 2 票全 OPEN（#160、#162）。
 
 ## #161 留给后续票的三条硬口径
 
