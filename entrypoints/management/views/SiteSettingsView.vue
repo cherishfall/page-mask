@@ -209,7 +209,11 @@
         <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
         <div class="media-rows" role="group" :aria-label="t.media.heading">
           <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
-            <div class="switch-row media-switch">
+            <!-- ⓘ 的宿主行（#183）：pm-info-anchor 让气泡锚定整行（漏了它气泡贴到页面头上、
+                 视口外，用户只见问号光标）；label margin-inline-end:auto 把 ⓘ + 开关推到行尾——
+                 与弹窗 #181 同款写法。守门：tests/info-tip-anchor.test.ts（静态）+
+                 tests/e2e/check-info-tips.mjs（真机 hover）。 -->
+            <div class="switch-row media-switch pm-info-anchor">
               <label :for="`pm-mgmt-media-${key}`">{{ t.media[key] }}</label>
               <!-- ⓘ（#174 / #175 视觉审查）：卡底那条「独立于主开关 + 不是不加载」的注脚改成行内 ⓘ，
                    与弹窗同构——0.8.18 后卡里只有一个开关，「组级注脚」的定位已失，两段常驻说明叠加
@@ -475,6 +479,12 @@ async function onRulesResetClosed(confirmed: boolean) {
 }
 .media-switch {
   justify-content: space-between;
+}
+/* #183：label 吃掉行内多余空间，把 ⓘ + 开关推到行尾——与弹窗辅助行 #181 同款思路
+   （.popup .aux-row .switch-row .popup-row-label）。auto margin 先吸收全部剩余空间，
+   space-between 无空间可分，保留无害 */
+.media-switch label {
+  margin-inline-end: auto;
 }
 .media-row .hint {
   margin: var(--pm-space-1) 0 0;
