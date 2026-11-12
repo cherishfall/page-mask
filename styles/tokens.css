@@ -215,6 +215,12 @@
   --pm-space-6: 24px; /* 页面边距 */
   --pm-space-8: 32px;
 
+  /* 内容基准线（#180）：卡片内容相对「弹窗 / 整页卡」边界的内缩量 =
+     卡片自己的 --pm-space-3 内边距 + 1px border。带框卡片靠 border + padding 收到这条线，
+     不带框的裸行用 margin-inline: var(--pm-card-inset) 收到同一个值——「内容相对边界内缩多少」
+     全项目只此一处表达，界面样式里不许再写第二份 13px 补偿值（docs/design-ui.md §五）。 */
+  --pm-card-inset: calc(var(--pm-space-3) + 1px);
+
   /* ── 圆角：小件（键帽）4 / 控件 8 / 卡片与浮层 12 / 胶囊 999 ── */
   --pm-radius-small: 4px;
   --pm-radius-control: 8px;

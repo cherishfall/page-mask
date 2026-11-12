@@ -399,20 +399,21 @@ const deleteLabel = deleteSiteHeading();
 /* 底部一行两个入口（0.8.16，#153）：文字链接——导航去别的页面不是本页操作，
    不该占按钮的视觉档（用户反馈；uBO / Dark Reader 弹窗底部同为链接行）。
    下划线 + muted 色（GOV.UK：链接默认带下划线）保证看着就能点（#74 的顾虑），
-   hover 变正文色；命中区 ≥24px（WCAG 2.5.8） */
+   hover 变正文色；命中区 ≥24px（WCAG 2.5.8）。
+   #180：改两端对齐——两个链接分别贴内容基准线左端与右端（父级 space-between），
+   间距用父级 gap 而不是给子项加 margin；去掉各占一半与文字居中，英文长文案也各贴各的一端。
+   这一行的左右内缩由下面「内容基准线」组合规则统一给，不在这里各写一份。 */
 .links {
   display: flex;
+  justify-content: space-between;
   gap: var(--pm-space-2);
 }
 .links > .popup-link {
-  flex: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   min-height: 24px;
   color: var(--pm-fg-muted);
   font-size: var(--pm-font-size-caption);
-  text-align: center;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -462,7 +463,9 @@ const deleteLabel = deleteSiteHeading();
 /* 分组分隔线（0.8.16，#153）：只保留删除入口上方一条——把「删配置」这个危险动作
    与上面的两个页面入口分开（0.8.15 曾在辅助行上方也画一条，用户反馈丑，已删：
    卡片边界 + 8px 留白已经分好组，格式塔共同区域不需要再多一道线）。
-   margin 归零：上下各吃 .popup 的 8px 组件间距，线不再贴着文字 */
+   margin 归零：上下各吃 .popup 的 8px 组件间距，线不再贴着文字。
+   #180 例外：它是分组线、容器级元素，刻意跨整卡宽（x=12…308），不跟内容行一起收进
+   内容基准线——所以不加 margin-inline。理由与判据见 docs/design-ui.md §五。 */
 .divider {
   border-top: 1px solid var(--pm-border);
 }
@@ -477,6 +480,19 @@ const deleteLabel = deleteSiteHeading();
   display: flex;
   flex-direction: column;
   gap: var(--pm-space-2);
+}
+/* ── 内容基准线（#180）──────────────────────────────────────────────────────
+   弹窗 320px、内边距 --pm-space-3。带框卡片（.popup-card）靠自己的 1px border +
+   12px padding 把内容收到 x=25…295；不带框的裸行用同一个 token 的 margin-inline
+   收到同一条线，不各写一份 13px 补偿值（--pm-card-inset = --pm-space-3 + 1px，
+   定义在 styles/tokens.css，全项目唯一来源）。于是三个开关右缘、辅助行 / 链接行 /
+   删除行的文字左右落点共线（iOS 设置 / SwiftUI Form 的 trailing edge、
+   Material 1 Lists: Controls）。.divider 是分组线、容器级元素，刻意跨整卡宽，
+   不参与内缩——例外见上方注释。 */
+.popup > .aux-row,
+.popup > .links,
+.popup > .text-danger {
+  margin-inline: var(--pm-card-inset);
 }
 /* ① 卡内两颗编辑入口并排（0.8.15 #148）：「标题和图标」在前、「收起内容」在后，间距 8。
    0.8.16（#153）：两颗同为次操作档（用户明确推翻「收起内容是主按钮」——已设置网站里它只是

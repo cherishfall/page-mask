@@ -380,6 +380,88 @@ async function checkPopupChrome(popup, label) {
     popupOrder.join(' / ') === popupExpected.join(' / '),
     `${label}：弹窗条目顺序与对照表一致（${popupOrder.join(' / ')}）`,
   );
+  await checkPopupGeometry(popup, label);
+}
+
+/**
+ * #180 内容基准线：水平几何断言（相对比较，不写死 px 坐标，中英两态通用）。
+ * 基准只用 getBoundingClientRect() 与卡片自身的计算样式推导「内容区边界」，不假设任何固定坐标：
+ *   - 三个 input[role=switch] 的 right 两两差 ≤1px；
+ *   - 辅助行 / 链接行 / 删除行的盒子边界与卡片内容区边界差 ≤1px；
+ *   - .divider 的 left/right 与卡片边框盒一致（整卡宽的例外）。
+ * 无 .popup-card 时（内容基准线不存在）直接跳过；其余各态按「在场才断言」处理：ready 三开关 +
+ * 辅助 / 链接 / 删除 / 分组线齐全，new 只有灰度开关与链接行，pending / 未覆盖没有开关与辅助行
+ * （遮住卡仍在、提供内容基准，链接 / 删除 / 分组线照样受约束）。
+ * 断言值一律来自元素之间的相对比较，英文长文案不会改变盒子边界（链接改两端对齐后尤其如此）。
+ */
+async function checkPopupGeometry(popup, label) {
+  const g = await popup.evaluate(() => {
+    const rect = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right };
+    };
+    const q = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? rect(el) : null;
+    };
+    const card = document.querySelector('.popup-card');
+    if (!card) return null; // pending 档无功能卡，内容基准线不存在
+    const cs = getComputedStyle(card);
+    const cr = card.getBoundingClientRect();
+    // 内容区 = 卡片 border-box 往内扣掉它自己真实的 border + padding（读计算样式，不写死 px）
+    const content = {
+      left: cr.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft),
+      right: cr.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight),
+    };
+    return {
+      content,
+      cardBorder: { left: cr.left, right: cr.right },
+      switches: [...document.querySelectorAll('.popup input[role="switch"]')].map(rect),
+      aux: q('.aux-row'),
+      auxLabel: q('.aux-row .switch-row label'),
+      links: [...document.querySelectorAll('.links > .popup-link')].map(rect),
+      danger: q('.text-danger'),
+      divider: q('.divider'),
+    };
+  });
+  if (!g) return;
+  const near = (a, b) => Math.abs(a - b) <= 1;
+  const f = (n) => n.toFixed(1);
+
+  // ① 三个开关右缘共线（ready 态恰好 3 个；new 态只有 1 个时无两两可比，跳过）
+  if (g.switches.length >= 2) {
+    const rights = g.switches.map((s) => s.right);
+    const spread = Math.max(...rights) - Math.min(...rights);
+    check(spread <= 1, `${label}：${g.switches.length} 个开关右缘共线（最大两两差 ${f(spread)}px ≤1）`);
+  }
+
+  // ② 裸行边界贴内容区（在场才断言）
+  if (g.aux) {
+    check(
+      near(g.aux.left, g.content.left) && near(g.aux.right, g.content.right),
+      `${label}：辅助行左右落点贴内容基准线（左 ${f(g.aux.left)} / 右 ${f(g.aux.right)} vs 内容区 ${f(g.content.left)}…${f(g.content.right)}）`,
+    );
+  }
+  if (g.auxLabel) {
+    check(near(g.auxLabel.left, g.content.left), `${label}：辅助行文字左缘贴内容基准线（${f(g.auxLabel.left)} vs ${f(g.content.left)}）`);
+  }
+  if (g.links.length === 2) {
+    check(
+      near(g.links[0].left, g.content.left) && near(g.links[1].right, g.content.right),
+      `${label}：链接行两端贴内容基准线（左 ${f(g.links[0].left)} / 右 ${f(g.links[1].right)} vs ${f(g.content.left)}…${f(g.content.right)}）`,
+    );
+  }
+  if (g.danger) {
+    check(near(g.danger.left, g.content.left), `${label}：删除行文字左缘贴内容基准线（${f(g.danger.left)} vs ${f(g.content.left)}）`);
+  }
+
+  // ③ 分组线保持整卡宽：left/right 与卡片边框盒一致
+  if (g.divider) {
+    check(
+      near(g.divider.left, g.cardBorder.left) && near(g.divider.right, g.cardBorder.right),
+      `${label}：分组线跨整卡宽，左右与卡片边框盒一致（${f(g.divider.left)}…${f(g.divider.right)} vs ${f(g.cardBorder.left)}…${f(g.cardBorder.right)}）`,
+    );
+  }
 }
 
 /**
@@ -577,6 +659,23 @@ async function main() {
     await checkPopupChrome(popup, '已添加');
     await coverAndRestore(ext, popup, site, '已添加的网站');
     await footerLandings(ext, browser, site, '已添加的网站');
+
+    // #180：内容基准线在英文态（文案更长）复核一次——按既有方式用 patchSettings 切语言，
+    // 重开一个干净的 ready 弹窗跑同一组相对几何断言，再切回 auto 并确认落库，
+    // 避免污染后续全部中文文案断言（check-media.mjs 也用 patchSettings 固定语言）。
+    console.log('\n--- popup：内容基准线（英文态复核 #180） ---');
+    await patchSettings(ext.control, { uiLanguage: 'en' });
+    const enPopup = await openPopup(ext, site);
+    await enPopup.waitForSelector(tid('pm-popup-switch'), { timeout: 5000 });
+    check(
+      !(await enPopup.evaluate(() => /[\u4e00-\u9fff]/.test(document.body.textContent))),
+      '英文态复核：弹窗确已切到英文（几何断言的另一语言态）',
+    );
+    await checkPopupGeometry(enPopup, '英文态');
+    await enPopup.close();
+    await patchSettings(ext.control, { uiLanguage: 'auto' });
+    await poll(async () => (await getSettings(ext.control))?.uiLanguage === 'auto', '语言切回 auto 落库');
+    check(true, '英文态复核后语言切回 auto，不污染后续中文断言');
 
     // ===================== popup：删除与「悬浮按钮」开关（#112） =====================
     console.log('\n--- popup：删除与胶囊显示开关 ---');

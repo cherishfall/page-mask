@@ -98,6 +98,21 @@
 5. **按钮间距 8**；同一组不超过三个，超过就收进「更多」。
 6. 浮层内的操作栏固定在底部，不随内容滚动。
 7. **卡片内边距两档**（#171 登记，视觉不动）：弹窗这类压在别人页面上的紧凑卡 12px（0.8.16 #153 用户定稿），整页视图（管理页 / 插件设置 / 欢迎页）的整页卡 16px——前者省的是稀缺的浮层高度，后者没有这个约束，松一档呼吸感更好。新界面按「浮层卡 12 / 整页卡 16」取档，不出现第三种。
+8. **同一屏里带框卡片与不带框的行共用一条内容基准线**（#180）：一行文字的起点与行尾控件的终点，必须与卡片内容区落在同一条竖线上。卡片靠自己的 `border + padding` 收到这条线；不带框的裸行用同一个共享 token 的 `margin-inline` 收到**同一个值**（`--pm-card-inset = --pm-space-3 + 1px`，唯一定义在 `styles/tokens.css`），不许各写一份 13px 补偿值，也不许用负 margin / `overflow: hidden` 补差。**分组分隔线是可以整卡宽的例外**：它是容器级元素，不是内容行。
+
+### 内容基准线的依据与取舍（#180）
+
+| 来源 | 取用的规则 |
+|---|---|
+| iOS 设置 / SwiftUI Form | "a Toggle aligns its switch to the trailing edge"；每一行行尾控件落在同一条 trailing padding 上 |
+| Readest DESIGN.md | "The visible right edge of every row's value (toggle, chevron icon, input text) MUST land at the same X — the row's trailing padding." |
+| [Material 1 · Lists: Controls](https://m1.material.io/components/lists-controls.html) | "States and primary actions are placed on the left side of a list tile"、"Secondary actions and info should be placed on the right side of the title"——行首 / 行尾各归其位，才谈得上对齐 |
+| [Carbon · Toggle](https://carbondesignsystem.com/components/toggle/usage/) | 标签间距统一到 8px 以 "improve consistency across our label spacing"：同类间距只取一个值 |
+| `modern-web-guidance` · `css-layout` | "Use gap ... instead of child margins"、"Use logical properties ... for layout dimensions and spacing"、"fix them at the source"、"Do NOT use overflow: hidden to mask layout issues"、推到行末用 `margin-inline-start: auto` |
+
+**为什么这样取舍**：毛病是「同一屏里同类位置用了两套内缩量」——带框卡片是 13px（12 padding + 1 border），裸行是 0，于是三个开关差 13px、页脚文字与卡片内容差 13px。从源头统一的做法是把「内容相对边界内缩多少」收成一个 token，卡片与裸行各自用自己合适的属性（`padding` / `margin-inline`）达到同一个值；链接行改两端对齐、间距用父级 `gap`（`margin-inline` 也是逻辑属性），推到行末用 `justify-content: space-between`（`margin-inline-start: auto` 的等价手段）。这样零布局重构、不动卡片结构、也不碰既有 E2E 几何断言。
+
+**没有引入 `subgrid`、没把整屏重构成 grid**：虽然 `modern-web-guidance` 的 `css-layout` 推荐用 subgrid 解决 ragged edge，但弹窗是 `flex column`、卡片内也是 `flex`，改成 grid / subgrid 会重构整屏、动到 0.8.16（#153）定稿的卡片结构与 E2E 几何断言，收益不抵风险；上面「从源头统一、用逻辑属性与 gap、推到行末」这几条用共享 token 即可达成。**分组分隔线**保持整卡宽是登记在案的例外：它划分的是容器分组、不是一行内容，跨整卡宽是成熟做法（格式塔共同区域）。
 
 ## 六、与参考方案不同的地方（以及为什么）
 
