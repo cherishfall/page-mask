@@ -65,6 +65,7 @@
               busy=""
               :covered="false"
               :cover-shortcut="coverShortcut"
+              :gray-shortcut="grayShortcut"
               preview
             />
           </div>
@@ -110,6 +111,7 @@ import { ensureTogglePreviewStyles } from '@/ui/toggle/preview-style';
 const step = ref(1);
 /** 弹窗示意图上的快捷键：与真实弹窗一致，取当前实际绑定（没绑定就不显示） */
 const coverShortcut = ref('');
+const grayShortcut = ref('');
 
 const stepCount = computed(() => t.value.onboarding.steps.length);
 /** 当前步（分步单屏，#139）：标题 / 说明 / 功能列表都来自文案表（step 恒在 1..length 内） */
@@ -137,8 +139,10 @@ onMounted(async () => {
     const commands = await browser.commands.getAll();
     const shortcut = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
     coverShortcut.value = formatShortcut(shortcut, isMacPlatform());
+    grayShortcut.value = formatShortcut(commands.find((c) => c.name === 'toggle-media-gray')?.shortcut ?? '', isMacPlatform());
   } catch {
     coverShortcut.value = '';
+    grayShortcut.value = '';
   }
 });
 

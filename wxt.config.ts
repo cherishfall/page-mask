@@ -23,12 +23,17 @@ export default defineConfig({
     options_ui: { page: 'settings.html', open_in_tab: true },
     permissions: ['storage', 'scripting', 'activeTab'],
     optional_host_permissions: ['*://*/*'],
-    // 幕布快捷键（#101）：全产品只此一条命令（ADR-0010）。默认键避开 Chrome 保留组合与 macOS 系统键；
+    // 快捷键（#101；0.9.2 起两条，用户提案 ADR-0020 修订 ADR-0010 的「全产品只此一条」）：
+    // 遮住用 X、变灰用 G，同族好记；默认键避开 Chrome 保留组合与 macOS 系统键。
     // 用户可在 chrome://extensions/shortcuts 改，界面显示以 chrome.commands.getAll() 为准。
     commands: {
       'toggle-curtain': {
         suggested_key: { default: 'Ctrl+Shift+X', mac: 'Command+Shift+X' },
         description: '__MSG_commandToggleCurtain__',
+      },
+      'toggle-media-gray': {
+        suggested_key: { default: 'Ctrl+Shift+G', mac: 'Command+Shift+G' },
+        description: '__MSG_commandToggleGray__',
       },
     },
   },

@@ -14,6 +14,7 @@
     :covered="covered"
     :page-uncovered="pageUncovered"
     :cover-shortcut="coverShortcut"
+    :gray-shortcut="grayShortcut"
     :show-toggle="profile?.capsuleHidden !== true"
     :media="mediaToggles"
     :media-error="mediaError"
@@ -157,14 +158,17 @@ onMounted(async () => {
 
 /** 幕布快捷键（#101）：显示当前平台的实际绑定，没绑定就不显示 */
 const coverShortcut = ref('');
+const grayShortcut = ref('');
 
 async function refreshShortcut() {
   try {
     const commands = await browser.commands.getAll();
-    const shortcut = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
-    coverShortcut.value = formatShortcut(shortcut, isMacPlatform());
+    const find = (name: string) => commands.find((c) => c.name === name)?.shortcut ?? '';
+    coverShortcut.value = formatShortcut(find('toggle-curtain'), isMacPlatform());
+    grayShortcut.value = formatShortcut(find('toggle-media-gray'), isMacPlatform());
   } catch {
     coverShortcut.value = '';
+    grayShortcut.value = '';
   }
 }
 

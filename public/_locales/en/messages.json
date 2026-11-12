@@ -14,5 +14,9 @@
   "commandToggleCurtain": {
     "message": "Cover this page, or restore it",
     "description": "Keyboard shortcut description shown in Chrome."
+  },
+  "commandToggleGray": {
+    "message": "Turn the whole page gray, or back to color",
+    "description": "Keyboard shortcut description shown in Chrome."
   }
 }

@@ -151,6 +151,14 @@
               {{ t.settings.shortcutChange }}
             </button>
           </div>
+          <!-- 整页变灰快捷键（0.9.2）：与遮住同一张卡、同一套展示口径（当前实际绑定 / 未绑定警告） -->
+          <div class="row">
+            <span class="row-label">{{ t.settings.shortcutGrayLabel }}</span>
+            <kbd v-if="grayShortcut" class="pm-kbd" data-testid="pm-settings-shortcut-gray-value">{{ grayShortcut }}</kbd>
+            <span v-else-if="shortcutLoaded" class="pm-mark pm-mark-warning" data-testid="pm-settings-shortcut-gray-unbound">
+              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
+            </span>
+          </div>
           <p v-if="shortcutOpenFailed" class="hint error" role="alert" data-testid="pm-settings-shortcut-error">
             {{ t.settings.shortcutOpenFailed }}
           </p>
@@ -291,16 +299,21 @@ const replaceDialog = ref<HTMLDialogElement | null>(null);
  * 未绑定时给出警告；改键只能去 chrome://extensions/shortcuts，这里只提供入口。
  */
 const shortcut = ref('');
+const grayShortcutRaw = ref('');
 const shortcutLoaded = ref(false);
 const shortcutOpenFailed = ref(false);
 const shortcutLabel = computed(() => formatShortcut(shortcut.value, isMacPlatform()));
+const grayShortcut = computed(() => formatShortcut(grayShortcutRaw.value, isMacPlatform()));
 
 async function refreshShortcut() {
   try {
     const commands = await browser.commands.getAll();
-    shortcut.value = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
+    const find = (name: string) => commands.find((c) => c.name === name)?.shortcut ?? '';
+    shortcut.value = find('toggle-curtain');
+    grayShortcutRaw.value = find('toggle-media-gray');
   } catch {
     shortcut.value = '';
+    grayShortcutRaw.value = '';
   }
   shortcutLoaded.value = true;
 }

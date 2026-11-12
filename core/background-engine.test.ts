@@ -94,8 +94,11 @@ function stubBrowser() {
     return undefined;
   });
   Object.assign(fakeBrowser.tabs, { sendMessage, get, update });
-  // 快捷键（#101）：fakeBrowser 没有 commands / action，用最小替身记录调用
-  const onCommand = fakeEvent<[string]>();
+  // 快捷键（#101 / 0.9.2）：fakeBrowser 没有 commands / action，用最小替身记录调用。
+  // 第二个参数是 onCommand 事件自带的标签页；变灰分支要读它的 id / url，
+  // 只声明真正读到的字段，不引 Browser.tabs.Tab 的全套必填项。
+  type ShortcutTab = { id?: number; url?: string };
+  const onCommand = fakeEvent<[string, ShortcutTab?]>();
   const commands = { onCommand };
   const fake = fakeBrowser as unknown as { commands?: object; action?: object };
   fake.commands ??= {};
@@ -982,7 +985,7 @@ describe('后台引擎（fakeBrowser）', () => {
       restore();
     });
 
-    it('其他命令一概不响应（全产品只有这一条命令）', async () => {
+    it('不认识的命令一概不响应（0.9.2 起命令有两条，其余仍不响应）', async () => {
       const restore = activeTab();
 
       await stubs.onCommand.trigger('some-other-command');
@@ -990,6 +993,112 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.sendMessage).not.toHaveBeenCalled();
       expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
       restore();
+    });
+  });
+
+  // ---------- 整页变灰快捷键（0.9.2，ADR-0020） ----------
+
+  describe('整页变灰快捷键（0.9.2，ADR-0020）', () => {
+    /** 造一个真实存在的标签页：enableSite 会 tabs.get(tabId) 核对站点，tab 必须真在 fakeBrowser 里 */
+    async function grayTab(url = `${BASE}/book/1`) {
+      const tab = await fakeBrowser.tabs.create({ url });
+      return { id: tab.id!, url };
+    }
+
+    const profileOf = async (origin = ORIGIN) =>
+      (await fakeBrowser.storage.local.get(`profile:${origin}`))[`profile:${origin}`] as SiteProfile | undefined;
+
+    it('已配置站点：就地翻转 mediaGray，开的时候落 true，并当场申请这个网站的权限', async () => {
+      await configure();
+      const tab = await grayTab();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      expect((await profileOf())?.mediaGray).toBe(true);
+      expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+    });
+
+    it('已配置站点：再按一次关掉，字段从存储里消失（写 undefined，不落 false）', async () => {
+      await configure();
+      await fakeBrowser.storage.local.set({
+        [`profile:${ORIGIN}`]: { ...disguisedProfile(), mediaGray: true },
+      });
+      const tab = await grayTab();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      const stored = await profileOf();
+      expect(stored?.mediaGray).toBeUndefined();
+      expect(Object.prototype.hasOwnProperty.call(stored, 'mediaGray')).toBe(false);
+    });
+
+    it('没配置过的网站：授权后走弹窗开灰度同一条路，补一份只带灰度的配置', async () => {
+      const tab = await grayTab();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      const stored = await profileOf();
+      expect(stored?.mediaGray).toBe(true);
+      expect(stored?.hideRules).toEqual([]);
+      expect(stored?.switchState).toBe('original'); // 灰-only 建站不打开整体设置
+      expect(stubs.permissions.request).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+      expect(stubs.scripting.executeScript).toHaveBeenCalled(); // enableSite 当场注入
+    });
+
+    it('用户拒绝授权（且没配置过）：什么都不做，不建档、不注入', async () => {
+      stubs.permissions.request.mockResolvedValueOnce(false);
+      const tab = await grayTab();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      expect(await profileOf()).toBeUndefined();
+      expect(stubs.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it('权限请求抛错（模拟用户手势丢失）：安静当作未授权，不抛到事件监听器外', async () => {
+      stubs.permissions.request.mockRejectedValueOnce(new Error('no user gesture'));
+      const tab = await grayTab();
+
+      await expect(stubs.onCommand.trigger('toggle-media-gray', tab)).resolves.toBeDefined();
+      expect(await profileOf()).toBeUndefined();
+    });
+
+    it('已有配置但这次授权被拒：仍就地切换，不逼人先扩权（ADR-0020 登记的取舍）', async () => {
+      await configure();
+      stubs.permissions.request.mockResolvedValueOnce(false);
+      const tab = await grayTab();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      expect((await profileOf())?.mediaGray).toBe(true);
+    });
+
+    it('chrome:// 之类不支持的页面：不申请权限，图标角标给一次可见反馈', async () => {
+      const tab = await grayTab('chrome://settings/');
+      vi.useFakeTimers();
+
+      await stubs.onCommand.trigger('toggle-media-gray', tab);
+
+      expect(stubs.permissions.request).not.toHaveBeenCalled();
+      expect(stubs.action.setBadgeText).toHaveBeenCalledWith({ tabId: tab.id, text: '!' });
+      expect(stubs.action.setTitle).toHaveBeenCalledWith(
+        expect.objectContaining({ tabId: tab.id, title: expect.stringMatching(/.+/) }),
+      );
+
+      await vi.runAllTimersAsync();
+      expect(stubs.action.setBadgeText).toHaveBeenLastCalledWith({ tabId: tab.id, text: '' });
+      vi.useRealTimers();
+    });
+
+    it('拿不到网址的标签页：给角标说明后安静返回，不猜站点', async () => {
+      vi.useFakeTimers();
+
+      await stubs.onCommand.trigger('toggle-media-gray', { id: 42 });
+
+      expect(stubs.permissions.request).not.toHaveBeenCalled();
+      expect(stubs.action.setBadgeText).toHaveBeenCalledWith({ tabId: 42, text: '!' });
+      await vi.runAllTimersAsync();
+      vi.useRealTimers();
     });
   });
 

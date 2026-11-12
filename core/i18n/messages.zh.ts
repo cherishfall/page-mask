@@ -43,6 +43,8 @@ export const zh = {
     resetTitleIcon: '恢复网站原来的标题和图标',
     /** 幕布快捷键在这个页面上用不了（chrome:// / 商店 / PDF）：扩展图标角标的悬停说明 */
     shortcutBlocked: '这个页面不能遮住',
+    /** 整页变灰快捷键在不支持的页面上（0.9.2）：同款角标说明 */
+    shortcutBlockedGray: '这个页面不能变灰',
     resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响',
     /** 回退出口（#160）：与 #99 对称，两处同名同物；只说「恢复内容」，不用「清空 / 重置」 */
     resetSiteContent: '恢复网站原来的内容',
@@ -315,8 +317,9 @@ export const zh = {
     toggleHint: '调它闲着的时候有多淡（数值越小越淡），鼠标移上去立刻变清楚。遮住整页后出现的那颗按钮不受影响，一直看得清。',
 
     shortcutHeading: '快捷键',
-    shortcutIntro: '只在当前页面临时遮住，刷新或离开页面就还原，不改你的设置',
+    shortcutIntro: '遮住是临时的，刷新或离开页面就还原；整页变灰按网站记，再按一次就关',
     shortcutLabel: '遮住 / 恢复',
+    shortcutGrayLabel: '整页变灰 / 恢复彩色',
     shortcutUnbound: '没有绑定快捷键，可能被别的扩展占用了',
     shortcutChange: '在 Chrome 里更改',
     shortcutOpenFailed: '这个浏览器不让扩展直接打开那一页，请在新标签页输入 chrome://extensions/shortcuts',

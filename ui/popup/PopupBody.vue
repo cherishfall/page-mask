@@ -135,6 +135,9 @@
             <MediaIcon class="popup-row-icon" :data-state="media?.mediaGray === true ? 'on' : 'off'" />
             <span>{{ t.media.mediaGray }}</span>
           </label>
+          <!-- 快捷键键帽（0.9.2，与遮住卡同款）：显示 Chrome 里当前绑定（区分 Mac / PC 由 formatShortcut 处理），
+               未绑定就不显示；aria-hidden 与遮住键帽同口径——开关本身有标签，键帽是视觉附属 -->
+          <kbd v-if="grayShortcut" class="pm-kbd popup-gray-kbd" aria-hidden="true">{{ grayShortcut }}</kbd>
           <!-- ⓘ 信息标（#161 抽成公共组件）：说明收短句，被砍掉的细节移到这里按需读。
                唯一 id / 常驻 DOM / 键盘聚焦 / 读屏 / Esc / shadow 内样式都归
                ui/info-tip/InfoTip.ts 与 styles/info-tip.css；这里只传正文与公共读屏名。 -->
@@ -265,6 +268,7 @@ const props = defineProps<{
   pageUncovered?: boolean;
   /** 弹窗上显示的快捷键（当前平台、已格式化；空串 = 没绑定，不显示） */
   coverShortcut: string;
+  grayShortcut: string;
   /** 右下角的小按钮在这个网站是否显示（#112：capsuleHidden 的反面）；只在 ready 出现 */
   showToggle?: boolean;
   /** 「整页变灰」的当前值（0.8.0）；欢迎页示意图不传时按未开渲染，new / ready 都显示这一行 */
@@ -369,6 +373,11 @@ const deleteLabel = deleteSiteHeading();
   align-items: center;
   justify-content: space-between;
   gap: var(--pm-space-2);
+}
+/* 灰度行的快捷键键帽（0.9.2）：贴着标签（与插件设置页「标签 + 键帽」同一形态），
+   margin auto 吃掉剩余空间，把 ⓘ 与开关推回行尾 */
+.popup .switch-row .popup-gray-kbd {
+  margin-inline-end: auto;
 }
 /* 只有真关联了开关的 label 才给指针样式与点击区补偿（#148）：new 态卡头的
    :for="undefined" 渲染后没有 for 属性，不该看着可点、点了没反应（方案 §四）。 */

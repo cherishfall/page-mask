@@ -35,6 +35,8 @@ export const en: Messages = {
     saveFailed,
     resetTitleIcon: 'Use the site’s own title and icon',
     shortcutBlocked: 'This page can’t be covered',
+    /** Gray command on an unsupported page (0.9.2): same badge treatment */
+    shortcutBlockedGray: 'This page can’t be turned gray',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are',
     /** Back-out entry (#160), symmetric with #99; same action, same words in both places */
     resetSiteContent: 'Use the site’s own content',
@@ -294,8 +296,9 @@ export const en: Messages = {
 
     shortcutHeading: 'Keyboard shortcut',
     shortcutIntro:
-      'Covers this page temporarily; reloading or leaving restores it without changing your settings',
+      'Covering is temporary — reloading or leaving the page restores it; turning the whole page gray is remembered per site, press again to turn back to color',
     shortcutLabel: 'Cover / Restore',
+    shortcutGrayLabel: 'Gray / Back to color',
     shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
     shortcutChange: 'Change in Chrome',
     shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',

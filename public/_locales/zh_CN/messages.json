@@ -14,5 +14,9 @@
   "commandToggleCurtain": {
     "message": "遮住这一页 / 恢复这一页",
     "description": "快捷键说明，显示在 Chrome 的快捷键设置页。"
+  },
+  "commandToggleGray": {
+    "message": "整页变灰 / 恢复彩色",
+    "description": "快捷键说明，显示在 Chrome 的快捷键设置页。"
   }
 }

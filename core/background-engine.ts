@@ -328,6 +328,52 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
   }
 
+  /**
+   * 整页变灰快捷键（0.9.2，用户提案，ADR-0020 修订 ADR-0010）。
+   *
+   * **permissions.request 必须在 onCommand 的同一同步回合发起**（与 requestPermissionThenEnable
+   * 同一条铁律）：命令按键本身就是用户手势。已授权的站点 request 直接返回 true、不弹任何窗；
+   * 没授权过的正好弹出 Chrome 的「允许」提示——授权与变灰一次按键完成，这就是「第一次就自动调起授权」。
+   * 用户拒绝 → 安静返回；拒绝但站点已有配置（旧精确授权用户）→ 仍允许就地切换，
+   * 不逼人先扩权。
+   */
+  async function toggleGrayByShortcut(tab?: Browser.tabs.Tab): Promise<void> {
+    const tabId = tab?.id;
+    const url = tab?.url;
+    if (tabId === undefined) return;
+    const supported = url ? isSupportedPage(url) : { ok: true };
+    if (!supported.ok) {
+      await flagShortcutBlocked(tabId, supported.reason);
+      return;
+    }
+    const site = url ? siteKeyOfUrl(url) : null;
+    if (!site) {
+      // 连网址都读不到（activeTab 没给到的罕见情况）：无从知道要灰哪个站点
+      await flagShortcutBlocked(tabId, t().common.shortcutBlockedGray);
+      return;
+    }
+    let granted = false;
+    try {
+      granted = await browser.permissions.request({ origins: sitePatterns(site) });
+    } catch {
+      granted = false; // 手势丢失 / 平台限制：按「未授权」处理，走下面的回退
+    }
+    if (await storage.getProfile(site)) {
+      // 已有配置：就地切换灰度（popup 同一字段、同一写入通道）
+      await storage.updateProfile(site, (p) => {
+        // 关掉写 undefined（字段从存储里消失）：与 core/media.ts 的 mediaFlagPatch、
+        // sanitizeProfile「显式 true 才落字段」同口径，不留一个要额外解释的 false。
+        // 与弹窗开关同一字段、同一写入通道，两条路径落库形状一致。
+        p.mediaGray = p.mediaGray === true ? undefined : true;
+      });
+      return;
+    }
+    if (!granted) return; // 没配置 + 没授权（用户拒绝了弹窗）：什么都不做
+    // 没配置过的网站：与 popup 开灰度同一条路——授权并注入后补一份只带灰度的配置。
+    // 页面还在错误页时配置照常建档（#154 语义），页面真正打开后灰度自动生效。
+    await enableSite({ t: 'enableSite', origin: site, tabId, initialMedia: true } satisfies EnableSiteRequest);
+  }
+
   /** 快捷键在这个页面用不了：给一次短暂、可见的反馈（角标 + 悬停说明），不弹窗、不打扰 */
   async function flagShortcutBlocked(tabId: number, reason?: string): Promise<void> {
     try {
@@ -720,8 +766,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
   browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
   browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
 
-  // 幕布快捷键（#101）：全产品只此一条命令，其他功能一律不加快捷键（ADR-0010）
-  browser.commands?.onCommand?.addListener((command) => {
+  // 快捷键：遮住（#101）与整页变灰（0.9.2，ADR-0020 修订 ADR-0010 的「全产品只此一条」）。
+  // 变灰路径的权限请求必须在这里同一同步回合发起——监听器把 tab 事件参数直接传下去，不再查询。
+  browser.commands?.onCommand?.addListener((command, tab) => {
+    if (command === 'toggle-media-gray') return toggleGrayByShortcut(tab);
     if (command !== 'toggle-curtain') return;
     // 返回 Promise 只为了单测能等它跑完；Chrome 不关心 onCommand 的返回值
     return toggleCurtainByShortcut();
