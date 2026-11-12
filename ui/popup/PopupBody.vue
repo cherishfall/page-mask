@@ -577,13 +577,18 @@ const deleteLabel = deleteSiteHeading();
   text-decoration: underline;
 }
 /* 摘要里的失效条改成了可点（#175）：保持 pm-mark 的「圆点 + 文字」样子，
-   按钮的默认样式全退掉；悬停出下划线示意能点 */
+   按钮的默认样式全退掉。#188 文字入口规则：可点的红字入口必须常驻下划线
+   （此前只有悬停才有——键盘 / 触屏没有「悬停一看」，Nielsen 状态可见）。
+   命中区补偿（WCAG 2.5.8）：12px 标记文字垫到 ≥24，负 margin 抵消，视觉不变 */
 .stale-link {
   border: none;
   background: none;
-  padding: 0;
+  padding: 4px 0;
+  margin: -4px 0;
   font: inherit;
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .stale-link:hover {
   text-decoration: underline;

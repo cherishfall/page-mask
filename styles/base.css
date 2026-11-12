@@ -41,8 +41,14 @@ textarea {
   outline-offset: var(--pm-focus-ring-offset);
 }
 
+/* 文字入口规则（docs/design-ui.md §四「文字入口」，#188）：链接一律常驻下划线
+ * （GOV.UK Links：「Links are blue and underlined by default」）。颜色只分轻重与去向：
+ * 蓝 = 离开本页的导航（默认）；本产品内的次级入口与按钮链接各自覆盖。
+ * 例外（不带下划线）：整行链接的列表行（.site-link）、按钮链接（controls.css 的 a.button）。 */
 a {
   color: var(--pm-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 a:hover {
   text-decoration: underline;

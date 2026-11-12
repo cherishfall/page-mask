@@ -213,9 +213,14 @@
 
       <!-- 整页变灰（0.8.0 #131；0.8.18 #156 升级为整页灰）：一个开关按站点记，与弹窗 / 胶囊媒体钮
            共用同一份键与文案。#157 起排在「收起的内容」之后、危险区之前——三处相对顺序统一，
-           权威对照表见 docs/design-surfaces.md；卡片标题与开关同叫法（t.media.heading）。 -->
+           权威对照表见 docs/design-surfaces.md；卡片标题与开关同叫法（t.media.heading）。
+           #188 同词卡头：卡头与行标签逐字同名（t.media.heading / t.media.mediaGray 都解析成
+           「整页变灰」），垂直相叠 30px。卡里只有一个开关，把开关行升成卡头（与弹窗灰度卡同构）
+           就没有第二个「整页变灰」：h3 转读屏专用（.visually-hidden，heading 结构与
+           design-surfaces 登记的键 / 中英文值原样保留），行内可见标签保留——开关的
+           label[for] 点击通路（「点标签也能拨」）不能断，check-media 的行标签断言也照旧。 -->
       <section class="card" aria-labelledby="pm-site-media-heading" data-testid="pm-mgmt-card-media">
-        <h3 id="pm-site-media-heading">{{ t.media.heading }}</h3>
+        <h3 id="pm-site-media-heading" class="visually-hidden">{{ t.media.heading }}</h3>
         <div class="media-rows" role="group" :aria-label="t.media.heading">
           <div v-for="key in MEDIA_FLAG_KEYS" :key="key" class="media-row">
             <!-- ⓘ 的宿主行（#183）：pm-info-anchor 让气泡锚定整行（漏了它气泡贴到页面头上、
@@ -379,12 +384,12 @@ async function onRulesResetClosed(confirmed: boolean) {
 <style scoped>
 .back {
   display: inline-block;
-  margin-bottom: var(--pm-space-3);
+  /* 命中区补偿（WCAG 2.5.8）：12px 的返回链接垫到 ≥24（负 margin 抵消，视觉不变）；
+     下划线来自 base.css 的链接默认（文字入口规则 #188：导航链接常驻下划线） */
+  padding: 3px 0;
+  margin-top: -3px;
+  margin-bottom: calc(var(--pm-space-3) - 3px);
   font-size: var(--pm-font-size-caption);
-}
-
-.back:hover {
-  text-decoration: underline;
 }
 
 .site-head {
@@ -455,11 +460,14 @@ async function onRulesResetClosed(confirmed: boolean) {
 
 /* 回退出口（#99 / #160）：不是卡片标题下的字段，单独一行，和上下内容都留出距离。
    0.8.16 发版审查：.ghost 无底无边、颜色与旁边说明同档，扫一眼分不清哪半句能点——
-   补下划线（与向导里同一个入口同款，看得出能点）。两处共用这一份样式，不复制。 */
+   补下划线（与向导里同一个入口同款，看得出能点）。两处共用这一份样式，不复制。
+   #188 文字入口规则：这是「嵌流文字按钮」，正文色（Ant 文字按钮取正文色的口径）
+   + 下划线，与旁边 12px muted 说明拉开色阶 / 字阶 / 字重一整档。 */
 .reset-row {
   margin: var(--pm-space-2) 0 var(--pm-space-3);
 }
 .reset-row .ghost {
+  color: var(--pm-fg);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -567,7 +575,9 @@ async function onRulesResetClosed(confirmed: boolean) {
   color: var(--pm-fg);
 }
 
-/* 撤销条：常驻的 live region，只有内容出现时才播报（空的时候高度为 0，不占位） */
+/* 撤销条：常驻的 live region，只有内容出现时才播报（空的时候高度为 0，不占位）。
+   撤销按钮是嵌在状态文字旁的文字按钮（#188 文字入口规则：正文色 + 常驻下划线，
+   与旁边的 muted 状态文字拉开一档） */
 .undo {
   display: flex;
   align-items: center;
@@ -577,6 +587,11 @@ async function onRulesResetClosed(confirmed: boolean) {
   border-radius: var(--pm-radius-card);
   padding: 0 var(--pm-space-1);
   color: var(--pm-fg);
+}
+.undo .ghost {
+  color: var(--pm-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .undo-on {

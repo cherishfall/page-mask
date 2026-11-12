@@ -15,10 +15,11 @@
       <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
 
       <template v-else>
-        <!-- 界面语言（#57）：三选一，切换即时生效 -->
+        <!-- 界面语言（#57）：三选一，切换即时生效。
+             #188 说明位置：intro 讲的是「切换后会发生什么」，跟着它解释的控件走——挪到三个选项下面
+             （整屏审查 1：字段的提示写在字段下面） -->
         <section class="card" aria-labelledby="pm-settings-language-heading" data-testid="pm-settings-language">
           <h2 id="pm-settings-language-heading">{{ t.settings.languageHeading }}</h2>
-          <p class="hint">{{ t.settings.languageIntro }}</p>
           <!-- 图例保留给读屏（fieldset 的可及名称），视觉上与卡片标题只留一份 -->
           <fieldset class="import-mode">
             <legend class="visually-hidden">{{ t.settings.languageHeading }}</legend>
@@ -56,21 +57,24 @@
               <label for="pm-settings-lang-en">{{ t.settings.languageEn }}</label>
             </div>
           </fieldset>
+          <p class="hint">{{ t.settings.languageIntro }}</p>
         </section>
 
-        <!-- 默认标题 -->
+        <!-- 默认标题（#188 同词卡头）：卡头「默认标题」与字段标签逐字同名相叠，
+             去掉可见字段标签，输入框的可及名指向卡头（aria-labelledby）——
+             「默认标题」这个词在卡内只出现一次；t.settings.titleLabel 键与值原样保留 -->
         <section class="card" aria-labelledby="pm-settings-title-heading">
           <div class="card-head pm-info-head pm-info-anchor">
             <h2 id="pm-settings-title-heading">{{ t.settings.titleHeading }}</h2>
             <InfoTip :text="t.settings.titleIntro" :label="t.common.infoLabel" />
           </div>
           <div class="row">
-            <label for="pm-settings-default-title">{{ t.settings.titleLabel }}</label>
             <input
               id="pm-settings-default-title"
               v-model="store.state.drafts[DEFAULT_KEY]"
               data-testid="pm-settings-default-title"
               :placeholder="store.languageDefaultTitle"
+              aria-labelledby="pm-settings-title-heading"
               aria-describedby="pm-settings-title-hint"
               @focus="store.focus(DEFAULT_KEY)"
               @blur="store.onBlur(DEFAULT_KEY)"
@@ -137,10 +141,11 @@
           <p v-if="opacityError" class="hint error" role="alert" data-testid="pm-settings-opacity-error">{{ opacityError }}</p>
         </section>
 
-        <!-- 快捷键（#101）：幕布与整页变灰两条命令（ADR-0020）；改键只能去 Chrome 自己的页面 -->
+        <!-- 快捷键（#101）：幕布与整页变灰两条命令（ADR-0020）；改键只能去 Chrome 自己的页面。
+             #188 说明位置：intro 解释两行快捷键的行为（哪个临时、哪个按网站记），挪到两行控件下面
+             （整屏审查 1：字段的提示写在字段下面），改键入口仍在其后。 -->
         <section class="card" aria-labelledby="pm-settings-shortcut-heading" data-testid="pm-settings-shortcut">
           <h2 id="pm-settings-shortcut-heading">{{ t.settings.shortcutHeading }}</h2>
-          <p class="hint">{{ t.settings.shortcutIntro }}</p>
           <div class="row">
             <span class="row-label">{{ t.settings.shortcutLabel }}</span>
             <kbd v-if="shortcutLabel" class="pm-kbd" data-testid="pm-settings-shortcut-value">{{ shortcutLabel }}</kbd>
@@ -156,8 +161,11 @@
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
             </span>
           </div>
+          <p class="hint">{{ t.settings.shortcutIntro }}</p>
           <!-- 改键入口归整张卡、不挂在第一行：Chrome 不允许扩展自己改绑定，只能把用户送到它自己的页面。
-               放在两行之后，任一行没绑上时都看得见下一步（Nielsen 9：说清发生了什么、怎么办）。 -->
+               放在两行之后，任一行没绑上时都看得见下一步（Nielsen 9：说清发生了什么、怎么办）。
+               #188 文字入口规则：单独一行的文字按钮（按钮档，Ant 文字按钮口径），不带下划线，
+               「能点」由悬停出浅灰底表达。 -->
           <div class="row">
             <button type="button" class="ghost" data-testid="pm-settings-shortcut-change" @click="openShortcutSettings">
               {{ t.settings.shortcutChange }}
@@ -615,5 +623,13 @@ function onReplaceClose() {
 .about-row dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+/* 「关于」两条外链（#188 文字入口规则：导航链接，下划线来自 base.css 默认）。
+   命中区补偿（WCAG 2.5.8）：13px 文字链接垫到 ≥24，负 margin 抵消，视觉不变 */
+.about-row dd a {
+  display: inline-block;
+  padding: 3px 0;
+  margin: -3px 0;
 }
 </style>

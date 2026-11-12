@@ -6,7 +6,9 @@
       <h2 id="pm-sites-title" class="view-title">{{ t.management.sitesTitle }}</h2>
       <a class="button small" href="settings.html" data-testid="pm-mgmt-settings-link">{{ t.popup.settings }}</a>
     </div>
-    <p class="hint">{{ t.management.sitesHint }}</p>
+    <!-- 隐私说明（#188）：空状态卡那句「还没有添加任何网站…」已经把同一件事说清，
+         两句同义重复（整屏审查 1「同一句话不说两遍」）——只在列表有内容或还在读取时显示 -->
+    <p v-if="!store.state.loaded || store.state.profiles.length > 0" class="hint">{{ t.management.sitesHint }}</p>
 
     <p v-if="!store.state.loaded" class="hint">{{ t.common.loading }}</p>
 

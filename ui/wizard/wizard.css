@@ -253,7 +253,8 @@
   justify-content: space-between;
   gap: var(--pm-space-2);
 }
-/* 「全部删掉」：文字链接，视觉权重明显低于主按钮 */
+/* 「全部删掉」：嵌在文字流里的文字按钮（#188 文字入口规则：正文色 + 常驻下划线，
+   与旁边的 muted 文字拉开一档；视觉权重仍明显低于主按钮） */
 .pm-wiz-link {
   flex: none;
   /* 命中区补偿（WCAG 2.5.8）：12px 字号的文字链垫到 ≥24，视觉不变（0.8.12 准则审查） */
@@ -261,7 +262,7 @@
   margin: -3px 0;
   border: 0;
   background: none;
-  color: var(--pm-fg-muted);
+  color: var(--pm-fg);
   font: inherit;
   font-size: var(--pm-font-size-caption);
   text-decoration: underline;
@@ -272,7 +273,7 @@
 .pm-wiz-link:focus-visible {
   color: var(--pm-danger);
 }
-/* 非破坏性的文字动作（#99「恢复原来的标题和图标」）：悬停不用危险色，回到正文色 */
+/* 非破坏性的文字动作（#99「恢复原来的标题和图标」）：悬停不用危险色，保持正文色 */
 .pm-wiz-link.plain:hover,
 .pm-wiz-link.plain:focus-visible {
   color: var(--pm-fg);

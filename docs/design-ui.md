@@ -11,12 +11,14 @@
 | 来源 | 取用的规则 | 用在哪 |
 |---|---|---|
 | [GOV.UK Design System · Button](https://design-system.service.gov.uk/components/button/) | 一页只用一个主按钮；次按钮用于次要行动；警告色只给「严重且不可撤销」的破坏性动作，并且要再走一次确认；尽量不用禁用态；按钮文字写成「动词 + 对象」；「保存，稍后再来」这类提前结束的路径要单独给按钮 | 按钮层级、文案、禁用态 |
+| [GOV.UK Design System · Links](https://design-system.service.gov.uk/styles/links/) | 链接默认蓝色带下划线（「Links are blue and underlined by default」）；只有「上下文已经说明这是链接」的场合（页头 / 侧边导航）才可以去掉下划线 | 文字入口的下划线立场（§四 文字入口） |
 | [Carbon · Button](https://v10.carbondesignsystem.com/components/button/usage/) | 主按钮每屏一个；次按钮只与主按钮成对出现，承担这一对里的「反向」动作（取消、返回）；三级按钮最弱；危险色只给破坏性动作 | 向导底栏的主/次/反向关系 |
+| [Carbon · Link](https://carbondesignsystem.com/components/link/usage/) | 链接只管导航（「Do not use links for actions that will change data … or trigger an action」）；内嵌链接必须带下划线 | 文字入口的链接 / 按钮分工（§四 文字入口） |
 | [Carbon · Type sets](https://carbondesignsystem.com/elements/typography/type-sets/) | 产品界面的 productive 字阶：正文 14、标签与辅助 12、标题 600 字重；标题与正文靠字重区分，不靠字号堆叠 | 字号阶梯与字重 |
 | [Ant Design · Button](https://ant.design/components/button) | 一个区块最多一个主按钮；默认按钮用于「一组没有优先级差别的动作」；文字按钮用于最次要的动作；危险色只给删除/授权这类有风险的动作；控件高度 32（默认）/ 40（大）/ 24（小） | 按钮档位、尺寸、行内小动作 |
 | 项目既有 `styles/tokens.css` | 语义色 + `light-dark()` + 强制颜色模式；对比度门槛由 `tests/tokens-contrast.test.ts` 守门 | 颜色落地方式 |
 
-四份来源在关键结论上完全一致，这也是判断「某个说法是不是主流」的依据：**主按钮一屏一个、次按钮成对出现、危险色只给不可撤销的破坏动作、文字按钮只给最次要的动作**。
+六份来源在关键结论上完全一致，这也是判断「某个说法是不是主流」的依据：**主按钮一屏一个、次按钮成对出现、危险色只给不可撤销的破坏动作、文字按钮只给最次要的动作、链接负责导航且默认带下划线**。
 
 ## 二、色彩
 
@@ -70,6 +72,7 @@
 - **没有值得主推的动作时，可以一屏零个主按钮**（0.8.16 #153）：弹窗的两颗编辑入口是「一组没有优先级差别的动作」（Ant 的默认按钮语义），同为次操作档；待授权态的「允许访问」是该屏唯一动作，才是实心。
 - **图标开关（icon toggle）的选中态 = 填实图标 + 淡灰选中底，不用强调色**（0.8.16 #152）：依据 M3 icon button（toggleable：选中 = filled icon + secondaryContainer 淡色容器，不用 primary）、Carbon 工具栏图标选中态（layer-selected 淡灰底）、iOS 控制中心（激活 = 色调底 + 填实图标）。胶囊两颗开启态按钮是落地实例：图标 `--pm-fg-muted → --pm-fg`（墨色浓淡）、图标填实 vs 描边（形状）、`--pm-bg-selected` 选中底（辅助信号），颜色不单独承载状态（WCAG 1.4.1）。0.8.15 的「强调色图标 + 底部 2px 指示条」按用户反馈退场——指示条与胶囊边框读成两道重复的线。
 - 危险色不许用来「吸引注意力」：GOV.UK 明确要求不能只靠红色表达严重性，必须有文字写清后果。
+- **危险色的两档用法**（#178-3，#160 有意）：红描边（危险档）给「发起点」——列表 ⋯ 菜单里的「删除这个网站的设置」、「恢复网站原来的内容」这类还在斟酌的入口与确认框的取消侧；实心红（`primary.danger`）只给最终确认那一步——确认框里的「删除设置」「确认替换」。删站点连权限一起收回、后果比单条收起项更重，所以「发起」与「最终确认」分两档，让最后一步更扎眼。GOV.UK 的 warning button 同构：「Warning buttons are designed to make users think carefully before they use them」，且只给「serious destructive consequences that cannot be easily undone」的动作。
 
 ### 五种状态（缺一不可）
 
@@ -88,6 +91,35 @@
 - 圆角 8，与输入框一致（`--pm-radius-control`）；键帽等一行字高的小件用 `--pm-radius-small`（4px，#171 登记：8px 会把键帽撑成胶囊）。
 - **键帽只有一份样式**（#171）：`styles/controls.css` 的 `.pm-kbd`（`--pm-border-control` 边 + `--pm-radius-small` + muted 色）。凡是「这个动作还有一条键盘通路」的提示都用它，不许各界面自写。
 - 文字：动词 + 对象。「只改标题，完成」这种提前结束的路径，按 GOV.UK 的「Save and come back later」模式，必须说清它会保存并结束。
+
+### 文字入口（#188）
+
+散在界面里「一行字当入口」的样式，先回答两个问题再定样子：**点它去哪、做什么**（定档），**靠什么看得出能点**（定形态）。本节收编此前散在各票里的既有决定（#74、#99、0.8.12、0.8.16 发版审查），全项目的文字入口按这一张表归档：
+
+**先分链接还是按钮**：去别的页面 = 链接（`<a>`）；对本页 / 本网站做动作 = 按钮。依据 Carbon · Link 的分工原话：「Do not use links for actions that will change data or manipulate how it is displayed, change a state, or trigger an action」。
+
+| 档 | 是什么 | 颜色 | 「能点」的信号 |
+|---|---|---|---|
+| 导航链接 | `<a>`，离开当前页面（返回列表、去 Chrome 的页面、外站） | 蓝（accent） | 常驻下划线 |
+| 次级入口链接 | `<a>`，本产品内的次要去向（弹窗底部两个入口、「查看使用说明」） | 灰（fg-muted） | 常驻下划线 |
+| 文字按钮 | `<button>`，对本页做动作（「跳过引导」「到 Chrome 里设置快捷键」） | 灰（fg-muted） | 悬停出浅灰底 |
+| 嵌流文字按钮 | `<button>`，与标题 / 说明文字同排、中间没有控件隔开的动作（「恢复…」出口、撤销、「全部删掉」） | 正文色（fg） | 常驻下划线 + 正文色，与旁边的 muted 文字拉开一档 |
+| 危险入口 | 红字，链接与按钮都可能是 | 红（danger） | 常驻下划线；后果写在文字或旁边 |
+
+依据与取舍：
+
+- **下划线是链接的默认**（GOV.UK · Links：「Links are blue and underlined by default」；Carbon 的内嵌链接同样「styled with an underline」）。Carbon 允许「单独摆放」的链接只在悬停加下划线，但本产品的文字入口普遍与说明文字同灰（#74 的教训：扫一眼分不清哪半句能点），所以取 GOV.UK 更保守的立场：链接一律常驻下划线。
+- **文字按钮归按钮档，不因长得像文字就按链接处理**（Ant · Button：「Text button: used for the most secondary action」；悬停出浅灰底 = Ant 的 `textHoverBg`）。它不带下划线：单独一行的文字按钮（「跳过引导」「到 Chrome 里设置快捷键」）靠悬停出底表达能点，下划线反而把它读成链接。
+- **嵌在文字流里的文字按钮补下划线、取正文色**：它与 12px muted 的说明同排，悬停表达不了「能点」（悬停是鼠标才有的状态，键盘与触屏都没有「悬停一看」）；正文色是 Ant 文字按钮的取色口径（`textTextColor` ≈ 正文色，不是 muted），加下划线，入口就从说明里拉开了一档（色阶 + 字阶 + 字重共三处不同）。0.8.16 给恢复出口补下划线的既有决定收编于此。
+- **颜色只表达轻重与去向，不表达「能不能点」**：蓝 = 离开本页；灰 = 本产品内的次级入口；红 = 危险。没有「可点 = 蓝、不可点 = 灰」的编码。
+- 红字入口不管链接还是按钮都必须带下划线，且后果用文字写清（GOV.UK warning button：「Do not only rely on the red colour of a warning button to communicate the serious nature of the action」）。
+
+登记的例外（每个都能一句话判定）：
+
+- **整行链接的列表行**（管理页站点行）：可点信号 = 悬停底色 + 行尾 ›，行内文字（域名、「N 项可能失效」）不逐个加下划线——GOV.UK 明确「上下文已经说明这是链接」的场合可以去掉下划线，举的正是导航的例子（header / side navigation）。
+- **按钮链接**（`a.button`，页头互跳入口）：视觉档归按钮（§四 四档），不带下划线。
+- **pm-mark 状态标**：圆点 + 文字是「这里有问题」的状态（§二 第 5 条），不是入口；唯一可点的失效条（弹窗摘要里那颗）按危险入口档处理。
+- **欢迎页「跳过引导」**：文字按钮档，无下划线；它自己还有别的问题（#187 登记在案），本规则只给它归档。
 
 ## 五、排布
 
