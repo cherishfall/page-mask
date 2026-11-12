@@ -2,7 +2,21 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
-## 0.9.3（2026-11-12）：#181 遗留观察 —— MediaIcon 与 ⓘ 外形相近
+## 0.9.3 实机反馈批次（2026-11-12）：弹窗视觉统一 #179–#181
+
+用户报两类显示问题：一屏里开关 / 按钮长得好几种、底部三行看着不平衡；建议把「悬浮按钮」改名「悬浮胶囊」并补个图标。三张票收口，两票实现（#180 `bcef93c`、#181 `ef47ddc`），**未发版**。
+
+- **控件类型不改（判断依据）**：开关管记住的状态、按钮做一次性动作——Apple HIG "A toggle always lets people manage the state of something"、Carbon "Ideal for settings or preferences that can be immediately applied" / "Avoid using toggles if the action requires immediate feedback or confirmation"、Ant Design "Switch will trigger a state change directly" 三家同口径。「遮住这一页」刷新即还原、不写配置，改成开关是把临时动作说成持久设置。整页变灰虽有快捷键、按一次开再按一次恢复，但 ADR-0020 明写它改的是按网站记的开关，仍是开关。
+- **用户看到的「不统一」不是控件类型，是同类控件没排齐**（代码量测）：卡片 `1px border + 12px padding` 让卡内开关右缘落在 x=295，裸行无内边距让辅助行开关落在 x=308，差 13px；两枚 ⓘ 一个被 `kbd` 的 auto margin 推到行尾、一个被 `space-between` 分到中间；四行里三行有 16px 同源图标、辅助行没有，文字差 24px；底部链接各占一半居中、删除贴 x=12。
+- **不采纳「悬浮胶囊」**：GLOSSARY 该词条 _Avoid_ 明写「悬浮球、悬浮窗、小胶囊（拿形状指代按钮）」，AGENTS.md 禁止用形状 / 意象指代功能；全项目六处 + 中英两份文案 + `surfaces.test.ts` 对照表都叫「悬浮按钮」。**图标可以用形状，名字不行**。补同源 `CapsuleIcon` 这条采纳（Apple HIG Label "lists align titles across rows regardless of glyph width"）。
+- **立一条成文基准线**（`docs/design-ui.md` §五第 8 条）：带框卡片靠自己的 border + padding、裸行靠同一个 `--pm-card-inset` token 的 `margin-inline`，达到同一条内容线；分隔线整卡宽是登记过的例外。**不引 subgrid**：popup 是 flex column、卡片内 flex，改成 grid 会重构整屏并动到 0.8.16 定稿结构与 E2E 几何断言，收益不抵风险；`modern-web-guidance` `css-layout` 的「从源头统一 / gap / 逻辑属性」用共享 token 即可达成。
+- **两票之间的断言冲突（主会话验收抓到）**：#180 新增的 `auxLabel` 断言写的是「辅助行文字左缘贴基准线 x=25」，#181 补图标后文字移到 x=49 会红。派票前发现并留评论，#181 改成「图标槽位左缘贴基准线 + 四行文字相对各自图标槽位的偏移一致 + 三行绝对共线」，未删断言、未放假绿。
+- **事实更正**：#179 把四行标签都记作 x=49 有误——遮住按钮是 `controls.css` 次操作档的居中按钮，绝对左缘不与开关行共线；这是动作按钮与状态行的形态差异，有理由不改，已在 #179 留评论。E2E 用相对比较锁同源槽位，不写死 px。
+- **指南取舍**：`modern-web-guidance` 的 `switch` 指南推荐原生 `<input type="checkbox" switch>`，但 Chrome 不支持、需引 polyfill，项目已有 `role="switch"` + 共享样式的等效实现，不引依赖；`precise-text-alignment` 的 `text-box` 要 Chrome 133+（项目下限 116）且解决的是垂直光心，本次是水平对齐，未采用。
+- **门禁（主会话两次亲自重跑）**：编译 ✓ / 单测 807 ✓ / E2E 9 脚本全绿 ✓ / `check:docs` ✓；新增中英两态水平几何断言（三开关右缘、裸行边界、四行图标槽位、两枚 ⓘ 右缘、分组线）。按用户一贯规矩**不做截图 / 仿真目检**，留实机。
+- **遗留未变**：#164 / #165 / #178 / #37；`MediaIcon` 与 ⓘ 外形相近见下条。
+
+## 遗留观察（#181，2026-11-12）：MediaIcon 与 ⓘ 外形相近
 
 - **遗留观察（不修，登记待议）**：灰度卡「整页变灰」文字左边的圆形图是 `MediaIcon`（对比度半填充圆，与胶囊「媒体」钮同源、`aria-hidden="true"` 的**功能图标**），**不是信息标 ⓘ**；真正的信息标在开关左边（`ui/info-tip/InfoTip.ts`）。两者外形相近，实机容易被看成同一类东西、以为图标也是「更多信息」。本批（#181）只把两枚 ⓘ 的位置统一到开关左侧，**不改 MediaIcon 图形**：换它要连胶囊「媒体」钮、⋯ 菜单、站点设置页的同一份图形一起换，牵连面超出本票，属另一批。若用户再反馈易混淆，另批连同这几处一起换图形（同源图标只有一个样子，不能只换弹窗这一处）。
 
