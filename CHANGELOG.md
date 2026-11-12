@@ -20,6 +20,7 @@ Under each version, the Chinese and English sections correspond item by item.
 
 - **没绑上时给得出下一步**：插件设置页把「到 Chrome 里设置快捷键」放到整张卡下面、两条命令共用，不再挤在第一行让人以为只管那一条；提示改成「可能被系统或其他扩展占用了」。Chrome 不允许扩展替用户改键，只能把用户送到它自己的快捷键页
 - **改完键切回来就能看到新键**：设置页与欢迎页在标签页重新可见时重读一次绑定。原来只监听窗口聚焦，而 Chrome 快捷键页是同一窗口的新标签页，切回来窗口焦点没变，会漏掉
+- **弹窗文字再收一轮**：删掉「悬浮按钮」那行只复述标签的说明，以及未设置网站多余的「设置后会出现」，已设置网站的常驻说明从三行减到两行；灰度卡不再用「上面的开关」这种位置指代，也不再把「按网站记」与「独立于主开关」混成一句；遮住卡只留还原时机。状态、错误、危险后果的说明一条没删（见 `docs/design-copy.md`）
 
 #### 面向审阅者
 
@@ -38,6 +39,7 @@ Under each version, the Chinese and English sections correspond item by item.
 
 - **A next step when unbound**: the settings page now puts "Manage shortcuts in Chrome" below both rows so neither looks unmanageable, and the notice says the system or another extension may have taken the key. Chrome does not let extensions change bindings themselves; the user is sent to the browser's own shortcuts page
 - **Rebound shortcuts show up without reopening the page**: the settings page and the welcome page re-read bindings when their tab becomes visible again. The old focus listener missed the common path, because Chrome's shortcuts page opens in a new tab of the same window
+- **A leaner popup**: dropped the line under "Floating button" that only restated its label, plus the extra "appears once set up" line on unset sites, so a set-up site now shows two persistent hints instead of three. The gray card names the other switch instead of pointing "above" and no longer mixes persistence with independence into one line; the cover card states only when the page comes back. Status, error and consequence copy is untouched (see `docs/design-copy.md`)
 
 #### For reviewers
 

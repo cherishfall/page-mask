@@ -323,16 +323,19 @@ async function checkPopupChrome(popup, label) {
     const layout = await popup.evaluate(() => {
       const g = document.querySelector('[data-testid="pm-popup-disguise"]');
       const btns = [...g.querySelectorAll('button[data-testid]')].map((b) => b.getAttribute('data-testid'));
-      const aux = document.querySelector('.aux-row') ?? document.querySelector('[data-testid="pm-popup-capsule"]');
+      const auxRow = document.querySelector('.aux-row');
       const title = document.querySelector('[data-testid="pm-popup-title"]')?.getBoundingClientRect();
       const setup = document.querySelector('[data-testid="pm-popup-setup"]')?.getBoundingClientRect();
-      const hintSizes = ['.card-switch-hint', '.media-hint', '.cover-hint', '.aux-hint']
+      // 0.9.3：辅助行的常驻说明删掉，字号一致的只剩卡内这几条
+      const hintSizes = ['.card-switch-hint', '.media-hint', '.cover-hint']
         .map((s) => document.querySelector(s))
         .filter((el) => el)
         .map((el) => getComputedStyle(el).fontSize);
       return {
         btns,
-        auxNoCard: !!aux && !aux.closest('.popup-card'),
+        auxExists: !!auxRow,
+        hasCapsuleSwitch: !!document.querySelector('[data-testid="pm-popup-capsule"]'),
+        auxNoCard: !!auxRow && !auxRow.closest('.popup-card'),
         topDelta: title && setup ? Math.abs(title.top - setup.top) : Infinity,
         titleH: title?.height ?? 0,
         setupH: setup?.height ?? 0,
@@ -355,11 +358,14 @@ async function checkPopupChrome(popup, label) {
       `${label}：两颗编辑入口等高 ≥40px（次 ${layout.titleH.toFixed(1)} / 主 ${layout.setupH.toFixed(1)}）`,
     );
     check(
-      (layout.hintSizes.length === 3 || layout.hintSizes.length === 4) && new Set(layout.hintSizes).size === 1 && layout.hintSizes[0] === '13px',
-      `${label}：卡内与辅助行说明字号一致 13px（${layout.hintSizes.join(' / ')}；ready 态 3 条、new 态 4 条，#153 删掉 ready 的卡头说明行）`,
+      (layout.hintSizes.length === 2 || layout.hintSizes.length === 3) && new Set(layout.hintSizes).size === 1 && layout.hintSizes[0] === '13px',
+      `${label}：卡内说明字号一致 13px（${layout.hintSizes.join(' / ')}；ready 态 2 条、new 态 3 条，0.9.3 删掉辅助行的常驻说明）`,
     );
     check(layout.forLabel === layout.hasSwitch, `${label}：卡头 label[for] 只在有开关时出现（new 态不放假可点 label）`);
-    check(layout.auxNoCard, `${label}：辅助行（悬浮按钮）无卡片框，只用分隔线与四块功能分开`);
+    check(
+      layout.hasCapsuleSwitch ? layout.auxNoCard : !layout.auxExists,
+      `${label}：辅助行只在有「悬浮按钮」开关时出现且无卡片框（新网站不显示这一行）`,
+    );
   }
   // 弹窗整体顺序（#157）：渲染后的条目先后必须与对照表一致；只在场的项参与比较（new 态没有删除入口）
   const popupOrder = await popup.evaluate(

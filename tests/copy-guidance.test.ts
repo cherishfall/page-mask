@@ -333,6 +333,19 @@ describe('四处收口（验收 3 / 5）', () => {
     }
   });
 
+  it('0.9.3 弹窗文字精简：辅助行不再挂常驻说明，两条复述标签的键中英一起删', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      const p = MESSAGES[lang].popup as unknown as Record<string, unknown>;
+      expect(p.showToggleHint, `${lang} 仍留着复述标签的说明`).toBeUndefined();
+      expect(p.showToggleHintNew, `${lang} 仍留着 new 态第三句「设置后会出现」`).toBeUndefined();
+    }
+    expect(popup, '辅助行不该再渲染常驻说明').not.toContain('class="hint aux-hint"');
+    expect(popup).not.toContain('t.popup.showToggleHint');
+    // 精简只删零风险重复：灰度独立与幕布临时这两条边界说明必须还是常驻
+    expect(popup).toContain('t.media.hintShort');
+    expect(popup).toContain('t.popup.coverHint');
+  });
+
   it('PopupBody 全局样式不再裸用 .switch-row（DEVLOG.md:66 管理页串味事故）', () => {
     const style = popup.slice(popup.indexOf('<style>'));
     expect(style).not.toMatch(/^\.switch-row\s*\{/m);

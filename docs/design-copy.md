@@ -67,3 +67,23 @@ Carbon 的「pertinent 信息不进 tooltip」是这条的依据；`tests/media-
 再把 b 类长说明收进 ⓘ、a 类常驻的压成一句短句。改完按 `AGENTS.md`「界面整屏审查」五条逐条自查：
 一行只做一件事、一个符号只有一个意思、动词跟对象真实状态、一屏一个主操作、同一个东西全项目一个样子。
 文案票与结构票分开提交，便于出回归时定位。
+
+**0.9.3 追加一轮「弹窗还是太密」的收口**（用户反馈）。
+
+依据（本轮查证，五个设计系统 + 同类产品实测）：
+- [GOV.UK · Text input](https://design-system.service.gov.uk/components/text-input/)「Use hint text for help that's relevant to the majority of users」「Keep hint text to a single short sentence」；[Error message](https://design-system.service.gov.uk/components/error-message/)「Be clear and concise … Be specific」——常驻只给多数人用得上的一句短句。
+- [Carbon · Notification](https://carbondesignsystem.com/components/notification/usage/)「Don't repeat or paraphrase the title」，[Form](https://carbondesignsystem.com/components/form/usage/)「pertinent assistive information … not be in a tooltip」——不复述标题，但必需信息不许只进 tooltip。
+- [Ant Design · 文案规范](https://ant.design/docs/spec/copywriting-cn)「省略无用词汇，不重复用户已知事实」「无需界面描述出全部的细节」。
+- [Apple HIG · Writing](https://developer.apple.com/design/human-interface-guidelines/writing)「Check each word to be sure it needs to be there」「If you're trying to convey more than one idea, consider breaking up the text」——一句只装一个意思。
+- [Material 3 · Dialogs](https://m3.material.io/components/dialogs/guidelines)「A dialog's purpose should be communicated by its headline and buttons」——标题与按钮已经说清的，不再补说明。
+- 同类扩展实测：uBlock Origin 的 popup 可见文字 1~3 词、解释全在悬停提示；Dark Reader 只留一行说明、长解释放独立帮助页。**不照搬**它们「解释全进 tooltip」的做法：与 Carbon「pertinent 信息不进 tooltip」和 WCAG 1.4.13 冲突，本项目删的只是复述，边界说明仍常驻，ⓘ 只放按需细节。
+
+落地：常驻说明不等于「每张卡都配一句」。
+弹窗 ready 态原有三条（灰度 / 遮住 / 悬浮按钮），其中悬浮按钮那条只是把标签和开关状态复述一遍
+——GOV.UK 的 hint text 只写多数人用得上的帮助，不重复控件标签里已有的信息；删掉整行，
+它身上唯一有用的「关掉后还能用什么」本就在 ⓘ 浮层里（二、b 按需）。new 态原有三句
+都在说「还没设置 / 设置后会出现」，辅助行整行退场。灰度与遮住两条属于三、必须留下，
+**只把措辞改准不删**：不再用「上面的开关」这种一改布局就失效的位置指代，也不再用
+「自己记自己」把「按网站记」与「独立于主开关」两件事混在一句里；遮住那条去掉与按钮名
+重复的「临时遮住」和行话「不改设置」，只留还原时机。结果：ready 态常驻说明 3 条 → 2 条、
+new 态 4 条 → 3 条；状态、错误、危险后果一条没动。审计范围与不改的理由记在 `DEVLOG.md`。

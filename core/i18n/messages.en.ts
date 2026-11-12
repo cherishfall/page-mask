@@ -113,9 +113,10 @@ export const en: Messages = {
     mediaGray: 'Turn the whole page gray',
     /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
     mediaGrayHint: 'The whole page turns black & white, same place, links still work',
-    /** Must stay visible (#153): the gray switch is independent of the main switch + "not unloaded" boundary. #161 keeps it to one short sentence */
-    hint: 'This switch works on its own — “Show this site your way” doesn’t control it; the page still loads as usual, just without color',
-    hintShort: 'This switch keeps its own setting — the switch above doesn’t control it',
+    /** Must stay visible (#153): the gray switch is independent of the main switch + "not unloaded" boundary. #161 keeps it to one short sentence; 0.9.3 drops the invented "keeps its own setting" phrasing */
+    hint: 'Not affected by the “Show this site your way” switch; the page still loads as usual, just without color',
+    /** One short line in the popup (#153): independence only. 0.9.3 names the other switch instead of pointing "above", and no longer mixes persistence into the same line */
+    hintShort: 'Not affected by the “Show this site your way” switch',
     /** Unconfigured sites: turning it on goes through first-time-style permission and creates a gray-only profile (0.8.5, #134) */
     hintNew: 'Turning it on first asks you to allow access to this site',
     /** Hover / screen-reader label for the capsule media button */
@@ -156,15 +157,12 @@ export const en: Messages = {
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
     mediaNotReady: 'This page hasn’t finished loading. Once it’s open, the whole page turns gray automatically.',
     coverPage: 'Cover this page',
-    /** Cover card: say this is temporary and changes no settings (#148) */
-    coverHint: 'Temporary — reloading restores it. Changes no settings',
-    /** Show-capsule switch (#112): label + one-line hint under the switch */
+    /** Cover card: only the restore moment the user needs to judge (#148; #153; 0.9.3 drops "temporary", which repeats the button, and "changes no settings", which is jargon) */
+    coverHint: 'Reloading or leaving this page restores it',
+    /** Show-capsule switch (#112): 0.9.3 leaves just the label, switch and ⓘ — the old line only restated the label */
     showToggle: 'Floating button',
-    showToggleHint: 'Turn it off and the floating button no longer appears on this site’s pages',
-    /** ⓘ popover (0.8.16, #153): details cut from the short hint live here */
+    /** ⓘ popover (0.8.16, #153): what still works after turning it off, available on demand; the only place for it now */
     showToggleTooltip: 'The popup settings and the “Cover this page” shortcut keep working.',
-    /** On an unset site there is no switch; say the button appears once set up (#148) */
-    showToggleHintNew: 'Once this site is set up, a floating button appears on its pages',
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
     replayIntro: 'View the guide',
     /** Full accessible name for the short header link (#148) */

@@ -10,7 +10,7 @@
 - [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.3-chrome.zip`
 - [ ] 版本号已改（`package.json` → `0.9.3`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.3` 待发版时打
-- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面，发版关需要重拍；`store-shots.mjs` 已过期，见 `docs/dev/DEVLOG.md`）
+- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面；弹窗又删掉两行常驻说明、灰度与遮住两行改了措辞，发版关需要重拍；`store-shots.mjs` 已过期，见 `docs/dev/DEVLOG.md`）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -334,7 +334,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 802 项（50 个文件，含 0.9.3 新增的快捷键绑定守门 6 项）；`npm run test:e2e` 九个脚本合计 1038 项断言全绿（0.9.3 构建）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 803 项（50 个文件，含 0.9.3 新增的快捷键绑定守门 6 项与文案守门 1 项）；`npm run test:e2e` 九个脚本合计 1038 项断言全绿（0.9.3 构建）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |

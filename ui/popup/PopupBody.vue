@@ -176,30 +176,25 @@
       </div>
 
       <!-- ④ 辅助行（悬浮按钮）：不带卡片框（0.8.16，#153：删掉上方的独立分割线，
-           卡片边界 + 留白已经分好组）。ready 是开关 + 短说明 + ⓘ（被砍掉的「快捷键照常可用」
-           移到浮层）；new 管的东西还不存在，不显示开关，同位置放一句说明。
-           待授权 / loading / unsupported 都不显示这一行。 -->
-      <template v-if="phase === 'new' || phase === 'ready'">
-        <div class="aux-row">
-          <template v-if="hasProfile">
-            <div class="switch-row pm-info-anchor">
-              <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
-              <InfoTip :text="t.popup.showToggleTooltip" :label="t.common.infoLabel" />
-              <input
-                id="pm-popup-capsule"
-                type="checkbox"
-                switch
-                role="switch"
-                data-testid="pm-popup-capsule"
-                :checked="showToggle"
-                @change="emit('toggleCapsule', $event.target as HTMLInputElement)"
-              />
-            </div>
-            <p class="hint aux-hint">{{ t.popup.showToggleHint }}</p>
-          </template>
-          <p v-else class="hint aux-hint">{{ t.popup.showToggleHintNew }}</p>
+           卡片边界 + 留白已经分好组）。0.9.3 文字精简：标签 + 开关已经说清这行管什么，
+           原先「关掉后不再显示悬浮按钮」只是复述标签，删掉；关掉后还能用什么由 ⓘ 按需给出。
+           new 态这一行管的东西还不存在，整行不渲染（原本两句都在说「设置后会出现」）。
+           待授权 / loading / unsupported 也不显示这一行。 -->
+      <div v-if="hasProfile && (phase === 'new' || phase === 'ready')" class="aux-row">
+        <div class="switch-row pm-info-anchor">
+          <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
+          <InfoTip :text="t.popup.showToggleTooltip" :label="t.common.infoLabel" />
+          <input
+            id="pm-popup-capsule"
+            type="checkbox"
+            switch
+            role="switch"
+            data-testid="pm-popup-capsule"
+            :checked="showToggle"
+            @change="emit('toggleCapsule', $event.target as HTMLInputElement)"
+          />
         </div>
-      </template>
+      </div>
     </template>
 
     <!-- 底部入口（0.8.16，#153）：文字链接，不再是按钮——它们是导航去别的页面，不是对本页的操作
@@ -496,8 +491,9 @@ const deleteLabel = deleteSiteHeading();
   flex: 1;
   min-block-size: var(--pm-control-lg);
 }
-/* 卡内说明（#148 / 方案 v3 §三①）：三张卡 + 辅助行的说明统一 13px 正文档，
+/* 卡内说明（#148 / 方案 v3 §三①）：卡内说明与错误提示统一 13px 正文档，
    消掉 .hint 默认 12px 与 .media-group .hint 13px 的分叉（AGENTS.md 整屏审查第 5 条）。
+   0.9.3 辅助行的常驻说明删掉，.aux-hint 一并退场。
    <style> 不是 scoped、欢迎页第 2 步会嵌入同一份界面（0.8.11 #139 同款教训），
    新增类名一律用 .popup 限定，别用通用词压到欢迎页自己的 .head / .card 等元素。 */
 .popup .card-switch-hint,
@@ -505,7 +501,6 @@ const deleteLabel = deleteSiteHeading();
 .popup .media-hint,
 .popup .media-notice,
 .popup .cover-hint,
-.popup .aux-hint,
 /* 卡内错误提示（mediaError / deleteError）跟着同一档，别比它旁边的说明小一号 */
 .popup .hint.error {
   margin: 0;
