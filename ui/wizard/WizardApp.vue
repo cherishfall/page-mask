@@ -706,7 +706,16 @@ let finished = false;
 const sitePattern = computed(() => deriveScopePattern(props.url));
 const scopeHint = computed(() => scopeUnavailableHint(props.url));
 const lastSelIndex = computed(() => (lastSel.value ? selEls.value.indexOf(lastSel.value) : -1));
-const lastSelName = computed(() => (lastSel.value ? describeElement(lastSel.value) : ''));
+/**
+ * 同一会话内同一对象只许有一个名字（#189 命名漂移核查）：已有草稿的元素用草稿名
+ * （保存名 / 用户改过的名），只有还没有草稿的新选才当场自动命名——
+ * 否则选内容清单、调整对象说明与看效果清单对同一条会给出两个叫法。
+ */
+const lastSelName = computed(() => {
+  if (!lastSel.value) return '';
+  const d = drafts.value.find((x) => x.el === lastSel.value);
+  return d ? draftName(d) : describeElement(lastSel.value);
+});
 /** 第 2 步的已选清单：序号与页面上的号码牌同源（core/wizard-logic.ts selectionRows） */
 const selectionRows = computed<SelectionRow<Element>[]>(() => buildSelectionRows(selEls.value, describeElement));
 
@@ -723,7 +732,10 @@ const pickRows = computed<PickRow[]>(() =>
     const sameHits = draft
       ? draft.sameHits
       : countCandidateHits(document, generateCandidates(row.el, { onlyThis: false }));
-    return { ...row, draft, sameHits };
+    // 名字与看效果同一条路径（#189 命名漂移核查）：有草稿的行显示草稿名（保存名 / 用户改过的名），
+    // 新选的显示当场自动命名——进看效果时 newDraft 记下的正是它，两步清单永远同名
+    const name = draft ? draftName(draft) : row.name;
+    return { ...row, name, draft, sameHits };
   }),
 );
 

@@ -258,6 +258,13 @@ async function main() {
       '「之前收起了」虚线角标已经退场（#81）',
     );
 
+    // #189：同一会话内同一对象必须同名——选内容清单的行名直接用草稿名（保存名优先），
+    // 不再对旧规则元素现场重算自动命名（否则同一行在两步里一个叫「广告位」一个叫「广告位（示例）」）
+    check(
+      picked.join('|') === '广告位|横幅',
+      `选内容清单行名 = 保存名，与看效果清单同名（${picked.join(' / ')}）`,
+    );
+
     // 下一步：三条旧规则都进了看效果
     await clickInShadow(page, HOST, tid('pm-wiz-preview'));
     await waitVisible(page, '看效果：页面按现有设置显示（广告位收起）', '#ad', false);
@@ -267,6 +274,11 @@ async function main() {
     check(
       names.join('|') === '广告位|横幅|已经不在的项',
       `草稿按规则原顺序排列、名称原样带过来（${names.join(' / ')}）`,
+    );
+    // #189：两步清单对同一对象同名（行名来自同一条草稿，不是两条取名路径）
+    check(
+      picked[0] === names[0] && picked[1] === names[1],
+      `选内容与看效果对同一对象同名（${picked.join(' / ')} vs ${names.slice(0, 2).join(' / ')}）`,
     );
     const summaries = await shadowTexts(page, '[data-testid$="-summary"]');
     check(

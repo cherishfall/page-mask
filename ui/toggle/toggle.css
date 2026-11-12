@@ -122,14 +122,30 @@
   line-height: 1;
   cursor: pointer;
 }
-.pm-tg-more:hover,
-.pm-tg-more[aria-expanded='true'] {
+.pm-tg-more:hover {
   background: var(--pm-bg-subtle);
   color: var(--pm-fg);
 }
 .pm-tg-more:active {
   background: var(--pm-bg-control-active);
   color: var(--pm-fg);
+}
+/* 展开态（#189，Nielsen 状态可见）：菜单开着时触发钮不能与平常零差异——
+   走 #152 的选中底口径（M3 icon button toggleable：选中 = filled icon + 淡色容器，不用强调色；
+   与两颗开启态按钮同用 --pm-bg-selected，不引入新颜色）。悬停 / 按下不换 background、
+   只叠 state layer 薄层（design-ui §九.7 的 box-shadow inset 9999px 画法，不改布局盒尺寸，
+   选中底在悬停 / 按下下保持可见），与 .pm-tg-main[data-state='on'] 同一套画法。
+   有意不进 §九的 150ms 过渡名单：popover 本身瞬时出现，触发钮底色跟着瞬时切换
+   （0.9.5 #189 实测：给 ⋯ 加过渡后，深浅切换的头几帧会被对比度巡检采样到旧色） */
+.pm-tg-more[aria-expanded='true'] {
+  background: var(--pm-bg-selected);
+  color: var(--pm-fg);
+}
+.pm-tg-more[aria-expanded='true']:hover {
+  box-shadow: inset 0 0 0 9999px var(--pm-state-hover);
+}
+.pm-tg-more[aria-expanded='true']:active {
+  box-shadow: inset 0 0 0 9999px var(--pm-state-press);
 }
 
 /* ── 「遮住」按钮（图标即可，读屏文案「遮住整页」）：可点 24×24，图标 13 ── */
@@ -246,7 +262,8 @@
      带 .pm-tg 前缀把特异性抬到与 hover/active 规则同档，压过它们的浅底；
      不改 border 宽度 / padding / margin（胶囊几何被 E2E 锁死），也不碰 :focus-visible 焦点环 */
   .pm-tg .pm-tg-main[data-state='on'],
-  .pm-tg .pm-tg-cover.pm-tg-media[data-state='on'] {
+  .pm-tg .pm-tg-cover.pm-tg-media[data-state='on'],
+  .pm-tg .pm-tg-more[aria-expanded='true'] {
     background: Highlight;
     color: HighlightText;
     box-shadow: none;

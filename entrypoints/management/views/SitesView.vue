@@ -272,6 +272,18 @@ function onRowDelete() {
   background: var(--pm-bg-control-active);
   color: var(--pm-fg);
 }
+/* 展开态（#189 同类扫描）：菜单开着时触发钮与平常零差异读不出状态——
+   与胶囊「⋯」同一口径：#152 的选中底（--pm-bg-selected），悬停 / 按下叠 state layer 薄层 */
+.site-more[aria-expanded='true'] {
+  background: var(--pm-bg-selected);
+  color: var(--pm-fg);
+}
+.site-more[aria-expanded='true']:hover {
+  box-shadow: inset 0 0 0 9999px var(--pm-state-hover);
+}
+.site-more[aria-expanded='true']:active {
+  box-shadow: inset 0 0 0 9999px var(--pm-state-press);
+}
 
 /* 行尾菜单：与胶囊菜单同一套材质（popover 关着时 UA 设 display:none） */
 .site-menu {

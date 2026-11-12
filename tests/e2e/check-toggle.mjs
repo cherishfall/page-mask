@@ -428,8 +428,30 @@ async function main() {
       menuShape.deleteColor === menuShape.danger,
       `删除项是红字、与上面两项分开（${menuShape.deleteColor}）`,
     );
+    // #189：菜单展开时触发钮要有看得见的状态（#152 选中底口径，Nielsen 状态可见），关掉后回到平常
+    const moreState = (h) => {
+      const sr = document.querySelector(h).shadowRoot;
+      const more = sr.querySelector('[data-testid="pm-toggle-more"]');
+      const probe = document.createElement('span');
+      probe.style.color = getComputedStyle(more).getPropertyValue('--pm-bg-selected');
+      more.appendChild(probe);
+      const selected = getComputedStyle(probe).color;
+      probe.remove();
+      return { expanded: more.getAttribute('aria-expanded'), bg: getComputedStyle(more).backgroundColor, selected };
+    };
+    const openMore = await page.evaluate(moreState, TOGGLE);
+    check(
+      openMore.expanded === 'true' && openMore.bg === openMore.selected,
+      `菜单展开时 ⋯ 触发钮带选中底（aria-expanded=${openMore.expanded}，bg ${openMore.bg} = --pm-bg-selected ${openMore.selected}）`,
+    );
     await page.keyboard.press('Escape');
     await waitFor(page, '菜单关闭', (h) => !document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE]);
+    await page.mouse.move(60, 400); // 指针挪开：不采样悬停底，只看展开态是否退掉
+    const closedMore = await page.evaluate(moreState, TOGGLE);
+    check(
+      closedMore.expanded === 'false' && closedMore.bg === 'rgba(0, 0, 0, 0)',
+      `菜单关掉后 ⋯ 回到平常（aria-expanded=${closedMore.expanded}，bg ${closedMore.bg}）`,
+    );
 
     // #120：菜单「调整不透明度」→ 插件设置的不透明度那张卡（深链 + 焦点）
     console.log('\n--- 菜单「调整不透明度」直达插件设置 ---');

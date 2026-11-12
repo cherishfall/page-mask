@@ -1094,6 +1094,7 @@ async function main() {
     // ===================== 工具条拖动 / 方向键（N15） =====================
     console.log('\n--- 工具条可拖动、可用方向键移动，且不出可视区 ---');
     const h0 = await shadowRect(page, tid('pm-wiz-drag'));
+    check(h0.w >= 24 && h0.h >= 24, `拖动把手命中区 ${Math.round(h0.w)}×${Math.round(h0.h)} ≥ 24×24（图形只有 10×16，命中区由按钮撑足，#189 实测登记）`);
     const t0 = await shadowRect(page, tid('pm-wizard-toolbar'));
     await page.mouse.move(h0.x + h0.w / 2, h0.y + h0.h / 2);
     await page.mouse.down();
