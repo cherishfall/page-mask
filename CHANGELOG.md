@@ -5,6 +5,44 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.2] - 2026-11-12
+
+给「整页变灰」加一条默认快捷键，并把它与幕布快捷键的差别在界面上说清楚。权限集合不变——仍是 storage、scripting、activeTab 加按站点的可选主机权限，两条键盘命令都不需要新权限。
+
+### 中文
+
+#### 新增
+
+- **整页变灰也能按快捷键了**：默认 Ctrl+Shift+G（Mac 是 ⌘+Shift+G），按一次变灰、再按一次恢复彩色，状态按网站记；第一次按键当场申请这个网站的权限，不必先打开弹窗。幕布那条快捷键仍是临时的、刷新就还原，两条的性质写在插件设置页的同一句说明里（ADR-0020 修订 ADR-0010「全产品只有一条命令」）
+
+#### 改动
+
+- **键帽提示补齐并区分 Mac / PC**：弹窗的灰度卡、插件设置页的快捷键卡、欢迎页示意图都显示 Chrome 里当前实际绑定的键；没绑定就隐藏（插件设置页给一句「没有绑定快捷键」）。Mac 键帽按 Apple 的键盘规范把 Shift 排在 Command 前面（⇧⌘G），Windows / Linux 仍写 Ctrl+Shift+G；幕布键帽同步改成同一种写法
+- **界面文案**：插件设置页一句话说清两条快捷键的差别（遮住是临时的、变灰按网站记），英文按同一个意思重写而不是逐字硬译；Chrome 的快捷键设置页里两条命令也都有中英文说明了
+
+#### 面向审阅者
+
+- 新增 ADR-0020 正式修订 ADR-0010，并同步「永不做」清单、术语表与商店提交材料
+- 后台变灰命令分支补 7 个单测（含拒绝授权、用户手势丢失、不支持页面、关掉时字段消失）；既有幕布快捷键 6 个用例保持通过
+- 变灰开关关闭时写「字段消失」而不是 false，与弹窗开关的落库形状一致
+
+### English
+
+#### Added
+
+- **A shortcut for turning the whole page gray**: Ctrl+Shift+G by default (⌘+Shift+G on Mac). Press once to turn gray, press again to turn back to color; the setting is remembered per site. The first press asks for that site's access right there, so you don't have to open the popup first. The curtain shortcut is still temporary and disappears on reload — the settings page now spells out the difference in one line (ADR-0020 revises ADR-0010's "only one command" decision)
+
+#### Changed
+
+- **Shortcut hints now cover both commands and both platforms**: the popup's gray card, the settings page shortcut card and the welcome page illustration all show the shortcut currently bound in Chrome; an unbound shortcut is hidden (the settings page says so). On Mac the keycaps follow Apple's keyboard guideline by putting Shift before Command (⇧⌘G); Windows/Linux still read Ctrl+Shift+G. The curtain keycap uses the same order now
+- **Interface copy**: the settings page explains in one sentence that covering is temporary while turning the whole page gray is remembered per site, rewritten in English rather than translated word for word; both commands now have localized descriptions in Chrome's keyboard shortcuts page
+
+#### For reviewers
+
+- ADR-0020 formally revises ADR-0010; the "never do" list, glossary and store submission materials were updated with it
+- Seven unit tests cover the new gray command branch (including declined permission, lost user gesture, unsupported pages and the field disappearing when switched off); the six existing curtain shortcut tests still pass
+- Turning the gray switch off now removes the field instead of writing false, matching what the popup switch stores
+
 ## [0.9.1] - 2026-11-12
 
 上架前的全面质量批次：一次全方位审查（代码 / 文案中英 / 界面规范 / 无障碍 / 商店材料 / 全界面真实渲染目检）发现的问题全部修完。功能与权限不变——权限集合仍是 storage、scripting、activeTab 加按站点的可选主机权限。
