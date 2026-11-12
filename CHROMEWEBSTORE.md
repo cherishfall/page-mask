@@ -3,14 +3,15 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-12 · 对应构建 **0.9.2**（`.output/page-mask-0.9.2-chrome.zip`）
+> 最后更新：2026-11-12 · 对应构建 **0.9.3**（`.output/page-mask-0.9.3-chrome.zip`）
 
 ## 0. 提交前清单
 
 - [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.2-chrome.zip`
-- [ ] 版本号已改（`package.json` → `0.9.2`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.2` 待发版时打
-- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.2 改了弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽，发版关需要重拍；`store-shots.mjs` 已过期，见 `docs/dev/DEVLOG.md`）
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.3-chrome.zip`
+- [ ] 版本号已改（`package.json` → `0.9.3`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.3` 待发版时打
+- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面，发版关需要重拍；`store-shots.mjs` 已过期，见 `docs/dev/DEVLOG.md`）
+- [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
 - [x] `npm run check:docs` 通过（用户可见文档无禁用词、内部链接有效）
@@ -48,7 +49,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 整页变灰：按网站的一个开关（悬浮按钮上的「媒体」钮、弹窗、站点设置页三处都能改）。整个页面变成黑白——文字、图片、视频、按钮、背景图全都一样，位置大小不变、链接还能点、文字照样读。会自动播放的视频会被暂停，点一下视频就能看。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。独立开关，不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走
 • 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时），并把这个标签页的声音一起静音；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
 • 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；悬浮按钮、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
-• 整页变灰快捷键：按一下变灰、再按一下恢复彩色（默认 Ctrl+Shift+G，Mac 是 ⌘+Shift+G）；状态按网站记，第一次按键就会申请这个网站的权限，不必先打开弹窗
+• 整页变灰快捷键：按一下变灰、再按一下恢复彩色（默认 Ctrl+Shift+Y，Mac 是 ⌘+Shift+Y）；状态按网站记，第一次按键就会申请这个网站的权限，不必先打开弹窗
 • 悬浮按钮可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
 • 每个网站一个开关：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
 • 页面内编辑：悬浮按钮的「⋯」菜单可以就地改标签页标题和图标；「收起内容」进设置面板的选内容一步，已收起的项直接进选择集，再「看效果」逐行换收起方式、换在哪些页面收起、重新选这一项，删掉的行随保存移除
@@ -75,6 +76,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含（0.8.18 起）；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
 • 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
 • 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；iframe 和 shadow DOM 里的元素暂时无法选择
+• 两条快捷键都能在 Chrome 自己的「扩展程序 → 键盘快捷键」页改：插件设置页有「到 Chrome 里设置快捷键」入口。Chrome 不允许扩展替你改键，所以这一步要在 Chrome 里做；改完切回插件设置页，键帽就显示新键，你在那一页设过的键不会被新版本覆盖
 • 反馈与支持：https://github.com/cherishfall/page-mask/issues
 ```
 
@@ -93,7 +95,7 @@ FEATURES
 • Whole-page gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable. Videos that autoplay are held down; click a video to watch that one. Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites the user hasn't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the floating button, the popup and the shortcut all work on the same state — any of them can undo any other
-• Whole-page gray shortcut: press to turn gray, press again to turn back to color (Ctrl+Shift+G by default, ⌘+Shift+G on Mac); the setting is remembered per site, and the first press asks for that site's access, so there is no need to open the popup first
+• Whole-page gray shortcut: press to turn gray, press again to turn back to color (Ctrl+Shift+Y by default, ⌘+Shift+Y on Mac); the setting is remembered per site, and the first press asks for that site's access, so there is no need to open the popup first
 • A floating button you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
 • One switch per site: the floating button flips between "Your settings" and "As is"; all tabs of that site switch together
 • On-page editing: the floating button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
@@ -120,6 +122,7 @@ NOTES
 • "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included (since 0.8.18); PageMask's own interface turns black & white with the page and keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
 • The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
 • Doesn't run on browser pages, local files or the Chrome Web Store; elements inside iframes/shadow DOM can't be picked yet
+• Both shortcuts can be changed at Chrome's own "Extensions → Keyboard shortcuts" page; Settings has a "Manage shortcuts in Chrome" button. Chrome doesn't let extensions change bindings themselves, so that step belongs in the browser. The keycaps show the new key when you come back, and keys you set there are kept across updates
 • Support: https://github.com/cherishfall/page-mask/issues
 ```
 
@@ -158,7 +161,7 @@ Declutters websites the user chooses: it hides page elements the user picks and,
 ```
 What it does: lets the user hide page elements they pick on sites they explicitly add, turn the whole page gray per site, and set an optional custom tab title/icon for those sites. Covering a page ("Cover this page") also holds that tab's sound. UI is bilingual (Chinese and English; the interface language follows the browser and can be switched in Settings).
 
-Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that site — one registrable domain, so the bare domain and its subdomains (two patterns); only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that site) and inject the hiding styles there. Two keyboard commands are declared in the manifest, neither needing a permission: Ctrl+Shift+X (Command+Shift+X on Mac) covers the current page temporarily, and Ctrl+Shift+G (Command+Shift+G on Mac) toggles the per-site whole-page gray switch. The gray command calls permissions.request for that site directly from the keyboard event (which counts as a user gesture) when access has not been granted yet; if the user declines, nothing is written.
+Permissions model: no host access and no content script are registered at install. The built manifest contains no content_scripts and no host_permissions. The popup buttons 「收起内容」 ("Hide items") and 「标题和图标」 ("Title & icon") call permissions.request for that site — one registrable domain, so the bare domain and its subdomains (two patterns); only after the user allows it does PageMask register the bundled content script (scripting.registerContentScripts, scoped to that site) and inject the hiding styles there. Two keyboard commands are declared in the manifest, neither needing a permission: Ctrl+Shift+X (Command+Shift+X on Mac) covers the current page temporarily, and Ctrl+Shift+Y (Command+Shift+Y on Mac) toggles the per-site whole-page gray switch. Chrome does not let extensions set bindings programmatically; users can change either key at chrome://extensions/shortcuts (Settings has a button that opens that page), and the keycaps in the popup, Settings and the welcome page are read from commands.getAll() whenever those pages open or become visible again, so they show the current binding and stay hidden when a command is unbound. Keys set manually there are preserved across updates. The gray command calls permissions.request for that site directly from the keyboard event (which counts as a user gesture) when access has not been granted yet; if the user declines, nothing is written.
 
 Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. While the gray switch is on, the same stylesheet turns the whole page black & white (one grayscale rule; layout, size and links stay as they are) and the bundled content script holds videos that the site autoplays — a video the user clicks is allowed to play. Covering a page calls chrome.tabs.update({ muted }) — Chrome's own tab mute, no tabs permission — and the extension only unmutes a tab it muted itself (mutedInfo.reason === 'extension' and our extensionId); the mute lives exactly as long as the cover. The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off; switching to "As is" restores the colors as well.
 
@@ -182,6 +185,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.9.3 | 2026-11-12 | 修复「整页变灰」默认快捷键装完就没键可用：原来的 `Ctrl+Shift+G` / `⌘⇧G` 撞 Chrome 自带的「查找上一个」，Chrome 会静默不绑定这条命令；改用 `Ctrl+Shift+Y` / `⌘⇧Y`（逐项核对过 Chromium 的两张保留快捷键表，幕布的 `Ctrl+Shift+X` 不变）。插件设置页把「到 Chrome 里设置快捷键」放到整张卡下面、两条命令共用，没绑上的提示补上「可能被系统或其他扩展占用了」；设置页与欢迎页在标签页重新可见时重读绑定，改完键切回来键帽就跟着变。本地已装过的构建只重新加载不会重算建议键，需卸载重装或手动设键，用户手动设过的键不会被覆盖。权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.2 | 2026-11-12 | 「整页变灰」新增默认快捷键（`Ctrl+Shift+G` / `⌘+Shift+G`）：按一次变灰、再按一次恢复彩色，状态按网站记，第一次按键当场申请站点权限；弹窗、插件设置页、欢迎页补齐当前实际绑定的键帽提示并区分 Mac / PC（Mac 按 Apple 键盘规范把 Shift 排在 Command 前）；ADR-0020 正式修订 ADR-0010「全产品只有一条命令」；变灰命令分支补 7 个单测，关态写「字段消失」而非 false。权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.1 | 2026-11-12 | 上架前全面质量批次（全方位审查收口）：修复带非默认端口站点管理页打不开（#162 遗留）；向导对 shadow DOM / iframe 内点选给出提示并拒绝选中；弹窗读取失败不再停在「读取中」；「在哪些页面收起」改原生单选分段；弹窗失效提醒可点、保存确认带「保存」、ⓘ 气泡指向箭头；文案全面梳理（禁词清零、一种叫法、句号规矩）；界面细节（动效 / 悬停按下态 / 遮罩统一 / 键帽 / 幕布恢复钮方向键）；商店材料与 README / 隐私政策旧名清扫。功能与权限不变。详见 `CHANGELOG.md` |
 | 0.9.0 | 2026-11-11 | 网站身份改成可注册域名（#162，ADR-0019）：`weibo.com` / `www.weibo.com` / `s.weibo.com` 是一个网站，一份设置、一次授权、列表一行；旧配置读时懒迁移（收起项取并集），旧精确授权继续有效，子域未覆盖时弹窗提示补授权；权限从单个 origin 变成「裸域 + 子域」两条模式。另含五处交互与文案修正（#157 三处界面对照表 + 自动检查、#158 空设置说明、#159 原样态保存前确认、#160 恢复网站原来的内容、#161 引导文字收口）。详见 `CHANGELOG.md` |
@@ -243,6 +247,7 @@ Test steps (no login needed):
 ## 9. 已知限制（写给审核员，也写给用户）
 
 - 界面语言默认跟随浏览器（简体中文 / English 两套文案），可在插件设置里切换。
+- 默认快捷键可能被系统或其他扩展占用：这时 Chrome 会静默不绑定，界面上就不显示键帽；到 Chrome 的「扩展程序 → 键盘快捷键」页另设一个键即可，插件设置页有入口。
 - 同一个网站按可注册域名算：`weibo.com`、`www.weibo.com` 与 `s.weibo.com` 共用一份设置与一次授权；规则仍按每个页面的实际网址生效，「只在 weibo.com 首页收起」不会套到子域页面。IP 地址、`localhost` 与带非默认端口的地址按原样识别，不合并子域。
 - 公共后缀只内置常见子集（`com.cn` / `co.uk` / `github.io` 等）：不在表里的后缀按单段后缀识别（取最后两段），最坏情况是同一后缀下的两个独立站点被当成一个（共用设置与授权），但不会丢设置。
 - 「整页变灰」只去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具；一条 CSS 规则覆盖整个页面（背景图、`<canvas>`、iframe 内容、内联 SVG、视频都在内），本扩展自己的浮层也会跟着变黑；`<audio>` 与一切声音不参与。
@@ -274,7 +279,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `0.9.0`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `0.9.3`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 120 / zh_CN 52 |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
@@ -329,7 +334,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 692 项；`npm run test:e2e` 九个脚本合计 842 项断言全绿（含 `check-media.mjs` 25 项，按 0.8.0 语义重写）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 802 项（50 个文件，含 0.9.3 新增的快捷键绑定守门 6 项）；`npm run test:e2e` 九个脚本合计 1038 项断言全绿（0.9.3 构建）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |

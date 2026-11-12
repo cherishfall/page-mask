@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.3] - 2026-11-12
+
+修复「整页变灰」快捷键装完就没有键可用的问题，并让改键前后界面把状态说清楚。权限集合不变。
+
+### 中文
+
+#### 修复
+
+- **默认快捷键撞了 Chrome 自带的按键**：原来的 `Ctrl+Shift+G` / `⌘⇧G` 是 Chrome 查找栏的「查找上一个」（macOS 上也是访达的「前往文件夹」），Chrome 会静默不绑定这条命令，装完就没有键可用。换成 `Ctrl+Shift+Y` / `⌘⇧Y`：逐项核对过 Chromium 的两张保留快捷键表，这组没有被占用，也是 Chrome 官方 commands 文档示例使用的组合。幕布的 `Ctrl+Shift+X` 不变
+- **弹窗上的键帽跟着真实绑定走**：绑上了就显示，没绑上不显示一个不存在的键。上一版「整页变灰」那一行没有键帽，根因就是这条命令没绑上；换键后与「遮住」那一行一致
+
+#### 改动
+
+- **没绑上时给得出下一步**：插件设置页把「到 Chrome 里设置快捷键」放到整张卡下面、两条命令共用，不再挤在第一行让人以为只管那一条；提示改成「可能被系统或其他扩展占用了」。Chrome 不允许扩展替用户改键，只能把用户送到它自己的快捷键页
+- **改完键切回来就能看到新键**：设置页与欢迎页在标签页重新可见时重读一次绑定。原来只监听窗口聚焦，而 Chrome 快捷键页是同一窗口的新标签页，切回来窗口焦点没变，会漏掉
+
+#### 面向审阅者
+
+- ADR-0020 补 0.9.3 修订节，写明根因、保留表核对结论与界面引导的改动；开发日志同步
+- 新增 `tests/shortcut-binding.test.ts` 守门 6 项：建议键不许回到被保留的 G、三处界面都读两条真实绑定、长驻页面重读并移除监听、改键入口在两行之后、没绑上不显示假键
+- 注意：本地已装过的扩展只「重新加载」不会重算建议键，需要卸载重装，或到 `chrome://extensions/shortcuts` 手动给这条命令设一个键；用户在那里设过的键不会被新版本覆盖
+
+### English
+
+#### Fixed
+
+- **The default shortcut collided with a Chrome built-in**: `Ctrl+Shift+G` / `⌘⇧G` is Chrome's "Find previous" (and Finder's "Go to Folder" on macOS), so Chrome silently left the command unbound — the feature shipped with no key. It is now `Ctrl+Shift+Y` / `⌘⇧Y`: both Chromium reserved-accelerator tables were checked line by line and this combination is free; it is also the combination used in Chrome's own commands documentation examples. The curtain shortcut (`Ctrl+Shift+X`) is unchanged
+- **Popup keycaps follow the real binding**: shown when bound, hidden when not, instead of implying a key that does not exist. The missing keycap on the gray row was a symptom of the unbound command
+
+#### Changed
+
+- **A next step when unbound**: the settings page now puts "Manage shortcuts in Chrome" below both rows so neither looks unmanageable, and the notice says the system or another extension may have taken the key. Chrome does not let extensions change bindings themselves; the user is sent to the browser's own shortcuts page
+- **Rebound shortcuts show up without reopening the page**: the settings page and the welcome page re-read bindings when their tab becomes visible again. The old focus listener missed the common path, because Chrome's shortcuts page opens in a new tab of the same window
+
+#### For reviewers
+
+- ADR-0020 gains a 0.9.3 revision section covering the root cause, the reserved-accelerator check and the UI changes; the dev log is updated too
+- A new `tests/shortcut-binding.test.ts` guard (6 checks) locks the fix in: suggested keys must not return to G, all three surfaces must read both live bindings, long-lived pages must re-read and clean up listeners, the manage button must sit below both rows, and no fake keycap when unbound
+- Note: reloading an already-installed local build does not re-evaluate a changed suggested key. Remove and reinstall the extension, or assign a key to this command at `chrome://extensions/shortcuts`. Keys the user set manually are preserved across updates
+
 ## [0.9.2] - 2026-11-12
 
 给「整页变灰」加一条默认快捷键，并把它与幕布快捷键的差别在界面上说清楚。权限集合不变——仍是 storage、scripting、activeTab 加按站点的可选主机权限，两条键盘命令都不需要新权限。
