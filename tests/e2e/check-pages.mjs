@@ -418,7 +418,29 @@ async function checkPopupGeometry(popup, label) {
       cardBorder: { left: cr.left, right: cr.right },
       switches: [...document.querySelectorAll('.popup input[role="switch"]')].map(rect),
       aux: q('.aux-row'),
-      auxLabel: q('.aux-row .switch-row label'),
+      // #181：辅助行补同源图标后的几何判据。四行图标槽位 / 标签文字各取一份矩形，
+      // ③ 遮住按钮是居中按钮（沿用 controls.css 次操作档），它的绝对左缘不与另三行共线，
+      // 因此「共线」用「文字左缘相对自身图标槽位的起点」做相对比较，四行都参与、不写死 px。
+      auxIcon: q('.aux-row .popup-row-icon'),
+      auxIconCss: (() => {
+        const el = document.querySelector('.aux-row .popup-row-icon');
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        return { size: parseFloat(cs.inlineSize), display: cs.display, flex: cs.flex, ariaHidden: el.getAttribute('aria-hidden') };
+      })(),
+      rowIcons: [
+        '.disguise-group .popup-row-icon',
+        '.media-group .popup-row-icon',
+        '.popup-cover .popup-action-icon',
+        '.aux-row .popup-row-icon',
+      ].map((s) => q(s)),
+      rowTexts: [
+        '.disguise-group .popup-row-label > span',
+        '.media-group .popup-row-label > span',
+        '.popup-cover-label',
+        '.aux-row .popup-row-label > span',
+      ].map((s) => q(s)),
+      infoTips: [...document.querySelectorAll('.popup .pm-info-tip-trigger')].map(rect),
       links: [...document.querySelectorAll('.links > .popup-link')].map(rect),
       danger: q('.text-danger'),
       divider: q('.divider'),
@@ -442,8 +464,34 @@ async function checkPopupGeometry(popup, label) {
       `${label}：辅助行左右落点贴内容基准线（左 ${f(g.aux.left)} / 右 ${f(g.aux.right)} vs 内容区 ${f(g.content.left)}…${f(g.content.right)}）`,
     );
   }
-  if (g.auxLabel) {
-    check(near(g.auxLabel.left, g.content.left), `${label}：辅助行文字左缘贴内容基准线（${f(g.auxLabel.left)} vs ${f(g.content.left)}）`);
+  // #181：原 auxLabel 断言「辅助行文字左缘贴内容基准线」——补同源 16px 图标后文字移到
+  // x=49（与另外几行共线），该口径作废。改成「图标槽位左缘贴基准线 + 四行标签文字共线」：
+  // ① 辅助行新图标槽位左缘贴内容基准线（原断言的直接替换对象，仍是 x=25）；
+  // ② 四行「标签文字左缘 − 各自图标槽位左缘」的偏移一致（同源 16px 槽位 + 8px gap，
+  //    相对比较、不写死 px、中英两态通用——文案长短不改变这个偏移）；
+  // ③ 从内容基准线起的三行（面具 / 灰度 / 辅助行）文字绝对左缘共线。
+  // ③ 遮住按钮沿用 controls.css 次操作档居中 + 14px 内边距，绝对左缘本就不在基准线上，
+  // 本票按「明确不改」不动它，由 ② 的相对比较一并锁住它的同源槽位。
+  if (g.auxIcon) {
+    check(near(g.auxIcon.left, g.content.left), `${label}：辅助行图标槽位左缘贴内容基准线（${f(g.auxIcon.left)} vs ${f(g.content.left)}）`);
+  }
+  if (g.auxIconCss) {
+    check(
+      g.auxIconCss.size === 16 && g.auxIconCss.display === 'block' && /^0 0 auto$/.test(g.auxIconCss.flex) && g.auxIconCss.ariaHidden === 'true',
+      `${label}：辅助行新图标 16px 槽位 / display:block / flex:none / aria-hidden（${JSON.stringify(g.auxIconCss)}）`,
+    );
+  }
+  const rowPairs = g.rowTexts.map((t, i) => ({ t, icon: g.rowIcons[i] })).filter((p) => p.t && p.icon);
+  if (rowPairs.length === 4) {
+    const offsets = rowPairs.map((p) => p.t.left - p.icon.left);
+    const spread = Math.max(...offsets) - Math.min(...offsets);
+    check(spread <= 1, `${label}：四行标签文字相对各自图标槽位的起点共线（同源 16px 槽位 + 8px gap，最大差 ${f(spread)}px ≤1；${offsets.map(f).join(' / ')}）`);
+  }
+  const baselineTexts = [g.rowTexts[0], g.rowTexts[1], g.rowTexts[3]].filter(Boolean);
+  if (baselineTexts.length === 3) {
+    const ls = baselineTexts.map((t) => t.left);
+    const spread = Math.max(...ls) - Math.min(...ls);
+    check(spread <= 1, `${label}：面具 / 灰度 / 辅助行三行标签文字左缘共线（最大差 ${f(spread)}px ≤1；${ls.map(f).join(' / ')}）`);
   }
   if (g.links.length === 2) {
     check(
@@ -461,6 +509,13 @@ async function checkPopupGeometry(popup, label) {
       near(g.divider.left, g.cardBorder.left) && near(g.divider.right, g.cardBorder.right),
       `${label}：分组线跨整卡宽，左右与卡片边框盒一致（${f(g.divider.left)}…${f(g.divider.right)} vs ${f(g.cardBorder.left)}…${f(g.cardBorder.right)}）`,
     );
+  }
+
+  // ④ #181：两枚 ⓘ（灰度卡 / 辅助行）统一到「开关左侧、固定间距」，右缘共线。
+  // 灰度卡由 .popup-gray-kbd 的 margin-inline-end:auto、辅助行由 label 的 auto 间距
+  // 把 ⓘ + 开关一起推到行尾，开关右缘贴基准线，故两枚 ⓘ 右缘落在同一 x。
+  if (g.infoTips.length === 2) {
+    check(near(g.infoTips[0].right, g.infoTips[1].right), `${label}：两枚 ⓘ 右缘共线（开关左侧固定间距，${f(g.infoTips[0].right)} / ${f(g.infoTips[1].right)}）`);
   }
 }
 

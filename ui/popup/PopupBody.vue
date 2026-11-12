@@ -179,10 +179,16 @@
            卡片边界 + 留白已经分好组）。0.9.3 文字精简：标签 + 开关已经说清这行管什么，
            原先「关掉后不再显示悬浮按钮」只是复述标签，删掉；关掉后还能用什么由 ⓘ 按需给出。
            new 态这一行管的东西还不存在，整行不渲染（原本两句都在说「设置后会出现」）。
-           待授权 / loading / unsupported 也不显示这一行。 -->
+           待授权 / loading / unsupported 也不显示这一行。
+           0.9.3 #181：补一颗与胶囊同源的 16px 图标占同一个槽位（四行标签文字共线），
+           label 用 margin-inline-end:auto 把 ⓘ + 开关推到行尾（两枚 ⓘ 右缘共线）；
+           界面仍叫「悬浮按钮」，不采用形状名。 -->
       <div v-if="hasProfile && (phase === 'new' || phase === 'ready')" class="aux-row">
         <div class="switch-row pm-info-anchor">
-          <label for="pm-popup-capsule">{{ t.popup.showToggle }}</label>
+          <label class="popup-row-label" for="pm-popup-capsule">
+            <CapsuleIcon class="popup-row-icon" />
+            <span>{{ t.popup.showToggle }}</span>
+          </label>
           <InfoTip :text="t.popup.showToggleTooltip" :label="t.common.infoLabel" />
           <input
             id="pm-popup-capsule"
@@ -226,6 +232,7 @@ import { computed } from 'vue';
 import { type MediaFlagKey, type MediaToggles } from '@/core/media';
 import { deleteSiteHeading } from '@/core/site-delete';
 import { t } from '@/ui/i18n';
+import CapsuleIcon from '@/ui/icons/CapsuleIcon.vue';
 import EyeOffIcon from '@/ui/icons/EyeOffIcon.vue';
 import EyeOpenIcon from '@/ui/icons/EyeOpenIcon.vue';
 import MaskIcon from '@/ui/icons/MaskIcon.vue';
@@ -427,8 +434,12 @@ const deleteLabel = deleteSiteHeading();
    0.8.16（#152）：开态图标改用 --pm-fg 墨色，与胶囊开启态同源同态（胶囊图标开关的选中态
    = 填实图标 + 淡灰选中底，不再用强调色，见 ui/toggle/toggle.css）；
    关态仍是 --pm-fg-muted，填实规则继续用 currentColor 自动跟随，眼缝 stroke 保持 var(--pm-bg) */
+/* #181：display:block 去掉 SVG 默认 inline 的额外间隙（modern-web-guidance · css-layout
+   "certain replaced elements like <svg> use display: inline by default ... remove it by
+   applying a block display-outside value"）；flex:none 固定 16px 槽位，长文案下也不被压 */
 .popup-action-icon,
 .popup-row-icon {
+  display: block;
   inline-size: 16px;
   block-size: 16px;
   flex: none;
@@ -453,6 +464,13 @@ const deleteLabel = deleteSiteHeading();
   display: inline-flex;
   align-items: center;
   gap: var(--pm-space-2);
+}
+/* #181：辅助行 label 吃满剩余空间，把 ⓘ + 开关推到行尾——与灰度卡
+   .popup-gray-kbd 的 margin-inline-end:auto 同款思路，两枚 ⓘ 右缘因此共线。
+   不用 order / *-reverse / justify-self 挪位置，DOM 与 Tab 顺序保持不变。
+   选择器带 .popup .aux-row 限定，避开「行首裸 .switch-row」与欢迎页同页嵌入的串味 */
+.popup .aux-row .switch-row .popup-row-label {
+  margin-inline-end: auto;
 }
 /* ⓘ 信息标（#161）：外观收进 styles/info-tip.css 一份共享样式，这里不再写第二套；
    浮层靠 .pm-info-anchor（模板加在带 ⓘ 的那一行）定位，全局样式只留布局。 */
