@@ -61,12 +61,18 @@
       </div>
       <p v-if="isPending && store.state.authError" class="hint error" role="alert">{{ store.state.authError }}</p>
 
-      <!-- 标签页标题 -->
-      <section class="card" data-testid="pm-mgmt-card-title">
-        <h3>{{ t.management.titleHeading }}</h3>
-        <p class="hint">{{ t.management.titleIntro }}</p>
-        <div class="row">
-          <label class="visually-hidden" for="pm-site-title-input">{{ t.management.titleHeading }}</label>
+      <!-- 标题和图标（#182 合卡）：弹窗入口、胶囊菜单、向导里是同一个概念（GLOSSARY），
+           设置页不再按存储结构拆成两张卡。卡内两个字段照搬原两卡的内容，控件类型与
+           自动保存交互不变：标题输入的 focus / 输入 / 失焦 / change 四个钩子原样，
+           图标仍是与向导共用的同一个 IconPicker。没复用 TitleIconFields 的原因：它只有
+           「输入即发射」一个事件，接不上这里的自动保存四钩子，接上了也得改向导共用的组件。 -->
+      <section class="card" data-testid="pm-mgmt-card-title-icon">
+        <h3>{{ t.management.titleIconHeading }}</h3>
+
+        <!-- 标题字段：合卡后卡头是「标题和图标」，字段名「标签页标题」自己站出来
+             （向导同款 caption 档字段名，fields.css 管理页全局引入） -->
+        <div class="field">
+          <label class="pm-tif-label" for="pm-site-title-input">{{ t.management.titleHeading }}</label>
           <input
             id="pm-site-title-input"
             name="site-title"
@@ -82,44 +88,47 @@
             @input="store.onInput(profile.origin)"
             @change="store.saveDraft(profile.origin)"
           />
+          <div class="row quick" role="group" aria-labelledby="pm-site-title-quick" data-testid="pm-mgmt-title-quick">
+            <span id="pm-site-title-quick" class="hint">{{ t.common.quickTitle }}</span>
+            <button
+              v-for="q in QUICK_TITLES"
+              :key="q.id"
+              type="button"
+              class="chip"
+              @click="store.pickTitle(profile.origin, q)"
+            >
+              {{ quickTitleValue(q, locale) }}
+            </button>
+          </div>
+          <!-- 两条说明跟着字段走（0.9.4 文案审计遗留）：先说开关关着时显示什么，再说保存机制；
+               保存那句仍用 aria-describedby 挂在输入框上，aria 语义不变 -->
+          <p class="hint">{{ t.management.titleIntro }}</p>
+          <p id="pm-site-title-hint" class="hint">
+            {{ profile.titleIconSet ? t.management.titleFootnote(fallbackTitle) : t.management.titleFootnoteUnset }}
+          </p>
         </div>
-        <div class="row quick" role="group" aria-labelledby="pm-site-title-quick" data-testid="pm-mgmt-title-quick">
-          <span id="pm-site-title-quick" class="hint">{{ t.common.quickTitle }}</span>
-          <button
-            v-for="q in QUICK_TITLES"
-            :key="q.id"
-            type="button"
-            class="chip"
-            @click="store.pickTitle(profile.origin, q)"
-          >
-            {{ quickTitleValue(q, locale) }}
+
+        <!-- 图标字段（#121）：三态选择器与向导共用同一个组件；「标签页图标」从卡头降为字段标签
+             （legend 本来就取这个键，不再 hide-legend）；说明放在选择项下面，与本页媒体卡同款 -->
+        <div class="field icon-field">
+          <IconPicker
+            :model-value="profile.icon"
+            id-prefix="pm-mgmt"
+            @update:model-value="onIconPick"
+          />
+          <p class="hint">{{ t.management.iconIntro }}</p>
+          <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
+        </div>
+
+        <!-- 恢复出口（#99）进卡（#182）：与「收起的内容」卡底的「恢复网站原来的内容」（#160）
+             完全同款（同结构、同类名、同间距），两处恢复出口形态一致；确认逻辑在 store，不动 -->
+        <div v-if="profile.titleIconSet" class="row reset-row" data-testid="pm-mgmt-title-reset-row">
+          <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="resetTitleIcon">
+            {{ t.common.resetTitleIcon }}
           </button>
+          <span class="hint">{{ t.common.resetTitleIconHint }}</span>
         </div>
-        <p id="pm-site-title-hint" class="hint">
-          {{ profile.titleIconSet ? t.management.titleFootnote(fallbackTitle) : t.management.titleFootnoteUnset }}
-        </p>
       </section>
-
-      <!-- 标签页图标（#121）：三态选择器，与向导共用同一个组件 -->
-      <section class="card" data-testid="pm-mgmt-card-icon">
-        <h3>{{ t.management.iconHeading }}</h3>
-        <p class="hint">{{ t.management.iconIntro }}</p>
-        <IconPicker
-          :model-value="profile.icon"
-          id-prefix="pm-mgmt"
-          hide-legend
-          @update:model-value="onIconPick"
-        />
-        <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
-      </section>
-
-      <!-- 回退出口（#99）：保存过标题和图标才出现；只撤销这两项，不动收起的内容 -->
-      <div v-if="profile.titleIconSet" class="row reset-row" data-testid="pm-mgmt-title-reset-row">
-        <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="resetTitleIcon">
-          {{ t.common.resetTitleIcon }}
-        </button>
-        <span class="hint">{{ t.common.resetTitleIconHint }}</span>
-      </div>
 
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
       <section class="card" data-testid="pm-mgmt-card-rules">
@@ -458,16 +467,31 @@ async function onRulesResetClosed(confirmed: boolean) {
   margin: 0;
 }
 
+/* 合卡（#182）后的两个字段：各自成组，字段名用向导同款 caption 档（.pm-tif-label），
+   排布也对齐向导的 TitleIconFields（字段名在上、控件在下）。两个字段之间留出接近
+   卡间距的一行——合并前它们本来就是两张卡。 */
+.field {
+  margin-top: var(--pm-space-2);
+}
+
+.icon-field {
+  margin-top: var(--pm-space-3);
+}
+
+.field .pm-tif-label {
+  display: block;
+  margin-bottom: var(--pm-space-1);
+}
+
 .title-input {
-  flex: 1;
-  min-width: 180px;
   inline-size: 100%;
   box-sizing: border-box;
 }
 
-.row.quick {
+/* 常用标题 chips 在块内布局里贴住输入框（旧的 -2px 是给 flex 行间距用的，这里不再适用） */
+.field .row.quick {
   gap: 6px;
-  margin-top: -2px;
+  margin: var(--pm-space-1) 0 0;
 }
 
 /* 图片、视频和声音（#116）：三行开关，每行的说明紧跟它解释的那一个；

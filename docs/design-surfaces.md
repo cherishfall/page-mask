@@ -28,7 +28,7 @@
 1. **相对顺序必须一致。**「序」是全产品统一的相对顺序。每个界面按自己的形态跳过没有的项，
    但跳过后剩下的先后关系必须与「序」一致。**不要求三处长一样**：弹窗是快捷卡片、胶囊是
    最小工具栏、设置页是完整表单；弹窗把「标题和图标」「收起内容」并成同一张卡里的两颗按钮、
-   设置页把它们拆成两张卡，都是合法形态。
+   设置页各自成卡，都是合法形态。
 2. **同一样东西只有一种叫法。** 每行的「界面用词」是该行在每个界面的登记名；模板不许写死文字，
    必须取「文案键」那一列（中英各一份）。新增叫法先改 `GLOSSARY.md`，再改这里。
    英文里卡片 / 分组名用名词短语、开关用动作短语，是刻意的角色区分；中文两处同名。
@@ -42,7 +42,7 @@
 
 | 序 | 功能项 | 组 | 说明 |
 |---:|---|---|---|
-| 1 | 标题和图标 | 内容 | 设置页把它拆成「标签页标题」「标签页图标」两张卡，仍是同一项 |
+| 1 | 标题和图标 | 内容 | 四处同一概念；站点设置页 #182 起也是一张卡（卡头取 management.titleIconHeading），不再拆成「标签页标题」「标签页图标」两张卡 |
 | 2 | 收起内容 | 内容 | 胶囊主按钮与弹窗面具卡都管这一项 |
 | 3 | 调整不透明度 | 按钮 | 只属于胶囊菜单；全局设置，不按网站 |
 | 4 | 按钮放回右下角 | 按钮 | 只属于胶囊菜单；拖过之后才出现 |
@@ -87,8 +87,7 @@
 
 | 序 | 功能项 | 控件 | 界面用词（中） | 界面用词（英） | 文案键 | 备注 |
 |---:|---|---|---|---|---|---|
-| 1 | 标题和图标 | pm-mgmt-card-title | 标签页标题 | Tab title | management.titleHeading | 同一项拆成两张卡的第一张 |
-| 1 | 标题和图标 | pm-mgmt-card-icon | 标签页图标 | Tab icon | management.iconHeading | 同一项拆成两张卡的第二张 |
+| 1 | 标题和图标 | pm-mgmt-card-title-icon | 标题和图标 | Title & icon | management.titleIconHeading | 一张卡（#182）：卡内两个字段沿用「标签页标题」（management.titleHeading）与「标签页图标」（management.iconHeading）的名字；卡内底部有「恢复网站原来的标题和图标」出口（#99），不是新的功能项，不加行 |
 | 2 | 收起内容 | pm-mgmt-card-rules | 收起的内容 | Hidden items | management.rulesHeading | 只读清单；卡内底部有「恢复网站原来的内容」出口（#160），不是新的功能项，不加行 |
 | 5 | 整页变灰 | pm-mgmt-card-media | 整页变灰 | Grayscale whole page | media.heading | 开关标签取 media.mediaGray，中文同名 |
 | 7 | 删除这个网站的设置 | pm-mgmt-card-delete | 删除这个网站的设置 | Delete this site’s settings | management.deleteSite.heading | 页脚危险区 |
@@ -121,9 +120,11 @@
 2. **叫法**：每一行的文案键解析出的中英文，必须与表里的「界面用词」逐字相等。
 3. **不写死**：三份模板的文本里不允许出现这些界面用词的字面值——必须走文案键。
 4. **同义键同值**：`media.heading` / `media.mediaGray` / `media.mediaTitle` 的中文必须同名；
-   `management.deleteSite.heading` / `toggle.menuDelete` 必须同名。
+   `management.deleteSite.heading` / `toggle.menuDelete` 必须同名；
+   `management.titleIconHeading` / `popup.editTitle` / `toggle.menuTitle` 必须同名（#182 合卡后
+   站点设置页卡头也用「标题和图标」这一个叫法）。
 5. **E2E 不再各写一份**：三条 E2E 必须从 `tests/e2e/lib/surfaces.mjs` 取期望值，源码里不许再
-   出现整串的菜单顺序 / 设置页五块标题。
+   出现整串的菜单顺序 / 设置页四块标题。
 
 E2E 侧额外做**渲染后**的顺序与叫法比对（弹窗 / 胶囊本体 / 菜单 / 设置页），防止模板解析通过、
 真正渲染出来的顺序却被 CSS 或条件分支改掉。

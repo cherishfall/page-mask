@@ -112,9 +112,13 @@ describe('三处界面对照表（docs/design-surfaces.md）', () => {
     expect(MESSAGES.en.media.heading.length).toBeGreaterThan(0);
     expect(MESSAGES.en.media.mediaGray.length).toBeGreaterThan(0);
 
-    // 标题和图标：弹窗入口、胶囊菜单项、向导标题同一叫法
+    // 标题和图标：弹窗入口、胶囊菜单项、向导标题、站点设置页卡头同一叫法（#182 合卡）
     expect(MESSAGES.zh.popup.editTitle).toBe(MESSAGES.zh.toggle.menuTitle);
     expect(MESSAGES.en.popup.editTitle).toBe(MESSAGES.en.toggle.menuTitle);
+    expect(MESSAGES.zh.management.titleIconHeading).toBe(MESSAGES.zh.popup.editTitle);
+    expect(MESSAGES.zh.management.titleIconHeading).toBe(MESSAGES.zh.toggle.menuTitle);
+    expect(MESSAGES.en.management.titleIconHeading).toBe(MESSAGES.en.popup.editTitle);
+    expect(MESSAGES.en.management.titleIconHeading).toBe(MESSAGES.en.toggle.menuTitle);
     // 收起内容：弹窗按钮与胶囊菜单项同一叫法
     expect(MESSAGES.zh.popup.setupMore).toBe(MESSAGES.zh.toggle.menuContent);
     expect(MESSAGES.en.popup.setupMore).toBe(MESSAGES.en.toggle.menuContent);

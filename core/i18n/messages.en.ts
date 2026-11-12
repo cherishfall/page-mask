@@ -210,15 +210,20 @@ export const en: Messages = {
     missingTitle: 'No settings for this site',
     missingHint: 'Open this site and click the PageMask icon in the toolbar to set it up',
 
+    // “Title & icon” (#182): the card heading on the site settings page — same term as the popup
+    // entry, the capsule menu item and the wizard (guarded by the same-key rule in surfaces test)
+    titleIconHeading: 'Title & icon',
     titleHeading: 'Tab title',
-    titleIntro: 'When the switch above is off, the site’s own title comes back',
+    // The two intros (#182) follow their own fields and name the switch instead of “the switch
+    // above” — the switch lives in the page header, not in this card (copy audit, 0.9.4)
+    titleIntro: 'When “Show this site your way” is off, the site’s own title comes back',
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title',
     titleFootnote: (fallback: string) =>
       `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'The tab uses this icon only when the switch above is on',
+    iconIntro: 'The tab uses this icon only when “Show this site your way” is on',
     iconSite: 'The site’s own icon',
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',

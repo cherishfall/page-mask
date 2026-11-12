@@ -236,15 +236,19 @@ export const zh = {
     missingTitle: '没有这个网站的设置',
     missingHint: '打开这个网站，点浏览器工具栏上的 PageMask 图标，就能设置它',
 
+    // 「标题和图标」（#182）：站点设置页的卡头，与弹窗入口 / 胶囊菜单 / 向导同一叫法（同义键同值有守门）
+    titleIconHeading: '标题和图标',
     titleHeading: '标签页标题',
-    titleIntro: '上面的开关关着时，仍显示网站本来的标题',
+    // 两条 intro（#182）跟着各自字段走：点名「按你的设置显示」这个开关，不再写「上面的开关」——
+    // 说明放进卡里，它解释的对象（页头开关）不在卡里，只能把话说全（0.9.4 文案审计遗留）
+    titleIntro: '「按你的设置显示」关着时，标签页仍显示网站本来的标题',
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
     titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题',
     titleFootnote: (fallback: string) =>
       `停止输入后自动保存。留空就用「${fallback}」——${titleBlankHint}`,
 
     iconHeading: '标签页图标',
-    iconIntro: '上面的开关打开时，标签页才用这里选的图标',
+    iconIntro: '「按你的设置显示」打开时，标签页才用这里选的图标',
     iconSite: '网站原来的图标',
     iconNone: '不显示图标',
     iconPreset: '换成别的图标',

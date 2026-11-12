@@ -16,7 +16,7 @@
  *   规则并集、站点级字段取较新者、列表只有一行
  * - 管理页：两个 tab 用链接语义（aria-current="page"）；没有 hash 时落到 #/sites，点行进入 #/sites/<域名>，
  *   浏览器后退与直接粘贴地址都落在正确视图；列表一行一站（清爽 / 原样、已收起 N 项、可能失效 N 项）；
- *   站点设置页（#41 / #56 / #116 / #157）：五块标题与顺序从对照表取（标签页标题、标签页图标、
+ *   站点设置页（#41 / #56 / #116 / #157 / #182）：四块标题与顺序从对照表取（标题和图标、
  *   收起的内容、整页变灰、删除这个网站的设置）、标签页标题自动保存并可回读、图标上传与清除、收起的内容清单（名称 / 收起方式 /
  *   人话范围）、删除后 5 秒内可撤销且按原下标插回、「在页面上编辑」（无页面时有提示、有页面时打开编辑面板）、
  *   页脚「删除这个网站的设置」与二次确认（标题带域名、默认聚焦「取消」、危险按钮实底红）、
@@ -959,7 +959,7 @@ async function main() {
     );
     await checkSchemes(m, '管理页 · 网站', 'bgSubtle');
 
-    console.log('\n--- 管理页：站点设置页（标签页标题、标签页图标、收起的内容、整页变灰、删除设置） ---');
+    console.log('\n--- 管理页：站点设置页（标题和图标、收起的内容、整页变灰、删除设置） ---');
     await m.click(tid('pm-mgmt-site-link'));
     await poll(async () => (await hash()) === SITE_HASH, '点网站行进入 #/sites/<域名>');
     await m.waitForSelector(tid('pm-mgmt-switch'), { timeout: 5000 });
@@ -967,12 +967,12 @@ async function main() {
     const mgmtSwitch = await findSwitch(m);
     check(mgmtSwitch.node?.name === '按你的设置显示', `站点设置页开关在无障碍树中为 switch「${mgmtSwitch.node?.name}」`);
     await checkCommon(m, '管理页 · 站点设置');
-    // 五块标题与顺序从对照表派生（#157；不再各写一份中文串）
+    // 四块标题与顺序从对照表派生（#157；#182 起标题和图标合为一张卡，不再各写一份中文串）
     const sections = await m.$$eval('main h3', (hs) => hs.map((h) => h.textContent.trim()));
     const expectedSections = SURFACES.siteSettings.map((row) => row.labelZh);
     check(
       sections.join(' / ') === expectedSections.join(' / '),
-      `站点设置页五块标题与顺序来自对照表（${sections.join(' / ')}）`,
+      `站点设置页四块标题与顺序来自对照表（${sections.join(' / ')}）`,
     );
     const cardOrder = await m.$$eval('[data-testid^="pm-mgmt-card-"]', (els) => els.map((el) => el.getAttribute('data-testid')));
     check(
@@ -999,8 +999,13 @@ async function main() {
     await m.reload({ waitUntil: 'load' });
     await m.waitForSelector(siteTitle, { timeout: 5000 });
     check((await m.$eval(siteTitle, (i) => i.value)) === SITE_TITLE, '重新打开管理页，站点标题值仍在');
-    // 回退出口（#99）：保存过标题和图标之后才出现
+    // 回退出口（#99 / #182）：保存过标题和图标之后才出现，且收进「标题和图标」卡内底部
+    // ——与「收起的内容」卡底的「恢复网站原来的内容」（#160）同一个形态
     check(!!(await m.$(tid('pm-mgmt-title-reset'))), '站点设置页出现「恢复网站原来的标题和图标」');
+    check(
+      !!(await m.$(`${tid('pm-mgmt-card-title-icon')} ${tid('pm-mgmt-title-reset-row')}`)),
+      '恢复出口收进「标题和图标」卡内底部（#182，与 #160 同款）',
+    );
 
     // 标签页图标三态（#121）：选「换成别的图标」→ 点一个预置图标；再切回「网站原来的图标」
     await m.click(tid('pm-mgmt-icon-kind-preset'));
