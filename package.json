@@ -1,6 +1,6 @@
 {
   "name": "page-mask",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "PageMask —— 收起网页上不想看的部分：点选要收起的内容，也可以改标签页标题和图标 / Hide the parts of a page you don't want",
   "private": true,
   "type": "module",

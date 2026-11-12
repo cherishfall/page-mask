@@ -2,9 +2,19 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
-## 0.9.5 批次（2026-11-13，进行中）：#190 商店材料修复
+## 0.9.5 发版（2026-11-13）：过夜全量批次（#182–#191）
 
-- **store-shots.mjs 已修通（#190）**：0.9.1 条目里记的「脚本过期」（等旧 testid 与旧 profile 形态）已解决——脚本早已对齐现行 testid 与 profile，真正断掉的是两处环境因素：本机 Clash 系统代理会把虚构域名交给代理（502），必须 `--no-proxy-server` 直连；项目惯用的 `.dev` 虚构名整个 TLD 在 Chrome 的 HSTS 预载表里、http 会被强制升 https，本地 HTTP 服务握不上手，主 fixture 改用 RFC 6761 保留 TLD `acme-journal.test`（公网永不解析），经 `--host-resolver-rules=MAP acme-journal.test 127.0.0.1:<端口>` 映射到本地 fixture，截图不再出现 127.0.0.1。另按 0.9.1 的教训把管理页夹具改成可注册域名裸域；输出目录可用 `STORE_SHOTS_OUT` 临时指到 `tmp/` 目检。6 张 + 宣传图块已预跑验证（产物 `tmp/store-shots-190/`），`docs/store-assets/` 的旧图等发版步重跑生成替换。
+用户睡前授权全权接管：修完实机反馈（Q2 拍板保留「按设置」短名，原则「精简=准确前提下的更简洁」）→ 四路审查（文案 328 键 / 代码 / 全界面 23 张渲染 + 三路新眼睛 / 商店就绪度）→ 拆票 #182–#190 串行修完 → 发版关重渲 25 张再审 → 收尾票 #191 → 发 0.9.5。一票一提交一推送，主会话逐票核验。
+
+- **#183 设置页 ⓘ**：宿主行缺 `pm-info-anchor` 导致气泡贴页面头渲染到视口外 + `space-between` 三子元素把 ⓘ 挤到行中央。修法与 #181 弹窗同款（锚类 + label `margin-inline-end:auto`）；新增静态守门（`<InfoTip` 调用点 vs 锚类计数，**剥离注释后计数**——字面计数会被模板注释骗绿，子代理反向验证时抓到）+ `check-info-tips.mjs` 三页面逐枚悬停断言。流程病根记档：动共享组件，审计单位 = grep 全部调用点，不是凭症状联想（#181 修类漏网即此）。
+- **#182 合卡**：两卡合一复用向导字段组件；恢复出口进卡底与 #160 同款；对照表 4.4 两行合一 + 同义键断言（titleIconHeading=editTitle=menuTitle）；GLOSSARY 站点设置页五区块改四。titleIntro/iconIntro 点名「按你的设置显示」。
+- **#185 端口语义**：`isOriginCovered` 未写端口按通配对齐 Chrome 官方文档（原实现相反且有测试固化错误）；IPv6 方括号 pattern 经 Chromium 源码三环节核实为接受，不动。顺手修正 `*` 方案端口的过时注释。
+- **#186 健壮性**：胶囊三处写入失败回滚（照 handleMediaChange 口径，提示复用同值键 `common.saveFailed`）；幕布恢复钮挂载夹取；向导 body 未解析守卫；P3 六处（`isValidSiteKey('*')`、grant 失败返回 null 跳过对账、muteChains 清理、coverPage 重试、媒体意图排除输入框、失真注释）。
+- **#184 文案**：必修 9 键 + 建议改 14 + 新增 3（pendingHint 假承诺、「还原→恢复」修一类、rulesEditHint 平句重写）；`tests/hint-punctuation.test.ts` 标点守门（豁免 ⓘ 浮层与对话框键，附理由）。`media.heading` en → "Whole-page gray" 同步对照表。
+- **#188/#187/#189 视觉**：design-ui 立「文字入口」五档（GOV.UK Links / Carbon Link / Ant Button 出处）；恢复类链接提为正文色；暗色 radio 硬伤（1.41:1，#191 修）；整页变灰卡**镜像决策**——隐藏卡头、保留可见行标签（与弹窗同构，label[for] 点击通路不断）；欢迎页顺序从对照表派生断言；`--pm-bg-selected` 1.31→1.81:1（#152 辅助信号加强，结构不变）；「跳过引导」归次级入口链接档（动作语义留在 button）；弹窗两颗编辑入口 40→32 档（#153 改判后依据）；⋯ 展开态选中底（刻意不进 150ms 过渡名单——check-pages 深浅巡检会采样到旧色，踩坑留痕）；命名漂移统一到保存名。
+- **#190/#191 商店与发版关**：store-shots.mjs 断因是环境不是代码（Clash 代理 502 → `--no-proxy-server`；`.dev` 整个 TLD 在 Chrome HSTS 预载表 → 改用 RFC 6761 保留 TLD `acme-journal.test`）；§10 矛盾句、§7 补注、§6 子域提示 + 八步自动化预走全过；发版关重渲 25 张三路新眼睛再审，真问题收进 #191（暗色 radio、welcome 演示态矛盾、漏讲灰度段、「调整」入口归档、✕ 同类实测 28×28 达标），**误报五起留实测证据收案**（徽标对比 5.18:1、空白警告句同源常量、胶囊描边 3.25:1、菜单空隙为字形留白、拖动手柄实为 32×32）。
+- **发版**：版本号 0.9.5 → `CHANGELOG.md` 双语条目 → 商店材料同步（头部/§0/§7/§11）→ store-shots 重跑替换 `docs/store-assets/` → tag `v0.9.5` → Release 附 zip。门禁（主会话实跑）：compile ✓ / vitest 55 文件 835 项 ✓ / build + zip + check:package ✓ / check:docs ✓ / E2E 10 脚本（含新 check-info-tips）✓。
+- **留给用户**：仓库公开拍板（#164，隐私政策死链是唯一自动拒审项）；§6 八步真机实走；快捷键真机复核；联系邮箱确认。
 
 ## 0.9.4 发版（2026-11-12）：弹窗视觉统一批次收口
 

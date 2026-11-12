@@ -3,14 +3,14 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-12 · 对应构建 **0.9.4**（`.output/page-mask-0.9.4-chrome.zip`）
+> 最后更新：2026-11-13 · 对应构建 **0.9.5**（`.output/page-mask-0.9.5-chrome.zip`）
 
 ## 0. 提交前清单
 
 - [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.4-chrome.zip`
-- [ ] 版本号已改（`package.json` → `0.9.4`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.4` 待发版时打
-- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.4 弹窗多了一颗「悬浮按钮」图标，三个开关与底部三行重新对齐，弹窗截图需重拍；0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面；弹窗又删掉两行常驻说明、灰度与遮住两行改了措辞；`store-shots.mjs` 已修通（#190），发版步重跑生成）
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.5-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.9.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.5` 发版时打
+- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -187,6 +187,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.9.5 | 2026-11-13 | 实机反馈与全维审查批次：站点设置页「标签页标题」「标签页图标」合为一张卡（「恢复网站原来的标题和图标」进卡内）；「整页变灰」说明气泡修复并贴开关左侧；带非默认端口的已授权页面不再误报未授权（对齐 Chrome 官方 match pattern 端口语义）；悬浮按钮写入失败回滚、幕布恢复按钮视口夹取、向导挂载守卫等健壮性修复；文案精修与标点守门；「文字入口」规则统一、暗色单选对比补足；商店截图脚本修通。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.4 | 2026-11-12 | 弹窗一屏里的同类东西排齐：三个开关右边缘对齐到同一条竖线（原来「悬浮按钮」那个往外偏 13 像素）；底部「全部网站设置 / 插件设置」改成一左一右贴边、「删除这个网站的设置」与卡片内说明左对齐（分隔线仍横跨整卡，它是分组线，有理由的例外）；「悬浮按钮」补上与页面上那颗按钮同源的轮廓图标，四行标签文字起点齐；两枚说明气泡统一到各自开关左边。控件类型、界面用词与权限集合一处未改。详见 `CHANGELOG.md` |
 | 0.9.3 | 2026-11-12 | 修复「整页变灰」默认快捷键装完就没键可用：原来的 `Ctrl+Shift+G` / `⌘⇧G` 撞 Chrome 自带的「查找上一个」，Chrome 会静默不绑定这条命令；改用 `Ctrl+Shift+Y` / `⌘⇧Y`（逐项核对过 Chromium 的两张保留快捷键表，幕布的 `Ctrl+Shift+X` 不变）。插件设置页把「到 Chrome 里设置快捷键」放到整张卡下面、两条命令共用，没绑上的提示补上「可能被系统或其他扩展占用了」；设置页与欢迎页在标签页重新可见时重读绑定，改完键切回来键帽就跟着变。本地已装过的构建只重新加载不会重算建议键，需卸载重装或手动设键，用户手动设过的键不会被覆盖。权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.2 | 2026-11-12 | 「整页变灰」新增默认快捷键（`Ctrl+Shift+G` / `⌘+Shift+G`）：按一次变灰、再按一次恢复彩色，状态按网站记，第一次按键当场申请站点权限；弹窗、插件设置页、欢迎页补齐当前实际绑定的键帽提示并区分 Mac / PC（Mac 按 Apple 键盘规范把 Shift 排在 Command 前）；ADR-0020 正式修订 ADR-0010「全产品只有一条命令」；变灰命令分支补 7 个单测，关态写「字段消失」而非 false。权限集合不变。详见 `CHANGELOG.md` |
@@ -282,7 +283,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `0.9.4`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `0.9.5`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 120 / zh_CN 52 |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |

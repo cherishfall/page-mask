@@ -5,6 +5,48 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.5] - 2026-11-13
+
+实机反馈修复 + 全维审查批次：两张实机报的界面缺陷、一个与 Chrome 官方语义相反的权限判定，外加按「文案 / 代码 / 全界面截图 / 商店材料」四路审查收掉的一批问题。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **站点设置页：「标签页标题」「标签页图标」合并为一张「标题和图标」卡**。向导、弹窗、胶囊菜单里它们本来就是一项，设置页是唯一拆开的地方（0.3.0 的旧结构一直没跟着合）。合并后卡内仍是「标签页标题」「标签页图标」两个字段，自动保存不变；「恢复网站原来的标题和图标」收进卡内底部，与「恢复网站原来的内容」同款
+- **站点设置页「整页变灰」的说明气泡修复**。此前悬停只见问号光标、气泡渲染到了页面外（宿主行少一个定位锚）；位置从行中央移到开关左侧、与弹窗一致。新增两条机器守门（锚类静态检查 + 三处页面逐枚悬停断言），同类问题第四次出现的路被堵死
+- **带非默认端口的页面不再误报「还没允许访问」**。此前匹配模式未写端口时按「只匹配默认端口」判定，与 Chrome 官方语义（未写端口 = 所有端口）相反：已授权网站打开带端口的页面会照常生效，不再陷入「允许访问也没用」的死循环
+- **健壮性**。悬浮按钮上开关 / 拖动定位写入失败时回滚并提示（此前静默失败）；幕布「恢复」按钮换到更小的窗口后不再停在屏幕外；页面还没加载完就打开「标题和图标」「收起内容」不再无响应；另修六处小问题（导入不再接受非法站点名、瞬时读权限失败不再全量注销注入、遮罩结果误报等）
+- **文案精修**。数量单位统一为「项」；说明句句尾句号清零并新增标点守门测试；撤掉幕布的动作统一叫「恢复」；待授权提示不再承诺「允许之后就会按设置显示」（开关若在「原样」，这句话是假的）；英文侧修正单复数、冠词、指代与开关命名（"Show the floating button"）
+- **视觉统一**。立「文字入口」规则（导航蓝 / 次级灰 / 危险红，能点的文字看得出来能点）并全项目归档；暗色模式下未选中的单选圆点对比补足（1.41 → 5.98:1）；欢迎页功能顺序对齐权威表、插图与胶囊选中底对比补足、演示状态与文案一致、补讲「整页变灰」段；「⋯」菜单展开时按钮有选中态；插件设置与管理页若干对齐（同词卡头去重、说明位置统一到字段下方、小控件点击区补足）
+- **商店材料**。6 张截图脚本修通（虚构域名映射本地，截图不再出现 127.0.0.1）、权限描述与版本史更正
+
+#### 面向审阅者
+
+- 机器守门新增：ⓘ 宿主锚类静态检查 + `check-info-tips`（三处页面逐枚悬停断言气泡在视口内）；说明句标点守门；欢迎页顺序从权威对照表派生断言；暗色单选对比断言
+- `docs/design-ui.md` 新增「文字入口」一节（五档，含 GOV.UK / Carbon / Ant 出处）与「危险色两档」登记；站点设置页区块「五改四」，`docs/design-surfaces.md` 对照表、`GLOSSARY.md`、`docs/design.md` 同步
+- 界面用词变更仅两处英文侧：辅助行开关 "Show the floating button"、灰度卡名 "Whole-page gray"（对照表逐字同步）；中文用词不变
+- 门禁：编译、单测 835 项（55 文件）、E2E 十脚本（含新增 check-info-tips）、check:docs / check:package 全绿；产物 `.output/page-mask-0.9.5-chrome.zip`
+
+### English
+
+#### Changes
+
+- **Site settings: "Tab title" and "Tab icon" are now one "Title & icon" card**. The wizard, popup and capsule menu already treat them as one item; the settings page was the only place still splitting them (a 0.3.0-era structure). The card keeps both field names, autosave unchanged; "Use the site's own title and icon" now sits inside the card bottom, matching "Use the site's own content"
+- **Fixed the info bubble on the site settings "Whole-page gray" row**. Hovering used to show only the help cursor — the bubble rendered off-page (its host row lacked a positioning anchor); the bubble also moved from mid-row to the left of the switch, matching the popup. Two machine guards added (a static anchor check plus per-instance hover assertions on three pages)
+- **Pages on non-default ports no longer report "not allowed yet"**. Match patterns without an explicit port were treated as default-port-only, the opposite of Chrome's documented semantics (no port = all ports): authorized sites now work on ported pages instead of looping on a pointless permission prompt
+- **Robustness**. Floating-button toggle / position writes roll back with a notice on failure (previously silent); the curtain's restore button no longer lands off-screen on smaller windows; opening "Title & icon" / "Hide items" before the page has finished loading no longer no-ops; six smaller fixes (imports reject invalid site keys, a transient permission-read failure no longer unregisters every site, cover-result false negatives, etc.)
+- **Copy refinement**. Counts unified to "items"; trailing full stops removed from standing hints with a new punctuation guard; uncovering the curtain is now consistently "Restore"; the pending-authorization hint no longer promises "shown your way" (false when the site switch is off); English fixes for plurals, articles, references, and the toggle label ("Show the floating button")
+- **Visual consistency**. A documented "text entry" rule (nav blue / secondary gray / danger red; clickable text looks clickable) applied across surfaces; dark-mode unchecked radios fixed (1.41 → 5.98:1); the welcome guide aligns with the canonical order, illustration and capsule selected-state contrast fixed, demo state now matches its copy, the gray segment is introduced; the "⋯" button shows a selected state while its menu is open; several alignments in plugin settings and management pages (duplicate card/field headings removed, hints moved below their fields, small-control hit areas)
+- **Store materials**. Screenshot script fixed (fictional domains mapped locally, no more 127.0.0.1 in shots), permission wording and version history corrected
+
+#### For reviewers
+
+- New machine guards: a static ⓘ-anchor check and `check-info-tips` (hover assertions on three pages); a hint punctuation guard; welcome order derived from the canonical surfaces table; dark radio contrast assertions
+- `docs/design-ui.md` gains a "text entry" section (five tiers with GOV.UK / Carbon / Ant sources) and a two-tier danger-color note; the site settings page goes from five blocks to four, with `docs/design-surfaces.md`, `GLOSSARY.md` and `docs/design.md` synced
+- Only two English wording changes: "Show the floating button" and "Whole-page gray" (table-synced); Chinese wording unchanged
+- Gates: typecheck, 835 unit tests (55 files), ten E2E scripts (including the new check-info-tips), check:docs / check:package all green; artifact `.output/page-mask-0.9.5-chrome.zip`
+
 ## [0.9.4] - 2026-11-12
 
 把弹窗一屏里的同类东西排齐。功能与权限都不变——这一版改的全是看得见的对齐与图标。
