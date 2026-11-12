@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.4] - 2026-11-12
+
+把弹窗一屏里的同类东西排齐。功能与权限都不变——这一版改的全是看得见的对齐与图标。
+
+### 中文
+
+#### 改动
+
+- **三个开关右边缘对齐**：原来「按你的设置显示」「整页变灰」两个开关在一条竖线上，「悬浮按钮」那个往外偏了 13 像素，看着像三样东西。现在三个落在同一条竖线上
+- **底部三行与上方对齐**：「全部网站设置」「插件设置」两个入口改成左右各贴一边（原来各占一半、文字居中），「删除这个网站的设置」与卡片里的说明文字左对齐。分隔线仍横跨整张卡——它是分组线，跨整卡是有理由的例外
+- **「悬浮按钮」补上图标**：另外三行标签前都有图标，唯独这行没有，文字比别人靠左 24 像素。现在补了一颗与页面上那颗悬浮按钮同源的轮廓图标，四行文字起点齐了；名字仍是「悬浮按钮」
+- **两枚说明气泡位置统一**：「整页变灰」那枚本来贴着开关，「悬浮按钮」那枚被挤在行中间。现在都在各自开关左边、间距一致
+- 界面上没有增删任何文字，术语与说法一处未改
+
+#### 面向审阅者
+
+- 「同一屏所有行共用一条内容边线」写成成文规矩（`docs/design-ui.md` §五第 8 条），并进一致性复查清单第 13 条；内容内缩量只在 `--pm-card-inset` 一处定义
+- 新增自动检查：中英两种语言下逐项比对三个开关右缘、底部三行左右落点、四行图标位置、两枚气泡右缘与分隔线宽度；另加 4 项单测守住「内缩量只有一处来源」
+- 控件类型按语义保留、不改：开关管记住的状态（按你的设置显示 / 整页变灰 / 悬浮按钮），按钮做一次性动作（遮住这一页刷新即还原）。Apple HIG、Carbon、Ant Design 三家规范同此口径
+- 遗留观察：「整页变灰」标签前的圆形图是功能图标，与信息标外形相近；换图形要连悬浮按钮、菜单、站点设置页一起换，另批再议
+- 门禁：编译、单测 807 项（51 个文件）、E2E 九个脚本 1067 项断言全绿、文档与打包检查通过
+
+### English
+
+#### Changed
+
+- **The three switches now share one edge**: “Shown your way” and “Grayscale whole page” sat on one vertical line while “Floating button” was 13 px further out, so the row read as a different kind of thing. All three now line up on the same edge
+- **The bottom rows line up with the cards above**: “All site settings” and “Settings” now hug the left and right ends of the content area (they used to split the row in half with centered text), and “Delete this site’s settings” lines up with the explanatory text inside the cards. The divider still spans the full card width — it separates groups, which is a deliberate exception
+- **The floating button row got an icon**: the other three rows have an icon before the label, this one had none, so its text started 24 px further left. It now carries an outline icon taken from the floating button itself, so all four labels start at the same place. The name is still “Floating button”
+- **Both info tips moved to the same spot**: the one beside “Grayscale whole page” already sat against its switch, the one beside “Floating button” had been pushed into the middle of the row. Both now sit against their own switch, the same distance away
+- No wording was added or removed, and no name changed
+
+#### For reviewers
+
+- “Every row on one screen shares one content edge” is now a written rule (`docs/design-ui.md` §五, rule 8) and a new entry in the consistency checklist; that inset is expressed in exactly one place (`--pm-card-inset`)
+- New automated checks compare, in both Chinese and English, the right edges of the three switches, the left and right edges of the bottom rows, the four icon slots, the two info tips and the divider; four new unit tests guard the single source of that inset
+- Control types stay as they are, by meaning: switches manage remembered state (“Shown your way” / “Grayscale whole page” / “Floating button”), buttons perform a one-off action (“Cover this page” is gone on reload). Apple HIG, Carbon and Ant Design all draw the same line
+- Known leftover: the round glyph before “Grayscale whole page” is a function icon that resembles the info tip; replacing it means changing the floating button, its menu and the site settings page together, so it waits for its own round
+- Gates: type check, 807 unit tests (51 files), 1067 E2E assertions across nine scripts, doc and package checks — all green
+
 ## [0.9.3] - 2026-11-12
 
 修复「整页变灰」快捷键装完就没有键可用的问题，并让改键前后界面把状态说清楚。权限集合不变。
