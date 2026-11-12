@@ -207,6 +207,9 @@
   --pm-font-weight-strong: 600;
   --pm-font-weight-medium: 500;
   --pm-line-height: 1.5;
+  /* 文字链接下划线的偏移（#192 收口成 token）：下划线离字底 2px，不压字形；
+     全项目文字入口共用一个值（GOV.UK Links 立场的落地，docs/design-ui.md §四） */
+  --pm-underline-offset: 2px;
 
   /* ── 控件尺寸：小 28 / 默认 32 / 大 40（浮层工具条用 28，触屏与主要提交用 40）
    *   左右内边距 14，小号 12（docs/design-ui.md §四） ── */

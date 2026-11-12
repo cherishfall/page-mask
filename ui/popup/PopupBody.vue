@@ -342,7 +342,7 @@ const deleteLabel = deleteSiteHeading();
   color: var(--pm-fg-muted);
   font-size: var(--pm-font-size-caption);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
   white-space: nowrap;
 }
 .popup-guide:hover {
@@ -422,7 +422,7 @@ const deleteLabel = deleteSiteHeading();
   color: var(--pm-fg-muted);
   font-size: var(--pm-font-size-caption);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 .links > .popup-link:hover {
   color: var(--pm-fg);
@@ -570,7 +570,7 @@ const deleteLabel = deleteSiteHeading();
   color: var(--pm-danger);
   text-align: left;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 .popup > .text-danger:hover:not(:disabled) {
   background: none;
@@ -589,11 +589,11 @@ const deleteLabel = deleteSiteHeading();
   font: inherit;
   cursor: pointer;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 .stale-link:hover {
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 .stale-link:focus-visible {
   outline: var(--pm-focus-ring);

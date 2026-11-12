@@ -97,8 +97,9 @@ const srv = await startServer((req, res) => {
 const ORIGIN = `http://${SITE_HOST}`;
 
 /** 管理页用的虚构站点（不需要真实存在，只要权限已授予、配置在存储里）。
- * 一律用可注册域名裸域：harness 的 siteKeyOf 不带 PSL，子域 URL 会写成子域 key，
- * 内核 sanitizeProfile 整条拒收，管理页列表就对不上（0.9.1 的教训，见 DEVLOG） */
+ * 一律用可注册域名裸域：站点配置的存储键与 origin 字段都必须是规范站点 key
+ * （eTLD+1，内核 isValidSiteKey 口径），裸域写法保证键、字段与显示同形
+ * （#192 起 harness 的 siteKeyOf 已与内核同为 eTLD+1；0.9.1 的教训见 DEVLOG） */
 const DEMO_SITES = [
   { origin: 'https://acme-notes.com', title: '阅读', rules: 3, stale: 0 },
   { origin: 'https://daily-digest.co', title: '文档', rules: 2, stale: 1 },

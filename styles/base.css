@@ -48,7 +48,7 @@ textarea {
 a {
   color: var(--pm-accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 a:hover {
   text-decoration: underline;

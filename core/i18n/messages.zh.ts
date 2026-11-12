@@ -567,6 +567,7 @@ export const zh = {
   /** 出错时给用户看的话（core 里的导出、导入等） */
   errors: {
     invalidExportFile: '这个文件不是 PageMask 导出的设置文件',
+    fileTooLarge: '这个文件超过 20 MB，太大；PageMask 的设置文件不会这么大',
     newerImport: '这个文件来自更新版本的 PageMask，先升级 PageMask 再导入',
     noSitesInFile: (base: string) => `${base}：文件里没有能导入的网站设置，本机的数据没有改动`,
     invalidProfile: '网站设置的数据格式不对，没有保存',

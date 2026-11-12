@@ -11,6 +11,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPO_ROOT } from './browser.mjs';
+import { siteKey as coreSiteKey, sitePatterns as coreSitePatterns } from './site-key.mjs';
 
 export class CheckError extends Error {}
 
@@ -83,29 +84,26 @@ export function resultsDir(name) {
 }
 
 /**
- * 页面 origin → 站点 key（core/site-key.ts，#162）。
- * E2E 夹具全部是 127.0.0.1:<端口>：IP 字面量保留端口，所以每个端口仍是独立站点。
+ * 页面 origin / 主机名 → 站点 key。直接复用内核实现（core/site-key.ts，#162，经
+ * tests/e2e/lib/site-key.mjs 转译加载）：可注册域名按 eTLD+1 合并（weread.qq.com → qq.com），
+ * IP 字面量 / localhost / 单标签主机名 / 带端口保留 host[:port] 不合并——真站 E2E 写档案的
+ * 存储键与内容脚本读的必须是同一个（0.9.1 的简版只保留 host[:port]，#192 修复）。
+ * 内核返回 null（无法解析）时退回原值，不让断言工具在坏输入上先炸。
  * 用法：const key = siteKeyOf(srv.origin); // '127.0.0.1:54321'
+ *       siteKeyOf('https://weread.qq.com/'); // 'qq.com'
  */
 export function siteKeyOf(origin) {
-  try {
-    const u = new URL(origin);
-    return u.hostname + (u.port ? `:${u.port}` : '');
-  } catch {
-    return origin;
-  }
+  return coreSiteKey(origin) ?? origin;
 }
 
 /**
- * 站点 key → 规范匹配模式（与 core/site-key.ts 的 sitePatterns 一致）。
- * 带端口的 key 不能写 `*://host:port/*`（Chrome 判 Invalid port），要拆成 http / https 两条。
+ * 站点 key → 规范匹配模式，与内核 sitePatterns 同一实现。
+ * 带端口的 key 不能写 `*://host:port/*`（Chrome 判 Invalid port），要拆成 http / https 两条；
+ * 可注册域名是裸域在前、子域在后两条。
  * 用法：sitePatternsOf(srv.origin); // ['http://127.0.0.1:54321/*', 'https://127.0.0.1:54321/*']
  */
 export function sitePatternsOf(origin) {
-  const key = siteKeyOf(origin);
-  if (key.lastIndexOf(':') > key.indexOf(']')) return [`http://${key}/*`, `https://${key}/*`];
-  if (key.includes(':') || key === 'localhost' || !key.includes('.')) return [`*://${key}/*`];
-  return [`*://${key}/*`, `*://*.${key}/*`];
+  return coreSitePatterns(siteKeyOf(origin));
 }
 
 /**

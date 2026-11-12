@@ -284,6 +284,17 @@ function onRowDelete() {
 .site-more[aria-expanded='true']:active {
   box-shadow: inset 0 0 0 9999px var(--pm-state-press);
 }
+/* 强制颜色模式（Windows 高对比度，#192）：--pm-bg-selected 在此模式下回落成 Canvas、
+   state layer 的 box-shadow 被浏览器丢弃，展开态与平常零差异、读不出菜单开着——
+   与胶囊「⋯」（ui/toggle/toggle.css，#189）同一口径改用系统 Highlight / HighlightText 反色，
+   box-shadow 声明一并清掉；不动几何与 :focus-visible 焦点环 */
+@media (forced-colors: active) {
+  .site-more[aria-expanded='true'] {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+  }
+}
 
 /* 行尾菜单：与胶囊菜单同一套材质（popover 关着时 UA 设 display:none） */
 .site-menu {

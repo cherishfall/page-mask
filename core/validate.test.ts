@@ -8,7 +8,9 @@ import {
   isValidStrategy,
   readSettings,
   sanitizeProfile,
+  sanitizeScope,
   sanitizeTabIcon,
+  MAX_SCOPE_LABEL_LENGTH,
 } from './validate';
 import { isValidSiteKey } from './site-key';
 import { createEmptyProfile } from './types';
@@ -103,6 +105,30 @@ describe('站点 key、范围、方案校验（表格驱动）', () => {
   ];
   it.each(cases)('%s', (_name, fn, expected) => {
     expect(fn()).toBe(expected);
+  });
+});
+
+describe('sanitizeScope 的 label 长度上限（#192）', () => {
+  const scopeOf = (label: string) => sanitizeScope({ type: 'include', patterns: [{ label, prefix: 'https://a.com/r/' }] }, 'a.com');
+  const firstLabel = (s: ReturnType<typeof sanitizeScope>): string => {
+    expect(s).not.toBeNull();
+    expect(s!.type).toBe('include');
+    return s!.type === 'all' ? '' : s!.patterns[0]!.label;
+  };
+
+  it('超长 label 按码点截断到 60（与标签页标题同口径，#177），规则本身保留', () => {
+    expect([...firstLabel(scopeOf('长'.repeat(500)))]).toHaveLength(MAX_SCOPE_LABEL_LENGTH);
+    // 上限内的 label 原样保留
+    expect([...firstLabel(scopeOf('首'.repeat(60)))]).toHaveLength(60);
+  });
+
+  it('按码点截断不劈开代理对：截断点落在代理对上时整对丢弃，不产生悬空代理', () => {
+    // 59 个 ASCII + 2 个 emoji = 61 个码点 → 截到 60 码点 = 59 个 a + 完整 1 个 emoji
+    const label = firstLabel(scopeOf('a'.repeat(59) + '🌍🌍'));
+    expect([...label]).toHaveLength(60);
+    expect(label.endsWith('🌍')).toBe(true);
+    // 末尾不是悬空的高代理（UTF-16 0xD800–0xDBFF）
+    expect(/[\uD800-\uDBFF]$/.test(label)).toBe(false);
   });
 });
 

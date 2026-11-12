@@ -469,7 +469,7 @@ async function onRulesResetClosed(confirmed: boolean) {
 .reset-row .ghost {
   color: var(--pm-fg);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 .reset-row .hint {
   margin: 0;
@@ -591,7 +591,7 @@ async function onRulesResetClosed(confirmed: boolean) {
 .undo .ghost {
   color: var(--pm-fg);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 
 .undo-on {

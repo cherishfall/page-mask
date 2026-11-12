@@ -532,6 +532,7 @@ export const en: Messages = {
 
   errors: {
     invalidExportFile: 'This file isn’t a settings file exported by PageMask',
+    fileTooLarge: 'This file is over 20 MB, which is too large; PageMask settings files aren’t this big',
     newerImport: 'This file comes from a newer PageMask. Update PageMask before importing',
     noSitesInFile: (base: string) => `${base}: it has no site settings to import, so nothing on this computer was changed`,
     invalidProfile: 'The site settings are malformed and weren’t saved',

@@ -232,7 +232,7 @@ h1 {
  * 「跳过引导」与说明文字同排——文字入口规则按上下文分档 */
 .skip {
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
 }
 /* 滚动区：常态内容不满一屏，竖直居中（0.8.11 目检 A4「头重脚轻」）；
    矮视口时内容在这里滚，底栏永远完整可见。居中由 .stack 的 margin-block:auto 承担：

@@ -29,6 +29,14 @@ import {
 
 export const MAX_SELECTOR_LENGTH = 1000;
 
+/**
+ * 生效范围行 label 的长度上限（#192）：与标签页标题同一口径（60 码点，#177）。
+ * label 随导入 / 坏数据进来时此前无界——一份带 1MB label 的文件会原样落库，
+ * 并整段渲染在向导「在哪些页面收起」与站点设置页里。超长按码点截断而不是拒绝：
+ * 范围本身合法，丢几个字不丢整条规则。
+ */
+export const MAX_SCOPE_LABEL_LENGTH = 60;
+
 export const STRATEGY_IDS: readonly StrategyId[] = ['remove', 'blank', 'mask'];
 const SWITCH_STATES: readonly SwitchState[] = ['disguised', 'original'];
 
@@ -130,7 +138,9 @@ export function sanitizeScope(v: unknown, site?: string): Scope | null {
     if (!okPrefix) return null;
     // 匹配方式白名单：缺省（前缀）或 'exact'（精确页面）
     if (p.match !== undefined && p.match !== 'exact') return null;
-    patterns.push(p.match === 'exact' ? { label: p.label, prefix: p.prefix, match: 'exact' } : { label: p.label, prefix: p.prefix });
+    // label 截到与标题同一上限（#192）：slice 按 UTF-16 码元切会劈开代理对，按码点切（#177 同款）
+    const label = [...p.label].slice(0, MAX_SCOPE_LABEL_LENGTH).join('');
+    patterns.push(p.match === 'exact' ? { label, prefix: p.prefix, match: 'exact' } : { label, prefix: p.prefix });
   }
   return { type: v.type, patterns };
 }

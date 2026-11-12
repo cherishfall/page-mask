@@ -266,7 +266,7 @@
   font: inherit;
   font-size: var(--pm-font-size-caption);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: var(--pm-underline-offset);
   cursor: pointer;
 }
 .pm-wiz-link:hover,

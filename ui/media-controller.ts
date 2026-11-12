@@ -52,8 +52,9 @@ function intentCoversVideo(intent: IntentMark, video: HTMLVideoElement): boolean
 }
 
 /**
- * 页面上的文本输入位置（输入框、多行框、可编辑区域）：这里的操作不算「想看视频」。
- * 在搜索框里敲空格 / 回车、点输入框准备打字，都不该给三层层级内的视频「背书」放行（#186）
+ * 页面上的输入位置：一切 <input>（不限文本类——复选框、单选、按钮同样算）、<textarea>
+ * 与可编辑区域。这里的操作不算「想看视频」：在搜索框里敲空格 / 回车、点任何表单控件，
+ * 都不该给三层层级内的视频「背书」放行（#186）。注释按现实现写全口径，行为不动（保守方向）
  */
 function isPageEditable(el: Element | null): boolean {
   if (!(el instanceof HTMLElement)) return false;

@@ -28,9 +28,10 @@ function assert(cond, msg) {
 }
 
 async function main() {
-  // 授权整站含子域（站点可能重定向到 www 等子域）
+  // 每站授权「裸域 + 子域」两条（与内核 sitePatterns 同型，#192）：`*.host` 不覆盖裸域，
+  // 只给子域的话落在裸域的页面会拿不到权限；站点可能重定向到 www 等子域，两条都要
   const hosts = [...new Set(SITES.map((s) => new URL(s.url).hostname))];
-  const ext = await launchExtension({ hostPatterns: hosts.map((h) => `*://*.${h}/*`), revocable: false });
+  const ext = await launchExtension({ hostPatterns: hosts.flatMap((h) => [`*://${h}/*`, `*://*.${h}/*`]), revocable: false });
   const { browser, control } = ext;
   try {
     console.log('✓ 扩展已加载（真机模式）');
@@ -122,6 +123,15 @@ async function main() {
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-preview"]');
         await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
         await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-save"]');
+        // #159：原样态站点保存后多一问「保存后看不到效果，现在打开吗」——走「先保持原样」
+        // 照常保存、开关不动（与本脚本后面「手动开清爽再验伪装」的顺序一致）；清爽态没有这一问，
+        // 保存即关闭。#192 修复记录：脚本写于 #159 之前，假定了「保存即关闭」，真站上一直停在这一问
+        try {
+          await waitForShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-open-stay"]', { timeout: 2000 });
+          await clickInShadow(page, WIZARD_HOST, '[data-testid="pm-wiz-open-stay"]');
+        } catch {
+          // 清爽态路径：没有这一问
+        }
         await waitFor(page, '保存后向导关闭', (h) => !document.querySelector(h), [WIZARD_HOST]);
         // 「收起内容」流程不碰开关（#81）：存完是原样态；规则落库后手动开清爽，再验伪装
         const saved = await getProfile(control, origin);

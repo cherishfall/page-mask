@@ -28,6 +28,12 @@ import { exportFileName } from '@/core/export-file';
 export const DEFAULT_KEY = '__default__';
 /** 打字停顿多久后自动保存（打完字直接关掉标签页也不丢，审查 N28） */
 export const AUTOSAVE_MS = 800;
+/**
+ * 导入文件的大小预检上限（#192）：正式导出的设置文件最大也就几十 KB，几 GB 的 JSON
+ * 会在 file.text() 上把管理页卡死。超上限先给人话报错、不读内容——file.size 是同步
+ * 拿到的，读文件之前就能拦。20 MB 给正常文件留足余量。
+ */
+export const MAX_IMPORT_FILE_BYTES = 20 * 1024 * 1024;
 
 export interface ManagementState {
   profiles: SiteProfile[];
@@ -339,6 +345,11 @@ export function createManagementStore() {
    */
   async function importFile(file: File): Promise<'auto' | 'confirm' | 'failed'> {
     state.importResult = '';
+    // 大小预检（#192）：超上限的文件不读内容，走导入结果同一通道给人话报错
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      state.importResult = t().errors.importFailed(t().errors.fileTooLarge);
+      return 'failed';
+    }
     let bundle: unknown;
     try {
       bundle = JSON.parse(await file.text());

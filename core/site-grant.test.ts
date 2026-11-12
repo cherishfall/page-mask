@@ -50,6 +50,15 @@ describe('isOriginCovered：当前页面是否被这批模式覆盖', () => {
     expect(isOriginCovered('https://weibo.com:8443/x', ['https://weibo.com:8443/*'])).toBe(true);
   });
 
+  it('显式 `:*` 通配端口与「没写端口」同一口径（官方端口语法允许 *；#192 防御性补齐）', () => {
+    expect(isOriginCovered('https://weibo.com/x', ['*://weibo.com:*/**'])).toBe(true);
+    expect(isOriginCovered('https://weibo.com:8443/x', ['https://weibo.com:*/*'])).toBe(true);
+    expect(isOriginCovered('https://[::1]:8080/x', ['*://[::1]:*/*'])).toBe(true);
+    // 写了具体端口的模式仍只匹配该端口，不受 ：* 归一影响
+    expect(isOriginCovered('https://weibo.com/x', ['https://weibo.com:8443/*'])).toBe(false);
+    expect(isOriginCovered('https://weibo.com/x', ['https://weibo.com:443/*'])).toBe(true);
+  });
+
   it('路径按 `*` 通配做前缀匹配（项目默认 /*，但不假设）', () => {
     expect(isOriginCovered('https://example.com/docs/a', ['https://example.com/docs/*'])).toBe(true);
     expect(isOriginCovered('https://example.com/docs', ['https://example.com/docs/*'])).toBe(false);

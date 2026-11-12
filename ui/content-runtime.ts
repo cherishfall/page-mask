@@ -910,9 +910,15 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
       sendResponse({ ok: true, covered: curtain.active });
       return false;
     }
-    // popup / 后台触发的入口消息
-    if (msg?.t === 'openWizard') void openWizard(msg.mode ?? 'editContent');
-    else if (msg?.t === 'siteReset') {
+    // 入口消息 openWizard（popup 的「标题和图标 / 收起内容」两颗入口按钮触发）：
+    // 只接受扩展自己的页面发来的（core/messages.ts 的 fromExtensionPage），与上面四条
+    // 幕布消息同一口径；网页脚本调不到 runtime.sendMessage，当前无可达路径，纯一致性加固（#192）
+    if (msg?.t === 'openWizard') {
+      if (!fromExtensionPage(sender as { id?: string; url?: string } | undefined, browser.runtime.id, extensionBase)) {
+        return false;
+      }
+      void openWizard(msg.mode ?? 'editContent');
+    } else if (msg?.t === 'siteReset') {
       void handleSiteReset().then(sendResponse, () => sendResponse({ ok: false }));
       return true; // 异步回复：后台等本页还原完再收回授权
     }

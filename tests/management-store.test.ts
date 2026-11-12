@@ -4,7 +4,7 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { AUTOSAVE_MS, createManagementStore, DEFAULT_KEY } from '@/entrypoints/management/store';
+import { AUTOSAVE_MS, createManagementStore, DEFAULT_KEY, MAX_IMPORT_FILE_BYTES } from '@/entrypoints/management/store';
 import { t } from '@/core/i18n';
 import { createEmptyProfile, type SiteProfile } from '@/core/types';
 import { sitePatterns } from '@/core/site-key';
@@ -224,6 +224,17 @@ describe('管理页 store', () => {
     await store.reload();
 
     expect(await store.importFile(new File(['{ not json'], 'broken.json'))).toBe('failed');
+    expect(store.state.importResult).toBe(`导入失败：${t().errors.invalidExportFile}`);
+
+    // 超上限的文件先预检、不读内容（#192）：几 GB 的 JSON 会把管理页卡死
+    const big = new File(['{}'], 'big.json');
+    Object.defineProperty(big, 'size', { value: MAX_IMPORT_FILE_BYTES + 1 });
+    expect(await store.importFile(big)).toBe('failed');
+    expect(store.state.importResult).toBe(`导入失败：${t().errors.fileTooLarge}`);
+    // 上限内的文件照常走读文件流程（这里给坏 JSON，报「不是导出文件」而不是「太大」）
+    const okSize = new File(['{ not json'], 'ok.json');
+    Object.defineProperty(okSize, 'size', { value: MAX_IMPORT_FILE_BYTES });
+    expect(await store.importFile(okSize)).toBe('failed');
     expect(store.state.importResult).toBe(`导入失败：${t().errors.invalidExportFile}`);
 
     store.state.importMode = 'replace';

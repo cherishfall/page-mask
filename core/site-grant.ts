@@ -103,8 +103,12 @@ function splitHostPort(host: string): { host: string; port: string } {
 function parsePattern(pattern: string): ParsedPattern | null {
   const m = /^(\*|https?):\/\/([^/]*)(\/.*)?$/i.exec(pattern.trim());
   if (!m) return null;
-  const { host, port } = splitHostPort(m[2]!.toLowerCase());
+  let { host, port } = splitHostPort(m[2]!.toLowerCase());
   if (!host) return null;
+  // 官方端口语法里显式写 `:*` 也是「通配所有端口」（developer.chrome.com match patterns：
+  // port 是 1–65535 或 *），与「没写端口」同一口径——'*' 不是数字，不归一的话任何页面
+  // 的有效端口都对不上、这条模式永不命中。项目自己产不出这个形态，防御性补齐（#192）
+  if (port === '*') port = '';
   return { scheme: m[1]!.toLowerCase(), host, port, path: pathRegExp(m[3] ?? '/*') };
 }
 
