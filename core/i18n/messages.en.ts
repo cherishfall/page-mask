@@ -226,7 +226,9 @@ export const en: Messages = {
       `Saved automatically once you stop typing; leave it empty to use “${fallback}” — ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
-    iconIntro: 'The tab uses this icon only when “Show this site your way” is on',
+    // #191: "uses this icon" read oddly with “No icon” picked — the choice covers all three
+    // kinds (site's own / none / a preset), so say "the icon follows what is picked here"
+    iconIntro: 'When “Show this site your way” is on, the tab icon is whatever is picked here',
     iconSite: 'The site’s own icon',
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -302,7 +304,7 @@ export const en: Messages = {
     toggleOpacityError: 'Couldn’t save the opacity, please try again.',
     toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
-    shortcutHeading: 'Keyboard shortcut',
+    shortcutHeading: 'Keyboard shortcuts',
     shortcutIntro:
       'Covering is temporary — reloading or leaving the page restores it; turning the whole page gray is remembered per site, press again to turn back to color',
     shortcutLabel: 'Cover / Restore',
@@ -379,7 +381,10 @@ export const en: Messages = {
       },
       {
         title: 'The floating button on the page',
-        text: 'On sites you’ve added, a floating button sits on the page: click it to switch “Your settings / As is” or cover this page. Drag it to move it anywhere.',
+        // #191: cover the third capsule segment (whole-page gray) that was missing, and
+        // state which state the illustration shows — the embedded real capsule renders
+        // "Your settings" on (the two states look different, #152)
+        text: 'On sites you’ve added, a floating button sits on the page: click it to switch “Your settings / As is” or cover this page. Drag it to move it anywhere. Another button on it turns the whole page gray: one click makes the page black & white, another click brings the colors back. The picture shows “Your settings” turned on.',
         features: [],
       },
     ],

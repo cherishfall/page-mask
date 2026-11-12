@@ -53,6 +53,15 @@
             <circle cx="133" cy="26" r="1.7" class="sk-puzzle-dot" />
             <circle cx="140" cy="26" r="1.7" class="sk-puzzle-dot" />
             <path d="M146 34 l6 8 M146 34 l-6 8" class="sk-line" />
+            <!-- 图钉（#191）：文案说「点图钉固定」，此前只画到光标指向拼图盒、图钉没画。
+                 画在拼图盒与固定好的 P 之间（文案的动作顺序：点拼图 → 点图钉 → 固定成 P），
+                 竖置图钉 = Chrome 扩展菜单里那枚固定钮的样子。对比度与拼图盒同档：
+                 fg-muted 对工具栏底（--pm-bg）浅 4.83 / 深 5.98 ≥3 -->
+            <g class="sk-pin">
+              <circle cx="167" cy="15.5" r="3.2" />
+              <path d="M164.6 18 L169.4 18 L168.2 22 L165.8 22 Z" />
+              <path class="sk-pin-needle" d="M167 22 L167 29.5" />
+            </g>
             <rect x="182" y="8" width="28" height="28" rx="8" class="sk-on" />
             <text x="196" y="27" text-anchor="middle" class="sk-on-text">P</text>
             <circle cx="240" cy="22" r="9" class="sk-dot" />
@@ -71,6 +80,7 @@
               :covered="false"
               :cover-shortcut="coverShortcut"
               :gray-shortcut="grayShortcut"
+              :media="{ mediaGray: false }"
               preview
             />
           </div>
@@ -357,6 +367,18 @@ h1 {
 }
 .sk-puzzle-dot {
   fill: var(--pm-bg);
+}
+/* 图钉（#191）：填充与拼图盒同一档（fg-muted，见 SVG 内注释），针尖用同色细线。
+   针尖选择器带 .sk-pin 前缀压过上一条的 path 填充（同特异性、靠源码顺序取胜） */
+.sk-pin circle,
+.sk-pin path {
+  fill: var(--pm-fg-muted);
+}
+.sk-pin path.sk-pin-needle {
+  fill: none;
+  stroke: var(--pm-fg-muted);
+  stroke-width: 1.6;
+  stroke-linecap: round;
 }
 .sk-line {
   stroke: var(--pm-fg-muted);

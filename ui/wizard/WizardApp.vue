@@ -265,9 +265,13 @@
                 :aria-label="t.wizard.nameLabel(i + 1)"
                 :data-testid="`pm-draft-name-${i + 1}`"
               />
+              <!-- #191 文字入口归档：每行的编辑入口（改名字 / 方式 / 范围全从这里进），
+                   此前是 ghost 裸文字——与旁边的 muted 摘要同灰、无下划线，读不出能点（#74 教训）。
+                   归 design-ui §四「嵌流文字按钮」档：正文色 + 常驻下划线，与 .pm-wiz-link.plain
+                   （恢复出口）同一档同一份样式 -->
               <button
                 type="button"
-                class="pm-btn ghost small pm-wiz-adjust"
+                class="pm-wiz-link plain pm-wiz-adjust"
                 :aria-expanded="!!d.expanded"
                 :data-testid="`pm-draft-${i + 1}-adjust`"
                 @click="d.expanded = !d.expanded"

@@ -98,6 +98,24 @@ describe('tokens 对比度', () => {
     for (const key of required) expect(listed, key).toContain(key);
   });
 
+  // #191：单选框两态（styles/controls.css 自绘，语言卡 / 导入方式 / 图标三选一共用）。
+  // 未选中描边与选中圆盘都压在卡底上，按 WCAG 1.4.11 非文字控件 ≥3 守门（点名用到的
+  // 组合，防止日后改色时把 radio 的依赖丢了）；圆点对圆盘 ≥4.5 沿表内登记。
+  it('radio 两态（#191）：未选中描边、选中圆盘对卡底 ≥3，圆点 ≥4.5', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const bg = palette[scheme].get('bg')!;
+      const bgSubtle = palette[scheme].get('bg-subtle')!;
+      expect(contrast(palette[scheme].get('fg-muted')!, bg), `${scheme} 未选中描边`).toBeGreaterThanOrEqual(3);
+      // 悬停底换到 bg-subtle 时描边仍是控件边界，同样要 ≥3
+      expect(contrast(palette[scheme].get('fg-muted')!, bgSubtle), `${scheme} 未选中描边（悬停底）`).toBeGreaterThanOrEqual(3);
+      expect(contrast(palette[scheme].get('accent')!, bg), `${scheme} 选中圆盘`).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(palette[scheme].get('on-accent')!, palette[scheme].get('accent')!),
+        `${scheme} 选中圆点`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   for (const row of table) {
     for (const scheme of ['light', 'dark'] as const) {
       it(`${scheme}: ${row.fg} on ${row.bg} ≥ ${row.min}，且与注释一致`, () => {

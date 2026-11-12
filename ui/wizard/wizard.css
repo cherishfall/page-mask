@@ -380,7 +380,9 @@
   align-items: center;
   gap: var(--pm-space-1);
 }
-/* 默认行：调整按钮不参与名称输入框的伸展 */
+/* 默认行：调整按钮不参与名称输入框的伸展。
+   形态归 design-ui §四「嵌流文字按钮」档（#191）：正文色 + 常驻下划线来自 .pm-wiz-link.plain，
+   这里只管布局——它是每行的编辑入口（改名字 / 方式 / 范围），不该缩在 muted 裸文字里 */
 .pm-wiz-draft-head .pm-wiz-adjust {
   flex: none;
 }

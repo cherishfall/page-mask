@@ -3,6 +3,7 @@
  *
  * 扩展页面（popup / 管理页 / 插件设置 / 引导页）与所有页内浮层（悬浮胶囊的菜单与面板、
  * 向导、编辑面板）共用这一份：高度、圆角、内边距、字号、四档、五种状态都只写在这里。
+ * #191 起单选框的外观也在这里（base.css 与 shadow-base.css 各引入一次，全项目一份）。
  *
  * 谁能用上这套外观：
  *   - 扩展页面的原生 <button> 与 <a class="button"> / <label class="button">（它们在 body 里）；
@@ -249,4 +250,84 @@ a.button {
   font: inherit;
   font-size: var(--pm-font-size-caption);
   line-height: 1.4;
+}
+
+/* ── 单选框（#191）：appearance:none 自绘两态，全项目只有这一份 ──
+ * 插件设置的语言卡与导入方式、图标三选一（向导 / 站点设置页共用 fields.css 的圆点）。
+ * 此前是原生控件只染 accent-color：未选中圆圈的描边由浏览器按 color-scheme 自定，
+ * 暗色实测 #3B3B3B 对卡底 #1F2329 只有 1.41:1——WCAG 1.4.11 非文字 3:1 硬伤。
+ * 两态取色（对比度由 tests/tokens-contrast.test.ts 的 radio 断言守门）：
+ *   未选中 = fg-muted 描边（对 bg 浅 4.83 / 深 5.98，两个主题都给足余量；浅色原生画法
+ *     3.23:1 贴线也一并解决。Carbon 的 radio / checkbox 描边同样用比输入框边框更深
+ *     一档的 border-strong：小圆圈要靠更重的墨色才读得出「这是个控件」）；
+ *   选中 = accent 填实 + on-accent 圆点（Chrome 原生单选的平台样子，与开关选中态
+ *     同一套 token，浅 5.18 / 深 6.97）。
+ * 悬停 / 按下补齐 design-ui 的五种状态：未选中沿 bg-subtle / bg-control-active，
+ * 选中沿 accent-hover / accent-active（与开关同构）。 */
+:where(input[type='radio']) {
+  appearance: none;
+  flex: none;
+  position: relative;
+  box-sizing: border-box;
+  inline-size: 13px;
+  block-size: 13px;
+  margin: 0;
+  border: 1px solid var(--pm-fg-muted);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9),
+    background-color 150ms cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+:where(input[type='radio']):checked {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+}
+:where(input[type='radio']):checked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: 50%;
+  background: var(--pm-on-accent);
+}
+:where(input[type='radio']):hover:not(:disabled) {
+  background: var(--pm-bg-subtle);
+}
+:where(input[type='radio']):hover:not(:disabled):checked {
+  border-color: var(--pm-accent-hover);
+  background: var(--pm-accent-hover);
+}
+:where(input[type='radio']):active:not(:disabled) {
+  background: var(--pm-bg-control-active);
+}
+:where(input[type='radio']):active:not(:disabled):checked {
+  border-color: var(--pm-accent-active);
+  background: var(--pm-accent-active);
+}
+:where(input[type='radio']):disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+/* 动效按 design-ui §九：只动颜色类属性，150ms 标准曲线；减弱动效保留 120ms 颜色淡变 */
+@media (prefers-reduced-motion: reduce) {
+  :where(input[type='radio']) {
+    transition-duration: 120ms;
+  }
+}
+/* 强制颜色模式：描边归系统色，选中态用 Highlight / HighlightText（与开关同一套） */
+@media (forced-colors: active) {
+  :where(input[type='radio']) {
+    border-color: CanvasText;
+  }
+  :where(input[type='radio']):checked {
+    border-color: Highlight;
+    background: Highlight;
+  }
+  :where(input[type='radio']):checked::before {
+    background: HighlightText;
+  }
 }

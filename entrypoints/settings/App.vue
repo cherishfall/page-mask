@@ -568,15 +568,17 @@ function onReplaceClose() {
   margin-top: -2px;
 }
 
+/* radio 组裸排（#191）：不再套一层带边内盒——全项目只有这里的单选组外多画了一圈框，
+   与其他卡的裸排不一致；边框盒去掉后，语言卡（图例留给读屏）与导入方式（可见图例）
+   两处共用这条规则一起变。字段组的分组感由行距与图例承担，不靠框 */
 .import-mode {
-  border: 1px solid var(--pm-border);
-  border-radius: var(--pm-radius-control);
+  border: 0;
   margin: var(--pm-space-3) 0 var(--pm-space-2);
-  padding: var(--pm-space-2) var(--pm-space-3);
+  padding: 0;
 }
 
 .import-mode legend {
-  padding: 0 var(--pm-space-1);
+  padding: 0;
 }
 
 .radio {
