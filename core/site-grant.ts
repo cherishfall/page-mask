@@ -14,31 +14,39 @@ export interface PermissionsApi {
   contains(permissions: { origins: string[] }): Promise<boolean>;
 }
 
-/** 全部已授权的主机模式（不含 API 权限） */
-export async function allGrantedPatterns(browser: { permissions: PermissionsApi }): Promise<string[]> {
+/**
+ * 全部已授权的主机模式（不含 API 权限）。
+ * 失败（瞬时异常）返回 null：调用方跳过这一轮，**不**当作「全没授权」——
+ * 对账里那样算会把所有站点注销一轮（#186）。
+ */
+export async function allGrantedPatterns(browser: { permissions: PermissionsApi }): Promise<string[] | null> {
   try {
     const all = await browser.permissions.getAll();
     return (all.origins ?? []).filter((o): o is string => typeof o === 'string');
   } catch {
-    return [];
+    return null;
   }
 }
 
 /**
  * 一个站点当前有效的授权模式（为空 = 待授权），保持 sitePatterns 的顺序：
  * 裸域在前、子域在后；其余归到同一站点的旧精确模式排在后面。
- * all 可由调用方预先取好，避免一次对账里为每个站点各调一次 getAll。
+ * all 可由调用方预先取好（allGrantedPatterns 的结果，含失败时的 null），避免一次对账里
+ * 为每个站点各调一次 getAll；为 null 时跳过按模式的归并，直接落到下面的 contains 兜底。
  */
 export async function grantedPatternsOfSite(
   browser: { permissions: PermissionsApi },
   key: string,
-  all?: readonly string[],
+  all?: readonly string[] | null,
 ): Promise<string[]> {
-  const granted = all ?? (await allGrantedPatterns(browser));
-  const own = grantedPatternsFor(key, granted);
-  if (own.length > 0) return own;
+  const granted = all === undefined ? await allGrantedPatterns(browser) : all;
+  if (granted) {
+    const own = grantedPatternsFor(key, granted);
+    if (own.length > 0) return own;
+  }
   // 用户在扩展详情里授了「所有网站」时 getAll 里是一个全站通配模式，归不到任何站点 key；
-  // 按本站点的两条模式问 contains 会返回 true
+  // 按本站点的两条模式问 contains 会返回 true。getAll 失败（granted 为 null）时也走到这里：
+  // contains 是独立的调用，还能给出正确答案，不把站点误判成没授权
   const canonical = sitePatterns(key);
   try {
     return (await browser.permissions.contains({ origins: canonical })) ? canonical : [];

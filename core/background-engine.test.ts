@@ -304,6 +304,24 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(res).toEqual({ ok: true, pending: [] });
       expect(stubs.registered.has(idOf(ORIGIN))).toBe(true);
     });
+
+    it('permissions.getAll 瞬时异常：跳过本轮对账，不全量注销（#186）', async () => {
+      await configure(ORIGIN);
+      await eventually(() => expect(stubs.registered.size).toBe(1));
+      // 等前置对账的异步尾巴收完，再清掉它留下的调用记录：只看这一轮的动静
+      await new Promise((r) => setTimeout(r, 20));
+      stubs.scripting.registerContentScripts.mockClear();
+      stubs.scripting.unregisterContentScripts.mockClear();
+
+      // 空清单会让 planReconcile 把已注册站点全部注销，权限恢复后才能补回来——必须整轮跳过
+      stubs.permissions.getAll.mockRejectedValueOnce(new Error('transient'));
+      const res = await send({ t: 'reconcile' });
+
+      expect(res).toEqual({ ok: true, pending: [] });
+      expect(stubs.registered.has(idOf(ORIGIN))).toBe(true);
+      expect(stubs.scripting.unregisterContentScripts).not.toHaveBeenCalled();
+      expect(stubs.scripting.registerContentScripts).not.toHaveBeenCalled();
+    });
   });
 
   // ---------- 特权消息只接受扩展页面 ----------

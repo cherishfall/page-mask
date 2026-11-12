@@ -132,4 +132,11 @@ describe('isValidSiteKey：存储校验', () => {
     expect(isValidSiteKey(42)).toBe(false);
     expect(isValidSiteKey(null)).toBe(false);
   });
+
+  it('含 `*` 或不含字母数字的单段值不通过：真实主机名不长这样，放进来会成为幻影站点（#186）', () => {
+    // siteKey 对这类输入原样返回（单标签主机名保留），必须在存储校验这里拦下
+    for (const v of ['*', '-', '___', 'x*', ':', '[::]']) {
+      expect(isValidSiteKey(v), v).toBe(false);
+    }
+  });
 });

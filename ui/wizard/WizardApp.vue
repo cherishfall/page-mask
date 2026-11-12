@@ -735,6 +735,8 @@ const sameFocusEl = shallowRef<Element | null>(null);
 /** 懒加载重算（#88）：页面变更后去抖重算草稿计数；句柄随向导卸载一起撤 */
 let draftObserver: MutationObserver | null = null;
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
+/** body 还没解析出来时等 DOM 就绪再挂观察的监听（#186）：卸载时要摘掉，别让它在收尾后再 observe */
+let onDomReadyForDraft: (() => void) | null = null;
 /**
  * 本次点选里、还没有草稿的元素勾没勾「一起收起」：进看效果建草稿时用（newDraft）。
  * 元素被取消选择时清掉——再点回来按默认值当新的一项，不记住上一次的勾
@@ -828,7 +830,14 @@ onMounted(() => {
       }
     }, 300);
   });
-  draftObserver.observe(document.body, { childList: true, subtree: true });
+  // document_start 注入后 body 可能还没解析出来（#186）：等 DOM 就绪再挂观察。
+  // 还没挂上时收不到变更通知没有影响——打开向导的时刻页面本来就还没有新内容
+  if (document.body) {
+    draftObserver.observe(document.body, { childList: true, subtree: true });
+  } else {
+    onDomReadyForDraft = () => draftObserver?.observe(document.body!, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', onDomReadyForDraft, { once: true });
+  }
 });
 
 onBeforeUnmount(() => {
@@ -836,6 +845,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown, true);
   window.removeEventListener('resize', reclampToolbar);
   draftObserver?.disconnect();
+  if (onDomReadyForDraft) document.removeEventListener('DOMContentLoaded', onDomReadyForDraft);
   if (draftTimer) clearTimeout(draftTimer);
   pick?.stop();
   follower.stop();

@@ -111,6 +111,61 @@ describe('自动播放压制与点击放行（0.8.0 建立压制；0.8.18 起是
     controller.dispose();
   });
 
+  // ---------- 页面输入框里的操作不算「想看视频」（#186） ----------
+
+  /** 把一个文本输入位置挂进播放器容器（video 的父层）：没有守卫时这里的按键会放行这个视频 */
+  function mountEditable(tag: 'input' | 'textarea' | 'contenteditable'): HTMLElement {
+    const el =
+      tag === 'input'
+        ? document.createElement('input')
+        : tag === 'textarea'
+          ? document.createElement('textarea')
+          : document.createElement('div');
+    if (tag === 'contenteditable') {
+      el.setAttribute('contenteditable', 'true');
+      // jsdom 没实现 isContentEditable（恒 false）：stub 这个属性，守住「代码读它做判断」的分支
+      Object.defineProperty(el, 'isContentEditable', { value: true });
+    }
+    document.querySelector('video')!.parentElement!.appendChild(el);
+    return el;
+  }
+
+  it.each(['input', 'textarea', 'contenteditable'] as const)(
+    '%s 里的回车是打字不是「想看视频」：不给播放器容器里的视频背书（#186）',
+    (tag) => {
+      const controller = createMediaController(document);
+      controller.sync({ mediaGray: true });
+      const vid = mountVideo();
+      const field = mountEditable(tag);
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      play(vid);
+      expect(pause).toHaveBeenCalled();
+      controller.dispose();
+    },
+  );
+
+  it('输入框里的 pointerdown 同样不记账（#186）', () => {
+    const controller = createMediaController(document);
+    controller.sync({ mediaGray: true });
+    const vid = mountVideo();
+    tap(mountEditable('input'));
+    play(vid);
+    expect(pause).toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it('守卫不扩大化：播放器容器里非输入元素上的点击照常放行', () => {
+    const controller = createMediaController(document);
+    controller.sync({ mediaGray: true });
+    const vid = mountVideo();
+    const overlay = document.createElement('div');
+    vid.parentElement!.appendChild(overlay);
+    tap(overlay);
+    play(vid);
+    expect(pause).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
   it('开关打开的这一刻：已在播放的视频当场按停（压制对存量视频生效）', () => {
     const playing = addVideo();
     const controller = createMediaController(document);

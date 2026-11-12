@@ -193,7 +193,13 @@ export function siteKeyOfPattern(pattern: string): string | null {
  * 站点 key 是否合法（存储校验用）：
  * - 必须是 siteKey 的规范输出（小写、punycode、无协议、无路径、无默认端口）
  * - 带 `://` 的一律不合法（旧版 origin 形态请在边界处先过 siteKey）
+ * - 含 `*` 或不含任何字母数字的单段值一律不合法：真实主机名不会长这样，而 siteKey 对
+ *   这类输入原样返回（单标签主机名保留），不拦的话导入文件里的 `origin: '*'` 会变成
+ *   一个「幻影站点」配置（#186）
  */
 export function isValidSiteKey(v: unknown): v is string {
-  return typeof v === 'string' && !!v && !v.includes('://') && siteKey(v) === v;
+  if (typeof v !== 'string' || !v || v.includes('://')) return false;
+  if (v.includes('*')) return false;
+  if (!v.includes('.') && !/[a-z0-9]/i.test(v)) return false;
+  return siteKey(v) === v;
 }

@@ -37,7 +37,7 @@ export interface EnableSiteRequest {
 /**
  * 失败原因：tabMismatch = 标签页已不在该站点；notGranted = 没有站点授权；
  * injectFailed = 页面拒绝注入；denied = 用户在权限框上拒绝；
- * gestureLost = 后台调用权限请求时已不在用户手势内（popup 可退回自己发起，见 popup 的兜底分支）；
+ * gestureLost = 后台调用权限请求时已不在用户手势内（popup 对这条只显示「再点一次」的提示，没有自行重新发起的兜底分支）；
  * pageNotReady = 页面还在 Chrome 错误页等未加载好的状态（0.8.16，#154）：只出现在 initialMedia
  * 流程里——权限已到手、配置已照常建档，等页面真正打开灰度会自动生效，弹窗按说明而非错误处理
  */

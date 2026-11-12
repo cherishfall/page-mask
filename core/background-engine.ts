@@ -99,6 +99,12 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const profiles = await storage.listProfiles();
     const configured = profiles.map((p) => p.origin);
     const granted = await allGrantedPatterns(browser);
+    // getAll 瞬时异常（#186）：跳过这一轮。往下算 grantedPatterns 会是空清单，
+    // planReconcile 会把所有已注册站点注销一轮，权限恢复后才能补回来——不能冒这个险
+    if (!granted) {
+      console.warn('[PageMask] 对账跳过：读不到当前授权（permissions.getAll 失败）');
+      return [];
+    }
     const grantedPatterns: string[] = [];
     for (const key of configured) grantedPatterns.push(...(await grantedPatternsOf(key, granted)));
     const registered = (await browser.scripting.getRegisteredContentScripts()) as RegisteredScript[];
@@ -269,15 +275,17 @@ export function createBackground({ browser }: BackgroundDeps): void {
         files: [CURTAIN_ONESHOT_FILE] as unknown as ScriptPublicPath[],
       });
       // 注入成功 ≠ 遮上了（页面控制器可能拒遮，比如向导开着）：回查确认，不假报成功（#107 复查修）。
-      // 一次性脚本的监听要等动态导入完成才注册：没人应答时等一拍再查一次，只有「有应答且没遮上」才算失败
-      let after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
-        | CurtainStateReply
-        | undefined;
-      if (!after) {
-        await new Promise((r) => setTimeout(r, 200));
-        after = (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
+      // 一次性脚本的监听要等动态导入完成才注册：没人应答时短间隔再查两次（慢机器上导入不止
+      // 200ms，#186），只有「有应答且没遮上」才算失败；总等待压在几百毫秒内，不让用户等太久
+      const askState = async (): Promise<CurtainStateReply | undefined> =>
+        (await browser.tabs.sendMessage(tabId, { t: 'curtainState' }).catch(() => undefined)) as
           | CurtainStateReply
           | undefined;
+      let after = await askState();
+      for (const waitMs of [100, 200]) {
+        if (after) break;
+        await new Promise((r) => setTimeout(r, waitMs));
+        after = await askState();
       }
       return { ok: after?.covered === true, error: after?.covered ? undefined : 'curtain did not cover' };
     } catch (e) {
@@ -398,6 +406,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
   async function reinjectOpenTabs(): Promise<void> {
     const profiles = await storage.listProfiles();
     const granted = await allGrantedPatterns(browser);
+    if (!granted) return; // getAll 瞬时异常：这轮重新注入跳过（#186，与对账同一口径）
     const keys = new Set<string>();
     for (const p of profiles) {
       if ((await grantedPatternsOf(p.origin, granted)).length > 0) keys.add(p.origin);
@@ -447,8 +456,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const key = siteKey(input);
     if (!key) return { ok: false, error: 'invalid site key' };
     const granted = await allGrantedPatterns(browser);
-    // 收回这个站点名下的全部模式：规范的两条 + 迁移前用户持有的旧精确模式
-    const patterns = [...new Set([...sitePatterns(key), ...grantedPatternsFor(key, granted)])];
+    // 收回这个站点名下的全部模式：规范的两条 + 迁移前用户持有的旧精确模式。
+    // getAll 瞬时异常（#186）时收不回旧精确模式，但删除动作照常完成，不能整个中断
+    const legacy = granted ? grantedPatternsFor(key, granted) : [];
+    const patterns = [...new Set([...sitePatterns(key), ...legacy])];
     await restoreOpenTabs(key);
     try {
       await browser.permissions.remove({ origins: patterns });
@@ -480,7 +491,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
     if (!key) return { ok: false, error: 'no sender tab' };
     if (await storage.getProfile(key)) return { ok: true };
     const granted = await allGrantedPatterns(browser);
-    const patterns = [...new Set([...sitePatterns(key), ...grantedPatternsFor(key, granted)])];
+    // getAll 瞬时异常（#186）时同 resetSite：旧精确模式收不回，注销照常完成
+    const legacy = granted ? grantedPatternsFor(key, granted) : [];
+    const patterns = [...new Set([...sitePatterns(key), ...legacy])];
     try {
       await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
     } catch {
@@ -497,8 +510,22 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 幕布静音（0.8.0，#131，ADR-0013） ----------
 
   /** 每个标签页一条静音写入队列：遮 / 撤两条消息的 check-then-act 不许交错（审查轮 #2），
-   *  后进队的后写，最终状态 = 最后一条消息的方向 */
+   *  后进队的后写，最终状态 = 最后一条消息的方向。链落定即清掉条目（#186）：
+   *  SW 生命周期里不 accumulate 已完成链条目 */
   const muteChains = new Map<number, Promise<unknown>>();
+
+  /** 挂到该标签页静音队列的尾部。链落定后清掉 Map 条目：只有这条链还是队尾时才删——
+   *  并发的新消息此刻已经 set 进了更新的链，误删会丢掉它的排队标记（#186） */
+  function enqueueMuteStep<R>(tabId: number, run: () => Promise<R>): Promise<R> {
+    const prev = muteChains.get(tabId) ?? Promise.resolve();
+    const next = prev.then(run, run);
+    const tail = next.catch(() => undefined);
+    muteChains.set(tabId, tail);
+    void tail.finally(() => {
+      if (muteChains.get(tabId) === tail) muteChains.delete(tabId);
+    });
+    return next;
+  }
 
   /**
    * 只解除「确实是本扩展静音的」标签页：Chrome 46+ 的 MutedInfo 提供 reason 与 extensionId
@@ -536,13 +563,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
         return { ok: false, error: String(e) };
       }
     };
-    const prev = muteChains.get(tabId) ?? Promise.resolve();
-    const next = prev.then(run, run);
-    muteChains.set(
-      tabId,
-      next.catch(() => undefined),
-    );
-    return next;
+    return enqueueMuteStep(tabId, run);
   }
 
   /**
@@ -561,13 +582,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
         // 标签页刚被关掉：没有需要收尾的状态
       }
     };
-    const prev = muteChains.get(tabId) ?? Promise.resolve();
-    const next = prev.then(run, run);
-    muteChains.set(
-      tabId,
-      next.catch(() => undefined),
-    );
-    return next;
+    return enqueueMuteStep(tabId, run);
   }
 
   /** 扩展更新 / 重载后的静音清扫：所有标签页逐个走解除（只动 mutedByUs 的那份） */
@@ -793,5 +808,11 @@ export function createBackground({ browser }: BackgroundDeps): void {
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status !== 'loading') return;
     void releaseCurtainMuteOnNavigation(tabId);
+  });
+
+  // 标签页关闭（#186）：静音队列的记录随之清掉——标签页都没了，队列不可能再有后继。
+  // 进行中的一步落定后走 enqueueMuteStep 自己的清理；这里只是不让已关闭标签页的条目留在 Map 里
+  browser.tabs.onRemoved.addListener((tabId) => {
+    muteChains.delete(tabId);
   });
 }

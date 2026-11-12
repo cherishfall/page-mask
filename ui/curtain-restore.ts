@@ -123,6 +123,10 @@ export function createCurtainRestoreButton(deps: CurtainRestoreDeps): CurtainRes
   }
 
   deps.root.appendChild(btn);
+  // 挂载即按当前视口夹紧（与拖动 / onResize 同一个 clamp、同一个视口来源）：上次大窗口
+  // 拖出去的坐标不能把唯一的页内出路挂到屏幕外（#186）。只改显示位置、不回写存储，
+  // 与 onResize「窗口变小后重夹」同一口径
+  if (pos) pos = clamp(pos);
   place();
 
   const ac = new AbortController();

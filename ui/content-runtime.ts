@@ -304,38 +304,65 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (!profile || !ctx.isValid) return; // 扩展已失联：读 isValid 即触发收尾，按钮随之消失
     // 目标态取自按钮当前显示的状态的反面；只改开关字段（按站点记忆 + onChanged 联动所有标签页）
     const target = profile.switchState === 'disguised' ? 'original' : 'disguised';
+    const before = profile.switchState;
     profile.switchState = target;
     syncToggleState();
-    await storage.updateProfile(site, (p) => {
-      p.switchState = target;
-    });
+    try {
+      await storage.updateProfile(site, (p) => {
+        p.switchState = target;
+      });
+    } catch {
+      if (profile) {
+        profile.switchState = before;
+        syncToggleState();
+      }
+      showPageNotice(ctx, t().common.saveFailed);
+    }
   }
 
   async function handleMoved(pos: { x: number; y: number }) {
     if (!profile || !ctx.isValid) return;
+    const before = profile.floatingBtnPos;
     profile.floatingBtnPos = pos;
     toggleState.position = pos; // 菜单的「放回右下角」跟随实时位置（#90）
     // 坐标是本机界面状态，不算用户修改设置
-    await storage.updateProfile(
-      site,
-      (p) => {
-        p.floatingBtnPos = pos;
-      },
-      { touch: false },
-    );
+    try {
+      await storage.updateProfile(
+        site,
+        (p) => {
+          p.floatingBtnPos = pos;
+        },
+        { touch: false },
+      );
+    } catch {
+      if (profile) {
+        profile.floatingBtnPos = before;
+        syncToggleState();
+      }
+      showPageNotice(ctx, t().common.saveFailed);
+    }
   }
 
   async function handleResetPos() {
     if (!profile || !ctx.isValid) return;
+    const before = profile.floatingBtnPos;
     profile.floatingBtnPos = null;
     syncToggleState();
-    await storage.updateProfile(
-      site,
-      (p) => {
-        p.floatingBtnPos = null;
-      },
-      { touch: false },
-    );
+    try {
+      await storage.updateProfile(
+        site,
+        (p) => {
+          p.floatingBtnPos = null;
+        },
+        { touch: false },
+      );
+    } catch {
+      if (profile) {
+        profile.floatingBtnPos = before;
+        syncToggleState();
+      }
+      showPageNotice(ctx, t().common.saveFailed);
+    }
   }
 
   /**

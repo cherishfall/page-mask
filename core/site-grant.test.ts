@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { grantedPatternsOfSite, isOriginCovered, isSiteGranted } from './site-grant';
+import { allGrantedPatterns, grantedPatternsOfSite, isOriginCovered, isSiteGranted } from './site-grant';
 import { sitePatterns } from './site-key';
 
 describe('isOriginCovered：当前页面是否被这批模式覆盖', () => {
@@ -112,5 +112,27 @@ describe('grantedPatternsOfSite：全站通配授权的 contains 兜底（#177 �
     };
     expect(await grantedPatternsOfSite(browser, 'weibo.com')).toEqual([]);
     expect(await isSiteGranted(browser, 'weibo.com')).toBe(false);
+  });
+});
+
+describe('allGrantedPatterns：getAll 瞬时异常返回 null（#186）', () => {
+  /** getAll 抛错、contains 正常：模拟权限 API 的瞬时抖动 */
+  const flakyBrowser = {
+    permissions: {
+      getAll: async (): Promise<{ origins?: string[] }> => {
+        throw new Error('transient failure');
+      },
+      contains: async ({ origins }: { origins: string[] }) =>
+        origins.every((o) => sitePatterns('weibo.com').includes(o)),
+    },
+  };
+
+  it('返回 null 而不是空清单（空清单会让对账把所有站点注销一轮）', async () => {
+    expect(await allGrantedPatterns(flakyBrowser)).toBeNull();
+  });
+
+  it('grantedPatternsOfSite 拿到 null：跳过按模式归并、落到 contains 兜底，不误判成没授权', async () => {
+    expect(await grantedPatternsOfSite(flakyBrowser, 'weibo.com')).toEqual(sitePatterns('weibo.com'));
+    expect(await isSiteGranted(flakyBrowser, 'weibo.com')).toBe(true);
   });
 });

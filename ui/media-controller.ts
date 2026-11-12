@@ -51,6 +51,15 @@ function intentCoversVideo(intent: IntentMark, video: HTMLVideoElement): boolean
   return false;
 }
 
+/**
+ * 页面上的文本输入位置（输入框、多行框、可编辑区域）：这里的操作不算「想看视频」。
+ * 在搜索框里敲空格 / 回车、点输入框准备打字，都不该给三层层级内的视频「背书」放行（#186）
+ */
+function isPageEditable(el: Element | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+}
+
 export function createMediaController(doc: Document): MediaController {
   let wantMedia = false;
   let disposed = false;
@@ -84,6 +93,8 @@ export function createMediaController(doc: Document): MediaController {
     // 点我们自己的界面（胶囊、遮罩、向导）不算「想看视频」：否则在胶囊上拨媒体钮的
     // 那一下，会在 10 秒窗口内给页面上所有浅层视频背书放行（E2E 揪出的真问题）
     if (isOwnUiNode(e.target as Node)) return;
+    // 页面输入框里的按键 / 点击同样不算（#186）：在搜索框里敲空格、回车是打字，不是想看视频
+    if (isPageEditable(e.target as Element | null)) return;
     // 键盘可达性（WCAG 2.1.1）：Enter / 空格触发的播放同样算用户意图；其余按键不记账
     if (e.type === 'keydown') {
       const key = (e as KeyboardEvent).key;

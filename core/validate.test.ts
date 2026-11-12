@@ -119,6 +119,8 @@ describe('sanitizeProfile', () => {
   it('身份字段非法整体拒绝', () => {
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: 'javascript:alert(1)' })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: 'not a key' })).toBeNull();
+    // 导入文件里可以造出 origin:'*' 这类幻影站点（#186）：存储校验必须拒收
+    expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), origin: '*' })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), formatVersion: 2 })).toBeNull();
     expect(sanitizeProfile({ ...createEmptyProfile('https://a.com'), hideRules: {} })).toBeNull();
   });
