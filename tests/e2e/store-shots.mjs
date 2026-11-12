@@ -1,11 +1,20 @@
 /**
- * 商店素材生成（#29 / #58）：6 张 1280×800 截图 + 440×280 宣传图块，输出到 docs/store-assets/。
+ * 商店素材生成（#29 / #58，#190 修通）：6 张 1280×800 截图 + 440×280 宣传图块。
  *
- * 运行：npm run build && node tests/e2e/store-shots.mjs        （约 1 分钟）
+ * 运行：npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs
+ *       （约 1 分钟；默认输出覆盖 docs/store-assets/，用 STORE_SHOTS_OUT=<目录> 改输出位置）
  *
  * 素材全部来自真实运行：页面截图是扩展在虚构站点「Acme 书房」上生效后的真实画面，
  * 拼版（之前/之后、标签栏、popup、两个管理页、⋯ 菜单与幕布）里的每一块都是这些截图
  * 与扩展自己的资源，不画假界面、不含第三方商标。
+ *
+ * 虚构域名映射（#190）：主 fixture 用 acme-journal.test（RFC 6761 保留 TLD，公网永不解析），
+ * 启动参数 --host-resolver-rules=MAP 把它指到本地 HTTP 服务，截图里不出现 127.0.0.1 / 端口。
+ * 两个平台坑（探针实测，见 tmp/ 探针脚本）：
+ * - .dev 整个 TLD 在 Chrome 的 HSTS 预载表里，http:// 会被强制升级 https，普通本地 HTTP 服务握不上手——
+ *   所以不能用项目里现成的 *.dev 虚构名，主 fixture 必须用 .test；
+ * - 本机 Clash 是系统代理，Chrome 会把映射域名交给代理（代理解析不了虚构域名，502）——
+ *   必须 --no-proxy-server 直连。CI 无代理，加上也无副作用。
  *
  * - screenshot-1-before-after：同一页面的「之前 / 之后」并排 + 大字说明
  * - screenshot-2-wizard：向导的点选与看效果两步并排（#81 起两步）
@@ -23,7 +32,7 @@ import { evalInContentWorld, launchExtension, openPopup, sendToBackground, sendT
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
-const OUT = path.join(REPO, 'docs/store-assets');
+const OUT = process.env.STORE_SHOTS_OUT ? path.resolve(process.env.STORE_SHOTS_OUT) : path.join(REPO, 'docs/store-assets');
 const TMP = resultsDir('store-shots');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
@@ -73,6 +82,9 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <footer id="site-footer">© Acme 书房（虚构站点，仅用于截图）</footer>
 </body></html>`;
 
+/** 主 fixture 的虚构域名：公网永不解析（RFC 6761），浏览器内映射到本地服务（见文件头） */
+const SITE_HOST = 'acme-journal.test';
+
 const srv = await startServer((req, res) => {
   if (req.url === '/favicon.ico') {
     res.writeHead(204);
@@ -82,13 +94,15 @@ const srv = await startServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(PAGE);
 });
-const ORIGIN = srv.origin;
+const ORIGIN = `http://${SITE_HOST}`;
 
-/** 管理页用的虚构站点（不需要真实存在，只要权限已授予、配置在存储里） */
+/** 管理页用的虚构站点（不需要真实存在，只要权限已授予、配置在存储里）。
+ * 一律用可注册域名裸域：harness 的 siteKeyOf 不带 PSL，子域 URL 会写成子域 key，
+ * 内核 sanitizeProfile 整条拒收，管理页列表就对不上（0.9.1 的教训，见 DEVLOG） */
 const DEMO_SITES = [
-  { origin: 'https://reader.acme-notes.com', title: '阅读', rules: 3, stale: 0 },
-  { origin: 'https://brief.daily-digest.co', title: '文档', rules: 2, stale: 1 },
-  { origin: 'https://journal.studio-notes.dev', title: '笔记', rules: 4, stale: 0 },
+  { origin: 'https://acme-notes.com', title: '阅读', rules: 3, stale: 0 },
+  { origin: 'https://daily-digest.co', title: '文档', rules: 2, stale: 1 },
+  { origin: 'https://studio-notes.dev', title: '笔记', rules: 4, stale: 0 },
 ];
 
 const ext = await launchExtension({
@@ -96,6 +110,9 @@ const ext = await launchExtension({
   revocable: false,
   // popup 里 tabs.query 要读当前标签页的网址（真实 popup 打开路径需要）
   extraPermissions: ['tabs'],
+  // 虚构域名 → 本地服务（替换端含端口：访问 http://acme-journal.test/ 落到本地随机端口）；
+  // --no-proxy-server：虚构域名交给系统代理就出不来了（本机 Clash；CI 无代理，无副作用）
+  args: [`--host-resolver-rules=MAP ${SITE_HOST} 127.0.0.1:${srv.port}`, '--no-proxy-server'],
 });
 const { browser, control } = ext;
 
@@ -297,8 +314,8 @@ try {
     'screenshot-4-popup',
     `<div style="height:800px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#eef1f5">
        <img src="${dataUrl(popupFile)}" style="width:420px;display:block;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);border:1px solid #dfe3e8">
-       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 编辑收起的内容 · 整页变灰 · 遮住这一页 / 恢复这一页</div>
-       <div class="cap" style="font-size:18px;margin-top:-10px">底部两个入口：你添加的网站 · 插件设置</div>
+       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 收起内容 / 标题和图标 · 整页变灰 · 遮住这一页 / 恢复这一页</div>
+       <div class="cap" style="font-size:18px;margin-top:-10px">底部两个入口：全部网站设置 · 插件设置</div>
      </div>`,
   );
 
@@ -362,17 +379,17 @@ try {
   await compose(
     'screenshot-5-management',
     `<div style="padding:30px 44px 0">
-      <div class="big">两个独立页面：「你添加的网站」与「插件设置」</div>
-      <div class="sub">面板底部两个入口分别进入；插件设置也是 Chrome 的「扩展程序选项」</div>
+      <div class="big">两个独立页面：「全部网站设置」与「插件设置」</div>
+      <div class="sub">弹窗底部两个入口分别进入；插件设置也是 Chrome 的「扩展程序选项」</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(mgmtFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">「你添加的网站」：一行一站，点进去是该网站的设置页</figcaption>
+         <figcaption class="cap" style="margin-top:10px">「全部网站设置」：一行一站，点进去是该网站的设置页</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(settingsFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">「插件设置」：默认标题、不透明度、导出 / 导入、界面语言</figcaption>
+         <figcaption class="cap" style="margin-top:10px">「插件设置」：默认标题、悬浮按钮不透明度、快捷键、导出 / 导入、界面语言</figcaption>
        </figure>
      </div>`,
   );

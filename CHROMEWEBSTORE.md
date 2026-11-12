@@ -10,7 +10,7 @@
 - [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.4-chrome.zip`
 - [ ] 版本号已改（`package.json` → `0.9.4`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.4` 待发版时打
-- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.4 弹窗多了一颗「悬浮按钮」图标，三个开关与底部三行重新对齐，弹窗截图需重拍；0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面；弹窗又删掉两行常驻说明、灰度与遮住两行改了措辞；`store-shots.mjs` 已过期，见 `docs/dev/DEVLOG.md`）
+- [ ] 6 张截图与宣传图块按 §8 重拍（0.9.4 弹窗多了一颗「悬浮按钮」图标，三个开关与底部三行重新对齐，弹窗截图需重拍；0.9.3 换了默认键，弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽都变了，设置页「到 Chrome 里设置快捷键」也挪到整张卡下面；弹窗又删掉两行常驻说明、灰度与遮住两行改了措辞；`store-shots.mjs` 已修通（#190），发版步重跑生成）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -168,7 +168,7 @@ Hiding is done with scripting.insertCSS (user origin) using the selectors the us
 No network requests, no analytics, no remote code, no bundled site rules. Image/video requests are NOT blocked — the gray look is purely visual. All data stays in chrome.storage.local.
 
 Test steps (no login needed):
-1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow.
+1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow — if the popup on a page (for example a subdomain of that site) instead shows 「需要允许访问」 / "Needs access" with 「这个页面还没允许访问」 / "This page isn't allowed yet", click 「允许访问」 ("Allow access") on that page and then 「收起内容」 again; your settings are kept.
 2. The page enters pick mode: click on the "From today's featured article" box (or any element you'd like to hide) — it is highlighted and listed in the toolbar's picked list. Click 「下一步：看效果」 (Next: check the result).
 3. The picked element is hidden with ghost markers; the list on the right lets you change the hide method or remove an item, and the "where it applies" options are in each row's 「调整」 (Adjust). Click 保存 (Save). The element is hidden.
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it ("Reading" / «阅读» when left empty and Chrome's UI language is Chinese).
@@ -179,9 +179,11 @@ Test steps (no login needed):
 ```
 
 **已实走（2026-10-27，0.2.0 构建）**：在匿名可访问的 Wikipedia 首页按当时 5 步完整跑通（点选 → 预览 → 保存 → 切换原样 → 编辑规则 → 一键清空），每一步的页面效果、标题变化、配置落库与清空后的还原都核对过。第 1 步的「点图标 + 授权弹窗」在自动化里用等价的 `enableSite` 消息代替，弹窗本身仍需人工点一次确认。
-**0.8.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对胶囊「媒体」钮与「遮住」钮、弹窗新排版（媒体开关一行 + 带图标的「遮住这一页」）、站点设置页「整页变灰」卡、第 8 步的自动播放压制 / 点击放行，以及幕布静音（遮住即哑、恢复有声、标签页斜线小喇叭）。自动化已按新语义全量跑过（0.8.0，#131/#132）：单测 692 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测变灰开关与幕布静音（含小图标豁免、播放压制与点击放行、静音归属、原样态还原、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。
+**0.8.0 待重走**：上面 8 步在提交前按当前界面在真实 Chrome 上跑一次并回填结果，重点核对胶囊「媒体」钮与「遮住」钮、弹窗新排版（媒体开关一行 + 带图标的「遮住这一页」）、站点设置页「整页变灰」卡、第 8 步的自动播放压制 / 点击放行，以及幕布静音（遮住即哑、恢复有声、标签页斜线小喇叭）。自动化已按新语义全量跑过（0.8.0，#131/#132）：单测 692 项；E2E 九个脚本合计 842 项断言，其中 `tests/e2e/check-media.mjs` 25 项专测变灰开关与幕布静音（含小图标豁免、播放压制与点击放行、静音归属、原样态还原、切回重新生效）；浅深色由 `check-language` 覆盖。品牌版 Chrome 的「允许」授权弹窗、隐私表单与隐私政策 URL 仍需人工。0.9.5（#190）：八步的可自动化部分已在 E2E harness 上预走一遍并全部通过（虚构站点 acme-journal.test；授权弹窗本身、chrome://extensions/shortcuts 改键、标签页小喇叭图标、自动播放视频的真实观感四项留人工），逐步结果回填在票 #190——上面的真机重走仍留给提交前的人工实走。
 
 ## 7. 版本历史
+
+> 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
@@ -228,19 +230,19 @@ Test steps (no login needed):
 |---|---|---|
 | 商店图标 128×128 | `public/icon/128.png`（同步 `docs/store-assets/icon-128.png`） | ✅ 已在 manifest 里（`npm run icons` 从 `assets/icon/*.svg` 生成） |
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
-| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：三步设置第 2 步（点选，选中项列成清单）与第 3 步（看效果，逐项编辑 + 在哪些页面收起）并排 |
+| 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：设置向导的两步并排——点选（选中项列成清单）与看效果（逐项编辑 + 在哪些页面收起） |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
-| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 已按现行文案重拍 1280×800（灰度卡为「整页变灰」+ 对比度符）：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 标题和图标 / 收起内容；灰度卡；悬浮按钮行；遮住这一页；底部两个入口）。⚠️ 弹窗顶部站点名是本地地址（127.0.0.1 端口），与 §8「虚构站点」口径不符——提交前用 `--host-resolver-rules` 把虚构域名指到本地服务重拍（见 #165） |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 标题和图标 / 收起内容；整页变灰卡；遮住这一页；悬浮按钮行；底部两个入口），顶部站点名是虚构域名 acme-journal.test（`store-shots.mjs` 已修通：`--host-resolver-rules` 把虚构域名映射到本地 fixture，#190 起截图不再出现 127.0.0.1）。⚠️ 库里旧图仍是 0.9.3 时段产物（本地地址 + 旧键帽），发版步重跑生成替换 |
 | 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
-| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 已按 0.8.10 重拍 1280×800：「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」）。⚠️ 菜单里的胶囊是 0.8.10 形态（开启态整钮填实）；0.8.16 起改为「墨色填实图标 + 淡灰选中底」，提交前随 #165 一并重拍 |
+| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 1280×800：「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」），胶囊为现行形态（#190 预跑验证过：左侧菜单完整、右侧幕布恢复钮不再大面积全白）。⚠️ 库里旧图还是 0.8.10 形态（开启态整钮填实），发版步重跑生成替换 |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
-重新生成：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`）。
+重新生成：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`；可先用 `STORE_SHOTS_OUT=<目录>` 输出到别处目检一遍再覆盖）。脚本把虚构站点 acme-journal.test 经 `--host-resolver-rules` 映射到本地 fixture，并加 `--no-proxy-server`——系统代理会把映射不到的虚构域名拦下（#190；.dev 整个 TLD 在 Chrome 的 HSTS 预载表里会被强制升 https，所以主 fixture 用 RFC 6761 保留 TLD `.test`）。
 商店控制台最多传 5 张截图时，优先传 1 / 2 / 4 / 5 / 6（首图、向导、面板、两个管理页、菜单与幕布）。
 
 素材口径（避免误导）：
 
-- 页面截图是扩展在**虚构站点**「Acme 书房」上真实生效后的画面，站点名、书名、评分为占位内容，不含任何第三方商标、真人照片或用户内容。
+- 页面截图是扩展在**虚构站点**「Acme 书房」（acme-journal.test，RFC 6761 保留 TLD，公网不存在）上真实生效后的画面，站点名、书名、评分为占位内容，不含任何第三方商标、真人照片或用户内容。
 - 「之前 / 之后」、popup、两个管理页与「菜单 + 幕布」都是拼版：每一块都来自上面的真实截图或扩展自己的图标资源，没有画假界面。
 - 标签栏那张的浏览器边框是拼版出来的示意（headless 截不到真实标签栏），但标题文字与图标就是扩展在该页面上实际设置的值（标题「阅读」、透明图标）。
 - 尺寸全部 1280×800（PNG）；宣传图块 440×280。
@@ -262,7 +264,7 @@ Test steps (no login needed):
 
 | 问题 | 回答 |
 |---|---|
-| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「收起内容」或「标题和图标」并选「允许」后，才按站点请求（普通域名是裸域 + 子域两条模式），代码里没有任何地方用 `permissions.request` 申请多个站点（管理页的「全部允许访问」也只是一个用户手势内的多站点请求，且只包含用户自己导入/已配置的站点）。 |
+| 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户点「收起内容」或「标题和图标」并选「允许」后，才按站点请求（普通域名是裸域 + 子域两条模式）；唯一例外是管理页对用户已配置站点的批量授权（同一手势、仅限已导入站点）。 |
 | 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
 | 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。变灰开关同样是一份用户样式表（grayscale 滤镜）；内容脚本只在变灰开关打开期间按住站点自动播放的视频（用户点过的放行）。不改网页原有 DOM、不发请求、不注入远程代码。 |
 | 变灰开关会拦网络请求吗？ | 不会。黑白观感是 `scripting.insertCSS` 的用户样式表（`grayscale(1)` 滤镜），图片 / 视频请求照发，因此也不省流量、不挡广告；扩展没有 `declarativeNetRequest` 权限，也没有拦截任何请求的代码。 |
@@ -315,8 +317,8 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | 商店图标 128×128 | ✅ `public/icon/128.png`，四尺寸齐全（16/32/48/128） |
-| 至少 1 张 1280×800 | ✅ 5 张 |
-| 截图与当前界面一致 | ✅ 1 / 2 / 3 / 5 与当前界面一致；4 已按现行文案重拍（站点名待虚构化）、6 的胶囊形态待随 #165 重拍（见 §8） |
+| 至少 1 张 1280×800 | ✅ 6 张 |
+| 截图与当前界面一致 | ✅ 1–6 已随 #190 修通 store-shots.mjs 并预跑验证（内容与 0.9.5 UI 一致、站点名虚构化）；`docs/store-assets/` 里的旧图由发版步重跑生成替换（见 §8） |
 | 不误导 | ✅ 虚构站点；标签栏为示意拼版（见 §8 口径说明） |
 | 无手机/平板样张 | ✅ 没有 |
 | 宣传图块 440×280 | ✅ |
