@@ -137,7 +137,7 @@
           <p v-if="opacityError" class="hint error" role="alert" data-testid="pm-settings-opacity-error">{{ opacityError }}</p>
         </section>
 
-        <!-- 快捷键（#101）：全产品只有幕布这一条命令；改键只能去 Chrome 自己的页面 -->
+        <!-- 快捷键（#101）：幕布与整页变灰两条命令（ADR-0020）；改键只能去 Chrome 自己的页面 -->
         <section class="card" aria-labelledby="pm-settings-shortcut-heading" data-testid="pm-settings-shortcut">
           <h2 id="pm-settings-shortcut-heading">{{ t.settings.shortcutHeading }}</h2>
           <p class="hint">{{ t.settings.shortcutIntro }}</p>
@@ -147,9 +147,6 @@
             <span v-else-if="shortcutLoaded" class="pm-mark pm-mark-warning" data-testid="pm-settings-shortcut-unbound">
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
             </span>
-            <button type="button" class="ghost" data-testid="pm-settings-shortcut-change" @click="openShortcutSettings">
-              {{ t.settings.shortcutChange }}
-            </button>
           </div>
           <!-- 整页变灰快捷键（0.9.2）：与遮住同一张卡、同一套展示口径（当前实际绑定 / 未绑定警告） -->
           <div class="row">
@@ -158,6 +155,13 @@
             <span v-else-if="shortcutLoaded" class="pm-mark pm-mark-warning" data-testid="pm-settings-shortcut-gray-unbound">
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.settings.shortcutUnbound }}
             </span>
+          </div>
+          <!-- 改键入口归整张卡、不挂在第一行：Chrome 不允许扩展自己改绑定，只能把用户送到它自己的页面。
+               放在两行之后，任一行没绑上时都看得见下一步（Nielsen 9：说清发生了什么、怎么办）。 -->
+          <div class="row">
+            <button type="button" class="ghost" data-testid="pm-settings-shortcut-change" @click="openShortcutSettings">
+              {{ t.settings.shortcutChange }}
+            </button>
           </div>
           <p v-if="shortcutOpenFailed" class="hint error" role="alert" data-testid="pm-settings-shortcut-error">
             {{ t.settings.shortcutOpenFailed }}
@@ -393,18 +397,26 @@ watch(
   { immediate: true },
 );
 
+/** 快捷键在 Chrome 自己的页面里改，扩展收不到「绑定变了」的通知：
+ *  focus 覆盖「切到别的窗口再回来」，visibilitychange 覆盖「同一窗口里切走再切回标签页」。
+ *  后者是改完键回来的常见路径——Chrome 快捷键页是新标签页，窗口焦点根本没变，只听 focus 会漏。 */
+function onShortcutSurfaceVisible(): void {
+  if (document.visibilityState === 'visible') void refreshShortcut();
+}
+
 onMounted(() => {
   void store.init();
   void refreshShortcut();
   // 预览用的是真实胶囊组件：把同一份 toggle.css 注入本页一次（shadow 版走 adoptedStyleSheets）
   ensureTogglePreviewStyles();
-  // 用户去快捷键页改完再回来：聚焦时重新读一次（Chrome 没有「快捷键变了」的事件）
   window.addEventListener('focus', refreshShortcut);
+  document.addEventListener('visibilitychange', onShortcutSurfaceVisible);
   // 设置页已经开着时再点一次菜单项，也要能跳过去（只改 hash 不重新加载文档）
   window.addEventListener('hashchange', jumpToHashTarget);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('focus', refreshShortcut);
+  document.removeEventListener('visibilitychange', onShortcutSurfaceVisible);
   window.removeEventListener('hashchange', jumpToHashTarget);
   window.clearTimeout(highlightTimer);
 });

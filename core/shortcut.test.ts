@@ -16,8 +16,8 @@ describe('formatShortcut：Chrome 的快捷键写法 → 界面上的键帽（#1
 
   it('Mac：多修饰键按 Apple HIG 的 Control → Option → Shift → Command 排（ADR-0020）', () => {
     // 与 Chrome 返回的字符串顺序无关：同一组合怎么写都得到同一串键帽
-    expect(formatShortcut('Command+Shift+G', true)).toBe('⇧⌘G');
-    expect(formatShortcut('Shift+Command+G', true)).toBe('⇧⌘G');
+    expect(formatShortcut('Command+Shift+Y', true)).toBe('⇧⌘Y');
+    expect(formatShortcut('Shift+Command+Y', true)).toBe('⇧⌘Y');
     expect(formatShortcut('Command+Alt+Shift+Ctrl+X', true)).toBe('⌃⌥⇧⌘X');
     expect(formatShortcut('Ctrl+Shift+Alt+Command+X', true)).toBe('⌃⌥⇧⌘X');
   });

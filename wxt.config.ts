@@ -24,7 +24,10 @@ export default defineConfig({
     permissions: ['storage', 'scripting', 'activeTab'],
     optional_host_permissions: ['*://*/*'],
     // 快捷键（#101；0.9.2 起两条，用户提案 ADR-0020 修订 ADR-0010 的「全产品只此一条」）：
-    // 遮住用 X、变灰用 G，同族好记；默认键避开 Chrome 保留组合与 macOS 系统键。
+    // 遮住用 X、变灰用 Y，与 X 相邻、同一族好按。
+    // 0.9.3 把变灰的 G 换成 Y：Ctrl+Shift+G / ⌘⇧G 是 Chrome 查找栏的「查找上一个」
+    // （macOS Finder 里还是「前往文件夹」），Chrome 会静默丢掉这条命令的建议键，用户装完就没键可用。
+    // Y 取自 Chrome commands 官方文档两处示例的组合，不与 Chrome 内置功能冲突。
     // 用户可在 chrome://extensions/shortcuts 改，界面显示以 chrome.commands.getAll() 为准。
     commands: {
       'toggle-curtain': {
@@ -32,7 +35,7 @@ export default defineConfig({
         description: '__MSG_commandToggleCurtain__',
       },
       'toggle-media-gray': {
-        suggested_key: { default: 'Ctrl+Shift+G', mac: 'Command+Shift+G' },
+        suggested_key: { default: 'Ctrl+Shift+Y', mac: 'Command+Shift+Y' },
         description: '__MSG_commandToggleGray__',
       },
     },

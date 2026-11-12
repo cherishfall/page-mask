@@ -7,7 +7,7 @@
  *
  * Mac 侧依据 [Apple HIG · Keyboards](https://developer.apple.com/design/human-interface-guidelines/keyboards)：
  * 「以正确顺序列出修饰键」——多个修饰键一律 Control → Option → Shift → Command，
- * 所以 Chrome 给的 `Command+Shift+G` 在键帽上是 `⇧⌘G`，不是照抄字符串顺序的 `⌘⇧G`；
+ * 所以 Chrome 给的 `Command+Shift+Y` 在键帽上是 `⇧⌘Y`，不是照抄字符串顺序的 `⌘⇧Y`；
  * 同页还规定 Command 作主修饰键、Shift 作次级，符号用键盘上印的那一个。
  * README / 商店材料里写「⌘+Shift+X」是「按哪几个键」的组合说明，与键帽的符号连写是两种语境，
  * Apple 自己也是这两种写法并用（正文 Shift-Command-Tab、菜单 ⇧⌘←），不是两套叫法。
@@ -26,8 +26,8 @@ const MODIFIER_ORDER = ['⌃', '⌥', '⇧', '⌘'];
 
 /**
  * 把 Chrome 的快捷键字符串转成界面上的写法。
- * Mac：`Command+Shift+G` → `⇧⌘G`（按 HIG 重排修饰键），`MacCtrl` / `Ctrl` → `⌃`；
- * 其它平台原样保留 `Ctrl+Shift+G`。
+ * Mac：`Command+Shift+Y` → `⇧⌘Y`（按 HIG 重排修饰键），`MacCtrl` / `Ctrl` → `⌃`；
+ * 其它平台原样保留 `Ctrl+Shift+Y`。
  * 空字符串（未绑定）原样返回 ''，由调用方决定显示「没有绑定」还是隐藏这一行。
  */
 export function formatShortcut(raw: string | null | undefined, mac: boolean): string {

@@ -320,8 +320,8 @@ export const zh = {
     shortcutIntro: '遮住是临时的，刷新或离开页面就还原；整页变灰按网站记，再按一次就关',
     shortcutLabel: '遮住 / 恢复',
     shortcutGrayLabel: '整页变灰 / 恢复彩色',
-    shortcutUnbound: '没有绑定快捷键，可能被别的扩展占用了',
-    shortcutChange: '在 Chrome 里更改',
+    shortcutUnbound: '没有绑定快捷键，可能被系统或其他扩展占用了',
+    shortcutChange: '到 Chrome 里设置快捷键',
     shortcutOpenFailed: '这个浏览器不让扩展直接打开那一页，请在新标签页输入 chrome://extensions/shortcuts',
 
     transferHeading: '导出 / 导入',

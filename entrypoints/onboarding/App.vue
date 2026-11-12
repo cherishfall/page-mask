@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { browser } from 'wxt/browser';
 import { formatShortcut, isMacPlatform } from '@/core/shortcut';
 import FloatingToggle from '@/ui/FloatingToggle.vue';
@@ -133,17 +133,31 @@ watch(step, async () => {
   });
 });
 
-onMounted(async () => {
-  ensureTogglePreviewStyles();
+/** 示意图上的键帽与真实弹窗一致，取 Chrome 里当前实际绑定；没绑定就不显示。
+ *  Chrome 没有「绑定变了」的通知，标签页重新可见时重读一次（用户可能刚在快捷键页改完）。 */
+async function refreshShortcut(): Promise<void> {
   try {
     const commands = await browser.commands.getAll();
-    const shortcut = commands.find((c) => c.name === 'toggle-curtain')?.shortcut ?? '';
-    coverShortcut.value = formatShortcut(shortcut, isMacPlatform());
-    grayShortcut.value = formatShortcut(commands.find((c) => c.name === 'toggle-media-gray')?.shortcut ?? '', isMacPlatform());
+    const find = (name: string) => commands.find((c) => c.name === name)?.shortcut ?? '';
+    coverShortcut.value = formatShortcut(find('toggle-curtain'), isMacPlatform());
+    grayShortcut.value = formatShortcut(find('toggle-media-gray'), isMacPlatform());
   } catch {
     coverShortcut.value = '';
     grayShortcut.value = '';
   }
+}
+
+function onShortcutSurfaceVisible(): void {
+  if (document.visibilityState === 'visible') void refreshShortcut();
+}
+
+onMounted(() => {
+  ensureTogglePreviewStyles();
+  void refreshShortcut();
+  document.addEventListener('visibilitychange', onShortcutSurfaceVisible);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onShortcutSurfaceVisible);
 });
 
 function finish() {

@@ -299,8 +299,8 @@ export const en: Messages = {
       'Covering is temporary — reloading or leaving the page restores it; turning the whole page gray is remembered per site, press again to turn back to color',
     shortcutLabel: 'Cover / Restore',
     shortcutGrayLabel: 'Gray / Back to color',
-    shortcutUnbound: 'No shortcut assigned — another extension may have taken it',
-    shortcutChange: 'Change in Chrome',
+    shortcutUnbound: 'No shortcut assigned — the system or another extension may have taken it',
+    shortcutChange: 'Manage shortcuts in Chrome',
     shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
 
     transferHeading: 'Export / Import',
