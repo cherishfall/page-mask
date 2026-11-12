@@ -58,4 +58,31 @@
 - **界面与文档**：弹窗灰度卡、插件设置页快捷键卡、欢迎页示意图三处键帽；`GLOSSARY.md`「整页变灰」「幕布」「插件设置」三个词条补快捷键入口；README 与 CHROMEWEBSTORE 的中英功能描述、审核员备注补这条命令；`public/_locales/{en,zh_CN}/messages.json` 增加 Chrome 快捷键页显示的说明。
 - **测试**：`core/background-engine.test.ts` 新增 7 个用例（翻转、关态写 undefined、gray-only 建站、拒绝授权、手势丢失、不支持页面、无网址），既有 6 个幕布用例保持绿；`core/shortcut.test.ts` 补 HIG 修饰键顺序用例。
 - **浏览器级快捷键自动化触发不了**（CDP 只能发页面级按键，ADR-0010 已记录）：命令分支靠 fake browser 单测覆盖，真机路径必须手测，交付时如实说明，不谎报。
-- **真机验收清单**：① 未授权站点按快捷键 → 授权框弹出 → 允许 → 页面变灰；② 已授权站点按 → 直接变灰、不弹框；③ 再按一次恢复彩色，刷新后状态仍保持；④ 在 `chrome://extensions/shortcuts` 确认两条命令都绑定成功，尤其 Mac 的 `⇧⌘G` 有没有被系统 / 查找占用抢走；⑤ 在 `chrome://` 页面按 → 图标角标 `!`、不弹权限框。
+- **真机验收清单**：① 未授权站点按快捷键 → 授权框弹出 → 允许 → 页面变灰；② 已授权站点按 → 直接变灰、不弹框；③ 再按一次恢复彩色，刷新后状态仍保持；④ 在 `chrome://extensions/shortcuts` 确认两条命令都绑定成功，尤其 Mac 的 `⇧⌘G` 有没有被系统 / 查找占用抢走（**④ 的键位以 0.9.3 修订节为准**）；⑤ 在 `chrome://` 页面按 → 图标角标 `!`、不弹权限框。
+
+## 0.9.3 修订：默认键从 G 改为 Y
+
+0.9.2 装机真机验证（2026-11-12）把上面「查不到 / 没有统一成文规定的部分」里那条风险坐实了，而且原因比登记的更硬：**不是别的扩展占用，是 Chrome 自己**。
+
+- [Chromium · accelerator_table.cc](https://github.com/chromium/chromium/blob/main/chrome/browser/ui/accelerator_table.cc)：`{ui::VKEY_G, ui::EF_SHIFT_DOWN | ui::EF_PLATFORM_ACCELERATOR, IDC_FIND_PREVIOUS}`
+- [Chromium · accelerators_cocoa.mm](https://github.com/chromium/chromium/blob/main/chrome/browser/ui/cocoa/accelerators_cocoa.mm)：`{IDC_FIND_PREVIOUS, ui::EF_COMMAND_DOWN | ui::EF_SHIFT_DOWN, ui::VKEY_G}`
+
+即 `Ctrl+Shift+G` / `⌘⇧G` 是 Chrome 的「查找上一个」（macOS 访达里还是「前往文件夹」）。Chrome 在**安装时**静默丢弃冲突的建议键，manifest 仍写着 G，`commands.getAll()` 返回空串（官方 `Command.shortcut` 的说明就是「如果无效，则为空白」），界面因此没有键帽。ADR-0010 当年记下的避让清单 `Ctrl+Shift+T/N/W/B/O/I/J/C` 漏了 G，这是这次踩到的直接原因。
+
+**决定 2 修订**：默认键改为 `Ctrl+Shift+Y`（Windows / Linux）、`Command+Shift+Y`（macOS）。依据三条：
+
+1. 逐项核对上述两张保留表，`VKEY_Y` 没有任何 `Ctrl/⌘+Shift+Y` 条目；macOS 表里只有**不带 Shift** 的 `⌘Y`（显示历史记录），修饰键不同即不同组合。
+2. [Chrome · chrome.commands](https://developer.chrome.google.cn/docs/extensions/reference/api/commands) 两处示例都用 `Ctrl+Shift+Y` / `Command+Shift+Y`，即官方认可的低冲突组合。
+3. 与幕布的 X 相邻、同一族修饰键，好按好记；不含官方禁止的 `Ctrl+Alt`。
+
+Y 不再取「Gray」的语义——键位语义换成了「不与浏览器内置功能冲突 + 与 X 相邻」，这是更硬的取舍依据。成熟产品里 Dark Reader 用 `Alt+Shift+D` / `Alt+Shift+A`、uBlock Origin 干脆不给默认键；本产品用户明确要「默认快捷键」，所以取官方示例键，并在界面上保留「实际绑定 + 未绑定警告」兜底其他扩展抢键的可能。
+
+**Consequences 的界面部分同步修订**：
+
+- 设置页的「到 Chrome 里设置快捷键」移到整张卡下面、两条命令共用，不再挂在第一行让人以为只改那一条；未绑定提示改成「可能被系统或其他扩展占用了」。Chrome 不允许扩展改绑定（没有 `commands.update`），只能在用户点击时打开 `chrome://extensions/shortcuts`。
+- 设置页与欢迎页在 `visibilitychange` 时重读 `getAll()`。Chrome 没有「绑定变了」事件；快捷键页是同一窗口的新标签页，切回来窗口焦点没变，只听 `focus` 会漏掉这条最常见的路径。弹窗每次打开都是新文档，天然重读。
+- 弹窗键帽仍只在**真的绑上**时出现，不显示一个不存在的键。Chrome 官方示例 `checkCommandShortcuts()` 的做法是检测空绑定并提示用户，不是伪造键帽；把冲突讲清楚、给出去处，比在弹窗里补一个假提示更诚实。
+
+**仍需注意**：扩展更新会重算建议键，但用户手动设过的绑定优先、不会被覆盖；本地已装构建只「重新加载」不会重算，需卸载重装或手动设键。这条要写进交付说明，不能只说「升级就好」。
+
+**真机验收清单第 ④ 条更新**：确认 `chrome://extensions/shortcuts` 里两条命令都显示为已绑定（Mac 为 `⇧⌘Y`）；在那里改一个键后切回插件设置页与欢迎页，键帽应立即更新。

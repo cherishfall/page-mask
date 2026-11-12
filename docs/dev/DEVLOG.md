@@ -2,6 +2,18 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.9.3（2026-11-12）：默认键撞 Chrome 保留表，真机反馈收口
+
+用户装机反馈两件事加一问：弹窗「整页变灰」那行没有键帽；设置页第二条命令显示「没有绑定快捷键」却看不到改键的路；问「换了键显示会变吗」。三条其实是一条链。
+
+- **根因查到源码级，不猜**：`Ctrl+Shift+G` / `⌘⇧G` 命中 [Chromium · accelerator_table.cc](https://github.com/chromium/chromium/blob/main/chrome/browser/ui/accelerator_table.cc) 的 `{VKEY_G, SHIFT_DOWN | PLATFORM_ACCELERATOR, IDC_FIND_PREVIOUS}` 与 [accelerators_cocoa.mm](https://github.com/chromium/chromium/blob/main/chrome/browser/ui/cocoa/accelerators_cocoa.mm) 的 `{IDC_FIND_PREVIOUS, COMMAND_DOWN | SHIFT_DOWN, VKEY_G}`。Chrome 安装时静默丢掉建议键：manifest 不变、`commands.getAll()` 返回空串、界面因此没有键帽。ADR-0010 当年记的避让清单 T/N/W/B/O/I/J/C 漏了 G。
+- **换键依据**：逐项核对两张保留表，`VKEY_Y` 没有任何 `Ctrl/⌘+Shift+Y` 条目（macOS 只有不带 Shift 的 `⌘Y` 历史记录）；Chrome 官方 commands 文档两处示例也用 `Ctrl+Shift+Y` / `Command+Shift+Y`。与幕布 X 相邻同族。成熟产品里 Dark Reader 用 `Alt+Shift+D/A`、uBlock Origin 干脆不给默认键，但本产品用户明确要「默认快捷键」，故取官方示例键。Y 不再取 Gray 的语义，取舍依据换成「不与浏览器内置冲突 + 与 X 相邻」。
+- **本地 reload 不重算建议键**（[SO 21883258](https://stackoverflow.com/a/25654514/5228251) / Chromium `OnExtensionWillBeInstalled`）：已装的本地构建改 manifest 后必须卸载重装，或到 `chrome://extensions/shortcuts` 手动设一个；用户手动设过的绑定在升级时保留。这条写进交付说明与商店材料，不能只说「升级就好」。
+- **Chrome 没有「绑定变了」事件**：主流做法是打开时读 `getAll()` + focus / visibilitychange 重读。设置页原本只有 focus，而 Chrome 快捷键页是同一窗口的新标签页，切回来焦点没变 → 会漏。设置页与欢迎页补 visibilitychange；弹窗每次打开都是新文档，天然重读。
+- **界面**：改键入口从第一行挪到整张快捷键卡下面（两行共用），未绑定文案补上「系统」；弹窗键帽仍只在真的绑上时出现，不显示假键——Chrome 官方示例 `checkCommandShortcuts()` 也是「检测空绑定并提示」，不是伪造一个键帽。
+- **同类位置扫过**：弹窗 / 插件设置 / 欢迎页三处键帽读取、README 与商店材料中英各两处功能描述、§6 审核员备注、GLOSSARY、design.md、core/shortcut 注释与用例、CHANGELOG 与商店版本历史（历史条目保留 G，新增 0.9.3 行）。其余无同类。
+- **上轮遗留未变**：#164 / #165 / #178 / #37。
+
 ## 0.9.2（2026-11-12）：整页变灰快捷键收口，ADR-0020 修订 ADR-0010
 
 上一会话把功能实现写在工作区未提交（命令声明、三处键帽、后台自动授权），HANDOFF 交下三件缺口：ADR、测试、发版一致性。本轮按 grilling 的设计树把每个分支自查一遍后收口，分三个可验收粒度提交推送，批次结束删 HANDOFF.md。
