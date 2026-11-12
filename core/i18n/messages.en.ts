@@ -7,8 +7,8 @@
  * tab title / tab icon, "cover" / "restore".
  *
  * Copy discipline (0.4.1, see AGENTS.md): name the action and the object, never invent a term.
- * One name per thing across the whole product. No "authorize", "take effect", "rule" or "process"
- * in the interface — say "allow access", "work", "hidden item", "change".
+ * One name per thing across the whole product. No "authorize", "take effect", "apply", "rule" or
+ * "process" in the interface — say "allow access", "work", "shown your way", "hidden item", "change".
  * Keep it short: the popup is 320px wide and English runs longer than Chinese.
  */
 import type { Messages } from './messages.zh';
@@ -55,7 +55,7 @@ export const en: Messages = {
     infoLabel: 'More information',
     /** Blank-title caveat shared by three keys (see the const above) */
     titleBlankHint,
-    unnamedElement: 'Unnamed element',
+    unnamedElement: 'Unnamed item',
     languageNameZh: '简体中文',
     languageNameEn: 'English',
     deleted: (name: string) => `Deleted “${name}”`,
@@ -109,7 +109,7 @@ export const en: Messages = {
    * `heading` is the card / group name and must name the same thing as the `mediaGray` switch label.
    */
   media: {
-    heading: 'Grayscale whole page',
+    heading: 'Whole-page gray',
     mediaGray: 'Turn the whole page gray',
     /** One short line per switch, kept short (#161); follows the switch it explains, not folded into ⓘ */
     mediaGrayHint: 'The whole page turns black & white, same place, links still work',
@@ -159,8 +159,9 @@ export const en: Messages = {
     coverPage: 'Cover this page',
     /** Cover card: only the restore moment the user needs to judge (#148; #153; 0.9.3 drops "temporary", which repeats the button, and "changes no settings", which is jargon) */
     coverHint: 'Reloading or leaving this page restores it',
-    /** Show-capsule switch (#112): 0.9.3 leaves just the label, switch and ⓘ — the old line only restated the label */
-    showToggle: 'Floating button',
+    /** Show-capsule switch (#112): 0.9.3 leaves just the label, switch and ⓘ — the old line only restated the label.
+     *  #184: switch labels in English are action phrases, like the other two switches on this card */
+    showToggle: 'Show the floating button',
     /** ⓘ popover (0.8.16, #153): what still works after turning it off, available on demand; the only place for it now */
     showToggleTooltip: 'The popup settings and the “Cover this page” shortcut keep working.',
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
@@ -180,7 +181,7 @@ export const en: Messages = {
       injectFailed: 'Couldn’t start on this page. Reload it and try again',
       /** Storage read failed (#168): never stuck on "loading" — fall to the empty state plus this line; reopening the popup retries */
       loadFailed: 'Couldn’t read the settings. Reopen the popup and try again',
-      denied: 'PageMask needs access to this site to change its title and hide things. Click again and choose “Allow”',
+      denied: 'PageMask needs access to this site to change its title and hide items. Click again and choose “Allow”',
       gestureLost: 'Couldn’t open the permission prompt. Click PageMask again',
       toggleFailed: 'Couldn’t switch between “Your settings” and “As is”. Please try again',
       editFailed: 'Couldn’t open “Title & icon”. Reload this page and try again',
@@ -202,7 +203,9 @@ export const en: Messages = {
         : `${n} sites haven’t been allowed yet; until you allow them, their settings do nothing`,
     authorizeAll: 'Allow access to all',
     pendingBadge: 'Needs access',
-    pendingHint: 'The browser hasn’t allowed PageMask to open this site; your settings are kept and apply once you allow it',
+    /** Pending site (#184): the switch may be on “As is” right now, so don’t promise “shown your way”
+     *  once allowed — only that the settings are kept and come back; the switch decides what shows */
+    pendingHint: 'The browser hasn’t allowed PageMask to open this site; your settings are kept and come back once you allow access',
     authorize: 'Allow access',
 
     back: '← All site settings',
@@ -220,7 +223,7 @@ export const en: Messages = {
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title',
     titleFootnote: (fallback: string) =>
-      `Saved automatically once you stop typing. Leave it empty to use “${fallback}” — ${titleBlankHint}`,
+      `Saved automatically once you stop typing; leave it empty to use “${fallback}” — ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
     iconIntro: 'The tab uses this icon only when “Show this site your way” is on',
@@ -244,9 +247,11 @@ export const en: Messages = {
     rulesHeading: 'Hidden items',
     rulesEmpty: 'Nothing set to hide',
     ruleStaleNote: (name: string) =>
-      `“${name}” can’t be found on the site any more — the site may have changed. Open the site and pick it again.`,
+      `“${name}” can’t be found on the site any more — the site may have changed; open the site and pick it again`,
+    /** Read-only list on this page (#184): a plain sentence that doesn’t presume the reader has met
+     *  “hide method”, and uses the registered “pick again” verb */
     rulesEditHint:
-      'To change the hide method or pick something again, do it on the site: click the PageMask icon, then “Hide items”',
+      'Hidden items are changed on the site’s own page: click the PageMask icon in the toolbar, then “Hide items”',
 
     deleteSite: {
       heading: 'Delete this site’s settings',
@@ -324,7 +329,7 @@ export const en: Messages = {
 
     languageHeading: 'Language',
     languageIntro:
-      'Applies immediately. The default tab title still follows the browser language.',
+      'Every open PageMask page switches right away; the default tab title still follows the browser language',
     languageAuto: (current: string) => `Automatic (now: ${current})`,
     languageZh: '简体中文',
     languageEn: 'English',
@@ -345,7 +350,7 @@ export const en: Messages = {
   onboarding: {
     pageTitle: 'PageMask · Getting started',
     title: 'Welcome to PageMask',
-    sub: 'Pick the parts you don’t want on the sites you read and hide them. PageMask never touches sites you didn’t add.',
+    sub: 'Pick the parts you don’t want on the sites you visit often and hide them. PageMask never touches sites you didn’t add.',
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
@@ -386,11 +391,11 @@ export const en: Messages = {
     },
     progress: (index: number, total: number) => `Step ${index} of ${total}`,
     titleHint: (fallback: string) =>
-      `Whatever you type here is what the tab shows, right now. Leave it empty to use “${fallback}” — ${titleBlankHint}`,
+      `Whatever you type here is what the tab shows, right now; leave it empty to use “${fallback}” — ${titleBlankHint}`,
     pickLead: [
-      'Click something on the page to pick it.',
-      'Click it again to deselect it. You can pick several in a row.',
-      'Everything you pick is listed below.',
+      'Click something on the page to pick it',
+      'Click it again to deselect it; you can pick several in a row',
+      'Everything you pick is listed below',
     ],
     adjustGroup: 'Adjust the last pick',
     adjustNow: 'Adjusting',
@@ -441,22 +446,25 @@ export const en: Messages = {
     /** Checked rows repeat the exact count in their summary (n = the whole group, this one included) */
     sameGroupSummary: (n: number) => `${n} in total with the others like it`,
     scopeHintHash: 'This site tells pages apart by what follows #, so for now the whole site is the only choice',
-    backToPick: 'Back: pick again',
-    nextToPreview: (n: number) => `Next: check result (${n})`,
+    backToPick: 'Back: pick what to hide',
+    nextToPreview: (n: number) => `Next: check the result (${n})`,
     save: 'Save',
     saving: 'Saving…',
     exit: 'Exit setup',
     exitTitle: 'Exit setup?',
     exitBodySelected: (n: number) =>
-      `The ${n} picked items won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.`,
+      n === 1
+        ? 'The item you picked won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.'
+        : `The ${n} picked items won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.`,
     exitBodyPlain:
-      'The title and icon you changed won’t be saved. After you exit, the tab goes back to its real name and the page to its original look.',
-    exitBodyNoChanges: 'Nothing here is unsaved yet — exiting won’t change your current settings.',
+      'The title and icon you changed won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.',
+    exitBodyNoChanges: 'Nothing has been changed yet this time; exiting won’t change your current settings.',
     exitStay: 'Keep setting up',
     exitConfirm: 'Exit',
     notSavedTitle: 'Not saved',
-    /** Choice before saving on an as-is site (#159): both paths save; only “Turn it on” flips the switch */
-    openTitle: 'You won’t see it after saving',
+    /** Choice before saving on an as-is site (#159): both paths save; only “Turn it on” flips the switch.
+     *  #184: “it” pointed at nothing — name what won’t be visible */
+    openTitle: 'You won’t see the result after saving',
     openBody: '“Show this site your way” is off. Turn it on now?',
     openStay: 'Save, keep as is',
     openConfirm: 'Save, turn it on now',

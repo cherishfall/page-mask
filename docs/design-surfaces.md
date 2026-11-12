@@ -61,7 +61,7 @@
 |---:|---|---|---|---|---|---|
 | 1 | 标题和图标 | pm-popup-title | 标题和图标 | Title & icon | popup.editTitle | 面具卡内第一颗编辑入口 |
 | 2 | 收起内容 | pm-popup-setup | 收起内容 | Hide items | popup.setupMore | 面具卡内第二颗编辑入口 |
-| 5 | 整页变灰 | pm-popup-media | 整页变灰 | Grayscale whole page | media.heading | 灰度卡的分组名；开关标签取 media.mediaGray，中文同名 |
+| 5 | 整页变灰 | pm-popup-media | 整页变灰 | Whole-page gray | media.heading | 灰度卡的分组名；开关标签取 media.mediaGray，中文同名 |
 | 6 | 遮住这一页 | pm-popup-cover | 遮住这一页 | Cover this page | popup.coverPage | 遮住卡内的按钮 |
 | 7 | 删除这个网站的设置 | pm-popup-delete | 删除这个网站的设置 | Delete this site’s settings | management.deleteSite.heading | 底部红字文字按钮 |
 
@@ -89,7 +89,7 @@
 |---:|---|---|---|---|---|---|
 | 1 | 标题和图标 | pm-mgmt-card-title-icon | 标题和图标 | Title & icon | management.titleIconHeading | 一张卡（#182）：卡内两个字段沿用「标签页标题」（management.titleHeading）与「标签页图标」（management.iconHeading）的名字；卡内底部有「恢复网站原来的标题和图标」出口（#99），不是新的功能项，不加行 |
 | 2 | 收起内容 | pm-mgmt-card-rules | 收起的内容 | Hidden items | management.rulesHeading | 只读清单；卡内底部有「恢复网站原来的内容」出口（#160），不是新的功能项，不加行 |
-| 5 | 整页变灰 | pm-mgmt-card-media | 整页变灰 | Grayscale whole page | media.heading | 开关标签取 media.mediaGray，中文同名 |
+| 5 | 整页变灰 | pm-mgmt-card-media | 整页变灰 | Whole-page gray | media.heading | 开关标签取 media.mediaGray，中文同名 |
 | 7 | 删除这个网站的设置 | pm-mgmt-card-delete | 删除这个网站的设置 | Delete this site’s settings | management.deleteSite.heading | 页脚危险区 |
 
 ## 五、登记在案的两条例外

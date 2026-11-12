@@ -67,8 +67,8 @@ export const zh = {
     infoLabel: '更多信息',
     /** 标题留空的坑提示，三处共用（见文件头的 const） */
     titleBlankHint,
-    /** 坏数据里没有名字的收起项 */
-    unnamedElement: '未命名的元素',
+    /** 坏数据里没有名字的收起项（清单内同类都叫「项」，#184） */
+    unnamedElement: '未命名的收起项',
     /** 语言名各用本语言书写，不翻译 */
     languageNameZh: '简体中文',
     languageNameEn: 'English',
@@ -163,8 +163,9 @@ export const zh = {
       other: '这类页面不让扩展改动',
     },
     pendingBadge: '需要允许访问',
-    /** 弹窗摘要里的失效条改成了可点（#175）：读屏名把去向说全，可见文字保持 common.staleCount 短名 */
-    staleAction: (n: number) => `${n} 项可能失效。点这里打开收起内容，重新选一次`,
+    /** 弹窗摘要里的失效条改成了可点（#175）：读屏名把去向说全，可见文字保持 common.staleCount 短名。
+     *  #184 去掉「点这里」——读屏名里不指代自己，直接说去哪、做什么 */
+    staleAction: (n: number) => `${n} 项可能失效。打开「收起内容」，重新选一次`,
     /** 没设置过时的一句话状态（#148）：一句就好，两个编辑入口就是第一步 */
     newSiteHint: '这个网站还没设置过',
     pendingHint: '浏览器收回了这个网站的访问权限；你的设置都还在，重新允许访问就回来了',
@@ -184,7 +185,7 @@ export const zh = {
     coverPage: '遮住这一页',
     /** 遮住卡的临时性说明（#148；#153 收短；0.9.3 再删与按钮名重复的「临时遮住」和行话「不改设置」）：
      *  只留用户要判断的还原时机，并写全「离开页面」这个真实边界 */
-    coverHint: '刷新或离开这个页面就还原',
+    coverHint: '刷新或离开这个页面就恢复',
     /** 右下角的小按钮开关（#112）：0.9.3 起只有标签 + 开关 + ⓘ。
      *  原先那行「关掉后不再显示悬浮按钮」只是把标签和开关状态复述一遍，已删 */
     showToggle: '悬浮按钮',
@@ -228,7 +229,9 @@ export const zh = {
     pendingAll: (n: number) => `有 ${n} 个网站还没允许访问；在你允许之前，这些网站的设置不会起作用`,
     authorizeAll: '全部允许访问',
     pendingBadge: '需要允许访问',
-    pendingHint: '浏览器还没允许 PageMask 访问这个网站；设置都还在，允许之后就会按设置显示',
+    /** 待授权站的说明（#184）：开关此刻可能是「原样」，不承诺「允许之后就会按设置显示」——
+     *  只说设置还在、允许访问就回来，回来之后是什么样由开关自己说了算 */
+    pendingHint: '浏览器还没允许 PageMask 访问这个网站；设置都还在，允许访问就回来了',
     authorize: '允许访问',
 
     back: '← 全部网站设置',
@@ -245,7 +248,7 @@ export const zh = {
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
     titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题',
     titleFootnote: (fallback: string) =>
-      `停止输入后自动保存。留空就用「${fallback}」——${titleBlankHint}`,
+      `停止输入后自动保存；留空就用「${fallback}」——${titleBlankHint}`,
 
     iconHeading: '标签页图标',
     iconIntro: '「按你的设置显示」打开时，标签页才用这里选的图标',
@@ -268,9 +271,10 @@ export const zh = {
 
     rulesHeading: '收起的内容',
     rulesEmpty: '还没有收起设置',
-    ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了。打开这个网站重新选一次。`,
-    /** 这一页只读清单；换成怎么收、重选元素都要页面上下文，所以指回页面（#71） */
-    rulesEditHint: '换收起方式或重选元素，要回网站页面上改：点工具栏上的 PageMask 图标，再点「收起内容」',
+    ruleStaleNote: (name: string) => `「${name}」最近在网站上找不到了，可能网站改版了；打开这个网站重新选一次`,
+    /** 这一页只读清单；改成什么都要页面上下文，所以指回页面（#71）。
+     *  #184 重写成平句：不预设用户见过「收起方式」，不用「重选元素」，用钦定的「重新选一次」 */
+    rulesEditHint: '收起的内容要在网站页面上改：点工具栏上的 PageMask 图标，再点「收起内容」',
 
     /** 站点设置页页脚与 ⋯ 菜单里的同一件事（改一处两处一起改） */
     deleteSite: {
@@ -296,7 +300,7 @@ export const zh = {
       partUpdated: (n: number) => `更新 ${n} 个网站`,
       partRemoved: (n: number) => `删掉 ${n} 个本机的网站`,
       partSkipped: (n: number) => `跳过 ${n} 个格式不对的网站`,
-      partSkippedRules: (n: number) => `忽略 ${n} 条读不出来的收起设置`,
+      partSkippedRules: (n: number) => `忽略 ${n} 项读不出来的收起设置`,
       modeMerge: '合并',
       modeReplace: '整体替换',
       cancelled: '已取消导入，本机的设置没有改动',
@@ -322,7 +326,7 @@ export const zh = {
     toggleHint: '调它闲着的时候有多淡（数值越小越淡），鼠标移上去立刻变清楚。遮住整页后出现的那颗按钮不受影响，一直看得清。',
 
     shortcutHeading: '快捷键',
-    shortcutIntro: '遮住是临时的，刷新或离开页面就还原；整页变灰按网站记，再按一次就关',
+    shortcutIntro: '遮住是临时的，刷新或离开页面就恢复；整页变灰按网站记，再按一次恢复彩色',
     shortcutLabel: '遮住 / 恢复',
     shortcutGrayLabel: '整页变灰 / 恢复彩色',
     shortcutUnbound: '没有绑定快捷键，可能被系统或其他扩展占用了',
@@ -389,7 +393,7 @@ export const zh = {
           '收起内容：点页面上不想要的部分，它们就消失。',
           '标题和图标：把标签页的名字和图标换成你设置的样子。',
           '整页变灰：整个页面变成黑白，位置不变。',
-          '遮住这一页：临时挡一下，刷新就还原。',
+          '遮住这一页：临时挡一下，刷新就恢复。',
         ],
       },
       {
@@ -408,9 +412,9 @@ export const zh = {
       preview: '看效果',
     },
     progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
-    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到。留空就用「${fallback}」——${titleBlankHint}`,
-    /** 选内容这一步的说明：一行一件事 */
-    pickLead: ['点一下页面上的东西，就选中它', '再点一下取消选中。可以连着选好几个', '选中的都列在下面'],
+    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到；留空就用「${fallback}」——${titleBlankHint}`,
+    /** 选内容这一步的说明：一行一件事（#184：行内分句用分号，不带句号） */
+    pickLead: ['点一下页面上的东西，就选中它', '再点一下取消选中；可以连着选好几个', '选中的都列在下面'],
     adjustGroup: '调整最后选中的那一项',
     adjustNow: '现在调的是',
     /** #161：与清单空状态（listEmpty）重复的「还没选中东西」去掉，只留下一步动作这一句 */
@@ -428,8 +432,8 @@ export const zh = {
     draftsLabel: (n: number) => `这次要收起的内容（${n} 项）`,
     /** 行上的展开按钮：收起方式、范围、重选、高级选择器都在里面（审查第 8 条） */
     adjust: '调整',
-    /** 预览行里勾了同类的行：跳回点选阶段检查组员（#88） */
-    inspectSame: '检查一样的',
+    /** 预览行里勾了同类的行：跳回点选阶段检查组员（#88；#184 补上对象，「检查一样的」不像一句完整的话） */
+    inspectSame: '检查一样的那些',
     /** 失效行的摘要：说清它可能没用了 */
     staleSummary: '可能失效 · 在页面上找不到了',
     /** 失效行点「重新选」后的一句提示：下一个动作是什么 */
@@ -476,10 +480,11 @@ export const zh = {
     saving: '正在保存…',
     exit: '退出设置',
     exitTitle: '退出设置？',
-    exitBodySelected: (n: number) => `已经选的 ${n} 项不会保存。退出后标签页会变回原来的名字，页面也变回设置前的样子。`,
-    exitBodyPlain: '改过的标题和图标不会保存。退出后标签页会变回原来的名字，页面也变回设置前的样子。',
-    /** 点「退出设置」但这次什么都没改（#123）：如实说明为什么还要问这一次 */
-    exitBodyNoChanges: '这次还没有未保存的改动，退出不会影响已有的设置。',
+    exitBodySelected: (n: number) => `已经选的 ${n} 项不会保存。退出后标签页会变回原来的标题，页面也变回设置前的样子。`,
+    exitBodyPlain: '改过的标题和图标不会保存。退出后标签页会变回原来的标题，页面也变回设置前的样子。',
+    /** 点「退出设置」但这次什么都没改（#123）：如实说明为什么还要问这一次。
+     *  #184 去掉「未保存的改动」的双重否定 */
+    exitBodyNoChanges: '这次还没有改过内容，退出不会影响已有的设置。',
     exitStay: '继续设置',
     exitConfirm: '退出',
     notSavedTitle: '没有保存',
@@ -489,7 +494,7 @@ export const zh = {
     openStay: '保存，先保持原样',
     openConfirm: '保存，现在打开',
     /** 保存后 0 条收起设置的轻提示 */
-    zeroRuleNotice: (title: string) => `已保存，标签页名字换成「${title}」了`,
+    zeroRuleNotice: (title: string) => `已保存，标签页标题换成「${title}」了`,
     titleResetNotice: '已恢复网站原来的标题和图标',
     /** 恢复收起内容后的页内提示（#160）：向导已关，用一句轻提示说清刚发生了什么 */
     rulesResetNotice: '已恢复网站原来的内容',
@@ -498,9 +503,9 @@ export const zh = {
     /** 嵌套区域检测（#167）：design.md「已知边界」承诺的提示。说清选不了、也别说行话 */
     warnNestedShadow: '这一块嵌在网页组件的内部区域里，收起设置管不到它，所以没有选中',
     warnNestedIframe: '这一块嵌在网页里另一层页面里，收起设置管不到它，所以没有选中',
-    warnUnstable: '这一组没法稳定找到，已经保持原来的勾选',
+    warnUnstable: '这一组没法稳定找到，还保持你原来选的样子',
     warnUnsavable: (index: number) =>
-      `第 ${index} 个元素很难稳定找到：点它右边的 ✕ 取消选中这一项，再用「选大一点」重新选`,
+      `第 ${index} 项很难稳定找到：点它右边的 ✕ 取消选中这一项，再用「选大一点」重新选`,
     warnPreviewFailed: '效果没有显示出来，再试一次',
     warnPreviewClearFailed: '预览效果没能撤掉，刷新页面就恢复了',
     warnNotCleared: '预览效果没能撤掉，这次没有保存。刷新页面后再试一次',

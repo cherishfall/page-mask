@@ -62,7 +62,7 @@ describe('unsavableDraftWarning 保存门槛：每条规则至少 1 个候选', 
   });
   it('有元素没有候选时拦下，并指出第几个', () => {
     const msg = unsavableDraftWarning([{ candidates: ['.a'] }, { candidates: [] }]);
-    expect(msg).toContain('第 2 个');
+    expect(msg).toContain('第 2 项');
     expect(msg).toContain('选大一点');
   });
 });
@@ -568,11 +568,11 @@ describe('「在哪些页面收起」三选一 → 落库的范围（#53）', ()
 });
 
 describe('0 条规则保存后的轻提示（#53）', () => {
-  it('说清楚生效的是标签页名字，并带上真正生效的标题', () => {
-    expect(zeroRuleSavedNotice('工作笔记')).toBe('已保存，标签页名字换成「工作笔记」了');
+  it('说清楚生效的是标签页标题，并带上真正生效的标题', () => {
+    expect(zeroRuleSavedNotice('工作笔记')).toBe('已保存，标签页标题换成「工作笔记」了');
   });
   it('标题取的是兜底后的值（输入留空时也一样）', () => {
     const patch = titleOnlyPatch({ title: '  ', icon: { kind: 'none' }, fallbackTitle: '阅读' });
-    expect(zeroRuleSavedNotice(patch.disguisedTitle)).toBe('已保存，标签页名字换成「阅读」了');
+    expect(zeroRuleSavedNotice(patch.disguisedTitle)).toBe('已保存，标签页标题换成「阅读」了');
   });
 });
