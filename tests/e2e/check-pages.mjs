@@ -353,9 +353,10 @@ async function checkPopupChrome(popup, label) {
       `${label}：面具卡内两颗编辑入口的顺序与对照表一致（${layout.btns.join(' → ')}）`,
     );
     check(layout.topDelta < 1.5, `${label}：两颗编辑入口并排同一行（top 差 ${layout.topDelta.toFixed(1)}px）`);
+    // #187：两颗同为次操作档（0.8.16 #153），高度回归默认档 32——40 只给触屏与主要提交
     check(
-      layout.titleH >= 40 && layout.setupH >= 40,
-      `${label}：两颗编辑入口等高 ≥40px（次 ${layout.titleH.toFixed(1)} / 主 ${layout.setupH.toFixed(1)}）`,
+      layout.titleH >= 32 && layout.setupH >= 32,
+      `${label}：两颗编辑入口等高 ≥32px（${layout.titleH.toFixed(1)} / ${layout.setupH.toFixed(1)}）`,
     );
     check(
       (layout.hintSizes.length === 2 || layout.hintSizes.length === 3) && new Set(layout.hintSizes).size === 1 && layout.hintSizes[0] === '13px',

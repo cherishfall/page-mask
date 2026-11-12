@@ -41,7 +41,7 @@
  *   on-danger        on danger-active 浅 8.31  深 8.31  ≥4.5
  *   fg               on bg-control-hover  浅 13.82 深 12.25 ≥4.5
  *   fg               on bg-control-active 浅 12.72 深 13.19 ≥4.5
- *   fg               on bg-selected       浅 12.01 深 9.67  ≥4.5
+ *   fg               on bg-selected       浅 8.72  深 9.67  ≥4.5
  *   （bg-selected 是胶囊图标开关的选中底，0.8.16 #152；开态图标就是 fg，此行守门。
  *     state-hover / state-press 是叠在选中底上的装饰性薄层，无文字压在上面，不设行）
  *   warning          on bg            浅 5.18  深 6.97  ≥4.5
@@ -101,14 +101,20 @@
      依据 M3 icon button（toggleable：选中 = filled icon + secondaryContainer 淡色容器，
      不用 primary 强调色）、Carbon 工具栏图标选中态（layer-selected 淡灰底）、
      iOS 控制中心（激活 = 色调底 + 填实图标）。浅色比 bg 深一档、深色比 bg 亮一档——
-     两个方向都是「离表面一步」，与各模式下 hover / active 的方向一致 */
-  --pm-bg-selected-light: #dde1e6;
+     两个方向都是「离表面一步」，与各模式下 hover / active 的方向一致。
+     #187：浅色 #dde1e6 对白底只有 1.31:1，隔一屏看不出「选中了」——加深一档到 #bcc1c8
+     （对白底 1.81:1，M3 secondaryContainer 量级的可见度），保持同一蓝灰相；
+     真实胶囊与欢迎页第 3 步的预览共用这个 token，同源同值一起变。
+     信号结构不变（#152：形状 + 墨色双主信号，选中底仍是辅助信号） */
+  --pm-bg-selected-light: #bcc1c8;
   --pm-bg-selected-dark: #303743;
   /* M3 state layer（选中态的悬停 / 按下薄层，0.8.16，#152）：叠在选中底上的半透明层，
      box-shadow inset 9999px 全覆盖画法（见 ui/toggle/toggle.css）。装饰性覆盖层，
      不承载信息，不参与对比度门槛。数值按本地选中底校准：M3 用 0.08/0.12 叠在较深的
-     secondaryContainer 上；我们的选中底很浅，发版审查实测 7% 薄层与选中底肉眼难辨
-     （悬停是临时的、选中是常驻的，两者必须分得开），加深到 0.14 / 0.22 */
+     secondaryContainer 上；发版审查实测 7% 薄层与当时的浅选中底肉眼难辨
+     （悬停是临时的、选中是常驻的，两者必须分得开），加深到 0.14 / 0.22。
+     #187 选中底浅色加深一档后复算：悬停层与选中底 1.35:1、按下层再与悬停 1.20:1，
+     与旧选中底（1.36 / 1.22）同量级，薄层档位不用动 */
   --pm-state-hover-light: rgb(0 0 0 / 0.14);
   --pm-state-hover-dark: rgb(255 255 255 / 0.16);
   --pm-state-press-light: rgb(0 0 0 / 0.22);

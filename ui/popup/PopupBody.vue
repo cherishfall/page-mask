@@ -516,14 +516,15 @@ const deleteLabel = deleteSiteHeading();
    0.8.16（#153）：两颗同为次操作档（用户明确推翻「收起内容是主按钮」——已设置网站里它只是
    两个编辑入口之一；Ant「默认按钮用于一组没有优先级差别的动作」）。弹窗不再有实心主按钮，
    pending 态的「允许访问」仍是实心（那一屏唯一的动作）。
-   两颗都按「主要提交」档给到 40px，并排比竖排省一行。<style> 非 scoped，一律 .popup 限定。 */
+   #187：高度回归默认档 32——#148 当年按「主要提交」给的 40 只属于实心那颗，
+   #153 改判次操作档后 40 的依据已经不在；并排省一行的形态不变。
+   <style> 非 scoped，一律 .popup 限定。 */
 .popup .edit-actions {
   display: flex;
   gap: var(--pm-space-2);
 }
 .popup .edit-actions button {
   flex: 1;
-  min-block-size: var(--pm-control-lg);
 }
 /* 卡内说明（#148 / 方案 v3 §三①）：卡内说明与错误提示统一 13px 正文档，
    消掉 .hint 默认 12px 与 .media-group .hint 13px 的分叉（AGENTS.md 整屏审查第 5 条）。

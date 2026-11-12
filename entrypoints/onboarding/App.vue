@@ -9,8 +9,9 @@
         <p class="sub">{{ t.onboarding.sub }}</p>
       </div>
       <!-- 退路在最轻的位置（AGENTS 整屏审查第 4 条 / #175 视觉审查）：装完就绑定三步不合情理，
-           随时可以跳过；跳过与看完最后一步走同一个出口（关掉这一页），不丢任何东西 -->
-      <button type="button" class="ghost" data-testid="onboard-skip" @click="finish">{{ t.onboarding.skip }}</button>
+           随时可以跳过；跳过与看完最后一步走同一个出口（关掉这一页），不丢任何东西。
+           「跳过引导」的形态归档见下方 .skip 的样式注释与 design-ui §四 文字入口 · 登记的例外（#187） -->
+      <button type="button" class="ghost skip" data-testid="onboard-skip" @click="finish">{{ t.onboarding.skip }}</button>
     </header>
 
     <!-- 分步单屏（#139）：一次只显示当前步，内容列放宽到 720——
@@ -39,14 +40,18 @@
             <!-- 这张画画的是 Chrome 工具栏（拼图图标 + 固定后的 PageMask），不是自家界面，
                  不在「示意图跟组件走」的同步范围内 -->
             <rect x="1" y="6" width="298" height="32" rx="16" class="sk-bar" />
+            <!-- 两侧灰圆是工具栏上别的图标位，纯装饰（#187：不承载「理解内容」，
+                 不参与 WCAG 1.4.11 的 3:1，保持低对比） -->
             <circle cx="26" cy="22" r="9" class="sk-dot" />
+            <!-- 拼图盒是文案让人去点的那枚图标（WCAG 1.4.11：理解内容必需的图形对象 ≥3:1。
+                 #187：填充从 bg-subtle 的约 1.05:1 加深到 fg-muted——浅 4.83 / 深 5.98，两个主题都过线） -->
             <rect x="126" y="14" width="26" height="16" rx="4" class="sk-puzzle" />
-            <!-- 拼图盒子里画个图标轮廓（0.8.11 目检 A3）：光标指着的是「拼图图标」，
-                 盒子里不能是空的——四个小点示意扩展图标格 -->
-            <circle cx="133" cy="19" r="1.7" class="sk-dot" />
-            <circle cx="140" cy="19" r="1.7" class="sk-dot" />
-            <circle cx="133" cy="26" r="1.7" class="sk-dot" />
-            <circle cx="140" cy="26" r="1.7" class="sk-dot" />
+            <!-- 盒内四个小点示意扩展图标格（0.8.11 目检 A3：光标指着的盒子里不能是空的）；
+                 盒子加深后随深色填充反白 -->
+            <circle cx="133" cy="19" r="1.7" class="sk-puzzle-dot" />
+            <circle cx="140" cy="19" r="1.7" class="sk-puzzle-dot" />
+            <circle cx="133" cy="26" r="1.7" class="sk-puzzle-dot" />
+            <circle cx="140" cy="26" r="1.7" class="sk-puzzle-dot" />
             <path d="M146 34 l6 8 M146 34 l-6 8" class="sk-line" />
             <rect x="182" y="8" width="28" height="28" rx="8" class="sk-on" />
             <text x="196" y="27" text-anchor="middle" class="sk-on-text">P</text>
@@ -79,11 +84,11 @@
             />
           </div>
         </div>
+        <!-- 这句讲的是弹窗里那两个入口在哪（#187：说明跟着它解释的对象走——从页面底部
+             挪进步骤卡、贴着弹窗示意图）：只配第 2 步（弹窗那一步）——0.8.11 目检指出
+             它在第 1 步提前引用了还没介绍的弹窗、又与第 3 步逐字重复 -->
+        <p v-if="step === 2" class="tip">{{ t.onboarding.tip }}</p>
       </section>
-
-      <!-- 这句讲的是弹窗里那两个入口在哪：只配第 2 步（弹窗那一步）——0.8.11 目检指出
-           它在第 1 步提前引用了还没介绍的弹窗、又与第 3 步逐字重复 -->
-      <p v-if="step === 2" class="tip">{{ t.onboarding.tip }}</p>
       </div>
     </div>
 
@@ -207,6 +212,18 @@ h1 {
   color: var(--pm-fg-muted);
   margin: var(--pm-space-2) 0 0;
 }
+/* 「跳过引导」（#187 定稿；归档登记在 docs/design-ui.md §四 文字入口 · 登记的例外）：
+ * 它是「结束引导」的动作不是去向，语义留在 <button>（Carbon：动作不用链接）；
+ * 形态取「次级入口链接」档——muted 灰 + 常驻下划线。文字按钮档的「悬停出浅灰底」
+ * 只有指针看得见（规则自己在嵌流档承认过：悬停是鼠标才有的状态，键盘与触屏没有悬停），
+ * 而它静置在标题与副标题两行说明文字旁边，同灰无下划线时读不出能点（#74 的教训；
+ * 弹窗删除入口 #175 先例：按钮 + 常驻下划线治「长得不像入口」）。
+ * 与设置页那个「到 Chrome 里设置快捷键」不共形不冲突：它独占一行、悬停信号够用，
+ * 「跳过引导」与说明文字同排——文字入口规则按上下文分档 */
+.skip {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 /* 滚动区：常态内容不满一屏，竖直居中（0.8.11 目检 A4「头重脚轻」）；
    矮视口时内容在这里滚，底栏永远完整可见。居中由 .stack 的 margin-block:auto 承担：
    flex 容器上的 justify-content:center 在内容溢出时会把顶部顶出可视区、滚不回来 */
@@ -260,11 +277,13 @@ h1 {
   color: var(--pm-fg-muted);
   line-height: 1.6;
 }
-/* 功能列表（#139 起四件事）：一行一件，名字在前、结果在后 */
+/* 功能列表（#139 起四件事）：一行一件，名字在前、结果在后。
+   #187：正文回到 --pm-fg——要点是这一步的主内容，原来与副标题同灰同值，
+   只靠加粗语序区分是层级倒挂；主内容 fg、辅助说明 muted（design-ui §三 文字表） */
 .features {
   margin: var(--pm-space-3) 0 0;
   padding-left: 1.2em;
-  color: var(--pm-fg-muted);
+  color: var(--pm-fg);
   line-height: 1.6;
 }
 .features li + li {
@@ -282,8 +301,10 @@ h1 {
   background: var(--pm-bg-subtle);
   border-top: 1px solid var(--pm-border);
 }
-/* 底栏两个按钮是这一步的主要提交：用 40 高（docs/design-ui.md §四） */
-.nav button {
+/* 底栏按钮尺寸（#187 统一到档）：40 只给触屏与主要提交（docs/design-ui.md §四）——
+ * 「下一步 / 开始使用」是这一步的主要提交，用 40；「上一步」是退路（次操作），
+ * 回归默认档 32。旧规则把整条底栏抬到 40，退路冒充了主要提交 */
+.nav button.primary {
   min-block-size: var(--pm-control-lg);
   padding-inline: var(--pm-space-4);
 }
@@ -328,9 +349,14 @@ h1 {
 .sk-dot {
   fill: var(--pm-border);
 }
+/* 拼图盒是文案让人去点的那枚图标，填充对白底必须 ≥3:1（WCAG 1.4.11，#187）：
+   fg-muted 浅 4.83 / 深 5.98；盒内的图标格随深色填充反白 */
 .sk-puzzle {
-  fill: var(--pm-bg-subtle);
-  stroke: var(--pm-border-control);
+  fill: var(--pm-fg-muted);
+  stroke: var(--pm-fg-muted);
+}
+.sk-puzzle-dot {
+  fill: var(--pm-bg);
 }
 .sk-line {
   stroke: var(--pm-fg-muted);

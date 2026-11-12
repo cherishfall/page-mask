@@ -368,8 +368,11 @@ export const en: Messages = {
         title: 'Four things the popup does',
         text: 'Click PageMask in the toolbar — this is the popup.',
         features: [
-          'Hide items: click the parts of a page you don’t want; they disappear.',
+          // #187: follow the canonical order in docs/design-surfaces.md §三 (1 = title & icon,
+          // 2 = hide items), matching the real popup embedded on the same screen; the order is
+          // guarded by tests/onboarding-sync.test.ts against the surfaces table
           'Title & icon: give the tab a name and icon of your choosing.',
+          'Hide items: click the parts of a page you don’t want; they disappear.',
           'Turn the whole page gray: the page turns black & white, same place.',
           'Cover this page: covers it for now; reloading restores it.',
         ],

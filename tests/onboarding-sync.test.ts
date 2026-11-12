@@ -12,6 +12,8 @@
  */
 // @ts-ignore -- node:fs 无类型声明（项目未装 @types/node）
 import { readFileSync } from 'node:fs';
+// @ts-ignore -- .mjs 解析器没有类型声明（项目未装 @types/node）
+import { loadSurfaces } from './e2e/lib/surfaces.mjs';
 import { describe, expect, it } from 'vitest';
 import { MESSAGES } from '@/core/i18n';
 
@@ -32,20 +34,48 @@ describe('欢迎页与当前功能集同步（#139）', () => {
     expect(popupBody).toContain('href="/onboarding.html"');
   });
 
+  // 弹窗对照表的行序就是全产品权威的「序」（docs/design-surfaces.md §三）；
+  // 欢迎页介绍的是弹窗四件事，不含「删除这个网站的设置」。要点用的界面名来源
+  // 与下面覆盖检查一致（开关名而不是卡名：整页变灰取 media.mediaGray）
+  const surfaces = loadSurfaces();
+  const FEATURE_KEYS: Record<string, string> = {
+    '标题和图标': 'popup.editTitle',
+    '收起内容': 'popup.setupMore',
+    '整页变灰': 'media.mediaGray',
+    '遮住这一页': 'popup.coverPage',
+  };
+  const valueOf = (obj: unknown, key: string): unknown =>
+    key.split('.').reduce<unknown>((cur, part) => (cur as Record<string, unknown>)?.[part], obj);
+
   for (const lang of ['zh', 'en'] as const) {
     it(`${lang}: 欢迎页文案覆盖当前功能集的界面名`, () => {
       const m = MESSAGES[lang];
       // 欢迎页分步文案拼成一段，逐个核对功能名（这些值来自各自的权威键，别手抄字面量）
       const onboardingText = JSON.stringify(m.onboarding.steps);
-      // —— 当前功能集清单；加新功能时在这里加一行 ——
-      const required: Array<[string, string]> = [
-        ['收起内容', m.popup.setupMore],
-        ['标题和图标', m.popup.editTitle],
-        ['整页变灰', m.media.mediaGray],
-        ['遮住这一页', m.popup.coverPage],
-      ];
+      // —— 当前功能集清单；顺序随对照表（下一行测试守序）——
+      const required: Array<[string, string]> = Object.entries(FEATURE_KEYS).map(
+        ([what, key]) => [what, valueOf(m, key) as string] as [string, string],
+      );
       for (const [what, label] of required) {
         expect(onboardingText, `${lang} 欢迎页没有介绍「${what}」（${label}）——加新功能时欢迎页文案要跟上`).toContain(label);
+      }
+    });
+
+    // #187：要点顺序随对照表——welcome-2 曾把「收起内容」排在「标题和图标」前面，
+    // 与「序」（1=标题和图标，2=收起内容）和同屏内嵌的真实弹窗相反
+    it(`${lang}: 欢迎页要点顺序与 design-surfaces 的「序」一致（#187）`, () => {
+      const features = MESSAGES[lang].onboarding.steps[1]!.features;
+      const rows = surfaces.popup as Array<{ item: string }>;
+      const required = rows
+        .filter((row) => FEATURE_KEYS[row.item])
+        .map((row) => [row.item, valueOf(MESSAGES[lang], FEATURE_KEYS[row.item]!) as string] as const);
+      expect(features.length, '欢迎页第 2 步的要点数量与对照表的弹窗行数一致').toBe(required.length);
+      const joined = features.join('\n');
+      let at = -1;
+      for (const [item, label] of required) {
+        const next = joined.indexOf(label);
+        expect(next, `${lang} 欢迎页要点缺少「${item}」（${label}），或没有按对照表的序排列`).toBeGreaterThan(at);
+        at = next;
       }
     });
   }
