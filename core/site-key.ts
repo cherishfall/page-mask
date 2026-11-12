@@ -163,8 +163,9 @@ function hasPort(key: string): boolean {
  * 站点对应的匹配模式（权限申请、动态注册共用）：
  * - 普通域名：裸域在前、子域在后，两条都申请 / 注册——不依赖 `*://*.x/*` 是否覆盖裸域
  * - IP / localhost / 单标签主机名：只有一条精确模式（不能造无效的通配子域模式）
- * - 带端口：不能用 `*` 方案——Chrome 的匹配模式只允许 `*` 搭配默认端口（80 / 443），
- *   `*://host:8080/*` 会被判 "Invalid port"（permissions.request / remove 整批失败）。
+ * - 带端口：不能用 `*` 方案——Chromium 的 URLPattern 对 `*` 方案只接受通配端口 `:*`，
+ *   任何显式端口（连 :80 / :443 在内）都判 "Invalid port"（IsValidPortForScheme：方案没有
+ *   默认端口就不收显式端口，而 `*` 不是真实方案），permissions.request / remove 会整批失败。
  *   显式给出 http、https 两条：协议不参与站点身份（#162），两条合起来仍是一个站点。
  */
 export function sitePatterns(key: string): string[] {

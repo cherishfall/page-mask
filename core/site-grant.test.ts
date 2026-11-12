@@ -25,14 +25,28 @@ describe('isOriginCovered：当前页面是否被这批模式覆盖', () => {
     expect(isOriginCovered('https://s.weibo.com/x', ['*://weibo.com/*'])).toBe(false);
   });
 
-  it('模式带端口只匹配该端口；没写端口只匹配默认端口', () => {
+  it('模式没写端口按 Chrome 口径通配所有端口（官方：match all ports unless an explicit port）', () => {
+    // 默认端口的页面照常命中
+    expect(isOriginCovered('https://weibo.com/x', ['*://weibo.com/*'])).toBe(true);
+    // #185 核心回归：无端口模式 × 非默认端口页面 = 命中（此前误判 false，弹窗死循环误导）
+    expect(isOriginCovered('https://weibo.com:8443/x', ['*://weibo.com/*'])).toBe(true);
+    expect(isOriginCovered('https://weibo.com:8443/x', ['https://weibo.com/*'])).toBe(true);
+    expect(isOriginCovered('http://localhost:3000/x', ['http://localhost/*'])).toBe(true);
+    // 全站通配授权（主机 `*`、无端口）覆盖任意端口的页面
+    expect(isOriginCovered('https://a.b.example:9090/', ['*://*/*'])).toBe(true);
+    // IPv6 字面量同样按通配端口处理
+    expect(isOriginCovered('https://[::1]/x', ['*://[::1]/*'])).toBe(true);
+    expect(isOriginCovered('https://[::1]:8080/x', ['*://[::1]/*'])).toBe(true);
+  });
+
+  it('模式写了端口只匹配该端口（页面对比用有效端口：没写端口按方案默认值算）', () => {
     expect(isOriginCovered('http://127.0.0.1:8080/x', ['http://127.0.0.1:8080/*'])).toBe(true);
     expect(isOriginCovered('http://127.0.0.1:8081/x', ['http://127.0.0.1:8080/*'])).toBe(false);
     expect(isOriginCovered('https://127.0.0.1:8080/x', ['http://127.0.0.1:8080/*'])).toBe(false);
-    // 默认端口：URL 解析后 port 为空，`*://host/*` 覆盖
-    expect(isOriginCovered('https://weibo.com/x', ['*://weibo.com/*'])).toBe(true);
-    // 非默认端口的页面不会被无端口模式覆盖
-    expect(isOriginCovered('https://weibo.com:8443/x', ['*://weibo.com/*'])).toBe(false);
+    expect(isOriginCovered('https://weibo.com/x', ['https://weibo.com:8443/*'])).toBe(false);
+    // 页面没写端口时有效端口是方案默认值：https 页面被显式 :443 模式覆盖（EffectiveIntPort 口径）
+    expect(isOriginCovered('https://weibo.com/x', ['https://weibo.com:443/*'])).toBe(true);
+    expect(isOriginCovered('https://weibo.com/x', ['https://weibo.com:80/*'])).toBe(false);
     expect(isOriginCovered('https://weibo.com:8443/x', ['https://weibo.com:8443/*'])).toBe(true);
   });
 

@@ -91,8 +91,9 @@ describe('sitePatterns：裸域在前，特殊情况只给精确模式', () => {
     expect(sitePatterns('intranet')).toEqual(['*://intranet/*']);
   });
 
-  // Chrome 的匹配模式里 `*` 方案只能配默认端口（80 / 443），`*://host:8080/*` 直接报 Invalid port，
-  // 权限申请 / 收回会整批失败。带端口的站点因此显式给出 http、https 两条。
+  // Chrome 的匹配模式里 `*` 方案只接受通配端口，任何显式端口（连 :80 / :443 在内）都报
+  // Invalid port（Chromium URLPattern::IsValidPortForScheme），权限申请 / 收回会整批失败。
+  // 带端口的站点因此显式给出 http、https 两条。
   it('带端口的站点给 http + https 两条（不能用 * 方案）', () => {
     expect(sitePatterns('127.0.0.1:8080')).toEqual(['http://127.0.0.1:8080/*', 'https://127.0.0.1:8080/*']);
     expect(sitePatterns('[::1]:8080')).toEqual(['http://[::1]:8080/*', 'https://[::1]:8080/*']);

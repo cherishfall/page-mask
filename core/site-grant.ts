@@ -60,6 +60,7 @@ interface ParsedPattern {
   /** '*'(http / https 都算) 或具体协议（不含冒号） */
   scheme: string;
   host: string;
+  /** ''（未写端口，按 Chrome 口径通配所有端口）或模式里的端口数字 */
   port: string;
   path: RegExp;
 }
@@ -106,11 +107,15 @@ function parsePattern(pattern: string): ParsedPattern | null {
  * 站点级判断说「已授权」，但内容脚本只注册在授权的那几条模式上，s.weibo.com 上什么都没跑。
  * 弹窗据此决定显示「就绪」还是「这个页面还没允许访问」。
  *
- * 边界（与 Chrome 的 match pattern 同口径）：
+ * 边界（与 Chrome 的 match pattern 同口径，官方文档：「Match patterns match all ports
+ * unless an explicit port is specified」，见 developer.chrome.com match patterns）：
  * - `*` 方案覆盖 http 与 https，具体方案只覆盖自己；
  * - `*.weibo.com` 覆盖子域、**不覆盖裸域 weibo.com**（两条都申请，不依赖这条边界，见 sitePatterns）；
- * - 模式没写端口只匹配默认端口；写了端口只匹配该端口（带端口的站点用 http / https 两条）；
- *   主机写成 `*` 时按「任意主机、任意端口」处理（全站通配授权）；
+ * - 模式没写端口 = 通配所有端口（#185 前误当作「只匹配默认端口」，导致已授权站点的带端口
+ *   页面被弹窗误报未授权）；写了端口只匹配页面的**有效端口**——页面没写端口时按方案默认值
+ *   算（http 80、https 443），与 Chromium `URLPattern` 的 `EffectiveIntPort` 比较同口径，
+ *   即 `https://weibo.com:443/*` 也覆盖 `https://weibo.com/`；
+ * - 主机写成 `*` 时按「任意主机」处理（全站通配授权）；
  * - 路径按 `*` 通配做前缀匹配，匹配 pathname + 查询串（项目目前只用 `/*`，但不假设）。
  *
  * 无法解析的 URL、非 http(s) 页面、空模式列表一律 false。
@@ -127,15 +132,18 @@ export function isOriginCovered(url: string, patterns: readonly string[]): boole
   const pageHost = page.hostname.replace(/\.+$/, '').toLowerCase();
   if (!pageHost) return false;
   const pagePort = page.port; // URL 已去掉默认端口（80 / 443）
+  // 页面的有效端口（与 GURL::EffectiveIntPort 同口径）：没写端口时取方案默认值
+  const pageEffectivePort = pagePort || (protocol === 'https:' ? '443' : '80');
   const pagePath = page.pathname + page.search;
 
   for (const raw of patterns) {
     const p = parsePattern(raw);
     if (!p) continue;
     if (p.scheme !== '*' && `${p.scheme}:` !== protocol) continue;
-    // 主机写成 `*` 是「任意主机」，端口也不限；具体主机则按端口严格比较
+    // Chrome 官方口径：模式没写端口 = 通配所有端口；写了端口精确匹配有效端口
+    // （主机是否为 `*` 与端口判断互不影响，和 URLPattern 的判断顺序一致）
+    if (p.port !== '' && p.port !== pageEffectivePort) continue;
     const anyHost = p.host === '*';
-    if (!anyHost && p.port !== pagePort) continue;
     const hostOk = anyHost || (p.host.startsWith('*.') ? pageHost.endsWith(`.${p.host.slice(2)}`) : pageHost === p.host);
     if (!hostOk) continue;
     if (p.path.test(pagePath)) return true;
