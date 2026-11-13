@@ -5,6 +5,38 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.7] - 2026-11-13
+
+上架准备：隐私政策入口与落地页。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **插件设置页「关于」卡补「隐私政策」入口**：一行链接指向在线隐私政策页。Chrome 商店的隐私披露要求「显著披露必须在扩展界面内」，商店描述页不算——此前扩展里没有政策入口，现在有了
+- **在线落地页上线**：<https://cherishfall.github.io/>（中英双语，含功能说明、三步用法、安装方式、隐私四问、常见问题），隐私政策页 <https://cherishfall.github.io/privacy.html> 与仓库里的 `PRIVACY.md` 逐条等义
+- **隐私政策链接改指已上线的页面**：商店材料、README、隐私政策文件的链接统一指向上面那个公开地址，不再依赖仓库是否公开（商店对隐私政策死链直接拒审）
+- 「关于」卡原为每行各自排布，各行值起点不齐（英文态 127/144/138/163 像素），改成两列网格后齐平
+
+#### 面向审阅者
+
+- 新增 `docs/store-submission-guide.md`：从注册开发者账号到提交审核、发布、后续更新的逐步操作指南，每条政策事实都附官方来源链接；含审核员备注写法、常见拒审原因与本项目的预防动作对照表
+- 门禁：编译、单测 840 项（56 文件）、E2E 十脚本 1108 项、check:docs / check:package 全绿
+
+### English
+
+#### Changes
+
+- **"Privacy policy" link added to the About card** in plugin settings, pointing at the online policy page. The store's disclosure rules require prominent disclosure inside the extension UI (a store listing does not count) — there was no policy entry before, now there is
+- **Landing page is live**: <https://cherishfall.github.io/> (bilingual: features, three-step usage, install, four privacy answers, FAQ), with the policy at <https://cherishfall.github.io/privacy.html>, equivalent item by item to the repository's `PRIVACY.md`
+- **Privacy policy links now point at the live page** in the store materials, README and the policy file itself — no longer dependent on whether the repository is public (a dead privacy-policy link is an automatic rejection)
+- The About card's rows now share a two-column grid, so their values line up (previously 127/144/138/163 px in English)
+
+#### For reviewers
+
+- New `docs/store-submission-guide.md`: a step-by-step guide from developer account to submission, review, publication and updates, every policy fact carrying an official source link; includes reviewer-notes guidance and a table mapping common rejection reasons to this extension's preventive actions
+- Gates: typecheck, 840 unit tests (56 files), ten E2E scripts (1108 assertions), check:docs / check:package all green
+
 ## [0.9.6] - 2026-11-13
 
 0.9.5 发版后第二轮深度审查的收尾：测试基建修复 + 小修与加固。界面与功能无可见变化，权限集合不变。
