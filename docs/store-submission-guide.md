@@ -40,9 +40,9 @@ unzip -p .output/page-mask-0.9.7-chrome.zip manifest.json
 - [x] 审核员备注与八步测试步骤（材料 §6）
 - [x] 版本历史表（材料 §7）
 - [x] 截图 6 张（各 1280×800）+ 宣传图块 440×280 + 商店图标 128×128（材料 §8）
-- [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实）
+- [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实为 Public，匿名浏览器可打开仓库页与 `PRIVACY.md`）
 - [x] `PRIVACY.md` 存在，且英文在前中文在后，与商店披露口径一致（`CHROMEWEBSTORE.md` §5 引用它）
-- [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/privacy.html>（已点验 200，与 `PRIVACY.md` 逐条等义）
+- [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/privacy.html>（已点验 200，与 `PRIVACY.md` 逐条等义）——两条路径都通，审核员无需登录
 - [x] 扩展界面内有隐私政策入口：插件设置页「关于」卡的「隐私政策」一行（#193）
 
 **还差你亲自做的（AI 做不了）**

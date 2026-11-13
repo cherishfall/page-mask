@@ -7,7 +7,7 @@
 
 ## 0. 提交前清单
 
-- [x] **隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/privacy.html>（CWS 对死链自动拒审，#193）。仓库是否公开由作者决定（只影响主页链接的可点性，不影响隐私政策 URL）
+- [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.5-chrome.zip`
 - [x] 版本号已改（`package.json` → `0.9.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.5` 发版时打
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
