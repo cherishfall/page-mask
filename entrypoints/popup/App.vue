@@ -544,9 +544,11 @@ async function onDeleteClose() {
 </script>
 
 <style>
-/* 删除确认框在 320 宽的弹窗里（#112）：比全局对话框窄一档，不溢出弹窗 */
+/* 删除确认框在 320 宽的弹窗里（#112 / #195）：比全局对话框窄一档，不溢出弹窗。
+   全局 dialog 已是 box-sizing: border-box（styles/base.css），这里用逻辑属性 inline-size，
+   288px 是含 16px padding 与 1px border 的外框宽；320px 弹窗里左右各留 16px，不再贴边占满。 */
 dialog.popup-delete-dialog {
-  width: min(288px, calc(100vw - 24px));
+  inline-size: min(288px, calc(100vw - 24px));
   /* 内容超高时滚动只发生在框内，不连动到弹窗页面（0.8.17 WIG 审查） */
   overscroll-behavior: contain;
 }

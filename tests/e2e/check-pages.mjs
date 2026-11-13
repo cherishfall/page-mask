@@ -773,6 +773,23 @@ async function main() {
       (await popup.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'pm-popup-delete-cancel',
       '默认焦点在「取消」',
     );
+    // #195：删除框不再贴边占满。相对比较（框 ↔ 弹窗表面），不写死 px 坐标：
+    // 盒宽由 inline-size + border-box 固定，与中英文案长度无关，两态都不该被卡住。
+    const dlgGeo = await popup.evaluate(() => {
+      const dlg = document.querySelector('[data-testid="pm-popup-delete-dialog"]');
+      const surface = document.querySelector('main.popup');
+      const d = dlg.getBoundingClientRect();
+      const s = surface.getBoundingClientRect();
+      return { leftGap: d.left - s.left, rightGap: s.right - d.right, width: d.width, surfaceWidth: s.width };
+    });
+    check(
+      dlgGeo.leftGap >= 12 && dlgGeo.rightGap >= 12,
+      `删除框左右各留白 ≥12px（左 ${dlgGeo.leftGap.toFixed(1)} / 右 ${dlgGeo.rightGap.toFixed(1)}）`,
+    );
+    check(
+      dlgGeo.width <= dlgGeo.surfaceWidth - 24,
+      `删除框外框 ≤ 弹窗宽 − 24px（框 ${dlgGeo.width.toFixed(1)} / 弹窗 ${dlgGeo.surfaceWidth}）`,
+    );
     await popup.keyboard.press('Escape');
     await waitFor(popup, 'Esc 关闭确认框', () => !document.querySelector('[data-testid="pm-popup-delete-dialog"]').open);
     check(

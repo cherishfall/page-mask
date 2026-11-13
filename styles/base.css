@@ -206,9 +206,11 @@ input[type='checkbox'][switch]::before {
 
 /* ── 原生模态对话框（modern-web-guidance「dialog」Rule 1） ── */
 dialog {
-  border: 1px solid var(--pm-border);
+  /* #195：固定宽度按 border-box 计，padding / border 不再把框撑破所在容器 */
+  box-sizing: border-box;
+  border: 1px solid var(--pm-border-control);
   border-radius: var(--pm-radius-card);
-  padding: 20px;
+  padding: var(--pm-space-4);
   width: min(420px, calc(100vw - 32px));
   background: var(--pm-bg);
   color: var(--pm-fg);
