@@ -83,8 +83,9 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 | `README.md` | 面向用户与 Chrome 商店审核：产品意图、安装、使用方法（中英双语） |
 | `CHANGELOG.md` | 版本发布说明（中英双语） |
 | `GLOSSARY.md` | 术语表（唯一权威，含每个概念的「界面用词」） |
-| `PRIVACY.md` | 隐私政策（英文为准 + 中文译文），商店隐私政策 URL 指向它 |
+| `PRIVACY.md` | 隐私政策（英文为准 + 中文译文），在线版与商店隐私政策 URL 指向 `https://cherishfall.github.io/privacy.html`（与本文件逐条等义） |
 | `CHROMEWEBSTORE.md` | 商店提交材料：名称与简介、详细描述、权限逐项理由、单一用途、审核员备注与测试步骤、隐私表单填法、版本历史、截图清单 |
+| `docs/store-submission-guide.md` | 上架手把手指南：注册开发者账号 → 填各字段 → 权限与数据披露 → 提交审核 → 发布 → 后续更新；每条政策事实附官方来源，含审核员备注写法与常见拒审原因对照表 |
 | `docs/design.md` | 最终设计共识，实现的唯一依据 |
 | `docs/design-ui.md` | 界面基础规范：色彩、文字、按钮四档与五种状态、排布规则，含参考来源与取舍理由 |
 | `docs/dev/ui-ux-audit.md` | 按准则逐项核对现状的审查结论（问题 + 违背条款 + 改法） |
