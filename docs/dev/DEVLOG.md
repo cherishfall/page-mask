@@ -2,6 +2,23 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 0.9.7 实机反馈批次（2026-11-13）：显示细节 + 文档与链接整理（#194–#196）
+
+用户看完 0.9.7 后先逐条报问题、明确要求「不要边报边改，后面集中调查并修复」，四件合成三票串行做；每票一提交一推送，主会话逐票亲手验收（commit 存在 + 抽查关键实现 + 全套门禁重跑）再关票。全程不做截图/仿真视觉验证，留用户实机目检。
+
+- **#194 欢迎页第 1 步图示**（`4439bc0`）：旧图把「工具栏」和「扩展程序菜单」挤进同一条 300×44 横条，还用蓝底白字 `P` 自造扩展图标；真实 Chrome 是两步两个界面（拼图按钮 → 一列扩展列表行 → 行尾图钉）。改成 300×112 的「工具栏 + 独立菜单面板」，拼图块用 Material extension 真实形状，PageMask 行内联 `assets/icon/icon-16.svg` 的真实图形（不用外部图片、不受 CSP 限制），行尾图钉复用 #191 形状。依据 Google Chrome 帮助 / Apple HIG Onboarding / NN-g Instructional Overlays / M3 Menus；第 2/3 步早就渲染真实组件（#103），只有第 1 步是手画。补静态守门：第 1 步不许再出现字母 P / `<text>`，内联眼罩 path 与 `icon-16.svg` 逐字同源（真图标改版会逼示意图一起改）。
+- **#195 删除确认框三处统一**（`96fe552`）：根因是 `styles/base.css` 的全局 `dialog` 缺 `box-sizing`，弹窗覆盖的 `288px` 按 content-box 算成 `288+40+2=330px`，超过 320px 弹窗 → 贴边占满。补 `border-box`，`padding`/`border` 改用与页内 `.pm-tg-dialog` 同源的 `--pm-space-4` / `--pm-border-control`；popup 覆盖改用逻辑属性 `inline-size`，不再重定义 padding/border/radius，弹窗里左右各留 16px。补静态守门（三处外壳同源、弹窗只覆盖宽度）+ E2E 几何断言（留白 ≥12px、外框 ≤ 弹窗宽−24px），实测 16.0/16.0、288/320。**平台边界**：原生 `<dialog>` 只会居中在所在窗口/文档，弹窗里的框挪不到页面中心、网页里的框也进不了弹窗，这条改不了；能做的是让三处「长相」完全一致。依据 `modern-web-guidance` 的 `dialog` / `css-layout`（search + retrieve）。
+- **#196 文档与链接**（`42d860e`，主会话接手）：根目录留 6 份（README / LICENSE / AGENTS / CLAUDE / CHANGELOG / SECURITY，依据 GitHub 官方仓库实践、agents.md 约定、Keep a Changelog、GitHub 对 SECURITY.md 的识别），三份 `git mv` 收进 `docs/`：GLOSSARY / PRIVACY / CHROMEWEBSTORE（git 识别 rename 95–100%）。落地页改 `/page-mask/` 子路径（用户以后要放多个项目），远端 `cherishfall.github.io` 的 `page-mask/index.html` + `page-mask/privacy.html` 新建、根 `index.html` 改项目索引、根 `privacy.html` 改跳转页，四址点验 200。**旧隐私地址绝不删**：0.9.7 及更早扩展的 `PRIVACY_URL` 写死它、商店审核会点，死链自动拒审（#193）。`CHANGELOG` / `DEVLOG` / 历史审查 / 商店材料 §7 版本史里的旧地址是当时的事实，保留不改。`AGENTS.md` / `README.md` 的位置信息、全仓 Markdown 相对链接、`core` 注释、`check-docs.mjs` 路径、`PRIVACY_URL` 与 E2E href 断言逐处同步（21 文件）。
+
+### 本批过程教训
+
+- **派单清单要列全同类位置**：#196 规格初版漏了两处 `blob/master/PRIVACY.md` 备用链接与四份现行规范文档里的裸 `GLOSSARY.md` 引用，主会话在全量 grep 基线（`tmp/refs-before-196.txt`）里才发现并补发。与 DEVLOG 里 0.8.15 那条「派单清单漏一行，子代理就少改一处」是同一个病根——**文档票也要先扫全量引用基线再派单**，不能只列主要文件。
+- **两票共享一个文件时必须串行**：#195 和 #196 都要改 `tests/e2e/check-pages.mjs`（一个加几何断言、一个改隐私 href 断言），实测行号从 1351 漂到 1368；并行会互相覆盖，改断言一律用内容定位不要信行号。
+- **子代理说「完成」不等于落地**：#195 子代理的完成报告因上下文压缩没送达，主会话靠 `git status` + diff + transcript 确认改动已落盘，再亲手重跑 compile / vitest 845 / check:docs / check:package / 全套真实 Chrome E2E 全绿才提交。
+- **子代理卡死要能自己接手**：#196 子代理做完三个 `git mv` 后 transcript 停在 17:53:14 不再推进，两次唤醒消息都无响应（13 分钟）。主会话 `TaskStop` 后按已写好的规格 `tmp/spec-196.md` + 受控替换脚本自己执行完 21 文件的改动与全套门禁。**批量文档票先把「全量引用基线 + 逐条替换清单 + 验收脚本」备齐**，子代理卡住时不至于从头再来；替换脚本逐条打印命中数，命中数不符就停下来人工确认（本批有 3 条期望 1 实际 2，是中英两处，改期望值后重跑）。
+- **移动文档会牵连文档内部的相对链接**：`PRIVACY.md` 里有两处指向 `CHANGELOG.md` 的相对链接（原先按同目录写），移到 `docs/` 后变成断链，`check:docs` 抓到才补成 `../CHANGELOG.md`。`git mv` 之后必须跑全仓链接解析，不能只改「外部指向它」的链接。
+- **验收脚本自己也会误报**：本批 `tmp/verify-196.sh` 前两版把「链接显示文字里的 `docs/GLOSSARY.md`」和「`docs/dev/` 下正确的 `../GLOSSARY.md`」误判成旧链接。改成「解析链接目标、确认落在 `docs/`」才准。**断言要验事实（解析后的路径），不要验字符串长相**。
+
 ## 0.9.7 发版（2026-11-13）：上架准备（#193）
 
 - **落地页上线**：新建公开仓库 `cherishfall/cherishfall.github.io`，Pages 已开，`https://cherishfall.github.io/` 与 `/privacy.html` 点验 200。零依赖零外部请求（内联 CSS/JS、内联 SVG 图标），中英双语（`<html lang>` + 每段 `lang` 属性 + localStorage 记忆 + 首绘前应用，无闪切），暗色两档对照扩展 token，FAQ 用 `details/summary`（非互斥），skip link + `:focus-visible` 焦点环，FAQ 与隐私区按 GLOSSARY 用词纪律（禁词零命中）；privacy.html 与 `PRIVACY.md` 逐条等义互为镜像。
