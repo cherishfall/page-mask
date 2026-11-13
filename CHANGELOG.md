@@ -5,6 +5,36 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [0.9.6] - 2026-11-13
+
+0.9.5 发版后第二轮深度审查的收尾：测试基建修复 + 小修与加固。界面与功能无可见变化，权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **真实网站 E2E 恢复全绿**：测试工具的站点身份计算没跟上 0.9.0 的「一个网站 = 可注册域名」改造，真站（微信读书 / 得到 / 墨问）的测试档案写错了键、流程停在第一步。现测试侧直接复用扩展内核的同一份实现（构建时转译，附三层一致性单测），三站完整流程（点选 → 看效果 → 保存 → 规则真实命中）恢复通过；顺带修掉脚本两层旧失配（裸域授权、保存后的「先保持原样」确认）
+- **小修**：权限匹配对显式 `:*` 通配端口按官方语义处理；管理页「⋯」展开态在高对比度模式下可见；下划线离字距离收口成共享 token；两处开发文档旧说法同步
+- **加固**：导入文件超 20MB 给人话报错（不再卡住页面）；收起项名称超长按码点截断（与标题同口径）；向导打开消息补来源校验（与其他特权消息同口径）
+
+#### 面向审阅者
+
+- 第二轮独立审查（真站 E2E / 夜间新增代码复审 / 安全与隐私探针）结论：无功能坏点；安全探针七项全安全（零远程资源、零 HTML 注入通道、特权消息全校验、权限申请全部用户手势同步回合）
+- 门禁：编译、单测 840 项（56 文件）、E2E 十脚本 1107 项、真站三站、check:docs / check:package 全绿
+
+### English
+
+#### Changes
+
+- **Real-site E2E restored to green**: the test harness computed site identity by full hostname, missing the 0.9.0 change to registrable domains — test profiles landed under wrong keys on real sites (WeRead / Dedao / Mowen). The harness now reuses the extension's own implementation (transpiled at test time, with three-layer consistency tests); the full flow (pick → preview → save → rules actually match) passes again on all three sites, plus two older script mismatches fixed (bare-domain grants, the save-time "keep as is" dialog)
+- **Small fixes**: explicit `:*` wildcard ports follow Chrome's documented semantics; the management-row "⋯" expanded state is visible in forced-colors mode; text-underline offset consolidated into a shared token; two stale doc mentions synced
+- **Hardening**: imports over 20 MB get a plain-language error instead of freezing the page; hide-item names longer than 60 code points are truncated (same as titles); the open-wizard message now validates its sender like other privileged messages
+
+#### For reviewers
+
+- Second independent review round (real-site E2E / fresh-code review / security & privacy probe) found no functional defects; the probe's seven areas all came back safe (zero remote resources, zero HTML-injection channels, all privileged messages validated, every permission request in a user-gesture turn)
+- Gates: typecheck, 840 unit tests (56 files), ten E2E scripts (1107 assertions), three real sites, check:docs / check:package all green
+
 ## [0.9.5] - 2026-11-13
 
 实机反馈修复 + 全维审查批次：两张实机报的界面缺陷、一个与 Chrome 官方语义相反的权限判定，外加按「文案 / 代码 / 全界面截图 / 商店材料」四路审查收掉的一批问题。功能与权限集合不变。

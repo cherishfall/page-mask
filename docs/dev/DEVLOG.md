@@ -16,6 +16,13 @@
 - **发版**：版本号 0.9.5 → `CHANGELOG.md` 双语条目 → 商店材料同步（头部/§0/§7/§11）→ store-shots 重跑替换 `docs/store-assets/` → tag `v0.9.5` → Release 附 zip。门禁（主会话实跑）：compile ✓ / vitest 55 文件 835 项 ✓ / build + zip + check:package ✓ / check:docs ✓ / E2E 10 脚本（含新 check-info-tips）✓。
 - **留给用户**：仓库公开拍板（#164，隐私政策死链是唯一自动拒审项）；§6 八步真机实走；快捷键真机复核；联系邮箱确认。
 
+## 0.9.6 发版（2026-11-13）：第二轮深度审查收尾（#192）
+
+- 三路独立二轮：真站 E2E（3 站曾全挂）→ 根因是 **harness `siteKeyOf` 没跟 #162 的 eTLD+1**，扩展自身无缺陷（源码级复现 + 对照组闭环；0.9.1 就登记过「harness 不带 PSL，夹具只用裸域绕」——同一类限制在真站脚本上爆发，本地 E2E 全是 IP/localhost 恰好掩盖）。修法复用内核：`core/site-key.ts` 构建期转译成 harness 可 import 的 .mjs（tmp 生成、不入库、内容比对幂等），harness 全部委托内核，`tests/harness-site-key.test.ts` 三层互证。真站脚本另修两层旧失配（裸域授权两条、#159 保存确认框）。教训入档：**测试夹具的站点身份必须与内核同源，不许各写一份**。
+- 夜间代码复审（541c95f..78c9cc5 逐 commit）：无 P1/P2；P3 六处收掉（design.md 两处漂移、`:*` 通配端口、site-more forced-colors、underline-offset token 收口、isPageEditable 注释口径）。
+- 安全与隐私探针：七项全安全——零远程资源（核到产物层）、零 HTML 注入通道（CSS 全走 insertCSS/adoptedStyleSheets + `isSafeSelector` 双重过滤）、特权消息全校验、三处 permissions.request 全在用户手势同步回合、存储读写全过 sanitize。四条纵深建议采纳三（导入 20MB 预检、scope label 60 码点截断、openWizard 来源校验），一条登记不动（draftCss 后台复验，输入全自产）。页面可检测扩展存在性的信号清单（宿主元素 / open shadow root / takeover 事件 / 探针帧 / adoptedStyleSheets 变化）按产品形态登记接受。
+- **收敛判断**：两轮全量审查后，第二轮仅产出工具缺陷与 P3/加固项（无功能坏点、无视觉缺陷、无安全问题），且全部修复经门禁与真站验证——第三轮全量重审的边际收益低于成本，判定循环收敛，转入上架准备交付物。
+
 ## 0.9.4 发版（2026-11-12）：弹窗视觉统一批次收口
 
 - 用户 0.9.3 装机反馈两类显示问题（#179）：一屏里开关 / 按钮长得好几种、底部三行左右不平衡；并建议把「悬浮按钮」改名「悬浮胶囊」、前面补个胶囊图标。
