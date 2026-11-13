@@ -100,6 +100,7 @@
 ### 隐私与权限说明（Chrome 应用商店审核适用）
 
 - **不收集、不上传任何数据**。PageMask 自身不发起任何网络请求，没有统计，没有第三方代码。设置仅存在 `chrome.storage.local`
+- **在线版本**：[落地页](https://cherishfall.github.io/)（含[隐私政策](https://cherishfall.github.io/privacy.html)在线版，与本仓库的 `PRIVACY.md` 内容一致）
 - 权限逐项说明：
   - `storage`：在本机保存你的网站设置（收起的内容、标签页标题与图标、开关状态，以及「整页变灰」开关）
   - `scripting`：只对你已添加的网站——注册内置内容脚本、在已打开的标签页里运行一次、按需增删你设置的收起样式
@@ -214,6 +215,7 @@ Once published on the Chrome Web Store this stops mattering: store updates upgra
 ### Privacy & permissions (for Chrome Web Store review)
 
 - **No data collection, no uploads.** PageMask itself makes no network requests; there is no analytics and no third-party code. Settings live only in `chrome.storage.local`
+- **Online version**: the [landing page](https://cherishfall.github.io/) (which carries the online [privacy policy](https://cherishfall.github.io/privacy.html), same content as `PRIVACY.md` in this repo)
 - Permissions, one by one:
   - `storage`: saves your per-site settings (hidden items, tab title and icon, switch state, and the "Turn the whole page gray" switch) on this device
   - `scripting`: for sites you have added only — registers the bundled content script, runs it once in the already-open tab, and inserts/removes the hiding styles you configured

@@ -1346,6 +1346,11 @@ async function main() {
     const shownVersion = await m.$eval(tid('pm-settings-version'), (e) => e.textContent.trim());
     check(shownVersion === manifest.version, `「关于」显示版本号 ${shownVersion}`);
     check(!!(await m.$('a[href="https://github.com/cherishfall/page-mask/issues"]')), '「关于」有指向 GitHub issues 的反馈入口');
+    // 隐私政策入口（#193）：商店要求显著披露在扩展界面内，链接指向已上线的 GitHub Pages
+    check(
+      !!(await m.$('a[href="https://cherishfall.github.io/privacy.html"]')),
+      '「关于」有指向已上线隐私政策的入口（GitHub Pages）',
+    );
 
     // 胶囊不透明度（#110）：一根 10%–100% 的滑杆，预览即时、存储在松手时写
     const previewOpacity = () =>

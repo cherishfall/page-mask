@@ -350,6 +350,7 @@ export const zh = {
     repo: '仓库',
     feedback: '反馈',
     feedbackLink: '在 GitHub 上反馈问题',
+    privacyPolicy: '隐私政策',
 
     /** 界面语言（#57）：三选一，语言名各用本语言书写 */
     languageHeading: '界面语言',

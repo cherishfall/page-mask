@@ -328,6 +328,7 @@ export const en: Messages = {
     repo: 'Repository',
     feedback: 'Feedback',
     feedbackLink: 'Report an issue on GitHub',
+    privacyPolicy: 'Privacy policy',
 
     languageHeading: 'Language',
     languageIntro:

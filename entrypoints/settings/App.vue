@@ -240,6 +240,10 @@
               <dt>{{ t.settings.feedback }}</dt>
               <dd><a :href="ISSUES_URL" target="_blank" rel="noopener noreferrer">{{ t.settings.feedbackLink }}</a></dd>
             </div>
+            <div class="about-row">
+              <dt>{{ t.settings.privacyPolicy }}</dt>
+              <dd><a :href="PRIVACY_URL" target="_blank" rel="noopener noreferrer">cherishfall.github.io/privacy.html</a></dd>
+            </div>
           </dl>
         </section>
       </template>
@@ -302,6 +306,11 @@ const autoDetectedName = computed(() => localeName(locale.value));
 
 const REPO_URL = 'https://github.com/cherishfall/page-mask';
 const ISSUES_URL = 'https://github.com/cherishfall/page-mask/issues';
+/**
+ * 隐私政策（#193）：指向 GitHub Pages 上的在线版，不用仓库 blob 链接——
+ * 商店审核员没有登录态，仓库是否公开由作者决定，页面托管与仓库公开与否解耦。
+ */
+const PRIVACY_URL = 'https://cherishfall.github.io/privacy.html';
 const version = browser.runtime.getManifest().version;
 
 const replaceDialog = ref<HTMLDialogElement | null>(null);
@@ -606,19 +615,23 @@ function onReplaceClose() {
   padding-left: 22px;
 }
 
+/* 「关于」两列：标签一列、值一列，各行值起点对齐（#193 加了「隐私政策」一行后，
+   标签宽度不齐会让值一列参差——英文的 Repository / Feedback / Privacy policy 本来就参差）。
+   grid + display:contents 让 dl 保持 dl 语义（读屏仍认 term/definition）；
+   row-gap 取 --pm-space-1，与旧布局行间 4px 的间距一致 */
 .about {
   margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--pm-space-3);
+  row-gap: var(--pm-space-1);
 }
 
 .about-row {
-  display: flex;
-  gap: var(--pm-space-3);
-  margin: var(--pm-space-1) 0;
+  display: contents;
 }
 
 .about-row dt {
-  flex: none;
-  min-width: 48px;
   color: var(--pm-fg-muted);
 }
 

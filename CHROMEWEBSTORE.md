@@ -7,7 +7,7 @@
 
 ## 0. 提交前清单
 
-- [ ] **仓库已公开**（GitHub → Settings → General → Danger Zone → Public，用户亲自操作），并用无登录浏览器点验隐私政策 URL 可访问：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>（CWS 对死链自动拒审，#164）
+- [x] **隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/privacy.html>（CWS 对死链自动拒审，#193）。仓库是否公开由作者决定（只影响主页链接的可点性，不影响隐私政策 URL）
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.5-chrome.zip`
 - [x] 版本号已改（`package.json` → `0.9.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.5` 发版时打
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
@@ -29,7 +29,9 @@
 - 语言：简体中文（主）+ English
 - Support URL：<https://github.com/cherishfall/page-mask/issues>
 - Homepage URL：<https://github.com/cherishfall/page-mask>
-- 隐私政策 URL：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>
+- 隐私政策 URL：<https://cherishfall.github.io/privacy.html>
+  - 指向 GitHub Pages 上的在线版，与仓库里的 `PRIVACY.md` 逐条等义（互为镜像）；页面公开可访问，与仓库是否公开无关，审核员无需登录即可打开（#193）
+  - 备用（仓库公开后的等价页）：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>
 - 联系方式邮箱：`cherishfall@hotmail.com`
 
 ## 2. 详细描述
@@ -69,7 +71,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 只处理你添加的网站；没添加的网站，PageMask 不会运行任何内容
 • 访问某个网站的权限只在你点「收起内容」或「标题和图标」时申请，而且只申请这一个网站
 • 所有设置只保存在你的浏览器里；PageMask 自身不发起任何网络请求，没有统计，没有第三方代码
-• 隐私政策：https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md
+• 隐私政策：https://cherishfall.github.io/privacy.html
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
@@ -115,7 +117,7 @@ PRIVACY & PERMISSIONS
 • Runs only on sites you add. On every other site, PageMask runs nothing
 • Access to a site is requested only when you enable it, and only for that one site
 • Settings are stored only in your browser. PageMask itself makes no network requests, has no analytics and no third-party code
-• Privacy policy: https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md
+• Privacy policy: https://cherishfall.github.io/privacy.html
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
@@ -166,6 +168,8 @@ Permissions model: no host access and no content script are registered at instal
 Hiding is done with scripting.insertCSS (user origin) using the selectors the user picked; the "cover" method adds a solid overlay element inside a shadow root. While the gray switch is on, the same stylesheet turns the whole page black & white (one grayscale rule; layout, size and links stay as they are) and the bundled content script holds videos that the site autoplays — a video the user clicks is allowed to play. Covering a page calls chrome.tabs.update({ muted }) — Chrome's own tab mute, no tabs permission — and the extension only unmutes a tab it muted itself (mutedInfo.reason === 'extension' and our extensionId); the mute lives exactly as long as the cover. The tab title/icon are changed only on enabled sites while that site's switch is on, and restored when switched off; switching to "As is" restores the colors as well.
 
 No network requests, no analytics, no remote code, no bundled site rules. Image/video requests are NOT blocked — the gray look is purely visual. All data stays in chrome.storage.local.
+
+Privacy policy: https://cherishfall.github.io/privacy.html — the same page is linked from the extension itself (Settings → 关于 / About → 隐私政策 / Privacy policy), so the disclosure is available inside the extension, not only in this listing.
 
 Test steps (no login needed):
 1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow — if the popup on a page (for example a subdomain of that site) instead shows 「需要允许访问」 / "Needs access" with 「这个页面还没允许访问」 / "This page isn't allowed yet", click 「允许访问」 ("Allow access") on that page and then 「收起内容」 again; your settings are kept.
@@ -330,7 +334,8 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | 数据披露与代码一致 | ✅ 只写 `chrome.storage.local`；不使用 `storage.sync`；无网络请求 |
-| 隐私政策 URL 可用 | ⚠️ 仓库公开后可用，提交前再点一次 |
+| 隐私政策 URL 可用 | ✅ 指向 GitHub Pages <https://cherishfall.github.io/privacy.html>，已点验 200；提交前用无痕窗口再点一次 |
+| 政策在扩展界面内可找到 | ✅ 插件设置页「关于」卡有「隐私政策」一行，链接同一 URL（#193） |
 | 政策与表单一致 | ✅ 表单勾 Website content + Web history，政策里逐项写了对应数据 |
 | 不使用远程代码 | ✅ |
 | 代码未混淆 | ✅ 仅压缩（WXT 默认） |
