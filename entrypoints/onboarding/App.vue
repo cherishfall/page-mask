@@ -33,39 +33,59 @@
         <ul v-if="current.features.length" class="features">
           <li v-for="line in current.features" :key="line">{{ line }}</li>
         </ul>
-        <!-- 每步一张图：第 2、3 步直接渲染真实组件（#103），弹窗 / 胶囊改版时示意图自动跟上。
+        <!-- 每步一张图：第 2、3 步直接渲染真实组件（#103），弹窗 / 胶囊改版时示意图自动跟上；
+             第 1 步示意真实 Chrome 工具栏 + 扩展菜单（#194），其中 PageMask 行的图标内联
+             assets/icon/icon-16.svg 的真实图形，与工具栏真图标同源。
              文案的同步由 tests/onboarding-sync.test.ts 守门：欢迎页文案必须覆盖当前功能名 -->
         <div class="art" aria-hidden="true" inert>
-          <svg v-if="step === 1" class="art-svg" viewBox="0 0 300 44" role="img">
-            <!-- 这张画画的是 Chrome 工具栏（拼图图标 + 固定后的 PageMask），不是自家界面，
-                 不在「示意图跟组件走」的同步范围内 -->
-            <rect x="1" y="6" width="298" height="32" rx="16" class="sk-bar" />
-            <!-- 两侧灰圆是工具栏上别的图标位，纯装饰（#187：不承载「理解内容」，
-                 不参与 WCAG 1.4.11 的 3:1，保持低对比） -->
-            <circle cx="26" cy="22" r="9" class="sk-dot" />
-            <!-- 拼图盒是文案让人去点的那枚图标（WCAG 1.4.11：理解内容必需的图形对象 ≥3:1。
-                 #187：填充从 bg-subtle 的约 1.05:1 加深到 fg-muted——浅 4.83 / 深 5.98，两个主题都过线） -->
-            <rect x="126" y="14" width="26" height="16" rx="4" class="sk-puzzle" />
-            <!-- 盒内四个小点示意扩展图标格（0.8.11 目检 A3：光标指着的盒子里不能是空的）；
-                 盒子加深后随深色填充反白 -->
-            <circle cx="133" cy="19" r="1.7" class="sk-puzzle-dot" />
-            <circle cx="140" cy="19" r="1.7" class="sk-puzzle-dot" />
-            <circle cx="133" cy="26" r="1.7" class="sk-puzzle-dot" />
-            <circle cx="140" cy="26" r="1.7" class="sk-puzzle-dot" />
-            <path d="M146 34 l6 8 M146 34 l-6 8" class="sk-line" />
-            <!-- 图钉（#191）：文案说「点图钉固定」，此前只画到光标指向拼图盒、图钉没画。
-                 画在拼图盒与固定好的 P 之间（文案的动作顺序：点拼图 → 点图钉 → 固定成 P），
-                 竖置图钉 = Chrome 扩展菜单里那枚固定钮的样子。对比度与拼图盒同档：
-                 fg-muted 对工具栏底（--pm-bg）浅 4.83 / 深 5.98 ≥3 -->
-            <g class="sk-pin">
-              <circle cx="167" cy="15.5" r="3.2" />
-              <path d="M164.6 18 L169.4 18 L168.2 22 L165.8 22 Z" />
-              <path class="sk-pin-needle" d="M167 22 L167 29.5" />
+          <svg v-if="step === 1" class="art-svg" viewBox="0 0 300 112" role="img">
+            <!-- 第 1 步（#194）：与真实 Chrome 一致的两步示意——上方工具栏里一枚真实形状的拼图按钮，
+                 下方是点开后弹出的扩展菜单（一列列表行），在 PageMask 这一行的行尾点图钉。
+                 依据：Google Chrome 帮助「Select Extensions → Find the hidden extension → Select Pin」；
+                 Apple HIG Onboarding「把引导放在对应区域附近」；NN/g Instructional Overlays
+                 「Use Visuals When Possible / Short, Focused Tips」；Material 3 Menus（列表行 leading / trailing）。
+                 旧图把菜单和工具栏挤进同一条 300×44 横条、用蓝底白字「P」自造符号指代扩展
+                 （GLOSSARY Avoid：不用形状 / 字母指代功能），已弃用。
+                 与第 2/3 步同理：PageMask 行的 leading icon 内联 assets/icon/icon-16.svg 的真实图形
+                 （同源、不依赖外部图片加载），不再自造符号。 -->
+            <!-- 工具栏短条：底色比卡片浅一档、边界用控件色（≥3:1），暗色 / forced-colors 下仍清楚 -->
+            <rect x="1" y="1" width="298" height="28" rx="8" class="sk-bar" />
+            <!-- 左侧灰圆是工具栏上别的图标位，纯装饰（沿用旧 sk-dot 口径，不承载理解内容、不参与 3:1） -->
+            <circle cx="20" cy="15" r="4.5" class="sk-dot" />
+            <circle cx="40" cy="15" r="4.5" class="sk-dot" />
+            <circle cx="60" cy="15" r="4.5" class="sk-dot" />
+            <!-- 拼图按钮 = 文案让人去点的「扩展程序」按钮：真实拼图块形状（Material extension 路径），
+                 不再是带四个点的方框。填充 fg-muted 对工具栏底（bg-subtle）浅 4.51 / 深 5.16 ≥3:1 -->
+            <path class="sk-puzzle" transform="translate(260 4) scale(0.9)"
+                  d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z" />
+            <!-- 下拉菜单面板：与工具栏分开的另一块圆角浮层，右对齐挂在拼图按钮下方，
+                 不再把两个界面挤进同一条横条。边界用控件色（≥3:1）保证暗色 / forced-colors 下读得出「这是一块菜单」 -->
+            <rect x="140" y="34" width="150" height="74" rx="10" class="sk-menu" />
+            <!-- 扩展列表行 1（中性灰占位：别的扩展，纯装饰） -->
+            <rect x="150" y="38" width="20" height="20" rx="5" class="sk-ph" />
+            <rect x="178" y="45" width="58" height="6" rx="3" class="sk-ph" />
+            <!-- 扩展列表行 2 = PageMask：行首内联真实 16px 图标、行尾一枚图钉（这一行略作强调，不引入新颜色语义） -->
+            <g class="sk-icon" transform="translate(150 61) scale(1.25)">
+              <rect width="16" height="16" rx="3.5" fill="#2563eb" />
+              <rect x="4.5" y="1.5" width="7" height="13" rx="1.5" fill="#ffffff" />
+              <rect x="5.5" y="10.5" width="5" height="1.5" rx="0.75" fill="#9aa3af" />
+              <g transform="rotate(-10 8 6)">
+                <path d="M2.6 5.2 C3.6 3.9 5.7 3.9 6.7 5.1 L8 6.4 L9.3 5.1 C10.3 3.9 12.4 3.9 13.4 5.2 C13.4 7.7 11.4 8.5 9.5 7.7 L8 7 L6.5 7.7 C4.6 8.5 2.6 7.7 2.6 5.2 Z" fill="#1e40af" />
+                <circle cx="5.6" cy="6.2" r="1.05" fill="#ffffff" />
+                <circle cx="10.4" cy="6.2" r="1.05" fill="#ffffff" />
+              </g>
             </g>
-            <rect x="182" y="8" width="28" height="28" rx="8" class="sk-on" />
-            <text x="196" y="27" text-anchor="middle" class="sk-on-text">P</text>
-            <circle cx="240" cy="22" r="9" class="sk-dot" />
-            <circle cx="266" cy="22" r="9" class="sk-dot" />
+            <!-- 行名字占位条用 fg-muted（≥3:1），比占位行深一档，突出「这一行就是 PageMask」 -->
+            <rect x="178" y="68" width="54" height="6" rx="3" class="sk-ph-strong" />
+            <!-- 行尾图钉（#191 沿用）：竖置图钉 = Chrome 扩展菜单里那枚固定钮，填充与拼图块同档 ≥3:1 -->
+            <g class="sk-pin" transform="translate(268 63)">
+              <circle cx="6" cy="3.2" r="3.2" />
+              <path d="M3.6 6 L8.4 6 L7.2 10 L4.8 10 Z" />
+              <path class="sk-pin-needle" d="M6 10 L6 16" />
+            </g>
+            <!-- 扩展列表行 3（中性灰占位） -->
+            <rect x="150" y="84" width="20" height="20" rx="5" class="sk-ph" />
+            <rect x="178" y="91" width="46" height="6" rx="3" class="sk-ph" />
           </svg>
           <div v-else-if="step === 2" class="popup-preview">
             <PopupBody
@@ -352,23 +372,44 @@ h1 {
   width: 100%;
   max-width: 300px;
 }
+/* ── 第 1 步示意图（#194）：把旧的 300×44 横条换成「工具栏 + 下拉菜单」两块，
+ *   与真实 Chrome（拼图 → 扩展菜单里找到 PageMask 这一行 → 点行尾图钉）一致，依据见 SVG 模板注释。
+ *   全部沿用 --pm-* token；理解内容必需的图形 ≥3:1（WCAG 1.4.11）：
+ *   拼图块 / 图钉 / PageMask 行名条取 fg-muted（对底浅 4.51~4.83 / 深 5.16~5.98），
+ *   工具栏与菜单边界取 border-control（≥3:1）；占位件沿用旧 sk-dot 口径，不参与 3:1。 ── */
 .sk-bar {
-  fill: var(--pm-bg);
+  fill: var(--pm-bg-subtle);
   stroke: var(--pm-border-control);
 }
+/* 工具栏上别的图标位：纯装饰，不承载「理解内容」（沿用旧 sk-dot 口径，不参与 WCAG 1.4.11 的 3:1） */
 .sk-dot {
   fill: var(--pm-border);
 }
-/* 拼图盒是文案让人去点的那枚图标，填充对白底必须 ≥3:1（WCAG 1.4.11，#187）：
-   fg-muted 浅 4.83 / 深 5.98；盒内的图标格随深色填充反白 */
+/* 拼图块 = 文案让人去点的「扩展程序」按钮，实心拼图块形状（不再是带四个点的方框）。
+   fg-muted 对工具栏底（bg-subtle）浅 4.51 / 深 5.16 ≥3:1 */
 .sk-puzzle {
   fill: var(--pm-fg-muted);
-  stroke: var(--pm-fg-muted);
 }
-.sk-puzzle-dot {
+/* 下拉菜单面板：与工具栏分开的另一块圆角浮层。fill 用 bg（与卡片同底、靠边界分出形状），
+   边界用控件色（≥3:1），暗色 / forced-colors 下都读得出「这是一块弹出的菜单」 */
+.sk-menu {
   fill: var(--pm-bg);
+  stroke: var(--pm-border-control);
 }
-/* 图钉（#191）：填充与拼图盒同一档（fg-muted，见 SVG 内注释），针尖用同色细线。
+/* 占位行（别的扩展）：中性灰占位，纯装饰，沿用 sk-dot 口径不参与 3:1 */
+.sk-ph {
+  fill: var(--pm-border);
+}
+/* PageMask 行的名字占位条：要看得清「这一行就是 PageMask」，按 ≥3:1 取 fg-muted（比占位深一档） */
+.sk-ph-strong {
+  fill: var(--pm-fg-muted);
+}
+/* 真实 PageMask 16px 图标（#194）：assets/icon/icon-16.svg 的图形原样内联到 .sk-icon 组里
+   （fill 写在各形状上，与工具栏真图标同源、不依赖外部图片加载、不用字母 P / 自造符号，GLOSSARY Avoid）。
+   它自带品牌蓝底（--pm-accent 同色相）与白纸，是一块自成一体的彩色方图，浅色 / 深色菜单底上都看得清；
+   forced-colors 下随系统色落成高对比图标块，仍是行首一枚可辨的图标。
+   图标的 fill 是固有品牌色，周围示意图形一律走 --pm-* token，两者不混、不新增颜色语义。 */
+/* 图钉（#191 沿用）：填充与拼图块同一档（fg-muted，见 SVG 内注释），针尖用同色细线。
    针尖选择器带 .sk-pin 前缀压过上一条的 path 填充（同特异性、靠源码顺序取胜） */
 .sk-pin circle,
 .sk-pin path {
@@ -379,19 +420,6 @@ h1 {
   stroke: var(--pm-fg-muted);
   stroke-width: 1.6;
   stroke-linecap: round;
-}
-.sk-line {
-  stroke: var(--pm-fg-muted);
-  stroke-width: 1.5;
-  fill: none;
-}
-.sk-on {
-  fill: var(--pm-accent);
-}
-.sk-on-text {
-  fill: var(--pm-on-accent);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 /* 真实弹窗（#103）：白色卡片 + 阴影，宽度与真身一致；居中放置（#139 分步单屏）。

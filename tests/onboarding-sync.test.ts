@@ -21,12 +21,33 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
 
 const app = read('../entrypoints/onboarding/App.vue');
 const popupBody = read('../ui/popup/PopupBody.vue');
+const icon16 = read('../assets/icon/icon-16.svg');
 
 describe('欢迎页与当前功能集同步（#139）', () => {
   it('示意图是真实组件，不退回手绘', () => {
     expect(app, '弹窗示意图应当渲染真实 PopupBody（#103）').toContain('<PopupBody');
     expect(app, '胶囊示意图应当渲染真实 FloatingToggle（#103）').toContain('<FloatingToggle');
     expect(app, '不许再出现已退场的 mini prop').not.toContain(':mini');
+  });
+
+  // #194：第 1 步图示原先把手画的「蓝底白字 P 方块」当成扩展图标、把菜单和工具栏挤进一条
+  // 300×44 横条，与真实 Chrome（拼图 → 扩展菜单列表行 → 行尾图钉）不符，也违背 GLOSSARY
+  // 「不用形状 / 字母指代功能」。现在改成工具栏 + 菜单列表行，并内联真实 16px 图标。
+  // 静态守门（只加不删既有断言）：第 1 步不再有字母 P，且 leading icon 与真实图标同源内联。
+  it('第 1 步图示与真实 Chrome 一致（#194）：不用字母 P、内联真实扩展图标', () => {
+    const step1 = app.match(/v-if="step === 1"[\s\S]*?<\/svg>/)?.[0] ?? '';
+    expect(step1, '第 1 步应有一张放大的 SVG（工具栏 + 菜单面板）').not.toBe('');
+    // 不再用蓝底白字「P」自造符号指代扩展（GLOSSARY Avoid）：名字一律用灰条占位，
+    // 整张 SVG 不出现 <text> 文字元素，自然不会有字母 P
+    expect(step1, '第 1 步不再有字母 P 方块的 sk-on-text 样式').not.toContain('sk-on-text');
+    expect(step1, '第 1 步图示不放文字元素（名字用灰条占位，不用字母自造符号）').not.toContain('<text');
+    expect(step1, '第 1 步不再有 <text>P</text>').not.toMatch(/<text[^>]*>\s*P\s*<\/text>/);
+    // 与 assets/icon/icon-16.svg 同源内联：倾斜眼罩的 transform 与眼罩 path 两处指纹，
+    // 证明 leading icon 是真实图形（不是自造符号），且不依赖外部图片加载
+    expect(step1, '内联的倾斜眼罩 transform 与 icon-16.svg 同源').toContain('rotate(-10 8 6)');
+    const maskPath = icon16.match(/d="(M2\.6 5\.2[^"]*)"/)?.[1] ?? '';
+    expect(maskPath, '能从 icon-16.svg 解析到眼罩 path 指纹').not.toBe('');
+    expect(step1, '内联的眼罩 path 与 icon-16.svg 逐字同源（#194）').toContain(maskPath);
   });
 
   it('弹窗里有「查看使用说明」入口，指向 onboarding 页', () => {
