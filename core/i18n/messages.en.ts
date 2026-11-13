@@ -2,7 +2,7 @@
  * UI copy · English (#57). Mirrors messages.zh.ts key for key; the type annotation makes any
  * missing / extra key a compile error, and core/i18n.test.ts compares both tables recursively.
  *
- * Wording follows GLOSSARY.md: "Your settings" / "As is" (the full label "Show this site your way"
+ * Wording follows docs/GLOSSARY.md: "Your settings" / "As is" (the full label "Show this site your way"
  * only on the switch itself), hide methods Disappear / Keep space / Cover, "may be broken",
  * tab title / tab icon, "cover" / "restore".
  *

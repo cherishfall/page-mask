@@ -23,7 +23,7 @@ const BANNED = [
 ];
 
 /** 检查禁用词的文件（GLOSSARY 例外：它要在「用词纪律」里点名这些词，只检查它的链接） */
-const DOCS = ['README.md', 'CHANGELOG.md', 'PRIVACY.md', 'CHROMEWEBSTORE.md'];
+const DOCS = ['README.md', 'CHANGELOG.md', 'docs/PRIVACY.md', 'docs/CHROMEWEBSTORE.md'];
 const LOCALES = ['public/_locales/en/messages.json', 'public/_locales/zh_CN/messages.json'];
 
 const problems = [];
@@ -74,15 +74,15 @@ for (const abs of collectMarkdown(ROOT)) {
  *  此前三处全靠手工对齐，0.8.14 期间商店材料头部就曾落后两个版本。 */
 const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-const store = fs.readFileSync(path.join(ROOT, 'CHROMEWEBSTORE.md'), 'utf8');
+const store = fs.readFileSync(path.join(ROOT, 'docs/CHROMEWEBSTORE.md'), 'utf8');
 if (!new RegExp(`^## \\[${version.replace(/\./g, '\\.')}]`, 'm').test(changelog)) {
   problems.push(`CHANGELOG.md 没有 ${version} 的条目（## [${version}] …）`);
 }
 if (!store.includes(`对应构建 **${version}**`)) {
-  problems.push(`CHROMEWEBSTORE.md 头部「对应构建」不是 ${version}（发版时同步更新）`);
+  problems.push(`docs/CHROMEWEBSTORE.md 头部「对应构建」不是 ${version}（发版时同步更新）`);
 }
 if (!store.includes(`| ${version} |`)) {
-  problems.push(`CHROMEWEBSTORE.md §7 版本历史没有 ${version} 的行`);
+  problems.push(`docs/CHROMEWEBSTORE.md §7 版本历史没有 ${version} 的行`);
 }
 
 if (problems.length) {

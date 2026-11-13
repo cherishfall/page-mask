@@ -49,13 +49,13 @@ PageMask is not directed at children and does not knowingly handle children's pe
 
 ### Changes
 
-If this policy changes, the new version will be published at this URL with an updated date, and changes will be noted in the release notes ([CHANGELOG.md](CHANGELOG.md)).
+If this policy changes, the new version will be published at this URL with an updated date, and changes will be noted in the release notes ([CHANGELOG.md](../CHANGELOG.md)).
 
 ### Contact
 
 Email: cherishfall@hotmail.com · Issues: https://github.com/cherishfall/page-mask/issues
 
-Online version of this policy: https://cherishfall.github.io/privacy.html — the same policy, on the web.
+Online version of this policy: https://cherishfall.github.io/page-mask/privacy.html — the same policy, on the web.
 
 ## 中文
 
@@ -98,10 +98,10 @@ PageMask 不面向儿童，也不会在知情的情况下处理儿童的个人�
 
 ### 变更
 
-如果本政策发生变化，新版本会发布在这个网址上并更新日期，变更也会写进[更新日志](CHANGELOG.md)。
+如果本政策发生变化，新版本会发布在这个网址上并更新日期，变更也会写进[更新日志](../CHANGELOG.md)。
 
 ### 联系方式
 
 邮箱：cherishfall@hotmail.com · 问题反馈：https://github.com/cherishfall/page-mask/issues
 
-本政策的在线版本：https://cherishfall.github.io/privacy.html —— 同一份政策的网页版。
+本政策的在线版本：https://cherishfall.github.io/page-mask/privacy.html —— 同一份政策的网页版。

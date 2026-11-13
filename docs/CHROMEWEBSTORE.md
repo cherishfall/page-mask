@@ -7,7 +7,7 @@
 
 ## 0. 提交前清单
 
-- [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
+- [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.5-chrome.zip`
 - [x] 版本号已改（`package.json` → `0.9.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.5` 发版时打
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
@@ -29,9 +29,10 @@
 - 语言：简体中文（主）+ English
 - Support URL：<https://github.com/cherishfall/page-mask/issues>
 - Homepage URL：<https://github.com/cherishfall/page-mask>
-- 隐私政策 URL：<https://cherishfall.github.io/privacy.html>
-  - 指向 GitHub Pages 上的在线版，与仓库里的 `PRIVACY.md` 逐条等义（互为镜像）；页面公开可访问，与仓库是否公开无关，审核员无需登录即可打开（#193）
-  - 备用（仓库公开后的等价页）：<https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md>
+- 隐私政策 URL：<https://cherishfall.github.io/page-mask/privacy.html>
+  - 指向 GitHub Pages 上的在线版，与仓库里的 `docs/PRIVACY.md` 逐条等义（互为镜像）；页面公开可访问，与仓库是否公开无关，审核员无需登录即可打开（#193）
+  - 备用（仓库公开后的等价页）：<https://github.com/cherishfall/page-mask/blob/master/docs/PRIVACY.md>
+  - **旧地址 <https://cherishfall.github.io/privacy.html> 仍可打开**：0.9.7 及更早版本的扩展里写死了这个地址，商店审核员也可能点它；该地址现在是跳转页，会自动打开上面的新版地址。以后改 URL 也要保留跳转，不能直接删（隐私政策死链是自动拒审项）
 - 联系方式邮箱：`cherishfall@hotmail.com`
 
 ## 2. 详细描述
@@ -71,7 +72,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 • 只处理你添加的网站；没添加的网站，PageMask 不会运行任何内容
 • 访问某个网站的权限只在你点「收起内容」或「标题和图标」时申请，而且只申请这一个网站
 • 所有设置只保存在你的浏览器里；PageMask 自身不发起任何网络请求，没有统计，没有第三方代码
-• 隐私政策：https://cherishfall.github.io/privacy.html
+• 隐私政策：https://cherishfall.github.io/page-mask/privacy.html
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
@@ -117,7 +118,7 @@ PRIVACY & PERMISSIONS
 • Runs only on sites you add. On every other site, PageMask runs nothing
 • Access to a site is requested only when you enable it, and only for that one site
 • Settings are stored only in your browser. PageMask itself makes no network requests, has no analytics and no third-party code
-• Privacy policy: https://cherishfall.github.io/privacy.html
+• Privacy policy: https://cherishfall.github.io/page-mask/privacy.html
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
@@ -150,13 +151,13 @@ Declutters websites the user chooses: it hides page elements the user picks and,
 1. **数据类型**（你处理哪些用户数据）：勾选 **Website content** 与 **Web history**。
    - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最多 8 字符）会存在本机。
    - Web history：站点配置里保存了网站地址与生效页面的路径前缀。
-   - 勾选后需要在「隐私政策」中说明用途；`PRIVACY.md` 已写明「只存本机、不上传」。
+   - 勾选后需要在「隐私政策」中说明用途；`docs/PRIVACY.md` 已写明「只存本机、不上传」。
    - 0.8.0 的「整页变灰」（当时叫「图片和视频变灰」）只是同一份站点配置里的一个布尔值；幕布静音是浏览器记在标签页上的状态，不是扩展采集的数据，**不新增数据类型勾选**。
 2. **三条证明**（与是否收集无关，**全部勾选**）：
    - 不出售或转让给第三方（批准的用途除外）
    - 不用于与单一用途无关的目的
    - 不用于判断信用或放贷
-   - 并勾选「遵守 Chrome 应用商店用户数据政策（含 Limited Use 要求）」——`PRIVACY.md` 的 "What we don't do" 一节已有对应声明。
+   - 并勾选「遵守 Chrome 应用商店用户数据政策（含 Limited Use 要求）」——`docs/PRIVACY.md` 的 "What we don't do" 一节已有对应声明。
 
 ## 6. 审核员备注（Notes / Test instructions）
 
@@ -169,7 +170,7 @@ Hiding is done with scripting.insertCSS (user origin) using the selectors the us
 
 No network requests, no analytics, no remote code, no bundled site rules. Image/video requests are NOT blocked — the gray look is purely visual. All data stays in chrome.storage.local.
 
-Privacy policy: https://cherishfall.github.io/privacy.html — the same page is linked from the extension itself (Settings → 关于 / About → 隐私政策 / Privacy policy), so the disclosure is available inside the extension, not only in this listing.
+Privacy policy: https://cherishfall.github.io/page-mask/privacy.html — the same page is linked from the extension itself (Settings → 关于 / About → 隐私政策 / Privacy policy), so the disclosure is available inside the extension, not only in this listing.
 
 Test steps (no login needed):
 1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow — if the popup on a page (for example a subdomain of that site) instead shows 「需要允许访问」 / "Needs access" with 「这个页面还没允许访问」 / "This page isn't allowed yet", click 「允许访问」 ("Allow access") on that page and then 「收起内容」 again; your settings are kept.
@@ -335,7 +336,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | 数据披露与代码一致 | ✅ 只写 `chrome.storage.local`；不使用 `storage.sync`；无网络请求 |
-| 隐私政策 URL 可用 | ✅ 指向 GitHub Pages <https://cherishfall.github.io/privacy.html>，已点验 200；提交前用无痕窗口再点一次 |
+| 隐私政策 URL 可用 | ✅ 指向 GitHub Pages <https://cherishfall.github.io/page-mask/privacy.html>，已点验 200；提交前用无痕窗口再点一次 |
 | 政策在扩展界面内可找到 | ✅ 插件设置页「关于」卡有「隐私政策」一行，链接同一 URL（#193） |
 | 政策与表单一致 | ✅ 表单勾 Website content + Web history，政策里逐项写了对应数据 |
 | 不使用远程代码 | ✅ |

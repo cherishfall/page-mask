@@ -242,7 +242,7 @@
             </div>
             <div class="about-row">
               <dt>{{ t.settings.privacyPolicy }}</dt>
-              <dd><a :href="PRIVACY_URL" target="_blank" rel="noopener noreferrer">cherishfall.github.io/privacy.html</a></dd>
+              <dd><a :href="PRIVACY_URL" target="_blank" rel="noopener noreferrer">cherishfall.github.io/page-mask/privacy.html</a></dd>
             </div>
           </dl>
         </section>
@@ -310,7 +310,7 @@ const ISSUES_URL = 'https://github.com/cherishfall/page-mask/issues';
  * 隐私政策（#193）：指向 GitHub Pages 上的在线版，不用仓库 blob 链接——
  * 商店审核员没有登录态，仓库是否公开由作者决定，页面托管与仓库公开与否解耦。
  */
-const PRIVACY_URL = 'https://cherishfall.github.io/privacy.html';
+const PRIVACY_URL = 'https://cherishfall.github.io/page-mask/privacy.html';
 const version = browser.runtime.getManifest().version;
 
 const replaceDialog = ref<HTMLDialogElement | null>(null);

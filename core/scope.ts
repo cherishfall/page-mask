@@ -1,6 +1,6 @@
 /**
  * 生效范围匹配：整站（默认）/ 仅某类页面 / 排除某类页面。
- * 范围属于规则，不属于站点配置（GLOSSARY.md「生效范围」）。
+ * 范围属于规则，不属于站点配置（docs/GLOSSARY.md「生效范围」）。
  */
 import type { HideRule, Scope } from './types';
 import { urlMatchesPattern } from './origin';

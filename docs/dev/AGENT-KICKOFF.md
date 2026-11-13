@@ -7,7 +7,7 @@
 1. `AGENTS.md`：协作规范、语言、目录、提交纪律、本机网络（`gh` 必须加 `HTTPS_PROXY=http://127.0.0.1:7890` 前缀）
 2. GitHub spec #18 正文与评论：`HTTPS_PROXY=http://127.0.0.1:7890 gh issue view 18 --comments`（任务表、依赖、**已确定的决策**）
 3. `docs/dev/review/REVIEW.md` 及附录 `appendix-ui.md`、`appendix-store.md`：每张票引用的问题编号（B/N/D/Q）的证据、行号与修复要点
-4. `docs/design.md`（含「永不做」清单）、`GLOSSARY.md`、`docs/adr/`
+4. `docs/design.md`（含「永不做」清单）、`docs/GLOSSARY.md`、`docs/adr/`
 5. 当前票的正文与全部评论（评论里的用户决策优先于正文）
 
 需要时激活 skill：`chrome-extensions`（所有涉及扩展 API / manifest / 商店的票）、`modern-web-guidance`（所有 UI 票，按票里列出的指南 id `retrieve`，并在提交说明里写明遵循了哪些指南）、`tdd`（修 bug 先写失败测试）、`implement`。

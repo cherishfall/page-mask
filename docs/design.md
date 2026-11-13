@@ -1,6 +1,6 @@
 # PageMask 设计共识
 
-本文档是 PageMask 的最终设计共识，是后续开发、建仓的唯一依据。术语定义见 [GLOSSARY.md](../GLOSSARY.md)，关键决策的背景与理由见 [docs/adr/](./adr/)。
+本文档是 PageMask 的最终设计共识，是后续开发、建仓的唯一依据。术语定义见 [GLOSSARY.md](GLOSSARY.md)，关键决策的背景与理由见 [docs/adr/](./adr/)。
 
 - **项目名**：PageMask（界面显示「PageMask · 收起网页上不想看的部分」）
 - **一句话定位**：点选网页上让你分心的元素，一键收起；标签页标题与图标也能一起变低调；有人走近时一键把整页遮住

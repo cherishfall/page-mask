@@ -8,7 +8,7 @@ Issues are tracked as GitHub issues via the `gh` CLI. See `docs/agents/issue-tra
 
 ### Domain docs
 
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
 
 ## 协作原则（用户背景）
 
@@ -30,7 +30,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 - 开发过程文档一律用**中文**写（用户阅读效率优先）。
 - 面向用户/外部的关键文档提供**中英双语**：`README.md`、`CHANGELOG.md`（release note）。
-- 术语以根目录 `GLOSSARY.md` 为准，禁止使用各术语 _Avoid_ 字段列出的叫法。
+- 术语以 `docs/GLOSSARY.md` 为准，禁止使用各术语 _Avoid_ 字段列出的叫法。
 
 ## 界面文案（用户高度重视，反复返工的原因）
 
@@ -38,7 +38,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 - **宁可长一点、朴素一点，不要显得高级**：把事说清的长句胜过简短好听但语义空转的短语。禁止为界面自造名词与比喻（用一个形状、一个意象去指代功能）；一个词如果用户得先读文档才懂，就是写错了。
 - **已有的产品名可以留，但不能当唯一解释**：像「清爽模式」这类已经定下的名字可以出现在标题与名字里，但凡是要用户点的地方，都必须落到具体的动作与结果上，不能只写这个名字。
 - 同一件事在所有界面只许有一种叫法；发现两套（如「在哪些页面收起」与「生效范围」）当场合掉，改一处必须同时改另一处。
-- 改界面用词时同步更新 `GLOSSARY.md`（唯一权威）与 `core/i18n/messages.zh.ts` / `messages.en.ts`；英文侧按同样的意思重写，不逐字硬译。
+- 改界面用词时同步更新 `docs/GLOSSARY.md`（唯一权威）与 `core/i18n/messages.zh.ts` / `messages.en.ts`；英文侧按同样的意思重写，不逐字硬译。
 
 ## 界面整屏审查（每改完一处照着过一遍）
 
@@ -82,9 +82,9 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 |---|---|
 | `README.md` | 面向用户与 Chrome 商店审核：产品意图、安装、使用方法（中英双语） |
 | `CHANGELOG.md` | 版本发布说明（中英双语） |
-| `GLOSSARY.md` | 术语表（唯一权威，含每个概念的「界面用词」） |
-| `PRIVACY.md` | 隐私政策（英文为准 + 中文译文），在线版与商店隐私政策 URL 指向 `https://cherishfall.github.io/privacy.html`（与本文件逐条等义） |
-| `CHROMEWEBSTORE.md` | 商店提交材料：名称与简介、详细描述、权限逐项理由、单一用途、审核员备注与测试步骤、隐私表单填法、版本历史、截图清单 |
+| `docs/GLOSSARY.md` | 术语表（唯一权威，含每个概念的「界面用词」） |
+| `docs/PRIVACY.md` | 隐私政策（英文为准 + 中文译文），在线版与商店隐私政策 URL 指向 `https://cherishfall.github.io/page-mask/privacy.html`（与本文件逐条等义） |
+| `docs/CHROMEWEBSTORE.md` | 商店提交材料：名称与简介、详细描述、权限逐项理由、单一用途、审核员备注与测试步骤、隐私表单填法、版本历史、截图清单 |
 | `docs/store-submission-guide.md` | 上架手把手指南：注册开发者账号 → 填各字段 → 权限与数据披露 → 提交审核 → 发布 → 后续更新；每条政策事实附官方来源，含审核员备注写法与常见拒审原因对照表 |
 | `docs/design.md` | 最终设计共识，实现的唯一依据 |
 | `docs/design-ui.md` | 界面基础规范：色彩、文字、按钮四档与五种状态、排布规则，含参考来源与取舍理由 |
@@ -95,7 +95,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 ## 开发纪律
 
-- **实现过程同样要思考，不许机械执行**：开工前把这张票对应的准则条款、`docs/design-ui.md`、`GLOSSARY.md` 和成熟产品的同类做法再确认一遍。实现中遇到设计细节拿不准（间距、文案分寸、交互先后、边界状态、异常路径），先查 AGENTS.md 的 UI/UX 来源与相关 skill（尤其 `chrome-extensions` 的 MV3 约束），再决定；查完仍拿不准的，写进 commit 正文或票里留痕，不要默默选一个。每改完一处界面，按「界面整屏审查」五条自查一遍。
+- **实现过程同样要思考，不许机械执行**：开工前把这张票对应的准则条款、`docs/design-ui.md`、`docs/GLOSSARY.md` 和成熟产品的同类做法再确认一遍。实现中遇到设计细节拿不准（间距、文案分寸、交互先后、边界状态、异常路径），先查 AGENTS.md 的 UI/UX 来源与相关 skill（尤其 `chrome-extensions` 的 MV3 约束），再决定；查完仍拿不准的，写进 commit 正文或票里留痕，不要默默选一个。每改完一处界面，按「界面整屏审查」五条自查一遍。
 - **一票一提交一推送**：每张票做完立刻 `npm run compile` + 测试过关，然后 commit、push 到 master，再关票、更新 HANDOFF。不许攒着最后一起推。
 - **完成一个可验收粒度的功能就 commit + push**（远程 `cherishfall/page-mask`，`master` 分支），不要攒大包提交。
 - commit message 用 Conventional Commits（type/scope 英文，正文可中文）。

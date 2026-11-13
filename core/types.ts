@@ -1,6 +1,6 @@
 /**
  * PageMask 领域模型（docs/design.md「数据模型」节的代码化）。
- * 术语见 GLOSSARY.md：站点配置 / 隐藏规则 / 收起方案 / 生效范围。
+ * 术语见 docs/GLOSSARY.md：站点配置 / 隐藏规则 / 收起方案 / 生效范围。
  *
  * 界面文案不在这里：全部集中在 core/i18n（收起方式的三个名字也从 `t().common.strategy` 取）。
  */

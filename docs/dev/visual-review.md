@@ -48,4 +48,4 @@
 
 ## 一致性复查清单
 
-见 `docs/dev/consistency-checklist.md`。性质：**只是索引，不是权威**——每条必须挂靠权威来源（GLOSSARY.md、docs/design-ui.md、WCAG 条款），与权威冲突时以权威为准。用户推翻某个判断时，同一提交里改权威文件、删条目、全项目扫一遍旧样式 / 旧叫法。
+见 `docs/dev/consistency-checklist.md`。性质：**只是索引，不是权威**——每条必须挂靠权威来源（docs/GLOSSARY.md、docs/design-ui.md、WCAG 条款），与权威冲突时以权威为准。用户推翻某个判断时，同一提交里改权威文件、删条目、全项目扫一遍旧样式 / 旧叫法。

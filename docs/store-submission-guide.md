@@ -1,9 +1,9 @@
 # Chrome 应用商店上架手把手指南（PageMask）
 
-> 这份文件是**操作说明**：一步一步教你怎么做，内容本身不另造——所有名称、简介、描述、权限理由、隐私表单、测试步骤都以 [`CHROMEWEBSTORE.md`](../CHROMEWEBSTORE.md) 为唯一依据，本文件只讲「在哪点、填什么、怎么确认成功」。
+> 这份文件是**操作说明**：一步一步教你怎么做，内容本身不另造——所有名称、简介、描述、权限理由、隐私表单、测试步骤都以 [`docs/CHROMEWEBSTORE.md`](CHROMEWEBSTORE.md) 为唯一依据，本文件只讲「在哪点、填什么、怎么确认成功」。
 > 核实日期：**2026-11-13**。政策类结论后面都带官方链接；官方页面改版或控制台字段变动时，**以控制台当时显示为准**（本文件把这类地方标了「以控制台为准」）。
 >
-> **两套章节号别混**：本文自己的章节写成 `§2.5`（带小数点）；`CHROMEWEBSTORE.md`（下文简称「材料」）的章节写成 **材料 §3**（不带小数点）。
+> **两套章节号别混**：本文自己的章节写成 `§2.5`（带小数点）；`docs/CHROMEWEBSTORE.md`（下文简称「材料」）的章节写成 **材料 §3**（不带小数点）。
 
 ---
 
@@ -33,16 +33,16 @@ unzip -p .output/page-mask-0.9.7-chrome.zip manifest.json
 **材料侧（已由仓库准备好，照抄即可）**
 
 - [x] 名称与简短说明（来自 `public/_locales/*/messages.json`，**控制台里改不了**，见 §2.1 与 §2.2 的字段总表）
-- [x] 详细描述中英两份（`CHROMEWEBSTORE.md` §2）
+- [x] 详细描述中英两份（`docs/CHROMEWEBSTORE.md` §2）
 - [x] 权限逐项理由（材料 §3）
 - [x] 单一用途一句话（材料 §4）
 - [x] 隐私表单填法（材料 §5）
 - [x] 审核员备注与八步测试步骤（材料 §6）
 - [x] 版本历史表（材料 §7）
 - [x] 截图 6 张（各 1280×800）+ 宣传图块 440×280 + 商店图标 128×128（材料 §8）
-- [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实为 Public，匿名浏览器可打开仓库页与 `PRIVACY.md`）
-- [x] `PRIVACY.md` 存在，且英文在前中文在后，与商店披露口径一致（`CHROMEWEBSTORE.md` §5 引用它）
-- [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/privacy.html>（已点验 200，与 `PRIVACY.md` 逐条等义）——两条路径都通，审核员无需登录
+- [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实为 Public，匿名浏览器可打开仓库页与 `docs/PRIVACY.md`）
+- [x] `docs/PRIVACY.md` 存在，且英文在前中文在后，与商店披露口径一致（`docs/CHROMEWEBSTORE.md` §5 引用它）
+- [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200，与 `docs/PRIVACY.md` 逐条等义）——两条路径都通，审核员无需登录
 - [x] 扩展界面内有隐私政策入口：插件设置页「关于」卡的「隐私政策」一行（#193）
 
 **还差你亲自做的（AI 做不了）**
@@ -133,20 +133,22 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 | URL | 现状 | 能不能用 |
 |---|---|---|
-| `https://cherishfall.github.io/privacy.html` | GitHub Pages 已开启并发布，页面返回 200，内容是完整隐私政策（与 `PRIVACY.md` 逐条等义） | ✅ 能用。这就是 `CHROMEWEBSTORE.md` §1 现在写的那个 |
-| `https://github.com/cherishfall/page-mask/blob/master/PRIVACY.md` | 仓库已公开，页面可访问，内容是完整隐私政策 | ✅ 也能用，作为仓库公开后的备用 |
+| `https://cherishfall.github.io/page-mask/privacy.html` | GitHub Pages 已开启并发布，页面返回 200，内容是完整隐私政策（与 `docs/PRIVACY.md` 逐条等义） | ✅ 能用。这就是 `docs/CHROMEWEBSTORE.md` §1 现在写的那个 |
+| `https://github.com/cherishfall/page-mask/blob/master/docs/PRIVACY.md` | 仓库已公开，页面可访问，内容是完整隐私政策 | ✅ 也能用，作为仓库公开后的备用 |
 
-托管现状：落地页代码（`index.html` + `privacy.html` + `.nojekyll`）已推送到 `cherishfall/cherishfall.github.io` 的 main 分支，**该仓库的 GitHub Pages 已开启**（`status: built`，Source = `main` / `/ (root)`），两个 URL 都已点验 200：<https://cherishfall.github.io/privacy.html> 与 <https://cherishfall.github.io/>。
+托管现状：`cherishfall/cherishfall.github.io` 的 main 分支现在有 5 个文件——`page-mask/index.html`（PageMask 落地页）、`page-mask/privacy.html`（隐私政策）、根 `index.html`（项目索引页，以后加新项目只需加一行）、根 `privacy.html`（旧地址跳转页）、`.nojekyll`。**该仓库的 GitHub Pages 已开启**（Source = `main` / `/ (root)`）。四个地址都已点验 200：<https://cherishfall.github.io/>、<https://cherishfall.github.io/page-mask/>、<https://cherishfall.github.io/page-mask/privacy.html> 与 <https://cherishfall.github.io/privacy.html>。
 
-**为什么选 Pages 而不是仓库 blob 链接**：Pages 上的页面公开可访问、与仓库是否公开解耦，审核员无需登录、无需担心分支改名或仓库可见性；blob 页面外面包着 GitHub 的代码仓库界面，阅读体验一般。仓库 blob 链接作为备用保留在 `CHROMEWEBSTORE.md` §1 的说明里。
+**旧地址必须留着**：0.9.7 及更早的扩展里把 `https://cherishfall.github.io/privacy.html` 写死在「关于」卡上，商店审核员也可能点这个地址；删掉就是死链、会自动拒审。根 `privacy.html` 因此改成一个跳转页，自动把人送到 `/page-mask/privacy.html`。以后再改地址，同样要留一层跳转，不能直接删。
+
+**为什么选 Pages 而不是仓库 blob 链接**：Pages 上的页面公开可访问、与仓库是否公开解耦，审核员无需登录、无需担心分支改名或仓库可见性；blob 页面外面包着 GitHub 的代码仓库界面，阅读体验一般。仓库 blob 链接作为备用保留在 `docs/CHROMEWEBSTORE.md` §1 的说明里。
 
 **已经改好的地方（#193）**：
 
-- `CHROMEWEBSTORE.md` §1（隐私政策 URL）、§2（中英详细描述里的“隐私政策：”那两行）、§0（提交前清单）
+- `docs/CHROMEWEBSTORE.md` §1（隐私政策 URL）、§2（中英详细描述里的“隐私政策：”那两行）、§0（提交前清单）
 - 扩展内入口：插件设置页「关于」卡新增「隐私政策」一行，链到同一个 URL（Chrome 官方要求显著披露在扩展界面内，商店描述不算）
-- `README.md` 与 `PRIVACY.md` 各加一行在线版本链接（与 Pages 上的页面互为镜像）
+- `README.md` 与 `docs/PRIVACY.md` 各加一行在线版本链接（与 Pages 上的页面互为镜像）
 
-**提交前你只需做一件事**：用**无痕窗口**（没有登录状态的浏览器）把 <https://cherishfall.github.io/privacy.html> 打开一次，确认在你自己机器上也打得开；再把 `https://github.com/cherishfall/page-mask/issues`（Support URL）也用无痕窗口点一遍。
+**提交前你只需做一件事**：用**无痕窗口**（没有登录状态的浏览器）把 <https://cherishfall.github.io/page-mask/privacy.html> 打开一次，确认在你自己机器上也打得开；再把 `https://github.com/cherishfall/page-mask/issues`（Support URL）也用无痕窗口点一遍。
 
 **点验方法（务必做）**：开一个**没有登录状态**的浏览器窗口（无痕 / 另一台没登过 GitHub 的机器）打开链接。审核员没有你的登录态，你登录状态下能看不代表审核员能看。
 
@@ -213,7 +215,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | **Permissions justification**（权限理由） | Privacy practices | 材料 §3 的四段（`storage` / `scripting` / `activeTab` / 主机权限） | 材料 §3 | §2.4、§3.1 |
 | **Remote Code**（远程代码） | Privacy practices | No | 材料 §3 | §2.4 |
 | **Data usage**（数据使用） | Privacy practices | 材料 §5：Website content + Web history，再加三条证明 + Limited Use | 材料 §5 | §2.4、§3.2 |
-| **Privacy Policy**（隐私政策 URL） | Privacy practices（页面底部） | `https://cherishfall.github.io/privacy.html` | 材料 §1 | §1.6、§2.4 |
+| **Privacy Policy**（隐私政策 URL） | Privacy practices（页面底部） | `https://cherishfall.github.io/page-mask/privacy.html` | 材料 §1 | §1.6、§2.4 |
 | **Visibility**（可见性） | Distribution | Public（建议）／Unlisted／Private | — | §2.5 |
 | **Geographic distribution**（地区） | Distribution | All regions | — | §2.5 |
 | **In-app purchases** | Distribution | 不勾 | — | §2.5 |
@@ -225,7 +227,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 | 控制台字段（英文） | 填什么 | 出处 | 怎么确认成功 |
 |---|---|---|---|
-| **Detailed description** | `CHROMEWEBSTORE.md` §2 的 zh-CN 全文（代码块里整段复制） | 材料 §2 | 存草稿后回到页面，字数没被截断 |
+| **Detailed description** | `docs/CHROMEWEBSTORE.md` §2 的 zh-CN 全文（代码块里整段复制） | 材料 §2 | 存草稿后回到页面，字数没被截断 |
 | 语言下拉 | 先选 **中文（简体）**，贴中文描述；再切 **English**，贴 en-US 全文 | 材料 §2 | 每种语言各存一次（不同语言是分开填的） |
 | **Category**（类别） | `Productivity › Tools`；控制台没有这一项时选最接近的 | 材料 §1 | 官方只要求“一个主要类别”，没有固定清单；**以控制台当次选项为准** |
 | **Language**（商店页语言） | 简体中文 + English | 材料 §1 | 与 manifest 的 `_locales` 一致 |
@@ -252,7 +254,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 | 字段（英文） | 填什么 | 出处 |
 |---|---|---|
-| **Single purpose description**（单一用途说明） | `CHROMEWEBSTORE.md` §4 那一整段英文（英文控制台就填英文） | 材料 §4 |
+| **Single purpose description**（单一用途说明） | `docs/CHROMEWEBSTORE.md` §4 那一整段英文（英文控制台就填英文） | 材料 §4 |
 | **Permissions justification**（权限理由） | 按控制台列出的条目逐个填：`storage` / `scripting` / `activeTab` 三项必有，对应 材料 §3 前三段；**主机权限 `*://*/*` 若控制台单列一项也填 材料 §3 第 4 段**，若没有单列字段，就把主机权限的理由并进最相关的一条，并在单一用途说明里补一句「按站点授权」 | 材料 §3 |
 | **Remote Code**（远程代码） | 选 **"No, I am not using remote code."** | 材料 §3 / 材料 §11 |
 | **Data usage**（数据使用） | 两组勾选，见 §3.2 | 材料 §5 |
@@ -286,7 +288,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 官方定位：这个标签页是给你**需要受限凭据或付费账号**的扩展放凭据和说明用的，"This is only useful if the item requires restricted credentials or a paid account for full access to all features."（<https://developer.chrome.com/docs/webstore/cws-dashboard-test-instructions/>）
 
-PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项没有**。但 `CHROMEWEBSTORE.md` §6 的那八步仍然是**最有价值的审核员说明**：审核员是按说明来验证功能的，说明写清楚能显著减少「功能不可用」类误判（这类拒审的官方 ID 是 Yellow Magnesium）。
+PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项没有**。但 `docs/CHROMEWEBSTORE.md` §6 的那八步仍然是**最有价值的审核员说明**：审核员是按说明来验证功能的，说明写清楚能显著减少「功能不可用」类误判（这类拒审的官方 ID 是 Yellow Magnesium）。
 
 **做法**：把 材料 §6 的整段英文（含 “What it does / Permissions model / … / Test steps (no login needed): 1–8”）贴进 Test instructions。材料 §6 已经把要点说全了，特别是：
 
@@ -331,7 +333,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 3.1 逐项权限：声明什么、审核员可能问什么
 
-来源：`CHROMEWEBSTORE.md` §3（理由原文）与 材料 §10（预置问答）。**声明文字直接复制 材料 §3，别自己重写。**
+来源：`docs/CHROMEWEBSTORE.md` §3（理由原文）与 材料 §10（预置问答）。**声明文字直接复制 材料 §3，别自己重写。**
 
 | 权限 / 声明 | 控制台要填什么（出处） | 审核员可能追问 | 怎么答（依据） |
 |---|---|---|---|
@@ -345,7 +347,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 3.2 数据披露（Privacy practices → Data usage）
 
-按 `CHROMEWEBSTORE.md` §5，**两组分开填，别混**：
+按 `docs/CHROMEWEBSTORE.md` §5，**两组分开填，别混**：
 
 **第一组：数据类型（勾选你处理的用户数据）**
 
@@ -361,7 +363,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 - 不用于判断信用或放贷
 - 并勾选「遵守 Chrome 应用商店用户数据政策（含 Limited Use 要求）」
 
-`PRIVACY.md` 的 "What we don't do" 一节已有对应声明（材料 §5 已核对）。
+`docs/PRIVACY.md` 的 "What we don't do" 一节已有对应声明（材料 §5 已核对）。
 
 #### 三条容易漏的官方要求
 
@@ -373,7 +375,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
    → <https://developer.chrome.com/docs/webstore/program-policies/limited-use/>
    PageMask 存网址路径前缀是为了“在哪些页面收起”这个**面向用户的功能**，所以合规，但**这个功能必须在商店页描述里显著写出来**——材料 §2 的详细描述里已有「在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面」这一条，符合要求。
 
-3. **Limited Use 要求你自己的网站上有一句肯定声明。** 官方原文要求在属于该扩展的网站上声明遵守用户数据政策（含 Limited Use）。`PRIVACY.md` 的 "What we don't do" 里已有这句（"PageMask's use of data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements."）——**隐私政策页面要能打开，这一串才算数**，这又回到 §1.6 的点验。
+3. **Limited Use 要求你自己的网站上有一句肯定声明。** 官方原文要求在属于该扩展的网站上声明遵守用户数据政策（含 Limited Use）。`docs/PRIVACY.md` 的 "What we don't do" 里已有这句（"PageMask's use of data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements."）——**隐私政策页面要能打开，这一串才算数**，这又回到 §1.6 的点验。
 
 ### 3.3 扩展界面内的隐私政策入口（已加，#193）
 
@@ -382,7 +384,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 > "The prominent disclosure and consent must occur within the Product's user interface. Disclosures in the Chrome Web Store description or inline installation page do not satisfy this requirement."
 > → <https://developer.chrome.com/docs/webstore/program-policies/user-data-faq/>
 
-现状：**已加**。插件设置页（Chrome 的「扩展程序选项」）的「关于」卡里新增一行「隐私政策」/ "Privacy policy"，外链到 <https://cherishfall.github.io/privacy.html>，与商店 listing 填的是同一个 URL；中英文案都在 `core/i18n/messages.{zh,en}.ts` 的 `settings.privacyPolicy`。另外官方最小权限 FAQ 建议把权限清单与理由也放进「商店 listing 或扩展内的 about 页面」——权限逐项理由见材料 §3，扩展内这一条由「关于」卡与设置页各功能卡承担。
+现状：**已加**。插件设置页（Chrome 的「扩展程序选项」）的「关于」卡里新增一行「隐私政策」/ "Privacy policy"，外链到 <https://cherishfall.github.io/page-mask/privacy.html>，与商店 listing 填的是同一个 URL；中英文案都在 `core/i18n/messages.{zh,en}.ts` 的 `settings.privacyPolicy`。另外官方最小权限 FAQ 建议把权限清单与理由也放进「商店 listing 或扩展内的 about 页面」——权限逐项理由见材料 §3，扩展内这一条由「关于」卡与设置页各功能卡承担。
 
 ---
 
@@ -395,7 +397,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 - [ ] manifest 里 `permissions` = `storage`/`scripting`/`activeTab`，`optional_host_permissions` = `["*://*/*"]`，**没有** `content_scripts`、**没有** `host_permissions`
 - [ ] 名称/简介与 `_locales` 一致：en 40/120 字符、zh_CN 22/52 字符（≤45 / ≤132）
 - [ ] 截图 5 张（1/2/4/5/6），每张 1280×800；宣传图块 440×280；图标 128×128
-- [ ] **隐私政策 URL（<https://cherishfall.github.io/privacy.html>）用无登录浏览器能打开**，且页面里确实有「收集什么、怎么用、怎么共享」的说明
+- [ ] **隐私政策 URL（<https://cherishfall.github.io/page-mask/privacy.html>）用无登录浏览器能打开**，且页面里确实有「收集什么、怎么用、怎么共享」的说明
 - [ ] Support URL（`.../issues`）与 Homepage URL 无痕能打开
 - [ ] 材料 §3 四段权限理由、材料 §4 单一用途、材料 §5 两组勾选、材料 §6 八步测试说明，都已贴进对应标签页
 - [ ] Remote Code 选了 No
@@ -403,7 +405,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 4.2 必须在真实 Chrome 上人工实走的八步（材料 §6）
 
-把 0.9.7 装进真实 Chrome 后，按 `CHROMEWEBSTORE.md` §6 的 1–8 步逐条走：
+把 0.9.7 装进真实 Chrome 后，按 `docs/CHROMEWEBSTORE.md` §6 的 1–8 步逐条走：
 
 1. 打开 <https://en.wikipedia.org/wiki/Main_Page> → 点 PageMask 图标 → 点「收起内容」→ **在 Chrome 的授权提示里点「允许」**
 2. 页面上点选元素 → 「下一步：看效果」
@@ -423,14 +425,14 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 4.3 隐私政策与实际数据流一致
 
-- [ ] 政策里写的三类本机数据（收起规则与选择器、标签页标题与图标、站点开关状态）与 `PRIVACY.md` 一致
+- [ ] 政策里写的三类本机数据（收起规则与选择器、标签页标题与图标、站点开关状态）与 `docs/PRIVACY.md` 一致
 - [ ] 政策里「不上传、不同步、不统计」与实现一致（只用 `chrome.storage.local`，不用 `storage.sync`，无网络请求）
 - [ ] 幕布静音写的是「浏览器记在标签页上的状态，不由扩展保存」——不是我们采集的数据，**不新增数据勾选**
 
 ### 4.4 版本一致性
 
 - [ ] `package.json` = `0.9.7`，`CHANGELOG.md` 有 0.9.7 的中英条目，tag `v0.9.7` 已打、Release 已发
-- [ ] `CHROMEWEBSTORE.md` 头部与 材料 §7 版本历史表已同步到 0.9.7
+- [ ] `docs/CHROMEWEBSTORE.md` 头部与 材料 §7 版本历史表已同步到 0.9.7
 
 ---
 
@@ -481,7 +483,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 | **Blue Argon** — Manifest V3 远程代码 | 引用包外 `<script>`；`eval()` 执行远程字符串；把远程命令当数据跑 | 注入的用户样式表内容是不是“远程来的”？ | 样式内容全在本机由用户点选生成；包内无 `eval`/`new Function`/外部脚本。材料 §6 明写 "no remote code"；Privacy 页 Remote Code 选 No |
 | **Yellow Magnesium** — 功能不可用 | 包装错误（manifest 提到的文件不在包里）；行为与列表描述不符 | 审核员按说明走却走不通（授权弹窗、子域页面的「需要允许访问」） | 材料 §6 八步实走；材料 §6 步骤 1 已写子域页面的处理；材料 §11 记录 “安装时零权限警告” |
 | **Purple Potassium** — 权限过度 | 请求了没用到的权限；权限范围超出功能所需 | `activeTab` 会不会被认为多余（官方明确列出 `activeTab` 是常见误解项） | 材料 §3 四段理由逐项写清用途；材料 §10 预置问答；材料 §6 讲清“装上不跑、点才跑” |
-| **Purple Lithium** — 用户数据披露 | 收集了数据却没给隐私政策；政策放在描述里而不是指定字段；**URL 打不开 / 不可访问 / 不是隐私政策**；政策没写清收集、使用、处理、共享 | 隐私政策 URL 死链（**已改指 GitHub Pages 并点验 200**，仍需提交前用无痕窗口再点一次）；政策页缺“共享给谁” | §1.6 点验；政策 URL 填在 Privacy 页底部指定字段；`PRIVACY.md` 的 “What we don't do” 已写共享与 Limited Use |
+| **Purple Lithium** — 用户数据披露 | 收集了数据却没给隐私政策；政策放在描述里而不是指定字段；**URL 打不开 / 不可访问 / 不是隐私政策**；政策没写清收集、使用、处理、共享 | 隐私政策 URL 死链（**已改指 GitHub Pages 并点验 200**，仍需提交前用无痕窗口再点一次）；政策页缺“共享给谁” | §1.6 点验；政策 URL 填在 Privacy 页底部指定字段；`docs/PRIVACY.md` 的 “What we don't do” 已写共享与 Limited Use |
 | **Red Magnesium / Red Copper / Red Lithium / Red Argon** — 单一用途 | 一个扩展干两件不相关的事；工具栏塞一排不相干入口 | 「整页变灰」「幕布遮住」看起来像第二个用途 | 材料 §4 的单一用途句把整页变灰说成“按站点把页面变灰”的同一件事的一部分；幕布说成“遮住整页并按住声音”。官方对“单一用途”的解释是**窄的领域**也算（<https://developer.chrome.com/docs/webstore/program-policies/quality-guidelines-faq/>），PageMask 属“让用户自己选的网站变清爽”这一窄领域 |
 | **Yellow Zinc** — 元数据缺失/不足 | 缺图标、标题、截图或描述；标题无意义或误导；截图没讲清功能 | 截图传 6 张超限（控制台上限 5 张，多传的会在上传时就被挡住，不会走到审核） | 传 5 张（1/2/4/5/6）；描述照 材料 §2 整段贴 |
 | 命名规范 / 关键字堆砌 | 描述里堆品牌词 | 描述里只有必要的品牌词 | 材料 §11 已核 |
@@ -496,7 +498,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 1. 改代码 → 提票 → 合并（仓库规矩：一票一提交一推送）。
 2. **升版本号**：`package.json` 的 `version` 必须**大于**已发布的版本（官方硬性要求："Each new version must have a larger version number than the previous version"）。
 3. `CHANGELOG.md` 加中英双语条目（Keep a Changelog 结构）。
-4. `CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
+4. `docs/CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
 5. `npm run build && npm run zip && npm run check:package` → 得到 `.output/page-mask-<版本>-chrome.zip`。
 6. 打 tag（`v<版本>`，annotated）+ 发 GitHub Release，附上 zip。**要不要同步 GitHub Release？——要。** 它是本项目对外的版本分发渠道（商店条目在审核通过前给不了用户可装的东西），也是审核员备注里可以引用的公开坐标。
 7. 控制台：商品页 → **Package** 标签页 → **Upload New Package** → 选新 zip。
@@ -531,7 +533,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 
 ### 6.4 版本历史怎么写
 
-`CHROMEWEBSTORE.md` §7 的表格是**提交商店时填的版本历史**（控制台在每次更新时会让你写 release notes）：
+`docs/CHROMEWEBSTORE.md` §7 的表格是**提交商店时填的版本历史**（控制台在每次更新时会让你写 release notes）：
 
 - 格式照 材料 §7 的表：一行一个版本，「版本号 | 日期 | 要点」。
 - 0.9.7 那行已写好，内容与 `CHANGELOG.md` 的 0.9.7 条目一致（功能与权限集合无可见变化）。
@@ -558,7 +560,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 | Remote Code | 远程代码 | 选 No |
 | Data usage | 数据使用 | 两组勾选，见 材料 §5 |
 | Website content / Web history | 网站内容 / 浏览历史 | 材料 §5 勾的两项 |
-| Limited Use | Limited Use（限定用途） | 政策里的术语，不翻译；`PRIVACY.md` 有一句肯定声明 |
+| Limited Use | Limited Use（限定用途） | 政策里的术语，不翻译；`docs/PRIVACY.md` 有一句肯定声明 |
 | Submit for review | 提交审核 | 交给审核员 |
 | Defer publish / Publish | 延迟发布 / 发布 | 「提交」≠「公开」的分界，见 §2.7 |
 | Pending review / Published / Rejected / Taken Down | 审核中 / 已发布 / 被拒 / 已下架 | 见 §5.1 |
@@ -595,7 +597,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 2. **截图 6 张 > 上限 5 张**，按材料 §8 传 1/2/4/5/6。
 3. **`*://*/*` 是官方点名的“拉长审核”因素**，权限理由与审核员备注必须写足（材料 §3、材料 §10、材料 §6），别让审核员自己推。
 4. **`activeTab` 是官方“常见误解权限”清单里的一项**：官方说拥有宽泛主机权限时通常不需要 activeTab。我们的主机权限是可选的、安装时不授予任何站点，所以需要它——**主动说明，别等被问**。
-5. **隐私政策 URL 指向 GitHub Pages**：<https://cherishfall.github.io/privacy.html>（已点验 200；仓库 blob 那条作为备用）。改 URL 时要**同步改多处**：材料 §1、材料 §2 中英详细描述里的“隐私政策：”行、扩展设置页「关于」卡的「隐私政策」入口（`entrypoints/settings/App.vue` 的 `PRIVACY_URL`）、`README.md` 与 `PRIVACY.md` 的在线版本链接、以及本文件。
+5. **隐私政策 URL 指向 GitHub Pages**：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200；仓库 blob 那条作为备用）。改 URL 时要**同步改多处**：材料 §1、材料 §2 中英详细描述里的“隐私政策：”行、扩展设置页「关于」卡的「隐私政策」入口（`entrypoints/settings/App.vue` 的 `PRIVACY_URL` 与链接显示文字）、`tests/e2e/check-pages.mjs` 的 href 断言、`README.md` 与 `docs/PRIVACY.md` 的在线版本链接、以及本文件。另外**旧地址 `https://cherishfall.github.io/privacy.html` 的跳转页不能删**：老版本扩展和审核员还会点它（#193 的死链自动拒审）。改完也要发新版，已装着的旧扩展才会指到新地址。
 6. **描述里不能出现不实说法**：「任何网站都可用」「完全不出网」「省流量」「挡广告」都不能写；正确口径是「PageMask 自身不发起任何网络请求」「变灰只是去掉颜色，页面照常加载」。
 7. **中英两份描述必须一致**，不一致官方会弹 warning。
 8. **两条快捷键的绑定要在真机复核**：`chrome://extensions/shortcuts` 改键 → 切回插件设置页/欢迎页，键帽要跟着变；自动化触发不了这一步。

@@ -2,7 +2,7 @@
 
 > 性质声明：本文是**权威**。「界面里要不要放一段说明、放成常驻还是按需」以本文为准；
 > `docs/dev/consistency-checklist.md` **只是索引**，不在这里另立规矩。控件尺寸、颜色、字号、
-> 按钮层级与排布仍以 `docs/design-ui.md` / `styles/tokens.css` 为准；界面用词以 `GLOSSARY.md` 为准。
+> 按钮层级与排布仍以 `docs/design-ui.md` / `styles/tokens.css` 为准；界面用词以 `docs/GLOSSARY.md` 为准。
 
 软件界面不是小作文。有些文字前几次有用，后面几百几千次几乎都是多余的；但另一些（危险后果、
 状态、边界坑）少一句就会出错。本文件把「哪些留、哪些收、怎么收」一次说清，四处界面照此收口。

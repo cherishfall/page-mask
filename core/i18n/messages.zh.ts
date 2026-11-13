@@ -7,7 +7,7 @@
  * - 键按界面分组（common / popup / management / settings / onboarding / wizard / editor / toggle /
  *   notice / curtain / errors）。`common` 放跨界面共用的几个词（保存 / 取消 / 关闭…），
  *   避免同一个词在四个界面各写一份、改一处漏三处
- * - 界面用词以 GLOSSARY.md 为准：「收起设置」「按设置 / 原样」「遮住」…
+ * - 界面用词以 docs/GLOSSARY.md 为准：「收起设置」「按设置 / 原样」「遮住」…
  * - 本文件是键集合的**基准**：`Messages = typeof zh`，messages.en.ts 必须一一对应
  *   （单测 core/i18n.test.ts 会递归比较两边的键）
  *
