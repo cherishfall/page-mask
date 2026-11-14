@@ -5,6 +5,48 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.1] - 2026-11-14
+
+商店提交前的最后一轮全量审查修复批（四条线：商店合规 / 后台与存储 / 内容脚本 / 界面文案与无障碍）。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **无障碍**：幕布「恢复」按钮的读屏名称现在以可见文字「恢复」开头（语音输入「点击恢复」能命中，WCAG 2.5.3）；弹窗「查看使用说明」链接的读屏名称包含可见文字；「恢复网站原来的标题和图标」补上二次确认框（站点设置页与向导两处入口，与「恢复网站原来的内容」同款）
+- **删除站点时权限收得干净**：「删除这个网站的设置」现在只收回浏览器实际授予的站点权限——Chrome 的收回是整批原子的，旧版把从未授予的模式一并塞入会导致整批失败、权限残留
+- **一键清空更稳**：页面卡住时多等一轮再收回授权，避免个别慢页面留下删不掉的隐藏样式（到下次导航为止）
+- **后台提示跟随界面语言**：快捷键在不支持的页面上被挡时，工具栏角标的悬停说明不再固定中文
+- **导入兼容**：导入文件里带显式默认端口（如 `:443`）的生效范围会先归一，不再静默永不生效
+- **向导健壮性**：极端并发下不会再出现两个向导叠加把整页点死；收起项名称超长按码点截断到 60（与标题、范围标签同口径）
+- **界面一致性**：向导全部对话框与扩展页面的对话框统一宽度；错误消息句尾标点全表统一，并新增两条自动化守门（错误族句尾、中英同键句尾对称）
+- **文案小修**：欢迎页第 2 步补全真实边界「刷新或离开页面就恢复」
+- **文档**：隐私政策与在线版逐字对齐、数据清单补全三个本机界面偏好字段（在线页同批更新）；上架指南快照更新
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.0 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点；改动集中在正确性与无障碍修复
+- 门禁：编译、单测 860 项（57 文件）、E2E 十脚本 1112 项断言、真机站点验证（匿名页）、check:docs / check:package 全绿（1.0.1 构建实测）
+
+### English
+
+#### Changes
+
+- **Accessibility**: the curtain's "Restore" button accessible name now starts with the visible label "Restore" (voice-control "click Restore" matches; WCAG 2.5.3); the popup's "View the guide" link accessible name contains the visible text; "use the site's own title and icon" now asks for confirmation first (both entry points — site settings and the wizard — matching the existing "restore hidden items" dialog)
+- **Site deletion revokes permissions cleanly**: "Delete this site's settings" now revokes only the host permissions the browser actually granted — Chrome's revocation is all-or-nothing per call, and the old batch including never-granted patterns silently failed, leaving permissions behind
+- **Clear-all is more robust**: a stuck page gets one extra wait round before permissions are revoked, so a slow tab can no longer keep an unremovable hidden stylesheet until the next navigation
+- **Background notices follow the UI language**: when a shortcut is blocked on an unsupported page, the toolbar badge tooltip no longer stays Chinese for English users
+- **Import compatibility**: a scope prefix with an explicit default port (e.g. `:443`) in an imported file is normalized, instead of silently never matching
+- **Wizard robustness**: double-opening the wizard in a tight race can no longer stack two wizards and block the whole page; over-long item names are truncated to 60 code points (same rule as titles and scope labels)
+- **UI consistency**: all wizard dialogs share one width with the extension-page dialogs; error-message punctuation is unified across the table with two new automated gates (error-family tails, Chinese–English per-key tail symmetry)
+- **Copy fixes**: the onboarding step 2 states the full boundary ("reloading or leaving the page restores it")
+- **Docs**: the privacy policy is verbatim-aligned with the online version and its data list now covers three local interface preferences (online page updated in the same batch); the submission guide snapshot refreshed
+
+#### For reviewers
+
+- Features and permissions are identical to 1.0.0 (`storage` / `scripting` / `activeTab` plus per-site optional host permissions, nothing granted at install); the changes are correctness and accessibility fixes
+- Gates: typecheck, 860 unit tests (57 files), 1112 assertions across ten E2E scripts, real-site checks on anonymous pages, check:docs / check:package all green (measured on the 1.0.1 build)
+
 ## [1.0.0] - 2026-11-14
 
 首个 Chrome 应用商店提交版本：商店材料按审核口径打磨，界面与文档一致性收口。权限集合不变。
