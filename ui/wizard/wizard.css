@@ -723,7 +723,9 @@ button.pm-wiz-badge {
   border-radius: var(--pm-radius-card);
   box-shadow: var(--pm-shadow-overlay);
   padding: var(--pm-space-4);
-  inline-size: min(360px, calc(100vw - 2 * var(--pm-space-4)));
+  /* #204 目检：与管理页/设置页的原生 dialog（styles/base.css）同宽——同一个确认框
+     全项目只有一个样子，此前向导族 360 / 管理族 420 两套 */
+  inline-size: min(420px, calc(100vw - 32px));
 }
 .pm-wiz-dialog:modal {
   overscroll-behavior: contain;
