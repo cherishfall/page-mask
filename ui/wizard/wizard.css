@@ -299,6 +299,13 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* 清单限高内部滚动时的「下面还有」渐隐线索（#223）：macOS 覆盖式滚动条平时不可见，
+   标题「N 项」与可见行数对不上会让人以为少了东西。滚到底 / 无需滚动时由 JS 摘掉
+   （.pm-fade-bottom 由 WizardApp 维护），避免最后一行被误盖。 */
+.pm-wiz-rows.pm-fade-bottom,
+.pm-wiz-drafts.pm-fade-bottom {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+}
 .pm-wiz-rows li {
   display: flex;
   align-items: center;
@@ -673,6 +680,11 @@
 .pm-wiz-ghost {
   border: 0;
 }
+/* 幽灵牌钉在隐藏前的位置上，那里往往已是回流后的别家文字——半透明让底下的字还能看清
+   （与 .inside 号码牌同一思路），可点性不受影响（#222） */
+.pm-wiz-ghost .pm-wiz-badge {
+  opacity: 0.6;
+}
 /* 号码牌自己一个盒子（#52）：位置由 core/wizard-logic.ts badgePlacement 算在元素边界外侧，
  * 所以牌子不会压住元素自己的文字；盒子里只有牌子本身，不画框。 */
 /* 号码牌：选择阶段不可点（点选落到捕获层上）；预览阶段可点，点了滚到清单里对应的行并高亮 */
@@ -683,8 +695,7 @@
   box-sizing: border-box;
   min-inline-size: 24px;
   block-size: 24px;
-  padding: 0 6px;
-  border: 2px solid var(--pm-bg);
+  padding: 0 6px;  border: 2px solid var(--pm-bg);
   border-radius: var(--pm-radius-pill);
   background: var(--pm-warning);
   color: var(--pm-on-warning);

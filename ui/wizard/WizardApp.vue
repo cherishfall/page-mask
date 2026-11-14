@@ -156,7 +156,14 @@
                 {{ t.wizard.clearAll }}
               </button>
             </div>
-            <ol v-if="selectionRows.length > 0" class="pm-wiz-rows" data-testid="pm-wiz-selected">
+            <ol
+              v-if="selectionRows.length > 0"
+              ref="selListEl"
+              class="pm-wiz-rows"
+              :class="{ 'pm-fade-bottom': !selListAtEnd }"
+              data-testid="pm-wiz-selected"
+              @scroll="onSelListScroll"
+            >
               <li
                 v-for="row in pickRows"
                 :key="rowKey(row.el)"
@@ -252,7 +259,15 @@
         <h3 v-if="drafts.length > 0" id="pm-wiz-drafts-title" class="pm-wiz-group-title" data-testid="pm-wiz-drafts-title">
           {{ t.wizard.draftsLabel(drafts.length) }}
         </h3>
-        <ol v-if="drafts.length > 0" class="pm-wiz-drafts" aria-labelledby="pm-wiz-drafts-title" data-testid="pm-wiz-drafts">
+        <ol
+          v-if="drafts.length > 0"
+          ref="draftsListEl"
+          class="pm-wiz-drafts"
+          :class="{ 'pm-fade-bottom': !draftsListAtEnd }"
+          aria-labelledby="pm-wiz-drafts-title"
+          data-testid="pm-wiz-drafts"
+          @scroll="onDraftsListScroll"
+        >
           <li v-for="(d, i) in drafts" :key="d.key" :data-testid="`pm-draft-${i + 1}`">
             <!-- 默认行：序号、名称、调整、删除（审查第 8 条：收起方式等控件折进「调整」，不摊在行上） -->
             <div class="pm-wiz-draft-head" :data-testid="`pm-draft-${i + 1}-head`">
@@ -856,6 +871,7 @@ onMounted(() => {
   pick.attach(pickLayer);
   // 一打开就用旧规则铺草稿起点（#69 / #81 无首次模式）：没有配置时是空清单，同一条路
   initEditDrafts();
+  nextTick(updateListFades); // 首屏草稿铺好后算一次清单要不要渐隐（#223）
   // 打开时不是点选阶段（「标题和图标」是单步表单）：捕获层不接管指针，光标也不改
   if (phase.value !== 'pick') {
     pickLayer.style.display = 'none';
@@ -878,6 +894,7 @@ onMounted(() => {
         refreshSameNav(); // 信息流补内容：导航计数与强调框跟着重算（#140）
         renderMarkers();
       }
+      updateListFades(); // 信息流补内容也会改变清单可滚动状态（#223）
     }, 300);
   });
   // document_start 注入后 body 可能还没解析出来（#186）：等 DOM 就绪再挂观察。
@@ -1519,6 +1536,29 @@ async function clearSelection() {
 
 // ---------- 页内标记 ----------
 
+// ---------- 清单渐隐线索（#223）：限高内部滚动时提示「下面还有」，到底 / 无需滚动时摘掉 ----------
+const selListEl = ref<HTMLElement | null>(null);
+const draftsListEl = ref<HTMLElement | null>(null);
+const selListAtEnd = ref(true);
+const draftsListAtEnd = ref(true);
+
+function listAtEnd(el: HTMLElement | null): boolean {
+  return !el || el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+}
+function onSelListScroll(e: Event) {
+  selListAtEnd.value = listAtEnd(e.currentTarget as HTMLElement);
+}
+function onDraftsListScroll(e: Event) {
+  draftsListAtEnd.value = listAtEnd(e.currentTarget as HTMLElement);
+}
+/** 清单行数变化（勾同类、删行、信息流补内容）后重算：滚动状态可能在下一帧才稳定，放到 rAF 之后 */
+function updateListFades() {
+  requestAnimationFrame(() => {
+    selListAtEnd.value = listAtEnd(selListEl.value);
+    draftsListAtEnd.value = listAtEnd(draftsListEl.value);
+  });
+}
+
 function makeBox(...classes: string[]): HTMLElement {
   const el = document.createElement('div');
   el.className = ['pm-wiz-box', ...classes].join(' ');
@@ -2125,6 +2165,12 @@ function reclampToolbar() {
 }
 
 /** 两步之间切换时工具条高度会变（#119）：拖动过的位置要重新夹回可视区 */
+// 行数变化（勾同类 / 删行 / 看效果切换）重算清单渐隐（#223）
+watch(
+  () => [selectionRows.value.length, drafts.value.length],
+  () => nextTick(updateListFades),
+);
+
 watch(phase, () => {
   void nextTick(reclampToolbar);
 });
