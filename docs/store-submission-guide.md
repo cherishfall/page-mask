@@ -62,9 +62,9 @@ unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json
 | 注册 + 付款 + 两步验证 + 邮箱验证 | 15–40 分钟 | 取决于你的 Google 账号验证流程，**以控制台显示为准** |
 | 填 5 个标签页（照抄材料 §1–§6） | 30–60 分钟 | 材料都已备好，主要是复制粘贴 |
 | 提交 → 审核结果 | **多数几天，最多几周** | 官方原话：“For most extensions, review is completed within a few days, but it can take up to a few weeks.”（<https://developer.chrome.com/docs/webstore/review-process/>） |
-| 审核通过 → 上线 | 自动发布即刻；手动发布需在**审核通过后 30 天内**点 Publish | <https://developer.chrome.com/docs/webstore/publish/> |
+| 审核通过 → 上线 | 自动发布即刻；手动发布需在**审核通过后 30 天内**点 Publish | <https://developer.chrome.com/docs/webstore/update/> |
 
-**PageMask 大概率比平均慢**，原因是官方点名的三个“会被仔细看”的信号 PageMask 全中：
+**PageMask 大概率比平均慢**，官方列了四个“会被仔细看”的信号，PageMask 占前三个（第四个「大改代码量」对新扩展不适用）：
 
 - new developers（新开发者账号）
 - new extensions（新扩展）
@@ -72,7 +72,7 @@ unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json
 
 见 <https://developer.chrome.com/docs/webstore/review-process/>。这条也决定了攻略重点：**权限理由要写足、审核员备注要写全**，别让审核员自己猜。
 
-官方还说：审核超过三周可联系开发者支持（"If your extension is pending review for more than three weeks, please contact developer support"）。
+审核时长官方现行口径只说「多数几天、最多几周」（旧版文档曾有「超过三周请联系开发者支持」的说法，现行页面已改写）；久等未见结果时可走 One Stop Support 表单询问（见 §5.2），以页面当时显示为准。
 
 ---
 
@@ -85,7 +85,7 @@ unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json
 3. 第一次进会看到注册页：**先同意开发者协议与政策，再付一次性注册费**（"you must register as a CWS developer and pay a one-time registration fee"）。
    - **费用金额：官方文档没有写死数字，注册页现场显示为准**（本文件不编数字）。注册页地址：<https://chrome.google.com/webstore/devconsole/register>
 4. **国家/地区**：官方注册页列出支持的地区，**中国大陆（China）在列表内**，香港、澳门、台湾也在（已核对该页列表）。<https://developer.chrome.com/docs/webstore/register/>
-5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好——建议用 `cherishfall@hotmail.com`（与商店对外联系邮箱一致），不要用临时邮箱。
+5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好——建议用 `cherishfall@hotmail.com`（与商店对外联系邮箱一致），不要用临时邮箱。官方更建议用专门的发布用邮箱（下一条）；此号兼作对外联系邮箱，取舍自负。
 6. 官方建议：用**专门发商店发布用**的邮箱，并且要经常看（拒审、下架通知都发这里）。
 
 > 注册时问“是否同时在 Google Play 上架”之类，PageMask 不涉及。
@@ -167,7 +167,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 **不声明的后果**：扩展可能被下架、或在部分地区对用户不可见。这是账号级合规项，不是可选项。
 
-**入口**：开发者控制台的 Account → Business info 区（或首次进入控制台时的合规提示）；具体叫法以控制台现场为准，官方操作说明：<https://support.google.com/chrome_webstore/answer/15570736>
+**入口**：开发者控制台的 Account → Business info 区（或首次进入控制台时的合规提示）；具体叫法以控制台现场为准。定义与验证要求见官方政策页：<https://developer.chrome.com/docs/webstore/program-policies/trader-disclosure>（原 support.google.com 操作页已下线、返回 404，别按旧链接找）。
 
 **PageMask 怎么答**：PageMask 免费、无内购、无广告、无订阅——按官方定义大概率是 **Non-Trader**（个人开发者、不以营利为目的发布），如实勾选即可，不需要证明材料。**但这是法律判断，最终由你自己拍板**：如果以后打算靠这个账号卖扩展或投放付费功能，就该按 Trader 路径走（Trader 要额外验证身份与联系信息，见 Trader FAQ）。
 
@@ -187,7 +187,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 1. 控制台 → **Add new item**（添加新商品）→ **Choose file** → 选 `.output/page-mask-0.9.8-chrome.zip` → **Upload**。
 2. 两条硬约束（官方）：
-   - 包体积上限 **2GB**（"The maximum supported file size for an extension package is 2GB"）；
+   - 包体积上限 **2GB**（"The maximum supported file size for an extension package is 2GB"——原文在 <https://developer.chrome.com/docs/webstore/publish/>，prepare 页没有这句）；
    - `manifest.json` 必须放在 **zip 根目录**，不能套一层文件夹（<https://developer.chrome.com/docs/webstore/prepare/>）。我们的包根目录就是 `manifest.json`，✅。
 
    （顺带：看到 "Cannot parse the manifest" 多半是 manifest 里有注释或 JSON 语法错——我们的包是构建产物，没有这个问题。）
@@ -321,7 +321,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
    官方原文（<https://developer.chrome.com/docs/webstore/publish/>）："If you uncheck the checkbox, your item will not be published immediately after its review is complete. Instead, you'll be able to manually publish it at a time of your choosing once the review is complete."
 
-3. **重要：审核通过后你有 30 天时间发布。** 官方："Once the review is complete, you will have up to 30 days to publish. After that period expires, the staged submission will revert to a draft which will have to be submitted again for review."（过期后退回草稿，要重新提交审核）
+3. **重要：审核通过后你有 30 天时间发布。** 官方："Once the review is complete, you will have up to 30 days to publish. After that period expires, the staged submission will revert to a draft which will have to be submitted again for review."（过期后退回草稿，要重新提交审核。引文原文在 <https://developer.chrome.com/docs/webstore/update/>，publish 页现行只说「过期时间可在商品状态里查看」）
 
 > **这是最容易搞混的一步**：「提交审核」和「公开发布」是两件事：
 > - 提交审核 = 交给审核员看（**你可以自己做**）；
@@ -519,15 +519,16 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 2. **升版本号**：`package.json` 的 `version` 必须**大于**已发布的版本（官方硬性要求："Each new version must have a larger version number than the previous version"）。
 3. `CHANGELOG.md` 加中英双语条目（Keep a Changelog 结构）。
 4. **在线更新日志页与落地页**（仓库 `cherishfall/cherishfall.github.io`，工作副本放 `tmp/pages-repo`，git 记得带代理前缀）：把该仓库更新到最新，跑 `npm run changelog:page`——它从 `CHANGELOG.md` 重新生成 `page-mask/changelog.html`（生成页勿手改），随落地页一起 commit + push。安装方式、界面措辞或 `docs/PRIVACY.md` 有变化时，同批更新落地页正文与 `page-mask/privacy.html`（中英两份，政策两版必须逐条等义）。
-5. `docs/CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
-6. `npm run build && npm run zip && npm run check:package` → 得到 `.output/page-mask-<版本>-chrome.zip`。
-7. 打 tag（`v<版本>`，annotated）+ 发 GitHub Release，附上 zip。**要不要同步 GitHub Release？——要。** 它是本项目对外的版本分发渠道（商店条目在审核通过前给不了用户可装的东西），也是审核员备注里可以引用的公开坐标。
-8. 控制台：商品页 → **Package** 标签页 → **Upload New Package** → 选新 zip。
+5. `README.md`（四件套之三）：安装方式、使用方法、权限说明有变化时同步（中英两份都在同一文件里）。
+6. `docs/CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
+7. `npm run build && npm run zip && npm run check:package` → 得到 `.output/page-mask-<版本>-chrome.zip`。
+8. 打 tag（`v<版本>`，annotated）+ 发 GitHub Release，附上 zip。**要不要同步 GitHub Release？——要。** 它是本项目对外的版本分发渠道（商店条目在审核通过前给不了用户可装的东西），也是审核员备注里可以引用的公开坐标。
+9. 控制台：商品页 → **Package** 标签页 → **Upload New Package** → 选新 zip。
    - **再点一次 Submit for Review**（上传新包不会自动送审）。
    - 审核通过前，已装的用户不受影响（"When you submit an update for review, it doesn't yet affect your published item"）。
    - 新包会发布到**和上一版相同的可见性**（Public 还是 Unlisted），要换可见性得在 Distribution 页改。
    - **新增权限**会弹给用户“接受新权限或停用扩展”的提示——PageMask 权限集合不变就不会有。
-9. 发布后可以开 **Percentage rollout**（灰度放量），但**只有 7 日活跃用户超过 10,000 的 item 才有这个选项**——新扩展用不上。
+10. 发布后可以开 **Percentage rollout**（灰度放量），但**只有 7 日活跃用户超过 10,000 的 item 才有这个选项**——新扩展用不上。
    - <https://developer.chrome.com/docs/webstore/update/>
 
 ### 6.2 出事了怎么办
@@ -622,7 +623,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 6. **描述里不能出现不实说法**：「任何网站都可用」「完全不出网」「省流量」「挡广告」都不能写；正确口径是「PageMask 自身不发起任何网络请求」「变灰只是去掉颜色，页面照常加载」。
 7. **中英两份描述必须一致**，不一致官方会弹 warning。
 8. **两条快捷键的绑定要在真机复核**：`chrome://extensions/shortcuts` 改键 → 切回插件设置页/欢迎页，键帽要跟着变；自动化触发不了这一步。
-9. **单账号只提交一个 PageMask**：官方 Spam & Placement 政策写明，任何开发者账号、**关联账号或 affiliate** 不得提交体验重复的扩展。
+9. **单账号只提交一个 PageMask**：官方 Spam and abuse 政策写明，任何开发者账号、**关联账号或 affiliate** 不得提交体验重复的扩展（<https://developer.chrome.com/docs/webstore/program-policies/spam-and-abuse/>；旧文档叫 Spam & Placement，现行政策名已改）。
 10. **每次更新都要过审**：免审核更新只给用 DNR 的扩展，PageMask 不适用。
 11. **发布后 30 天内要点 Publish**（若选了延迟发布），过期会退回草稿、重新提交。
 12. **扩展界面里有隐私政策入口**（插件设置页「关于」卡，#193，见 §3.3）：审核员在扩展里就能找到政策，不只是商店页上有。
@@ -638,7 +639,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 | 注册开发者账号、一次性注册费、邮箱不可改、支持的国家地区 | <https://developer.chrome.com/docs/webstore/register/> |
 | 账号资料：Publisher name、验证邮箱、物理地址的适用条件、受信任测试者 | <https://developer.chrome.com/docs/webstore/set-up-account/> |
 | 两步验证为发布前提 | <https://developer.chrome.com/docs/webstore/program-policies/two-step-verification/> |
-| 上架流程、五个标签页、提交对话框、延迟发布、30 天期限、2GB 上限、新发布者最多 2 个已发布扩展 | <https://developer.chrome.com/docs/webstore/publish/> |
+| 上架流程、五个标签页、提交对话框、延迟发布、2GB 上限、新发布者最多 2 个已发布扩展 | <https://developer.chrome.com/docs/webstore/publish/>（30 天发布期限的原文在 <https://developer.chrome.com/docs/webstore/update/>） |
 | 商店详情字段：图标 128×128、截图至少 1 张最多 5 张 1280×800、图块 440×280 / 1400×560、类别、语言、多语言、Homepage/Support URL、内容分级 | <https://developer.chrome.com/docs/webstore/cws-dashboard-listing/> |
 | 隐私实践页四个字段 | <https://developer.chrome.com/docs/webstore/cws-dashboard-privacy/> |
 | 可见性 Public/Unlisted/Private、地区、测试版标签 | <https://developer.chrome.com/docs/webstore/cws-dashboard-distribution/> |
@@ -652,10 +653,11 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 | 取消审核 | <https://developer.chrome.com/docs/webstore/cancel-review/> |
 | 免审核更新的适用条件（仅 DNR） | <https://developer.chrome.com/docs/webstore/skip-review/> |
 | Unpublish（下架）与账号/发布者删除 | <https://developer.chrome.com/docs/webstore/account-deletion/> |
-| 政策总表（单一用途、Limited Use、披露要求、最小权限、Spam & Placement） | <https://developer.chrome.com/docs/webstore/program-policies/> |
+| 政策总表（单一用途、Limited Use、披露要求、最小权限、Spam and abuse） | <https://developer.chrome.com/docs/webstore/program-policies/> |
 | 用户数据 FAQ（本地处理也要披露、显著披露须在扩展界面、最小权限清单） | <https://developer.chrome.com/docs/webstore/program-policies/user-data-faq/> |
 | 单一用途 FAQ（窄的领域也算单一用途） | <https://developer.chrome.com/docs/webstore/program-policies/quality-guidelines-faq/> |
 | 申诉次数限制与善意申诉要求 | <https://developer.chrome.com/docs/webstore/program-policies/notification-and-appeals/> |
+| Trader / Non-Trader 定义、声明义务与验证要求（support.google.com 旧操作页已 404，别引） | <https://developer.chrome.com/docs/webstore/program-policies/trader-verification-faq/> · <https://developer.chrome.com/docs/webstore/program-policies/trader-disclosure> |
 | Manifest V2 下架时间线（2026-08-31 全部移除） | <https://developer.chrome.com/docs/extensions/develop/migrate/mv2-deprecation-timeline/> |
 
 **没查到官方明文、按「以控制台为准」处理的项**：
