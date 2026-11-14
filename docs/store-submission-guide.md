@@ -138,6 +138,8 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 托管现状：`cherishfall/cherishfall.github.io` 的 main 分支现在有 3 个文件——`page-mask/index.html`（PageMask 落地页）、`page-mask/privacy.html`（隐私政策）、根 `index.html`（站点项目索引页，以后加新项目只需加一行），外加 `.nojekyll`。**PageMask 的页面全部在 `/page-mask/` 下**。该仓库的 GitHub Pages 已开启（Source = `main` / `/ (root)`）。三个地址已点验 200：<https://cherishfall.github.io/>、<https://cherishfall.github.io/page-mask/>、<https://cherishfall.github.io/page-mask/privacy.html>。
 
+**两页的品牌图标与扩展主图标是同一份图形**：导航栏那个小方块和 favicon 都由本仓库 `assets/icon/icon.svg`（128px 版，商店列表与扩展管理页显示的那一份）原样内联/转 data URI 而来，不另画一版。改图标时两处必须一起改，所以图标是跨仓库共用资源，不是各画各的。
+
 **旧地址已移除，返回 404**：`https://cherishfall.github.io/privacy.html` 不再存在，也不做跳转——PageMask 的资源统一收在 `/page-mask/` 下。0.9.7 及更早版本的扩展里写死了这个旧地址，那些版本还没升级时点「关于」卡里的隐私政策会看到找不到页面；升级到 0.9.8 后即指向新地址。**因此商店后台的 Privacy Policy URL 只能填 `https://cherishfall.github.io/page-mask/privacy.html`**，填旧地址会因死链被自动拒审。
 
 **为什么选 Pages 而不是仓库 blob 链接**：Pages 上的页面公开可访问、与仓库是否公开解耦，审核员无需登录、无需担心分支改名或仓库可见性；blob 页面外面包着 GitHub 的代码仓库界面，阅读体验一般。仓库 blob 链接作为备用保留在 `docs/CHROMEWEBSTORE.md` §1 的说明里。
