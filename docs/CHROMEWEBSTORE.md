@@ -149,7 +149,7 @@ Lets users declutter the pages they choose — hide the elements they pick, opti
 控制台分两组，别混：
 
 1. **数据类型**（你处理哪些用户数据）：勾选 **Website content** 与 **Web history**。
-   - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最多 8 字符）会存在本机。
+   - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最长 60 字符）会存在本机。
    - Web history：站点配置里保存了网站地址与生效页面的路径前缀。理由栏建议写：`Only the domain of sites the user adds and the path prefixes the user chooses are kept, in chrome.storage.local — never uploaded or synced. The web browsing activity is used solely for the user-facing "where it applies" feature, described prominently in the store listing and in the extension UI`——一句话占住 Limited Use 例外的两个要件（显著描述的用户可见功能 + 本机处理）。
    - 勾选后需要在「隐私政策」中说明用途；`docs/PRIVACY.md` 已写明「只存本机、不上传」。
    - 0.8.0 的「整页变灰」（当时叫「图片和视频变灰」）只是同一份站点配置里的一个布尔值；幕布静音是浏览器记在标签页上的状态，不是扩展采集的数据，**不新增数据类型勾选**。

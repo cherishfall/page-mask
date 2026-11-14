@@ -19,7 +19,7 @@ PageMask does not send any data to the developer or to anyone else. There is no 
 Only for sites you add, PageMask stores in your browser's local extension storage (`chrome.storage.local`):
 
 - the site's identity (its registrable domain, e.g. `weibo.com`; IP addresses, `localhost` and addresses with a port are kept as-is);
-- your hide rules: CSS selectors that identify the elements you picked, a short label (up to 8 characters taken from the element's text or accessibility label, which you can edit), the hiding method, and the pages it applies to (a URL path prefix, if you chose one);
+- your hide rules: CSS selectors that identify the elements you picked, a short label (auto-filled from the element's text or accessibility label, editable, at most 60 characters), the hiding method, and the pages it applies to (a URL path prefix, if you chose one);
 - the tab title and icon image you set for that site, and the site's on/off state;
 - one per-site switch for "Turn the whole page gray" (whether the entire page is shown in black & white);
 - the position of the on-page button, and whether each rule still found its element the last time the page was opened (with a timestamp);
@@ -69,7 +69,7 @@ PageMask 不向开发者或任何第三方发送任何数据。它没有服务�
 只针对你主动添加的网站，PageMask 会在浏览器的扩展本地存储（`chrome.storage.local`）里保存：
 
 - 网站身份（可注册域名，例如 `weibo.com`；IP 地址、`localhost` 与带端口的地址按原样保留）；
-- 你的收起规则：用来定位你所选元素的 CSS 选择器、一个短标签（最多 8 个字符，取自元素文字或无障碍名称，你可以修改）、收起方式、生效页面（如果你选了某一类页面，就是一段网址路径前缀）；
+- 你的收起规则：用来定位你所选元素的 CSS 选择器、一个短标签（按元素文字或无障碍名称自动填好，你可以修改，最长 60 个字符）、收起方式、生效页面（如果你选了某一类页面，就是一段网址路径前缀）；
 - 你为该网站设置的标签页标题与图标图片，以及该网站的开关状态；
 - 该网站的一个开关：「整页变灰」（该网站是否整页黑白显示）；
 - 页面内按钮的位置，以及每条规则最近一次打开页面时是否仍找到目标（带时间戳）；
