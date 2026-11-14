@@ -166,7 +166,7 @@
                放在两行之后，任一行没绑上时都看得见下一步（Nielsen 9：说清发生了什么、怎么办）。
                #188 文字入口规则：单独一行的文字按钮（按钮档，Ant 文字按钮口径），不带下划线，
                「能点」由悬停出浅灰底表达。 -->
-          <div class="row">
+          <div class="row row-shortcut">
             <button type="button" class="ghost" data-testid="pm-settings-shortcut-change" @click="openShortcutSettings">
               {{ t.settings.shortcutChange }}
             </button>
@@ -462,6 +462,13 @@ function onReplaceClose() {
 <style scoped>
 :global(body) {
   background: var(--pm-bg-subtle);
+}
+
+/* #224：改键入口是行内文字按钮档（#188），文字要与卡内其他行共基线——按钮自身的
+   内边距（14px）+ 边框（1px）把文字推进去 15px；负 margin 抵消，悬停底色也从
+   内容基准线起笔。只动这一行，不动 #188 的按钮档尺寸口径。 */
+.row-shortcut :where(button.ghost) {
+  margin-inline-start: calc(-1 * var(--pm-control-padding-inline) - 1px);
 }
 
 .shell {

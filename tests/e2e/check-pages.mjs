@@ -1364,6 +1364,20 @@ async function main() {
     );
     const manifest = JSON.parse(fs.readFileSync(ext.manifestPath, 'utf8'));
     check(manifest.options_ui?.page === 'settings.html' && manifest.options_ui?.open_in_tab === true, '插件设置页注册为扩展程序选项，且在标签页里打开');
+    // 改键入口（文字按钮档）的文字与卡内说明共基线（#224）：按钮内边距把它推进去 15px，负 margin 抵消
+    const baseline = await m.evaluate(() => {
+      const btn = document.querySelector('[data-testid="pm-settings-shortcut-change"]');
+      const range = document.createRange();
+      if (btn?.firstChild) range.selectNodeContents(btn.firstChild);
+      const text = range.getClientRects()[0]?.left ?? null;
+      const card = btn?.closest('section');
+      const hint = card?.querySelector('.hint');
+      return { text, hint: hint?.getClientRects()[0]?.left ?? null };
+    });
+    check(
+      baseline.text !== null && baseline.hint !== null && Math.abs(baseline.text - baseline.hint) <= 2,
+      `改键入口文字与卡内说明共基线（按钮文字 x=${baseline.text?.toFixed(1)}，说明 x=${baseline.hint?.toFixed(1)}）`,
+    );
     const shownVersion = await m.$eval(tid('pm-settings-version'), (e) => e.textContent.trim());
     check(shownVersion === manifest.version, `「关于」显示版本号 ${shownVersion}`);
     check(!!(await m.$('a[href="https://github.com/cherishfall/page-mask/issues"]')), '「关于」有指向 GitHub issues 的反馈入口');
