@@ -36,6 +36,19 @@ export function maskColorFor(el: Element): string {
   return resolveMaskColor(ancestorBackgrounds(el), pageCanvasIsDark(el.ownerDocument));
 }
 
+/**
+ * 页面有效底色是否偏深（#221）：html / body 第一个不透明背景色（幕布同款取法），认不出按画布口径兜底。
+ * 向导的选中 / 悬停框画在**页面**上，颜色应该跟页面底色走、不跟扩展界面主题——
+ * UI 切了深色、页面还是白底时，随主题翻成浅色的描边在白页上会掉到 3:1 以下（WCAG 1.4.11）。
+ */
+export function pageBackgroundIsDark(doc: Document): boolean {
+  const c = parseCssColor(curtainBackgroundFor(doc));
+  if (!c) return pageCanvasIsDark(doc);
+  // sRGB 相对亮度（WCAG 公式的简化分档）：0.5 阈值只用来二选一描边色，不需要精确对比度
+  const lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+  return lum < 0.5;
+}
+
 /** 遮罩盒子的外观：颜色 + 跟随被遮元素的圆角 */
 export function applyMaskAppearance(box: HTMLElement, el: Element): void {
   box.style.background = maskColorFor(el);

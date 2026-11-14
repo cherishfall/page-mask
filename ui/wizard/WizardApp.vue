@@ -578,7 +578,7 @@ import { isSafeSelector } from '@/core/validate';
 import { newRuleId, type HideRule, type Scope, type SiteProfile, type StrategyId, type TabIcon } from '@/core/types';
 import { createPageMaskStorage } from '@/core/storage';
 import { buildPreviewCss, buildSameGroupOutlineCss, STRATEGY_ORDER } from '@/core/css-builder';
-import { applyMaskAppearance } from '../mask-color';
+import { applyMaskAppearance, pageBackgroundIsDark } from '../mask-color';
 import { isOwnUiNode } from '@/core/host-shield';
 import { countCandidateHits } from '@/core/health';
 import type { CssAck } from '@/core/messages';
@@ -832,6 +832,15 @@ watch([titleInput, iconData], () => {
 onMounted(() => {
   const root = rootEl.value?.getRootNode();
   if (root instanceof ShadowRoot) adoptWizardStyles(root);
+  // 选中 / 悬停框画在**页面**上（overlay 层的盒子盖在页面元素上）：颜色按页面底色钉住，
+  // 不随扩展界面主题翻（#221）——UI 切了深色、页面还是白底时，浅橙描边在白页上只有
+  // 2.26:1（WCAG 1.4.11 底线 3:1）。深底页面则用深色值。遮罩颜色是同一自适应思路。
+  const overlay = overlayLayer.value;
+  if (overlay) {
+    const dark = pageBackgroundIsDark(document);
+    overlay.style.setProperty('--pm-warning', `var(--pm-warning-${dark ? 'dark' : 'light'})`);
+    overlay.style.setProperty('--pm-accent', `var(--pm-accent-${dark ? 'dark' : 'light'})`);
+  }
   // 全屏透明捕获层：拾取期接管全部指针事件（见 pick-controller 注释）
   pickLayer = document.createElement('div');
   pickLayer.dataset.testid = 'pm-pick-layer';

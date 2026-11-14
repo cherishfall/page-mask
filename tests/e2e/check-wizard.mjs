@@ -472,6 +472,16 @@ async function main() {
     const rowNames = await shadowTexts(page, `${tid('pm-wiz-selected')} .pm-wiz-row-name`);
     check(JSON.stringify(rowNums) === '["1","2","3"]', `清单一行一项、序号 1/2/3（实际 ${JSON.stringify(rowNums)}）`);
     check(rowNames.length === 3 && rowNames[0].includes('卡片一') && rowNames[2].includes('卡片三'), `每行显示元素名字（${rowNames.join(' / ')}）`);
+    // 页面底色定描边色（#221）：选中框画在页面上，颜色跟页面底色不跟界面主题——
+    // UI 切深色、页面还是白底时，描边必须保持浅色值（浅橙在白页上只有 2.26:1）
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+    await new Promise((r) => setTimeout(r, 200));
+    const outlineInDarkUi = await page.evaluate((h) => {
+      const box = document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-box-1"]');
+      return box ? getComputedStyle(box).outlineColor : null;
+    }, HOST);
+    check(outlineInDarkUi === 'rgb(194, 65, 12)', `深色界面 + 白页：选中描边保持浅色值（${outlineInDarkUi}，#221）`);
+    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
     check(
       !!(await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-group-list"]').querySelector('[data-testid="pm-wiz-clear-all"]')?.classList.contains('pm-wiz-link'), HOST)),
       '「全部取消选择」在清单标题行里、是文字链接（不是按钮）',
