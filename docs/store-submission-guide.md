@@ -88,6 +88,7 @@ unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json
 5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好，不要用临时邮箱。
    - **两个邮箱别混**（官方 set-up-account 页原文口径）：**登录用的 Google 账号邮箱 = 通知邮箱**（"Any notifications will be sent to your Chrome Web Store developer account email"——拒审、下架都强制发到这里）；**Account 页「Verify your email」= 商店对外显示的联系邮箱**（"Only displayed under your extensions' contact information"），点 Add email 填哪个验证哪个，可以与登录邮箱不同。
    - **两种走法**：A. 直接用现有个人 Gmail 账号注册，Account 页把 `cherishfall@hotmail.com` 加进去验证——对外显示与全部材料一致，个人 Gmail 只收通知不对外公开；B. **用 `cherishfall@hotmail.com` 新建一个专用 Google 账号**（Google 支持用现有邮箱注册，不会产生新 Gmail）——登录、通知、对外联系三者同源，符合官方「发布用专用邮箱」建议，个人 Gmail 完全隔离。**推荐 B**：通知（拒审/下架）发到你天天看的 GitHub 邮箱收件箱，不会漏。
+   - **建新账号时的选择**（2026-11-14 已按 B 走）：账号类型选 **「用于个人用途」**（「用于管理企业」会引导建 Google 商家资料，面向实体商家，与 Non-Trader 口径相悖且多余）；「为何创建」选「为自己创建」；邮箱选 **「使用当前的电子邮件地址」** 填 hotmail（不产生新 Gmail），Google 发验证码到 hotmail 确认归属；建好立刻开两步验证（发布硬要求），并把新账号的辅助邮箱 / 手机设为常用通道（专用账号更要留恢复途径）。
 6. 官方建议：用**专门发商店发布用**的邮箱，并且要经常看（拒审、下架通知都发这里）。
 
 > 注册时问“是否同时在 Google Play 上架”之类，PageMask 不涉及。
