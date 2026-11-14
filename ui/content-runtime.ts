@@ -122,9 +122,16 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   /** 本扩展的页面根地址：判断消息是不是自己人发来的（core/messages.ts 的 fromExtensionPage） */
   const extensionBase = browser.runtime.getURL('/');
   // 扩展更新 / 重载后被重新注入：新旧实例不在同一个隔离环境（实测），旧实例交不出样式记录。
-  // 先看本文档里有没有旧实例注入的宿主保护样式（有 = 之前有实例在这里工作过，样式要接手），
-  // 再广播接管事件：失联的旧实例收到后读 isValid，随即收尾（撤下界面、还原标题图标）
-  const inheritedOrphanCss = !takeover && document.readyState !== 'loading' && hostShieldPresent(document);
+  // 它插在文档里的用户样式表由新实例请后台撤掉（releaseOrphanCss，#213）。接管路径（同环境
+  // executeScript 叠加）拿得到交接记录，不需要这一步。此前以「宿主保护样式在场」为信号——
+  // 但胶囊隐藏的站点（capsuleHidden，mountToggle 直接 return）没有任何页面 UI、也没有保护样式，
+  // 探测恒为假，旧样式卡死到用户手动刷新。releaseOrphanCss 只 removeCSS 当前配置算出的文本，
+  // 对不上是空操作，executeScript 路径（readyState !== 'loading'）无条件调用即可。
+  // 边界：①document_start 的注册路径是新文档，没有旧实例样式，不需要；②executeScript 落在
+  // 还在 loading 的文档上的竞态窗口（更新恰好落在页面加载中途）不覆盖，成本收益不成立；
+  // ③孤儿文本与当前配置算出的文本不同（更新后用户又改了配置）时删不掉——这对所有站点是
+  // 既有边界，不是本修复引入。
+  const orphanReleaseNeeded = !takeover && document.readyState !== 'loading';
   document.dispatchEvent(new Event(TAKEOVER_EVENT));
   ctx.addEventListener(document, TAKEOVER_EVENT as keyof DocumentEventMap, () => void ctx.isValid);
   const storage = createPageMaskStorage(browser.storage.local);
@@ -992,7 +999,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     if (prerendering) void activated.then(() => scheduleRefresh({ force: true }));
     void scheduleRefresh().then(() => {
       // 自己的一份已经插上（样式链串行），再请后台撤掉旧实例留下的那份：同文本插几次要删几次，中间不闪
-      if (inheritedOrphanCss) void styles.releaseOrphans(location.href);
+      if (orphanReleaseNeeded) void styles.releaseOrphans(location.href);
     });
   }
 
