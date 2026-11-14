@@ -5,6 +5,48 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.2] - 2026-11-15
+
+提审前最后一轮自主收敛：四路深审（核心引擎 / 界面文案 / 商店政策 / 真实渲染与真机）+ 两轮新眼睛目检 + 审核员八步走查。功能与权限集合不变，改动集中在首屏体验、键盘可达性与正确性。
+
+### 中文
+
+#### 改动
+
+- **「盖住」不再首屏闪现**：给元素选「盖住」方式后，打开该网站的瞬间目标内容不会先露一帧再被盖住（首屏遮挡现在会等遮罩层就位才撤）
+- **扩展更新后旧设置立即接管**：隐藏了悬浮按钮的网站在扩展更新 / 重载后，旧实例留下的样式由新实例正确接管——此前删规则、关灰度会"看起来没反应"，要手动刷新页面
+- **切换界面语言立即生效**：只靠语言兜底标题的网站，切换界面语言后已打开标签页的假标题立刻跟着换
+- **慢设备上「遮住这一页」不再误报**：遮罩铺开所需时间较长时不再提示失败
+- **键盘操作不断线**：站点设置页删行、撤销，以及三处「允许访问」授权完成后，焦点回到列表中正确的位置，不再跳回页首
+- **深色界面下的点选框**：向导的选中 / 悬停描边颜色跟随网页底色而非界面主题——深色界面 + 浅色网页时描边依然清晰（对比度 ≥3:1）
+- **向导清单更好读**：收起项清单底部新增"下面还有"的渐隐提示；「盖住」的幽灵号牌改为半透明，不再完全盖住底下的文字
+- **界面小修**：欢迎页一处用词与术语表对齐；透明度过淡提示改为"所在的位置"（原"原来的位置"易误解为默认位置）；导入结果统一用"跳过"；插件设置页快捷键入口文字与卡内其他行对齐
+- **文档**：隐私政策的短标签长度口径与实现对齐（自动填好、可编辑、最长 60 字符；在线页同批更新）
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.1 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点
+- 门禁：编译、单测 862 项（57 文件）、E2E 十二脚本（新增"扩展重载后样式接管"与"深浅色 tokens"两道）、真机站点验证（匿名页）、check:docs / check:package 全绿（1.0.2 构建实测）
+
+### English
+
+#### Changes
+
+- **"Cover" no longer flashes on first paint**: after choosing the "cover" method for an element, opening that site no longer shows the target for a frame before it gets covered (the first-paint shield now stays until the cover layer is in place)
+- **Old settings take over correctly after extension updates**: on sites where the floating button is hidden, styles left by the old instance after an update / reload are now taken over by the new one — previously deleting a rule or turning gray off could "look like nothing happened" until a manual reload
+- **Switching the interface language applies immediately**: on sites relying on the language-fallback tab title, already-open tabs now follow the switch right away
+- **"Cover this page" no longer reports failure on slow devices**: when the cover takes longer to spread, no more false failure notice
+- **Keyboard path stays connected**: after deleting a row or undoing on the site settings page, and after all three "Allow access" confirmations, focus returns to the right place in the list instead of jumping to the top of the page
+- **Pick outline in dark UI**: the wizard's selection / hover outline color now follows the page background instead of the UI theme — with a dark UI on a light page the outline stays clearly visible (contrast ≥3:1)
+- **Easier-to-read wizard lists**: the items list gains a bottom fade hinting "more below"; ghost badges for covered items become semi-transparent so they no longer fully hide the text underneath
+- **Small UI fixes**: one welcome-page wording now matches the glossary; the low-opacity hint says "where the button is" instead of "its original position"; import results consistently say "skipped"; the shortcut entry on the Settings page aligns with the card's other rows
+- **Docs**: the privacy policy's short-label length now matches the implementation (auto-filled, editable, up to 60 characters; online copy updated in the same batch)
+
+#### For reviewers
+
+- Features and permission set are identical to 1.0.1 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); no site access is granted at install time
+- Gates: compile, 862 unit tests (57 files), E2E across twelve scripts (two new: "style takeover after extension reload" and "light/dark tokens"), real-site verification (anonymous pages), check:docs / check:package all green (verified on the 1.0.2 build)
+
 ## [1.0.1] - 2026-11-14
 
 商店提交前的最后一轮全量审查修复批（四条线：商店合规 / 后台与存储 / 内容脚本 / 界面文案与无障碍）。功能与权限集合不变。
