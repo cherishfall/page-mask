@@ -339,7 +339,7 @@ function onRowDelete() {
   inline-size: 100%;
   border: none;
   border-radius: var(--pm-radius-control);
-  padding: 6px 8px;
+  padding: var(--pm-menu-item-padding);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -371,7 +371,7 @@ function onRowDelete() {
   flex: none;
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--pm-radius-small);
 }
 
 .favicon.initial {

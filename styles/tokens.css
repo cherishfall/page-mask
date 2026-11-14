@@ -239,6 +239,9 @@
   --pm-radius-card: 12px;
   --pm-radius-pill: 999px;
 
+  /* ── 菜单项（#218）：胶囊「⋯」菜单与管理页行尾菜单同一套尺寸口径，只此一份 ── */
+  --pm-menu-item-padding: 6px 8px;
+
   /* ── 焦点环 ── */
   --pm-focus-ring: 2px solid var(--pm-accent);
   --pm-focus-ring-offset: 2px;

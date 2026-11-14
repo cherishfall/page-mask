@@ -341,7 +341,7 @@
   inline-size: 100%;
   border: none;
   border-radius: var(--pm-radius-control);
-  padding: 6px 8px;
+  padding: var(--pm-menu-item-padding);
   background: transparent;
   color: inherit;
   font-size: var(--pm-font-size-caption);
