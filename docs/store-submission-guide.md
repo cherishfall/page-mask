@@ -14,9 +14,9 @@
 | 项 | 值 |
 |---|---|
 | 商品 | PageMask（Chrome 扩展，Manifest V3） |
-| 版本 | **0.9.7** |
-| 上传用的包 | `.output/page-mask-0.9.7-chrome.zip`（仓库内路径；已核实存在，32 个文件 / 245 KB） |
-| 同一份包的公开副本 | GitHub Release `v0.9.7` 已发布（<https://github.com/cherishfall/page-mask/releases/tag/v0.9.7>），审核员/用户要自己装时可指它 |
+| 版本 | **0.9.8** |
+| 上传用的包 | `.output/page-mask-0.9.8-chrome.zip`（仓库内路径；已核实存在，32 个文件 / 245 KB） |
+| 同一份包的公开副本 | GitHub Release `v0.9.8` 已发布（<https://github.com/cherishfall/page-mask/releases/tag/v0.9.8>），审核员/用户要自己装时可指它 |
 | 包内权限 | `storage` / `scripting` / `activeTab` + 可选主机权限 `*://*/*`（可选 = 安装时不授予任何站点） |
 | 包内内容脚本 | 无（`manifest.json` 里没有 `content_scripts`、没有 `host_permissions`；内容脚本按站点动态注册） |
 | 声明的快捷键 | `Ctrl+Shift+X`（遮住）/ `Ctrl+Shift+Y`（整页变灰），Mac 为 `⌘+Shift+X` / `⌘+Shift+Y` |
@@ -24,8 +24,8 @@
 产物核实方式（你可以自己复核）：
 
 ```bash
-unzip -l .output/page-mask-0.9.7-chrome.zip | head
-unzip -p .output/page-mask-0.9.7-chrome.zip manifest.json
+unzip -l .output/page-mask-0.9.8-chrome.zip | head
+unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json
 ```
 
 ### 0.2 当前状态：什么已经齐了，什么还差你
@@ -166,13 +166,13 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 官方要求："Test the exact files that you submit to the web store, not just a local development version of your extension."（<https://developer.chrome.com/docs/webstore/troubleshooting/>）
 
-做法：把 `.output/page-mask-0.9.7-chrome.zip` 解压到 `tmp/` 下的空目录 → `chrome://extensions` → 开发者模式 → **Load unpacked（加载已解压的扩展程序）** → 选那个目录 → 照 §4.2 的八步走一遍。
+做法：把 `.output/page-mask-0.9.8-chrome.zip` 解压到 `tmp/` 下的空目录 → `chrome://extensions` → 开发者模式 → **Load unpacked（加载已解压的扩展程序）** → 选那个目录 → 照 §4.2 的八步走一遍。
 
 > 安全提示：解压目录请放在仓库内的 `tmp/` 下，不要用系统临时目录。
 
 ### 2.1 第 1 步：创建商品并上传包
 
-1. 控制台 → **Add new item**（添加新商品）→ **Choose file** → 选 `.output/page-mask-0.9.7-chrome.zip` → **Upload**。
+1. 控制台 → **Add new item**（添加新商品）→ **Choose file** → 选 `.output/page-mask-0.9.8-chrome.zip` → **Upload**。
 2. 两条硬约束（官方）：
    - 包体积上限 **2GB**（"The maximum supported file size for an extension package is 2GB"）；
    - `manifest.json` 必须放在 **zip 根目录**，不能套一层文件夹（<https://developer.chrome.com/docs/webstore/prepare/>）。我们的包根目录就是 `manifest.json`，✅。
@@ -392,7 +392,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 4.1 材料与链接
 
-- [ ] 包在：`.output/page-mask-0.9.7-chrome.zip`；版本号 `0.9.7`（`unzip -p .output/page-mask-0.9.7-chrome.zip manifest.json | grep version`）
+- [ ] 包在：`.output/page-mask-0.9.8-chrome.zip`；版本号 `0.9.8`（`unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json | grep version`）
 - [ ] `manifest.json` 在 zip 根目录；无 `.map`、无 README/CHANGELOG/CHROMEWEBSTORE.md、无测试与配置文件（`npm run check:package` 会验）
 - [ ] manifest 里 `permissions` = `storage`/`scripting`/`activeTab`，`optional_host_permissions` = `["*://*/*"]`，**没有** `content_scripts`、**没有** `host_permissions`
 - [ ] 名称/简介与 `_locales` 一致：en 40/120 字符、zh_CN 22/52 字符（≤45 / ≤132）
@@ -405,7 +405,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 4.2 必须在真实 Chrome 上人工实走的八步（材料 §6）
 
-把 0.9.7 装进真实 Chrome 后，按 `docs/CHROMEWEBSTORE.md` §6 的 1–8 步逐条走：
+把 0.9.8 装进真实 Chrome 后，按 `docs/CHROMEWEBSTORE.md` §6 的 1–8 步逐条走：
 
 1. 打开 <https://en.wikipedia.org/wiki/Main_Page> → 点 PageMask 图标 → 点「收起内容」→ **在 Chrome 的授权提示里点「允许」**
 2. 页面上点选元素 → 「下一步：看效果」
@@ -431,8 +431,8 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 
 ### 4.4 版本一致性
 
-- [ ] `package.json` = `0.9.7`，`CHANGELOG.md` 有 0.9.7 的中英条目，tag `v0.9.7` 已打、Release 已发
-- [ ] `docs/CHROMEWEBSTORE.md` 头部与 材料 §7 版本历史表已同步到 0.9.7
+- [ ] `package.json` = `0.9.8`，`CHANGELOG.md` 有 0.9.8 的中英条目，tag `v0.9.8` 已打、Release 已发
+- [ ] `docs/CHROMEWEBSTORE.md` 头部与 材料 §7 版本历史表已同步到 0.9.8
 
 ---
 
@@ -536,9 +536,9 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 `docs/CHROMEWEBSTORE.md` §7 的表格是**提交商店时填的版本历史**（控制台在每次更新时会让你写 release notes）：
 
 - 格式照 材料 §7 的表：一行一个版本，「版本号 | 日期 | 要点」。
-- 0.9.7 那行已写好，内容与 `CHANGELOG.md` 的 0.9.7 条目一致（功能与权限集合无可见变化）。
+- 0.9.8 那行已写好，内容与 `CHANGELOG.md` 的 0.9.8 条目一致（功能与权限集合不变）。
 - 材料 §7 开头注明：「0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列」——**商店的版本历史只写对外发过的版本**，内部版本别写进去。
-- 提审时第一次填的版本历史应包含 0.9.7 这一行即可（更早的版本都是内部版本）。
+- 提审时第一次填的版本历史应包含 0.9.8 这一行即可（更早的版本都是内部版本）。
 
 ---
 

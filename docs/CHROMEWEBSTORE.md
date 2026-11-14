@@ -3,13 +3,13 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-13 · 对应构建 **0.9.7**（`.output/page-mask-0.9.7-chrome.zip`）
+> 最后更新：2026-11-14 · 对应构建 **0.9.8**（`.output/page-mask-0.9.8-chrome.zip`）
 
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.5-chrome.zip`
-- [x] 版本号已改（`package.json` → `0.9.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.5` 发版时打
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.8-chrome.zip`
+- [x] 版本号已改（`package.json` → `0.9.8`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.8` 已打、Release 已发
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
@@ -192,6 +192,7 @@ Test steps (no login needed):
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 0.9.8 | 2026-11-14 | 实机反馈显示细节与文档整理：欢迎页第 1 步图示改画真实 Chrome 的「拼图 → 扩展列表 → 图钉」并用插件真实图标；删除这个网站的设置的确认框不再贴着弹窗边缘（宽度按 border-box 计，左右各留 16px），管理页与设置页同类确认框统一内边距与边框；插件内隐私政策入口改指 `https://cherishfall.github.io/page-mask/privacy.html`，旧 `/privacy.html` 保留为跳转页（0.9.7 及更早版本写死该地址、商店审核会点，死链自动拒审）；落地页改到 `/page-mask/` 子路径、站点根页改为项目索引；术语表 / 隐私政策 / 商店材料三份文档收进 `docs/`，全仓链接与位置信息同步。确认框仍居中在各自所在窗口（Chrome 原生行为，未改）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.7 | 2026-11-13 | 上架准备：插件设置页「关于」卡补「隐私政策」入口（商店要求隐私披露在扩展界面内显著呈现，商店描述页不算）；中英双语落地页与在线隐私政策页上线（`https://cherishfall.github.io/`、`/privacy.html`），材料、README、隐私政策文件的链接统一指向该公开地址，不再依赖仓库公开与否（隐私政策死链是自动拒审项）；「关于」卡两列对齐。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.6 | 2026-11-13 | 第二轮深度审查收尾：真实网站 E2E 工具对齐站点身份语义（三站恢复全绿）；显式 `:*` 通配端口、高对比度模式展开态、下划线偏移 token 等小修；导入大小预检、收起项名称截断、openWizard 来源校验等加固。界面与功能无可见变化，权限集合不变。详见 `CHANGELOG.md` |
 | 0.9.5 | 2026-11-13 | 实机反馈与全维审查批次：站点设置页「标签页标题」「标签页图标」合为一张卡（「恢复网站原来的标题和图标」进卡内）；「整页变灰」说明气泡修复并贴开关左侧；带非默认端口的已授权页面不再误报未授权（对齐 Chrome 官方 match pattern 端口语义）；悬浮按钮写入失败回滚、幕布恢复按钮视口夹取、向导挂载守卫等健壮性修复；文案精修与标点守门；「文字入口」规则统一、暗色单选对比补足；商店截图脚本修通。功能与权限集合不变。详见 `CHANGELOG.md` |
@@ -290,7 +291,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `0.9.7`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `0.9.8`（0.1.0 从未提交商店；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 120 / zh_CN 52 |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
