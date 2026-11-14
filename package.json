@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "css-selector-generator": "3.9.4",
-    "vue": "3.5.44"
+    "vue": "3.5.45"
   },
   "devDependencies": {
     "@puppeteer/browsers": "3.2.6",
@@ -45,7 +45,7 @@
     "puppeteer-core": "25.16.0",
     "typescript": "5.9.3",
     "vitest": "5.0.5",
-    "vue-tsc": "2.2.12",
+    "vue-tsc": "3.3.14",
     "wxt": "0.21.4"
   }
 }
