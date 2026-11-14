@@ -556,7 +556,7 @@ async function main() {
     check((await progressOf(page)) === '第 2 步 / 共 2 步', `看效果是第 2 步（${await progressOf(page)}）`);
     check((await shadowExists(page, HOST, tid('pm-wiz-back'))), '看效果这一步左下角有「上一步」');
     const backToPick = (await shadowTexts(page, tid('pm-wiz-back')))[0] ?? '';
-    check(backToPick === '上一步：重新选内容', `「上一步」写清退回去重新选内容（${backToPick}）`);
+    check(backToPick === '上一步：重新点选要收起的内容', `「上一步」写清退回去重新点选要收起的内容（${backToPick}）`);
     const footPreview = await footerChildren(page);
     check(
       footPreview?.length === 2 && footPreview.every((n) => n.tag === 'BUTTON') && footPreview[0].testid === 'pm-wiz-back' && footPreview[1].testid === 'pm-wiz-save',
@@ -829,7 +829,7 @@ async function main() {
     // 后续用例在点选阶段继续：走「上一步」回点选（也顺带验返回按钮）
     await clickInShadow(page, HOST, tid('pm-wiz-back'));
     await waitFor(page, '上一步回到点选', (h) => (document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wiz-progress"]')?.textContent ?? '').includes('第 1 步'), [HOST]);
-    check(true, '「上一步：重新选内容」回到点选，继续大组用例');
+    check(true, '「上一步：重新点选要收起的内容」回到点选，继续大组用例');
 
 
     // 焦点切换：选一条大组（25 条帖子 > 20）勾上 → 上一组收回，整片一条描边样式规则。
