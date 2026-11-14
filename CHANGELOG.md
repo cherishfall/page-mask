@@ -5,6 +5,40 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.0] - 2026-11-14
+
+首个 Chrome 应用商店提交版本：商店材料按审核口径打磨，界面与文档一致性收口。权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **商店名称与简介换新措辞**：简介里的「只处理你添加的网站」改成「只对你添加的网站起作用」（用词纪律），英文补上 "only"（排他语义与中文对齐）；工具栏按钮的悬停提示改成具体动作「改这个网站的标题和图标、收起内容」
+- **界面文案小修**：向导与站点设置页两处「某一项找不到了」的说明改成同一句式；站点设置页「留空就用『阅读』」点明来源是默认标题；「上一步」按钮写清退回去做什么；三处常驻说明去掉句尾句号（中英同步）
+- **商店描述按审核口径打磨**：权限申请时点写全（收起内容 / 标题和图标 / 未添加网站上开整页变灰）、按钮名按界面实名（「整页变灰」钮）、中英描述逐条取齐、单一用途一句话简化
+- **上架指南修正**：三处官方引文改指现行页面、Trader 官方操作链接换官方政策页（原链接已失效）、发版流程补 README 同步步骤
+- **文档一致性收口**：隐私政策首段的旧功能名（「图片 / 视频变灰」）改成「整页变灰」；CHANGELOG 四十四个版本标题的链接补齐（GitHub 上从纯文本变成可点）；README 的「插件设置」说明补全
+
+#### 面向审阅者
+
+- 这是首次提交 Chrome 应用商店的版本；功能与权限集合与 0.9.8 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点
+- 门禁：编译、单测 847 项（57 文件）、E2E 十脚本 1110 项断言、check:docs / check:package 全绿（1.0.0 构建实测）
+
+### English
+
+#### Changes
+
+- **Store name and description reworded**: the short description now says "only on sites you choose" (exclusive scope, aligned with the Chinese text), and the Chinese copy replaces a banned term with the approved wording; the toolbar tooltip now names the concrete actions (change this site's title & icon, hide items)
+- **Small copy fixes in the UI**: the two "item can no longer be found" notices (wizard and site settings) now share one sentence pattern; the site-settings title hint names where the fallback title comes from; the "back" button says what going back does; three persistent hints drop their trailing periods (Chinese and English alike)
+- **Store listing copy polished for review**: the permission-request moments are stated in full, button names match the real UI labels ("Turn the whole page gray"), the Chinese and English descriptions are aligned item by item, and the single-purpose sentence is simplified
+- **Submission guide corrected**: three official quotes now point at the live pages, the Trader statement link points at the official policy page (the old one is gone), and the release process gained a README-sync step
+- **Documentation consistency**: the privacy policy's first paragraph now says "the whole page gray" (it still described the pre-0.8.18 pictures-and-videos version); all 44 version headings in this changelog got working links; the README's "Settings" description lists everything that page actually holds
+
+#### For reviewers
+
+- This is the first version submitted to the Chrome Web Store; features and permissions are identical to 0.9.8 (`storage` / `scripting` / `activeTab` plus per-site optional host permissions, nothing granted at install)
+- Gates: typecheck, 847 unit tests (57 files), 1110 assertions across ten E2E scripts, check:docs / check:package all green (measured on the 1.0.0 build)
+
 ## [0.9.8] - 2026-11-14
 
 显示细节修正，以及文档与网址整理。功能与权限集合不变。
@@ -1562,4 +1596,5 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.0]: https://github.com/cherishfall/page-mask/compare/v0.9.8...v1.0.0
 [0.9.8]: https://github.com/cherishfall/page-mask/compare/v0.9.7...v0.9.8
