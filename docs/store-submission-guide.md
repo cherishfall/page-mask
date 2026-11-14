@@ -85,7 +85,9 @@ unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json
 3. 第一次进会看到注册页：**先同意开发者协议与政策，再付一次性注册费**（"you must register as a CWS developer and pay a one-time registration fee"）。
    - **费用金额：官方文档没有写死数字，注册页现场显示为准**（本文件不编数字）。注册页地址：<https://chrome.google.com/webstore/devconsole/register>
 4. **国家/地区**：官方注册页列出支持的地区，**中国大陆（China）在列表内**，香港、澳门、台湾也在（已核对该页列表）。<https://developer.chrome.com/docs/webstore/register/>
-5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好——建议用 `cherishfall@hotmail.com`（与商店对外联系邮箱一致），不要用临时邮箱。官方更建议用专门的发布用邮箱（下一条）；此号兼作对外联系邮箱，取舍自负。
+5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好，不要用临时邮箱。
+   - **两个邮箱别混**（官方 set-up-account 页原文口径）：**登录用的 Google 账号邮箱 = 通知邮箱**（"Any notifications will be sent to your Chrome Web Store developer account email"——拒审、下架都强制发到这里）；**Account 页「Verify your email」= 商店对外显示的联系邮箱**（"Only displayed under your extensions' contact information"），点 Add email 填哪个验证哪个，可以与登录邮箱不同。
+   - **两种走法**：A. 直接用现有个人 Gmail 账号注册，Account 页把 `cherishfall@hotmail.com` 加进去验证——对外显示与全部材料一致，个人 Gmail 只收通知不对外公开；B. **用 `cherishfall@hotmail.com` 新建一个专用 Google 账号**（Google 支持用现有邮箱注册，不会产生新 Gmail）——登录、通知、对外联系三者同源，符合官方「发布用专用邮箱」建议，个人 Gmail 完全隔离。**推荐 B**：通知（拒审/下架）发到你天天看的 GitHub 邮箱收件箱，不会漏。
 6. 官方建议：用**专门发商店发布用**的邮箱，并且要经常看（拒审、下架通知都发这里）。
 
 > 注册时问“是否同时在 Google Play 上架”之类，PageMask 不涉及。
@@ -104,7 +106,7 @@ unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json
 | 控制台字段 | 填什么 | PageMask 的情况 |
 |---|---|---|
 | **Publisher name**（必填） | 你想对用户公开的开发者名，例如 `cherishfall` | 这会显示在商店页 "Offered by:" 后面 |
-| **Verify your email**（必填） | 加 `cherishfall@hotmail.com`，点邮件里的验证链接 | 商店页的联系方式只显示这个 |
+| **Verify your email**（必填） | 加 `cherishfall@hotmail.com`，点邮件里的验证链接 | 商店页的联系方式只显示这个；可与登录邮箱不同（见 §1.1 条 5 的「两个邮箱别混」） |
 | **Physical address** | **留空** | 官方写明：只有“提供可购买的功能、附加功能或订阅”的商品才必须填物理地址（"Only items that offer functionality to purchase items, additional features, or subscriptions must include a physical address."）。PageMask 免费、无内购、不卖东西 → 不需要 |
 | **Trusted tester accounts**（可选） | 填 1–2 个你自己的/同事的邮箱 | 上架前小范围验证用。注意这个字段**不支持 Google 群组邮箱**，只有普通个人邮箱；群组要用 Distribution 页里按单个商品的 Private + 群组 |
 | 邮箱通知 | 打开「发布/暂存」等通知 | 拒审与下架通知本来就强制发，但你需要的是发布成功通知 |
