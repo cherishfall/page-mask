@@ -591,6 +591,15 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.scripting.executeScript).toHaveBeenCalled();
     });
 
+    it('注入后始终无人应答（慢机器上一次性脚本还在导入）：不误报失败 (#215)', async () => {
+      stubs.sendMessage.mockRejectedValue(new Error('Could not establish connection'));
+
+      const res = (await send({ t: 'coverPage', tabId: siteTabId })) as { ok: boolean };
+
+      expect(res.ok).toBe(true);
+      expect(stubs.scripting.executeScript).toHaveBeenCalled();
+    });
+
     it('注入失败时回复错误，不吞掉原因', async () => {
       stubs.sendMessage.mockRejectedValueOnce(new Error('Could not establish connection'));
       stubs.scripting.executeScript.mockRejectedValueOnce(new Error('Cannot access a chrome:// URL'));

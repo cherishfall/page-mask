@@ -297,7 +297,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
         await new Promise((r) => setTimeout(r, waitMs));
         after = await askState();
       }
-      return { ok: after?.covered === true, error: after?.covered ? undefined : 'curtain did not cover' };
+      // 始终无人应答 = 一次性脚本多半还在动态导入（慢机器上不止 200ms，#186）：注入已成功，
+      // 幕布随后自己铺上——按注释口径只有「有应答且没遮上」才算失败，不误报（#215）
+      if (after === undefined) return { ok: true };
+      return { ok: after.covered === true, error: after.covered ? undefined : 'curtain did not cover' };
     } catch (e) {
       return { ok: false, error: String(e) };
     }

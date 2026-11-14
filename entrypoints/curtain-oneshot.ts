@@ -53,7 +53,11 @@ export default defineUnlistedScript(() => {
           // 旧层撤不掉就让它随文档消失（宿主会被 CurtainLayer.show() 摘掉）
         }
         existing.unregister();
-        void run().catch((e: unknown) => console.warn('[PageMask] 遮住本页失败', e));
+        void run().catch((e: unknown) => {
+          // 失败要复位 pending（与下面主路径 catch 同口径），否则卡死会杀死本文档后续所有一次性注入（#215）
+          w.__pagemaskCurtainPending = false;
+          console.warn('[PageMask] 遮住本页失败', e);
+        });
       }
     })();
     return;
