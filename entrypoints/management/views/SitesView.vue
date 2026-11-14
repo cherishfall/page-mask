@@ -24,7 +24,7 @@
           type="button"
           class="primary"
           data-testid="pm-mgmt-authorize-all"
-          @click="store.authorize(store.state.pendingOrigins)"
+          @click="authorizeAll($event)"
         >
           {{ t.management.authorizeAll }}
         </button>
@@ -87,7 +87,7 @@
               <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.management.pendingBadge }}
             </span>
             <span class="hint">{{ t.management.pendingHint }}</span>
-            <button type="button" data-testid="pm-mgmt-authorize" @click="store.authorize([p.origin])">
+            <button type="button" data-testid="pm-mgmt-authorize" @click="authorizeRow(p.origin, $event)">
               {{ t.management.authorize }}
             </button>
           </div>
@@ -112,6 +112,30 @@ const staleCount = (p: SiteProfile) => staleRulesOf(p).length;
 const initialOf = (origin: string) => siteLabelOf(origin).slice(0, 1).toUpperCase();
 /** 删除项的文案与胶囊菜单同名（「删除这个网站的设置」）；确认框里的实心红按钮才是「删除设置」 */
 const deleteMenuLabel = deleteSiteHeading();
+
+// ---------- 授权后的焦点归还（#208） ----------
+// 授权成功后待授权块随重渲染消失，触发按钮不在了：焦点交给该行的编辑入口（行内授权）
+// 或列表第一个站点（一次全部授权），键盘路径不断（WCAG 2.4.3）。
+// authorize 返回 ≠ 块已经消失（状态落地还隔着几拍刷新）：等按钮真正离开 DOM 再还焦点
+// （上限 1s）；失败时按钮还连着，焦点留在原地，交给 role=alert 的错误行。
+
+async function waitForDetach(btn: HTMLElement | null): Promise<void> {
+  for (let i = 0; i < 20 && btn?.isConnected; i++) await new Promise((r) => setTimeout(r, 50));
+}
+
+async function authorizeRow(origin: string, ev: MouseEvent) {
+  const btn = ev.currentTarget as HTMLElement | null;
+  await store.authorize([origin]);
+  await waitForDetach(btn);
+  if (btn && !btn.isConnected) btn.closest('li')?.querySelector<HTMLAnchorElement>('a.site-link')?.focus();
+}
+
+async function authorizeAll(ev: MouseEvent) {
+  const btn = ev.currentTarget as HTMLElement | null;
+  await store.authorize(store.state.pendingOrigins);
+  await waitForDetach(btn);
+  if (btn && !btn.isConnected) document.querySelector<HTMLAnchorElement>('a.site-link')?.focus();
+}
 
 /** popover 属性（Vue 的模板类型还没有收录，按 modern-web-guidance 建议用对象展开） */
 const POPOVER = { popover: 'auto' } as Record<string, string>;

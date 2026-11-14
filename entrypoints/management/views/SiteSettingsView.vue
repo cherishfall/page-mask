@@ -12,7 +12,7 @@
 
     <template v-else>
       <div class="site-head">
-        <h2 id="pm-site-title" class="host">{{ siteLabelOf(profile.origin) }}</h2>
+        <h2 ref="siteTitleEl" id="pm-site-title" class="host" tabindex="-1">{{ siteLabelOf(profile.origin) }}</h2>
         <div class="switch-row">
           <label for="pm-mgmt-switch">{{ t.common.cleanMode }}</label>
           <!-- 切换期间不禁用：再拨一次由 store 忽略并拨回实际状态，失败原因写在这一块下面那行提示里 -->
@@ -55,7 +55,7 @@
           <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.management.pendingBadge }}
         </span>
         <span class="hint">{{ t.management.pendingHint }}</span>
-        <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="store.authorize([profile.origin])">
+        <button type="button" class="primary" data-testid="pm-mgmt-authorize" @click="authorizeHere($event)">
           {{ t.management.authorize }}
         </button>
       </div>
@@ -139,7 +139,7 @@
         <p v-if="profile.hideRules.length === 0" class="hint" data-testid="pm-mgmt-no-rules">
           {{ t.management.rulesEmpty }}
         </p>
-        <ul v-else class="rule-list" data-testid="pm-mgmt-rule-list">
+        <ul v-else ref="rulesListEl" class="rule-list" data-testid="pm-mgmt-rule-list">
           <li
             v-for="(r, i) in profile.hideRules"
             :key="r.id"
@@ -183,7 +183,7 @@
         <div class="undo" :class="{ 'undo-on': !!undo }" role="status" data-testid="pm-mgmt-undo">
           <template v-if="undo">
             <span>{{ t.common.deleted(undo.name) }}</span>
-            <button type="button" class="ghost small" data-testid="pm-mgmt-undo-btn" @click="undoDelete">
+            <button type="button" class="ghost small" data-testid="pm-mgmt-undo-btn" @click="undoFromBar">
               {{ t.common.undo }}
             </button>
           </template>
@@ -310,10 +310,13 @@ const iconError = ref('');
 /** 三个媒体开关写入失败时的一句话，显示在这张卡里 */
 const mediaError = ref('');
 // 删除 / 撤销：与页面上共用同一套逻辑（core/rule-undo.ts + ui/rule-undo.ts）
-const { pending: undo, remove, undo: undoDelete, cancel: cancelUndo } = useRuleUndo((update) => {
+const { pending: undo, remove, undo: undoRestore, cancel: cancelUndo } = useRuleUndo((update) => {
   const p = profile.value;
   if (p) void store.updateRules(p.origin, update);
 });
+
+/** 行尾 ✕ 与撤销条里要接焦点的元素（#208）：删行后按钮随重渲染消失，焦点不能掉回 body */
+const rulesListEl = ref<HTMLElement | null>(null);
 
 /** 「收起的内容」卡标题：确认框关了之后焦点落在这里（触发按钮会随列表清空消失） */
 const rulesHeading = ref<HTMLElement | null>(null);
@@ -326,7 +329,37 @@ function onToggle(e: Event) {
 }
 
 function removeRule(rule: HideRule) {
-  remove(profile.value?.hideRules ?? [], rule.id);
+  const rules = profile.value?.hideRules ?? [];
+  const idx = rules.findIndex((r) => r.id === rule.id);
+  remove(rules, rule.id);
+  // 焦点交给被删项后面那一行的 ✕（删到底给前一行；清空交给卡片标题，与「恢复网站原来的
+  // 内容」同款）：键盘连续清理时不丢位置（WCAG 2.4.3，#208）。store 写入是异步的，nextTick
+  // 时列表还是旧的——邻居必须按删除前的列表算；节点按 r.id 做 key，重渲染不会丢焦点。
+  void nextTick(() => {
+    const next = (idx >= 0 ? rules[idx + 1] : undefined) ?? (idx > 0 ? rules[idx - 1] : undefined) ?? null;
+    const btn = next
+      ? rulesListEl.value?.querySelector<HTMLButtonElement>(`[data-testid="pm-mgmt-rule-delete-${next.id}"]`)
+      : null;
+    (btn ?? rulesHeading.value)?.focus();
+  });
+}
+
+/** 撤销：条插回原位、撤销按钮随条消失，焦点交给卡片标题（#208） */
+function undoFromBar() {
+  undoRestore();
+  void nextTick(() => rulesHeading.value?.focus());
+}
+
+/** 站点设置页的授权块（#208）：授权成功后块随重渲染消失，焦点交给页面标题 */
+const siteTitleEl = ref<HTMLElement | null>(null);
+
+async function authorizeHere(ev: MouseEvent) {
+  const btn = ev.currentTarget as HTMLElement | null;
+  await store.authorize([profile.value?.origin ?? '']);
+  // authorize 返回 ≠ 块已经消失（状态落地还隔着几拍刷新）：等按钮真正离开 DOM 再还焦点
+  // （上限 1s）。失败时按钮还连着，焦点留在原地，交给 role=alert 的错误行（#208）
+  for (let i = 0; i < 20 && btn?.isConnected; i++) await new Promise((r) => setTimeout(r, 50));
+  if (btn && !btn.isConnected) siteTitleEl.value?.focus();
 }
 
 /** 换标签页图标三态（#121）：网站原来的 / 不显示 / 内置某个 */

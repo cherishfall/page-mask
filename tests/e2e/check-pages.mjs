@@ -1056,10 +1056,14 @@ async function main() {
 
     // 删除 → 5 秒内撤销：撤销后按原下标插回、id 不变
     await m.click(tid('pm-mgmt-rule-delete-r1'));
+    // 删行后的焦点归还（#208）：✕ 随行消失，焦点交给下一行的 ✕，键盘连续清理不丢位置
+    await waitFor(m, '删行后焦点归还给下一行的 ✕', (s) => document.activeElement === document.querySelector(s), [tid('pm-mgmt-rule-delete-r2')], { timeout: 3000 });
     await poll(async () => (await getProfile(ext.control, ORIGIN)).hideRules.length === 1, '删除一条后只剩 1 条');
     const undoText = await m.$eval(tid('pm-mgmt-undo'), (e) => e.innerText);
     check(undoText.includes('已删除「页头」'), `出现可撤销提示（${undoText.trim()}）`);
     await m.click(tid('pm-mgmt-undo-btn'));
+    // 撤销按钮随条消失：焦点交给「收起的内容」卡标题，不掉回 body（#208）
+    await waitFor(m, '撤销后焦点归还给卡标题', (s) => document.activeElement === document.querySelector(s), [tid('pm-mgmt-rules-heading')], { timeout: 3000 });
     const restored = await poll(async () => {
       const p = await getProfile(ext.control, ORIGIN);
       return p.hideRules.length === 2 ? p : null;
@@ -1527,8 +1531,9 @@ async function main() {
         return true;
       };
     });
-    await m.click(tid('pm-mgmt-authorize'));
-    await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
+    await m.click(tid('pm-mgmt-authorize'));    await waitFor(m, '授权后本页不再显示待授权', (s) => !document.querySelector(s), [tid('pm-mgmt-pending')]);
+    // 授权块消失后焦点归还页面标题，不掉回 body（#208）
+    await waitFor(m, '授权后焦点归还页面标题', (s) => document.activeElement === document.querySelector(s), ['#pm-site-title'], { timeout: 3000 });
     const authReq = await m.evaluate(() => window.__pmRequests);
     check(
       authReq.length === 1 && sitePatternsOf(ORIGIN).every((p) => authReq[0].origins.includes(p)),
