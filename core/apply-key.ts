@@ -10,7 +10,7 @@ import type { GlobalSettings, SiteProfile } from './types';
 
 export function applyKey(
   profile: SiteProfile,
-  settings: Pick<GlobalSettings, 'defaultTitle' | 'uiLanguage'>,
+  settings: Pick<GlobalSettings, 'defaultTitle'> & { uiLanguage?: GlobalSettings['uiLanguage'] },
   url: string,
 ): string {
   // 图标三态（#121）摊成扁平字符串：对象不能直接进键（引用不同会让键恒变）
