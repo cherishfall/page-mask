@@ -41,6 +41,14 @@ describe('resolveLocale 三档偏好 → 渲染语言', () => {
   afterEach(() => vi.unstubAllGlobals());
 });
 
+describe('可及名与可见文字（WCAG 2.5.3 Label in Name，#204）', () => {
+  it('幕布恢复钮的可及名以可见文字开头', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      expect(MESSAGES[lang].curtain.restoreAria.startsWith(MESSAGES[lang].curtain.restore)).toBe(true);
+    }
+  });
+});
+
 describe('两套文案表结构完全一致（防漏翻）', () => {
   /** 递归取键集合：函数与基本类型都是叶子，不再往下看 */
   function shape(v: unknown, path = ''): Set<string> {

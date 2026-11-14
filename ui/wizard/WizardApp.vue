@@ -70,7 +70,7 @@
       </div>
 
       <!-- 标题和图标：单步小表单（#81）。
-           表单与页面 ⋯ 菜单的小面板是同一个组件（ui/title-icon/TitleIconFields.vue），不写第二份 -->
+           表单复用 ui/title-icon/TitleIconFields.vue（#81 起无就地小面板），不写第二份 -->
       <template v-if="phase === 'title'">
         <div class="pm-wiz-step1">
           <TitleIconFields
@@ -86,7 +86,7 @@
               class="pm-wiz-link plain"
               data-testid="pm-wiz-title-reset"
               :disabled="saving"
-              @click="resetTitleIcon"
+              @click="askTitleIconReset"
             >
               {{ t.common.resetTitleIcon }}
             </button>
@@ -539,6 +539,29 @@
         </div>
       </form>
     </dialog>
+
+    <!-- 恢复网站原来的标题和图标（#99 / #204）：同款二次确认（GLOSSARY：破坏性动作先确认，
+         默认焦点在「取消」）；Esc = 取消，回向导继续设置 -->
+    <dialog
+      ref="titleIconResetDlg"
+      class="pm-wiz-dialog"
+      aria-labelledby="pm-titleicon-reset-title"
+      data-testid="pm-wizard-titleicon-reset-dialog"
+      @close="onTitleIconResetClose"
+    >
+      <form method="dialog">
+        <h2 id="pm-titleicon-reset-title">{{ t.common.resetTitleIconTitle }}</h2>
+        <p>{{ t.common.resetTitleIconImpact }}</p>
+        <div class="pm-wiz-actions">
+          <button value="cancel" class="pm-btn" autofocus data-testid="pm-wizard-titleicon-reset-cancel">
+            {{ t.common.cancel }}
+          </button>
+          <button value="confirm" class="pm-btn danger" data-testid="pm-wizard-titleicon-reset-confirm">
+            {{ t.common.resetTitleIconConfirm }}
+          </button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -690,6 +713,7 @@ const exitDlg = ref<HTMLDialogElement | null>(null);
 const noticeDlg = ref<HTMLDialogElement | null>(null);
 const openDlg = ref<HTMLDialogElement | null>(null);
 const rulesResetDlg = ref<HTMLDialogElement | null>(null);
+const titleIconResetDlg = ref<HTMLDialogElement | null>(null);
 
 const follower = new ElementFollower();
 let pick: PickController;
@@ -890,7 +914,11 @@ function showInfo(text: string) {
 /** 是否有浮层打开（确认框）：有就让浮层自己按原生行为处理 Esc */
 function overlayOpen(): boolean {
   return (
-    !!exitDlg.value?.open || !!noticeDlg.value?.open || !!openDlg.value?.open || !!rulesResetDlg.value?.open
+    !!exitDlg.value?.open ||
+    !!noticeDlg.value?.open ||
+    !!openDlg.value?.open ||
+    !!rulesResetDlg.value?.open ||
+    !!titleIconResetDlg.value?.open
   );
 }
 
@@ -1271,7 +1299,7 @@ function saveSelectors(d: Draft) {
 }
 
 /**
- * 「恢复网站原来的标题和图标」（#99）：写回「没设置过」的状态，关掉向导并给一句提示。
+ * 「恢复网站原来的标题和图标」（#99）：确认后写回「没设置过」的状态，关掉向导并给一句提示。
  * 不碰收起规则与开关状态——它只撤销标题 / 图标这一项定制。
  */
 async function resetTitleIcon() {
@@ -1314,6 +1342,22 @@ function onRulesResetClose() {
   const confirmed = dlg.returnValue === 'confirm';
   dlg.returnValue = ''; // Esc 不设置返回值，必须清掉上一次的
   if (confirmed) void resetHiddenItems();
+}
+
+/** 打开标题图标复位确认框：连点两次不重复 showModal（对已打开的 dialog 再调会抛错） */
+function askTitleIconReset() {
+  if (saving.value || finished) return;
+  const dlg = titleIconResetDlg.value;
+  if (dlg && !dlg.open) dlg.showModal();
+}
+
+/** 确认框关了：只有点「恢复标题和图标」才真正写；Esc / 点外面 = 回向导继续设置 */
+function onTitleIconResetClose() {
+  const dlg = titleIconResetDlg.value;
+  if (!dlg) return;
+  const confirmed = dlg.returnValue === 'confirm';
+  dlg.returnValue = ''; // Esc 不设置返回值，必须清掉上一次的
+  if (confirmed) void resetTitleIcon();
 }
 
 /**

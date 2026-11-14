@@ -53,6 +53,10 @@ export const zh = {
     /** 确认框正文：说清有几项会没了 */
     resetSiteContentImpact: (n: number) => `${n} 项收起设置会全部删除。`,
     resetSiteContentConfirm: '恢复内容',
+    // 「恢复网站原来的标题和图标」的二次确认（#204；GLOSSARY：破坏性动作先确认，默认焦点「取消」）
+    resetTitleIconTitle: '恢复网站原来的标题和图标？',
+    resetTitleIconImpact: '标签页标题会清空、图标会回到网站原来的样子，收起的内容不受影响。',
+    resetTitleIconConfirm: '恢复标题和图标',
     /** 两个状态的名字（GLOSSARY「清爽态 / 原样态」）：短名，用在胶囊与列表上，不用来解释动作 */
     clean: '按设置',
     original: '原样',
@@ -194,7 +198,7 @@ export const zh = {
     /** 头部「查看使用说明」小链接（0.8.11 #139 入口，0.8.15 #148 挪到标题右侧） */
     replayIntro: '查看使用说明',
     /** 头部链接的读屏全称（#148）：短文字链接配一个说清对象的名字 */
-    replayIntroAria: '查看 PageMask 使用说明',
+    replayIntroAria: '查看使用说明（PageMask 使用说明）',
     /** 删除这个网站的设置（#112）：与站点设置页 / 胶囊菜单同一套文案（core/site-delete.ts） */
     deleting: '正在删除…',
     restorePage: '恢复这一页',
@@ -324,7 +328,7 @@ export const zh = {
     toggleHeading: '悬浮按钮',
     toggleOpacityLabel: '不透明度',
     toggleOpacityLowHint: '调得太淡会不容易找到；把鼠标移到悬浮按钮原来的位置，它就会变清楚',
-    toggleOpacityError: '不透明度没有存上，请再试一次。',
+    toggleOpacityError: '不透明度没有存上，请再试一次',
     toggleHint: '调它闲着的时候有多淡（数值越小越淡），鼠标移上去立刻变清楚。遮住整页后出现的那颗按钮不受影响，一直看得清。',
 
     shortcutHeading: '快捷键',
@@ -398,7 +402,7 @@ export const zh = {
           '标题和图标：把标签页的名字和图标换成你设置的样子。',
           '收起内容：点页面上不想要的部分，它们就消失。',
           '整页变灰：整个页面变成黑白，位置不变。',
-          '遮住这一页：临时挡一下，刷新就恢复。',
+          '遮住这一页：临时挡一下，刷新或离开页面就恢复。',
         ],
       },
       {
@@ -561,7 +565,7 @@ export const zh = {
 
   /** 遮住整页后那颗「恢复」按钮（ui/curtain-restore） */
   curtain: {
-    restoreAria: '取消遮住，回到刚才的页面（按住拖动，或用方向键移动位置）',
+    restoreAria: '恢复：取消遮住，回到刚才的页面（按住拖动，或用方向键移动位置）',
     restore: '恢复',
   },
 

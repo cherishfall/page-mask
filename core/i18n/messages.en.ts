@@ -45,6 +45,10 @@ export const en: Messages = {
     resetSiteContentImpact: (n: number) =>
       n === 1 ? '1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
     resetSiteContentConfirm: 'Restore content',
+    // Confirmation for “use the site’s own title and icon” (#204; GLOSSARY: destructive actions confirm first, focus lands on Cancel)
+    resetTitleIconTitle: 'Use the site’s own title and icon?',
+    resetTitleIconImpact: 'The tab title will be cleared and the icon will go back to the site’s own; hidden items stay as they are.',
+    resetTitleIconConfirm: 'Restore title & icon',
     clean: 'Your settings',
     original: 'As is',
     cleanMode: 'Show this site your way',
@@ -167,7 +171,7 @@ export const en: Messages = {
     /** The "View the guide" text link in the header (0.8.11 #139 entry, moved to the title row in 0.8.15 #148) */
     replayIntro: 'View the guide',
     /** Full accessible name for the short header link (#148) */
-    replayIntroAria: 'View the PageMask guide',
+    replayIntroAria: 'View the guide (PageMask guide)',
     /** Delete site settings (#112): same copy as the site settings page / capsule menu (core/site-delete.ts) */
     deleting: 'Deleting…',
     restorePage: 'Restore this page',
@@ -292,7 +296,7 @@ export const en: Messages = {
     back: 'All site settings',
 
     titleHeading: 'Default title',
-    titleIntro: 'Pre-filled when you open “Title & icon” for a site. Also used when you cover a page on a site that has no title of its own',
+    titleIntro: 'Pre-filled when you open “Title & icon” for a site; also used when you cover a page on a site that has no title of its own',
     titleLabel: 'Default title',
     titleFootnote: (fallback: string) =>
       `Leave it empty to use “${fallback}” (follows the browser language) — ${titleBlankHint}`,
@@ -301,7 +305,7 @@ export const en: Messages = {
     toggleHeading: 'Floating button',
     toggleOpacityLabel: 'Opacity',
     toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear',
-    toggleOpacityError: 'Couldn’t save the opacity, please try again.',
+    toggleOpacityError: 'Couldn’t save the opacity, please try again',
     toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
     shortcutHeading: 'Keyboard shortcuts',
@@ -311,7 +315,7 @@ export const en: Messages = {
     shortcutGrayLabel: 'Gray / Back to color',
     shortcutUnbound: 'No shortcut assigned — the system or another extension may have taken it',
     shortcutChange: 'Manage shortcuts in Chrome',
-    shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab.',
+    shortcutOpenFailed: 'This browser won’t let the extension open that page. Type chrome://extensions/shortcuts in a new tab',
 
     transferHeading: 'Export / Import',
     transferIntro: 'Saves every site’s settings plus these settings into one file. Import it after switching computers or reinstalling the browser to restore.',
@@ -377,7 +381,7 @@ export const en: Messages = {
           'Title & icon: give the tab a name and icon of your choosing.',
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Turn the whole page gray: the page turns black & white, same place.',
-          'Cover this page: covers it for now; reloading restores it.',
+          'Cover this page: covers it for now; reloading or leaving the page restores it.',
         ],
       },
       {
@@ -527,7 +531,7 @@ export const en: Messages = {
   },
 
   curtain: {
-    restoreAria: 'Remove the cover and go back to the page you were on (press and drag it, or move it with arrow keys)',
+    restoreAria: 'Restore — remove the cover and go back to the page you were on (press and drag it, or move it with arrow keys)',
     restore: 'Restore',
   },
 

@@ -1493,6 +1493,9 @@ async function main() {
     await waitForShadow(pageOnly, HOST, tid('pm-wiz-title-reset'));
     check(true, '保存过标题和图标的网站，表单底部出现回退出口');
     await clickInShadow(pageOnly, HOST, tid('pm-wiz-title-reset'));
+    // #204 破坏性动作先确认：出现确认框，点「恢复标题和图标」才真正写
+    await waitForShadow(pageOnly, HOST, tid('pm-wizard-titleicon-reset-dialog'));
+    await clickInShadow(pageOnly, HOST, tid('pm-wizard-titleicon-reset-confirm'));
     await waitFor(pageOnly, '恢复后向导关闭', (h) => !document.querySelector(h), [HOST]);
     await waitFor(pageOnly, '标签页回到网站原来的标题', () => document.title === 'Acme 书房 · 向导测试');
     const afterReset = await getProfile(ext.control, TITLE_ONLY_ORIGIN);

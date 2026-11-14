@@ -1,7 +1,7 @@
 <template>
-  <!-- 标签页标题 + 快捷标题 + 标签页图标：向导第 1 步与页面 ⋯ 菜单的小面板共用这一份（#56）。
-       这里只有「编辑」：读写值走 v-model，保存由外面决定（向导在最后一步保存，小面板点「保存」）。
-       两处文案相同，所以标签与按钮文案写在这里；随场景变化的提示由 titleHint 传入。 -->
+  <!-- 标签页标题 + 快捷标题 + 标签页图标：向导的标题和图标表单用这一份（#81 起无就地小面板）。
+       这里只有「编辑」：读写值走 v-model，保存由外面决定（向导在最后一步保存）。
+       随场景变化的提示由 titleHint 传入。 -->
   <div class="pm-tif">
     <label class="pm-tif-label" :for="`${idPrefix}-title-input`">{{ t.management.titleHeading }}</label>
     <input

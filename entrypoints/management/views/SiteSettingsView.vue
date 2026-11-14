@@ -121,13 +121,15 @@
         </div>
 
         <!-- 恢复出口（#99）进卡（#182）：与「收起的内容」卡底的「恢复网站原来的内容」（#160）
-             完全同款（同结构、同类名、同间距），两处恢复出口形态一致；确认逻辑在 store，不动 -->
+             完全同款（同结构、同类名、同间距），两处恢复出口形态一致；破坏性动作先确认
+             （GLOSSARY），确认框与 ClearRulesDialog 同壳 -->
         <div v-if="profile.titleIconSet" class="row reset-row" data-testid="pm-mgmt-title-reset-row">
-          <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="resetTitleIcon">
+          <button type="button" class="ghost" data-testid="pm-mgmt-title-reset" @click="titleIconResetOpen = true">
             {{ t.common.resetTitleIcon }}
           </button>
           <span class="hint">{{ t.common.resetTitleIconHint }}</span>
         </div>
+        <ResetTitleIconDialog v-if="titleIconResetOpen" @closed="onTitleIconResetClosed" />
       </section>
 
       <!-- 收起的内容：只读清单，换方式与重选元素要到页面上做 -->
@@ -278,6 +280,7 @@ import { useRuleUndo } from '@/ui/rule-undo';
 import { locale, t } from '@/ui/i18n';
 import IconPicker from '@/ui/title-icon/IconPicker.vue';
 import ClearRulesDialog from '../ClearRulesDialog.vue';
+import ResetTitleIconDialog from '../ResetTitleIconDialog.vue';
 import { normalizeSiteHost, siteHostOf, siteLabelOf, staleRulesOf } from '../site';
 import { DEFAULT_KEY, managementStore as store } from '../store';
 
@@ -316,6 +319,7 @@ const { pending: undo, remove, undo: undoDelete, cancel: cancelUndo } = useRuleU
 const rulesHeading = ref<HTMLElement | null>(null);
 /** 「恢复网站原来的内容」确认框是否打开（只在本视图挂一个实例） */
 const rulesResetOpen = ref(false);
+const titleIconResetOpen = ref(false);
 
 function onToggle(e: Event) {
   if (profile.value) void store.toggleSite(profile.value, e);
@@ -358,10 +362,13 @@ async function onMediaChange(key: MediaFlagKey, e: Event) {
   }
 }
 
-/** 恢复网站原来的标题和图标（#99）：只撤销标题 / 图标，收起的内容不动 */
-async function resetTitleIcon() {
-  if (!profile.value) return;
-  await store.resetTitleIcon(profile.value.origin);
+/** 恢复网站原来的标题和图标（#99）：确认框关了之后收尾，只撤销标题 / 图标，收起的内容不动。
+ *  触发按钮不随恢复消失，焦点由浏览器自动还给触发按钮（<dialog> 原生行为），不用手动接 */
+async function onTitleIconResetClosed(confirmed: boolean) {
+  titleIconResetOpen.value = false;
+  const p = profile.value;
+  if (!confirmed || !p) return;
+  await store.resetTitleIcon(p.origin);
 }
 
 /**

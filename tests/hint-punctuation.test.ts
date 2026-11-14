@@ -118,3 +118,62 @@ describe('常驻 hint 标点守门（design-copy 二、d 的自动化，#184）'
     });
   }
 });
+
+/** 全表拍平：路径 → 求值后的文本（函数键用哑参求值，数组带下标）。拍平两份表按路径配对 */
+function flattenAll(lang: 'zh' | 'en'): Map<string, string> {
+  const out = new Map<string, string>();
+  function walk(value: unknown, path: string): void {
+    if (typeof value === 'string') {
+      out.set(path, value);
+      return;
+    }
+    if (typeof value === 'function') {
+      const fn = value as (...args: unknown[]) => unknown;
+      walk(fn(...Array.from({ length: fn.length }, () => DUMMY)), path);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => walk(item, `${path}[${index}]`));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) walk(child, path ? `${path}.${key}` : key);
+    }
+  }
+  walk(MESSAGES[lang], '');
+  return out;
+}
+
+/** 是不是以句号收尾（中英同口径：全角句号与半角句点） */
+const endsWithPeriod = (text: string): boolean => /[.。]$/.test(text);
+
+describe('错误 / 警告消息的句尾规矩（#204）', () => {
+  // design-copy 二、d 把句号「保留给」错误消息等完整句场合；产品通行的写法是
+  // 「多句消息内部句号照用、句尾一律不带」（GOV.UK 错误消息同款：单句不带句尾句点）。
+  // 键路径含 error / failed / warn 的键按这个口径守门（#204 之前只有两个离群键）
+  const FAMILY = /(^|\.)(error|failed|warn)/i;
+
+  for (const lang of ['zh', 'en'] as const) {
+    it(`${lang}：错误 / 警告消息句尾不带句号（多句的内部句号不算）`, () => {
+      for (const [path, text] of flattenAll(lang)) {
+        if (!FAMILY.test(path)) continue;
+        expect(text, `${lang}.${path} 是错误 / 警告消息，句尾不带句号（分句用句号或分号）`).not.toMatch(/[.。]$/);
+      }
+    });
+  }
+});
+
+describe('中英同键句尾对称（#204）', () => {
+  it('每个键两语言「是否以句号收尾」一致', () => {
+    const zhAll = flattenAll('zh');
+    const enAll = flattenAll('en');
+    expect([...zhAll.keys()].sort()).toEqual([...enAll.keys()].sort());
+    for (const [path, zhText] of zhAll) {
+      const enText = enAll.get(path)!;
+      expect(
+        endsWithPeriod(enText),
+        `${path} 句尾句号不一致：zh=${JSON.stringify(zhText)} en=${JSON.stringify(enText)}`,
+      ).toBe(endsWithPeriod(zhText));
+    }
+  });
+});
