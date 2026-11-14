@@ -101,6 +101,8 @@ function resolveMessage(value, readFile, listLocales, defaultLocale) {
 
 function checkManifest(label, manifest, readFile, listLocales, hasFile) {
   if (manifest.manifest_version !== 3) fail(`[${label}] manifest_version 应为 3，实际为 ${manifest.manifest_version}`);
+  // 版本一致性（#216）：商店上传的包版本必须与 package.json 一致（发版四件套漏改一处就拦在门禁）
+  if (manifest.version !== pkg.version) fail(`[${label}] manifest.version ${manifest.version} ≠ package.json ${pkg.version}`);
 
   for (const field of ['name', 'description']) {
     if (!manifest[field]) {
@@ -130,6 +132,16 @@ function checkManifest(label, manifest, readFile, listLocales, hasFile) {
   if (actionTitle) {
     for (const { locale, text, error } of resolveMessage(actionTitle, readFile, listLocales, manifest.default_locale)) {
       const where = locale ? `action.default_title（${locale}）` : 'action.default_title';
+      if (error) fail(`[${label}] ${where}：${error}`);
+      else checkWording(label, where, text);
+    }
+  }
+  // commands 的快捷键说明（#216）：同样可能是 __MSG_x__ 占位符——解析并按可见文案查禁用词
+  for (const [cmdId, cmd] of Object.entries(manifest.commands ?? {})) {
+    const desc = cmd?.description;
+    if (!desc) continue;
+    for (const { locale, text, error } of resolveMessage(desc, readFile, listLocales, manifest.default_locale)) {
+      const where = locale ? `commands.${cmdId}.description（${locale}）` : `commands.${cmdId}.description`;
       if (error) fail(`[${label}] ${where}：${error}`);
       else checkWording(label, where, text);
     }
