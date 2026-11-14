@@ -10,7 +10,7 @@
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
 - [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-0.9.8-chrome.zip`
 - [x] 版本号已改（`package.json` → `0.9.8`），`CHANGELOG.md` 有对应版本的双语条目，tag `v0.9.8` 已打、Release 已发
-- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）
+- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；0.9.8 提交前重跑验证全部现行（重生成与库中版本逐字节一致）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [ ] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「媒体」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -76,7 +76,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
-• 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含（0.8.18 起）；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
+• 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
 • 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
 • 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；iframe 和 shadow DOM 里的元素暂时无法选择
 • 两条快捷键都能在 Chrome 自己的「扩展程序 → 键盘快捷键」页改：插件设置页有「到 Chrome 里设置快捷键」入口。Chrome 不允许扩展替你改键，所以这一步要在 Chrome 里做；改完切回插件设置页，键帽就显示新键，你在那一页设过的键不会被新版本覆盖
@@ -95,13 +95,13 @@ FEATURES
 • Three hide methods: disappear (gone, and the content below moves up), keep space (invisible, but the space stays), cover (a block in the page color sits on top, leaving the site's own styles untouched)
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; sites without their own icon use the default icon
-• Whole-page gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable. Videos that autoplay are held down; click a video to watch that one. Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites the user hasn't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
+• Whole-page gray: one per-site switch (the floating button's "Media" button, the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable. Videos that autoplay are held down; click a video to watch that one. Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites you haven't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
 • Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
 • Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the floating button, the popup and the shortcut all work on the same state — any of them can undo any other
 • Whole-page gray shortcut: press to turn gray, press again to turn back to color (Ctrl+Shift+Y by default, ⌘+Shift+Y on Mac); the setting is remembered per site, and the first press asks for that site's access, so there is no need to open the popup first
 • A floating button you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
 • One switch per site: the floating button flips between "Your settings" and "As is"; all tabs of that site switch together
-• On-page editing: the floating button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again, delete with 5-second undo)
+• On-page editing: the floating button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again; rows you take out are removed when you save)
 • Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, export / import, interface language, the floating button's opacity and version info, and is registered as Chrome's "Options" page
 • Delete is always reachable: the very bottom of the popup and every row's "⋯" menu in "All site settings" both carry "Delete this site's settings" — no need to open the details page first
 • Broken-item notices: if a site redesign means an item can no longer be found, you're asked to pick it again
@@ -122,7 +122,7 @@ PRIVACY & PERMISSIONS
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
-• "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included (since 0.8.18); PageMask's own interface turns black & white with the page and keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
+• "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included; PageMask's own interface turns black & white with the page and keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked
 • The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
 • Doesn't run on browser pages, local files or the Chrome Web Store; elements inside iframes/shadow DOM can't be picked yet
 • Both shortcuts can be changed at Chrome's own "Extensions → Keyboard shortcuts" page; Settings has a "Manage shortcuts in Chrome" button. Chrome doesn't let extensions change bindings themselves, so that step belongs in the browser. The keycaps show the new key when you come back, and keys you set there are kept across updates
@@ -133,15 +133,15 @@ NOTES
 
 - **storage**: Saves the user's settings for each site they add (which page elements to hide, how, on which pages, the tab title/icon they chose, the on/off state, and the per-site "Turn the whole page gray" switch) in `chrome.storage.local` on the device. Nothing is synced or sent anywhere.
 - **scripting**: For sites the user has explicitly enabled only: (1) registers PageMask's bundled content script for that site's pages, (2) runs it once in the already-open tab right after the user enables the site, and (3) inserts/removes the user's hiding stylesheet (`insertCSS`/`removeCSS`) when the user switches the site between clean and original. While the gray switch is on, the same stylesheet turns the whole page black & white (one grayscale rule), and the bundled content script holds videos that autoplay — all still local, with no remote code.
-- **activeTab**: When the user opens the popup, it reads the active tab's URL to show which site it is, whether it's supported (browser pages, local files and the Web Store are not), and whether it is already configured. No other tab is accessed.
-- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. When the user clicks 「收起内容」 ("Hide items") or 「标题和图标」 ("Title & icon"), PageMask calls `chrome.permissions.request` for that site: the bare domain plus its subdomains (e.g. `*://example.com/*` and `*://*.example.com/*`). IP addresses, `localhost` and addresses with a port get exact patterns instead, and a site with a non-default port uses explicit `http://…:port/*` and `https://…:port/*` patterns (Chrome does not accept `*://host:port/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that site. Deleting that site's settings (from the site's settings page, or the floating button's ⋯ menu on the page) removes that site's permission.
+- **activeTab**: When the user opens the popup, it reads the active tab's URL to show which site it is, whether it's supported (browser pages, local files and the Web Store are not), and whether it is already configured. It also provides the temporary, gesture-scoped injection used by "Cover this page" and the whole-page-gray shortcut on sites the user has not added — no persistent permission is ever granted for those. No other tab is accessed.
+- **Host permissions (optional, declared as `*://*/*`)**: Declared broadly only because the user may enable any site they choose; **nothing is granted at install**. As documented in the `chrome.permissions` API reference, a broad `optional_host_permissions` pattern is the official way to request hosts that are only discovered at runtime; each grant is requested within a user gesture and removed when that site's settings are deleted. When the user clicks 「收起内容」 ("Hide items") or 「标题和图标」 ("Title & icon"), PageMask calls `chrome.permissions.request` for that site: the bare domain plus its subdomains (e.g. `*://example.com/*` and `*://*.example.com/*`). IP addresses, `localhost` and addresses with a port get exact patterns instead, and a site with a non-default port uses explicit `http://…:port/*` and `https://…:port/*` patterns (Chrome does not accept `*://host:port/*`). The grant is used only to run the content script and apply the user's hiding styles and tab title/icon on that site. Deleting that site's settings (from the site's settings page, or the floating button's ⋯ menu on the page) removes that site's permission.
 
 **0.8.0 adds no permission.** Covering a page holds that tab's sound via `chrome.tabs.update(tabId, { muted })`, which changes Chrome's own tab-mute state and does not need the `tabs` permission (that permission is for reading `url` / `title` / `favIconUrl`). The gray switch needs no host access beyond the site access the user already granted, and makes no network requests — the black & white look is a stylesheet, so the image/video requests still happen.
 
 ## 4. 单一用途（Single purpose）
 
 ```
-Declutters websites the user chooses: it hides page elements the user picks and, per site, can turn the whole page gray (with an optional custom tab title and icon). Covering a page holds its sound. It does nothing on sites the user has not added.
+Declutters websites the user chooses — one single purpose in the narrow area of controlling what each page shows the user: it hides the page elements the user picks, can turn the whole page gray per site, and can set an optional per-site tab title and icon; momentarily covering a page (holding its sound) belongs to the same area. It does nothing on sites the user has not added.
 ```
 
 ## 5. 隐私表单填法
@@ -150,7 +150,7 @@ Declutters websites the user chooses: it hides page elements the user picks and,
 
 1. **数据类型**（你处理哪些用户数据）：勾选 **Website content** 与 **Web history**。
    - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最多 8 字符）会存在本机。
-   - Web history：站点配置里保存了网站地址与生效页面的路径前缀。
+   - Web history：站点配置里保存了网站地址与生效页面的路径前缀。理由栏建议写：`Only the domain of sites the user adds and the path prefixes the user chooses are kept, in chrome.storage.local — never uploaded or synced. The web browsing activity is used solely for the user-facing "where it applies" feature, described prominently in the store listing and in the extension UI`——一句话占住 Limited Use 例外的两个要件（显著描述的用户可见功能 + 本机处理）。
    - 勾选后需要在「隐私政策」中说明用途；`docs/PRIVACY.md` 已写明「只存本机、不上传」。
    - 0.8.0 的「整页变灰」（当时叫「图片和视频变灰」）只是同一份站点配置里的一个布尔值；幕布静音是浏览器记在标签页上的状态，不是扩展采集的数据，**不新增数据类型勾选**。
 2. **三条证明**（与是否收集无关，**全部勾选**）：
@@ -241,9 +241,9 @@ Test steps (no login needed):
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：设置向导的两步并排——点选（选中项列成清单）与看效果（逐项编辑 + 在哪些页面收起） |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
-| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 标题和图标 / 收起内容；整页变灰卡；遮住这一页；悬浮按钮行；底部两个入口），顶部站点名是虚构域名 acme-journal.test（`store-shots.mjs` 已修通：`--host-resolver-rules` 把虚构域名映射到本地 fixture，#190 起截图不再出现 127.0.0.1）。⚠️ 库里旧图仍是 0.9.3 时段产物（本地地址 + 旧键帽），发版步重跑生成替换 |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 标题和图标 / 收起内容；整页变灰卡；遮住这一页；悬浮按钮行；底部两个入口），顶部站点名是虚构域名 acme-journal.test（`store-shots.mjs` 已修通：`--host-resolver-rules` 把虚构域名映射到本地 fixture，#190 起截图不再出现 127.0.0.1）。0.9.8 重生成与库中版本逐字节一致（0.9.5 起形态未变） |
 | 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
-| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 1280×800：「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」），胶囊为现行形态（#190 预跑验证过：左侧菜单完整、右侧幕布恢复钮不再大面积全白）。⚠️ 库里旧图还是 0.8.10 形态（开启态整钮填实），发版步重跑生成替换 |
+| 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 1280×800：「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」），胶囊为现行形态（#190 预跑验证过：左侧菜单完整、右侧幕布恢复钮不再大面积全白）。0.9.8 重生成与库中版本逐字节一致 |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
 
 重新生成：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs`（输出直接覆盖 `docs/store-assets/`；可先用 `STORE_SHOTS_OUT=<目录>` 输出到别处目检一遍再覆盖）。脚本把虚构站点 acme-journal.test 经 `--host-resolver-rules` 映射到本地 fixture，并加 `--no-proxy-server`——系统代理会把映射不到的虚构域名拦下（#190；.dev 整个 TLD 在 Chrome 的 HSTS 预载表里会被强制升 https，所以主 fixture 用 RFC 6761 保留 TLD `.test`）。

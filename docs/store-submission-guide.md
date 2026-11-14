@@ -53,6 +53,7 @@ unzip -p .output/page-mask-0.9.8-chrome.zip manifest.json
 | 2 | 确认 `cherishfall@hotmail.com` 能正常收信（要加白名单、防垃圾箱） | 拒审/下架通知只发这一个邮箱 | §1.7 |
 | 3 | 照材料 §6 八步在**真实 Chrome** 上人工实走一遍；复核两条快捷键真能按 | 自动化触发不了 Chrome 的「允许」授权弹窗和 `chrome://extensions/shortcuts` | §4.2 |
 | 4 | 点「Submit for review」，并决定要不要自动发布 | 这是「提交商店」与「公开发布」的分界点 | §2.7、§5.1 |
+| 5 | 在控制台声明 Trader / Non-Trader 身份（PageMask 免费、无内购，按官方定义大概率 Non-Trader；法律判断由你拍板） | 账号级合规必答，漏报可能被下架或部分地区不可见 | §1.8 |
 
 ### 0.3 预计耗时
 
@@ -159,6 +160,16 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 - `cherishfall@hotmail.com` 要能正常收信。
 - 建议把 `chromewebstore-noreply@google.com` 加进联系人/白名单，官方明确建议："add chromewebstore-noreply@google.com to your contacts so that you receive all communications in a timely manner"（<https://developer.chrome.com/docs/webstore/check-review/>）。
 - 拒审、下架通知只发这个邮箱；漏看邮件会一路拖到下架。
+
+### 1.8 Trader / Non-Trader 声明（账号级必答，漏报会被下架或区域不可见）
+
+**这是什么**：欧盟《数字服务法》（DSA）要求平台向用户说明商品是否由「以经营为目的的商家（Trader）」提供。Google 现行要求**所有开发者**声明自己是 Trader 还是 Non-Trader——官方原话："**All developers** on the Chrome Web Store are required to declare if they are a Trader or Non-Trader."（<https://developer.chrome.com/docs/webstore/program-policies/trader-verification-faq>）
+
+**不声明的后果**：扩展可能被下架、或在部分地区对用户不可见。这是账号级合规项，不是可选项。
+
+**入口**：开发者控制台的 Account → Business info 区（或首次进入控制台时的合规提示）；具体叫法以控制台现场为准，官方操作说明：<https://support.google.com/chrome_webstore/answer/15570736>
+
+**PageMask 怎么答**：PageMask 免费、无内购、无广告、无订阅——按官方定义大概率是 **Non-Trader**（个人开发者、不以营利为目的发布），如实勾选即可，不需要证明材料。**但这是法律判断，最终由你自己拍板**：如果以后打算靠这个账号卖扩展或投放付费功能，就该按 Trader 路径走（Trader 要额外验证身份与联系信息，见 Trader FAQ）。
 
 ---
 
