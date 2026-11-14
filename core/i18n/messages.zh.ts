@@ -181,7 +181,7 @@ export const zh = {
     /** ⓘ 浮层（0.8.16，#153）：灰度卡被砍掉的细节移到这里，悬停 / 聚焦可见 */
     mediaTooltip: '整个页面变成黑白：位置不变、还能看清、链接照常点。自动播放的视频会暂停，点一下视频就能看。',
     /** 页面没加载好但配置已建档（0.8.16，#154）：说明而非错误，等页面打开灰度自动生效 */
-    mediaNotReady: '这个页面还没加载好。打开之后，整个页面会自动变灰。',
+    mediaNotReady: '这个页面还没加载好；打开之后，整个页面会自动变灰',
     coverPage: '遮住这一页',
     /** 遮住卡的临时性说明（#148；#153 收短；0.9.3 再删与按钮名重复的「临时遮住」和行话「不改设置」）：
      *  只留用户要判断的还原时机，并写全「离开页面」这个真实边界 */
@@ -248,7 +248,7 @@ export const zh = {
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
     titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题',
     titleFootnote: (fallback: string) =>
-      `停止输入后自动保存；留空就用「${fallback}」——${titleBlankHint}`,
+      `停止输入后自动保存；留空就用默认标题「${fallback}」——${titleBlankHint}`,
 
     iconHeading: '标签页图标',
     // #191：「才用这里选的图标」在选中「不显示图标」时读着别扭（选了「不显示」却说「用图标」）。
@@ -375,12 +375,12 @@ export const zh = {
   onboarding: {
     pageTitle: 'PageMask · 开始使用',
     title: '欢迎使用 PageMask',
-    sub: '在常看的网站上点选不想看的部分，把它们收起。你没添加的网站，PageMask 完全不碰。',
+    sub: '在常看的网站上点选不想看的部分，把它们收起；你没添加的网站，PageMask 完全不碰',
     prev: '上一步',
     next: '下一步',
     start: '开始使用',
     skip: '跳过引导',
-    tip: '两个设置入口在弹窗最下面：全部网站设置、插件设置。',
+    tip: '两个设置入口在弹窗最下面：全部网站设置、插件设置',
     /** 读屏播报当前步（#108）：切步时更新，不抢焦点 */
     stepStatus: (n: number, m: number, title: string) => `第 ${n} 步，共 ${m} 步：${title}`,
     steps: [
@@ -461,7 +461,7 @@ export const zh = {
     errorInvalid: (line: number) => `第 ${line} 行不是有效的选择器：每行只能写一个，不能包含 { } ; @ 或逗号`,
     errorNoHit: (line: number) => `第 ${line} 行在这个页面上找不到目标，不能保存`,
     /** 失效那一行为什么可能没用了 */
-    staleWhy: (name: string, scope: string) => `「${name}」最近找不到目标了，可能网站改版了。在哪些页面收起：${scope}`,
+    staleWhy: (name: string, scope: string) => `「${name}」最近在网站上找不到了，可能网站改版了；在哪些页面收起：${scope}`,
     /** 看效果一条都没有时（只剩失效项被删光） */
     draftsEmpty: '这个页面上没有用得上的收起设置。可以回到上一步再选一些内容',
     nameLabel: (seq: number) => `第 ${seq} 项的名称，留空就自动起名`,
@@ -481,7 +481,7 @@ export const zh = {
     /** 用 # 区分页面的网站推不出「这类页面」时的一句说明 */
     scopeHintHash: '这个网站用 # 后面的内容区分页面，暂时只能整个网站一起收起',
     /** 「上一步」写清退回去做什么：看效果退回选内容（选内容没有上一步） */
-    backToPick: '上一步：重新选内容',
+    backToPick: '上一步：重新点选要收起的内容',
     nextToPreview: (n: number) => `下一步：看效果（${n}）`,
     save: '保存',
     /** 保存中：按钮文字变进行时，不另写原因 */

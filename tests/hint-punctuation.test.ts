@@ -86,4 +86,35 @@ describe('常驻 hint 标点守门（design-copy 二、d 的自动化，#184）'
       }
     }
   });
+
+  // 反向登记（2026-11-14 #200 目检发现）：键名不含上面五个词、因此扫描天然漏掉、
+  // 但呈现形态同为「常驻说明」的键——规矩相同：结尾不带句号，分句用分号。
+  // - popup.mediaNotReady：弹窗 role=status 常驻说明（ui/popup/PopupBody.vue）
+  // - onboarding.sub / onboarding.tip：欢迎页常驻说明（entrypoints/onboarding）
+  // - wizard.staleWhy：看效果清单的失效行说明（ui/wizard/WizardApp.vue）
+  // 这些键改成 ⓘ / 对话框等允许句号的形态时，从这里移回并注明理由。
+  const NO_PERIOD = ['popup.mediaNotReady', 'onboarding.sub', 'onboarding.tip', 'wizard.staleWhy'];
+
+  function textAt(lang: 'zh' | 'en', path: string): string {
+    let value: unknown = MESSAGES[lang];
+    for (const seg of path.split('.')) {
+      if (value && typeof value === 'object') value = (value as Record<string, unknown>)[seg];
+      else return '';
+    }
+    if (typeof value === 'function') {
+      const fn = value as (...args: unknown[]) => unknown;
+      value = fn(...Array.from({ length: fn.length }, () => DUMMY));
+    }
+    return typeof value === 'string' ? value : '';
+  }
+
+  for (const lang of ['zh', 'en'] as const) {
+    it(`${lang}：反向登记的常驻说明键同样不带句号（#200 补扫描盲区）`, () => {
+      for (const path of NO_PERIOD) {
+        const text = textAt(lang, path);
+        expect(text, `反向登记键 ${lang}.${path} 取不到值：键被改名或移出文案表了，请同步 NO_PERIOD 清单`).not.toBe('');
+        expect(text, `${lang}.${path}：常驻说明不带句号，分句用分号`).not.toMatch(/[.。]$/);
+      }
+    });
+  }
 });

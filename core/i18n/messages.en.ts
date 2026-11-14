@@ -55,7 +55,7 @@ export const en: Messages = {
     infoLabel: 'More information',
     /** Blank-title caveat shared by three keys (see the const above) */
     titleBlankHint,
-    unnamedElement: 'Unnamed item',
+    unnamedElement: 'Unnamed hidden item',
     languageNameZh: '简体中文',
     languageNameEn: 'English',
     deleted: (name: string) => `Deleted “${name}”`,
@@ -70,7 +70,7 @@ export const en: Messages = {
     strategyHint: {
       remove: 'Gone, and the content below moves up',
       blank: 'Invisible, but the space stays',
-      mask: 'A block in the page color sits on top',
+      mask: 'A block matching the background sits on top',
     },
     scope: {
       all: 'The whole site',
@@ -155,7 +155,7 @@ export const en: Messages = {
     /** ⓘ popover (0.8.16, #153): details cut from the short hint live here, shown on hover / focus */
     mediaTooltip: 'The whole page turns black & white: same place, still readable, links still work. Autoplaying videos pause; click a video to watch it.',
     /** Page not ready but the profile is created (0.8.16, #154): an explanation, not an error */
-    mediaNotReady: 'This page hasn’t finished loading. Once it’s open, the whole page turns gray automatically.',
+    mediaNotReady: 'This page hasn’t finished loading; once it’s open, the whole page turns gray automatically',
     coverPage: 'Cover this page',
     /** Cover card: only the restore moment the user needs to judge (#148; #153; 0.9.3 drops "temporary", which repeats the button, and "changes no settings", which is jargon) */
     coverHint: 'Reloading or leaving this page restores it',
@@ -223,7 +223,7 @@ export const en: Messages = {
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title',
     titleFootnote: (fallback: string) =>
-      `Saved automatically once you stop typing; leave it empty to use “${fallback}” — ${titleBlankHint}`,
+      `Saved automatically once you stop typing; leave it empty to use the default title “${fallback}” — ${titleBlankHint}`,
 
     iconHeading: 'Tab icon',
     // #191: "uses this icon" read oddly with “No icon” picked — the choice covers all three
@@ -353,12 +353,12 @@ export const en: Messages = {
   onboarding: {
     pageTitle: 'PageMask · Getting started',
     title: 'Welcome to PageMask',
-    sub: 'Pick the parts you don’t want on the sites you visit often and hide them. PageMask never touches sites you didn’t add.',
+    sub: 'Pick the parts you don’t want on the sites you visit often and hide them; PageMask never touches sites you didn’t add',
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
     skip: 'Skip this guide',
-    tip: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”.',
+    tip: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”',
     /** Screen-reader announcement for the current step (#108): updated on step change, never steals focus */
     stepStatus: (n: number, m: number, title: string) => `Step ${n} of ${m}: ${title}`,
     steps: [
@@ -521,7 +521,7 @@ export const en: Messages = {
 
   notice: {
     saveFailed,
-    settingsFailed: 'Couldn’t open the extension settings. Please try again',
+    settingsFailed: 'Couldn’t open Settings. Please try again',
     /** Reading the profile failed and the wizard didn’t open (#168): one line beats a dead click */
     loadFailed: 'Couldn’t read the settings, so “Hide items” didn’t open. Try again later',
   },
