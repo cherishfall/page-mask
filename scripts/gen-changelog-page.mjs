@@ -142,10 +142,12 @@ function renderVersion(v) {
 const latest = versions[0];
 const count = versions.length;
 const mainContent = `    <div class="container policy">
+    <div class="page-head">
     <p class="back"><a class="text-link link-standalone" href="index.html"><span lang="zh-CN">← 返回首页</span><span lang="en">← Back to home</span></a></p>
     <h1><span lang="zh-CN">更新日志</span><span lang="en">Changelog</span></h1>
     <p class="policy-meta"><span lang="zh-CN">最新版本 ${latest.version} · ${latest.date} · 共 ${count} 个版本</span><span lang="en">Latest version ${latest.version} · ${latest.date} · ${count} versions</span></p>
     <p class="policy-note"><span lang="zh-CN">本页由仓库里的 <a class="text-link" href="https://github.com/cherishfall/page-mask/blob/master/CHANGELOG.md">CHANGELOG.md</a> 生成，内容逐条一致；每个版本下中文与英文逐条对应。</span><span lang="en">This page is generated from <a class="text-link" href="https://github.com/cherishfall/page-mask/blob/master/CHANGELOG.md">CHANGELOG.md</a> in the repository and matches it item by item; under each version, the Chinese and English texts correspond item by item.</span></p>
+    </div>
 
 ${versions.map(renderVersion).join('\n\n')}
   </div>`;
