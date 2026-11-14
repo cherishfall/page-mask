@@ -30,7 +30,8 @@
     "presets": "node scripts/gen-icons.mjs --presets",
     "notices": "node scripts/gen-notices.mjs",
     "check:docs": "node scripts/check-docs.mjs",
-    "check:package": "node scripts/check-package.mjs"
+    "check:package": "node scripts/check-package.mjs",
+    "changelog:page": "node scripts/gen-changelog-page.mjs"
   },
   "dependencies": {
     "css-selector-generator": "3.9.4",

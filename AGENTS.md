@@ -81,7 +81,7 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 | 位置 | 用途 |
 |---|---|
 | `README.md` | 面向用户与 Chrome 商店审核：产品意图、安装、使用方法（中英双语） |
-| `CHANGELOG.md` | 版本发布说明（中英双语） |
+| `CHANGELOG.md` | 版本发布说明（中英双语）；在线版更新日志页由 `npm run changelog:page` 从它生成（见下「发版前对外文档同步」） |
 | `docs/GLOSSARY.md` | 术语表（唯一权威，含每个概念的「界面用词」） |
 | `docs/PRIVACY.md` | 隐私政策（英文为准 + 中文译文），在线版与商店隐私政策 URL 指向 `https://cherishfall.github.io/page-mask/privacy.html`（与本文件逐条等义） |
 | `docs/CHROMEWEBSTORE.md` | 商店提交材料：名称与简介、详细描述、权限逐项理由、单一用途、审核员备注与测试步骤、隐私表单填法、版本历史、截图清单 |
@@ -99,6 +99,12 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 - **一票一提交一推送**：每张票做完立刻 `npm run compile` + 测试过关，然后 commit、push 到 master，再关票、更新 HANDOFF。不许攒着最后一起推。
 - **完成一个可验收粒度的功能就 commit + push**（远程 `cherishfall/page-mask`，`master` 分支），不要攒大包提交。
 - commit message 用 Conventional Commits（type/scope 英文，正文可中文）。
+- **发版前对外文档同步（四件套，漏一件就是没发完版）**：升版本号的每次发版，以下对外公开文档必须同步更新并推送——
+  1. `CHANGELOG.md` 中英双语条目（Keep a Changelog 结构）；
+  2. **在线更新日志页**：落地页仓库（`cherishfall/cherishfall.github.io`，工作副本放 `tmp/pages-repo`）里跑 `npm run changelog:page`，从 `CHANGELOG.md` 重新生成 `page-mask/changelog.html`（生成页勿手改，样式与页头页脚随 privacy.html 模板走），随落地页一起 commit + push；
+  3. `README.md`：安装方式、使用方法、权限说明有变化时同步（中英两份）；
+  4. **在线隐私政策页**：`docs/PRIVACY.md` 内容有变化时同步落地页仓库的 `page-mask/privacy.html`（两版逐条等义是商店要求，措辞漂移会让审核员比对不上）。
+  落地页正文（功能介绍、安装、FAQ）有变化时同批更新。发版完整流程见 `docs/store-submission-guide.md` §6.1。
 - 遇到超出 `docs/design.md` 已定范围的技术决策：**先调研成熟开源项目**（uBlock Origin、Dark Reader、Tabee/chrome-tab-modifier 等）的做法，综合做出合理决策后继续推进，不阻塞等待用户；重要取舍事后补记 ADR 或 DEVLOG。
 - 实现的结构与写法参考成熟插件，力争最佳实践；设计文档中「永不做」清单（快捷键、全局总开关、预置规则、远程订阅、右键菜单、免保存临时隐藏）任何情况下不得违反。
 - **修一类，不是修一个**：用户指出某处问题（文案、交互、样式、行为）时，先判断它属于哪一类，然后在全项目内审计同类位置——其他页面、同一页面的其他状态、其他入口，以及中英两份文案的对应处——一次性全部修掉，不要等用户一页一页地报。收尾时在 commit 正文或 DEVLOG 里写明审计范围与结论：哪些位置同类、各自怎么改、哪些确认不受影响；给用户的回复里也补一行「同类位置扫过哪些，其余无同类」（见 `docs/dev/visual-review.md`）。

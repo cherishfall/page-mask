@@ -518,15 +518,16 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 1. 改代码 → 提票 → 合并（仓库规矩：一票一提交一推送）。
 2. **升版本号**：`package.json` 的 `version` 必须**大于**已发布的版本（官方硬性要求："Each new version must have a larger version number than the previous version"）。
 3. `CHANGELOG.md` 加中英双语条目（Keep a Changelog 结构）。
-4. `docs/CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
-5. `npm run build && npm run zip && npm run check:package` → 得到 `.output/page-mask-<版本>-chrome.zip`。
-6. 打 tag（`v<版本>`，annotated）+ 发 GitHub Release，附上 zip。**要不要同步 GitHub Release？——要。** 它是本项目对外的版本分发渠道（商店条目在审核通过前给不了用户可装的东西），也是审核员备注里可以引用的公开坐标。
-7. 控制台：商品页 → **Package** 标签页 → **Upload New Package** → 选新 zip。
+4. **在线更新日志页与落地页**（仓库 `cherishfall/cherishfall.github.io`，工作副本放 `tmp/pages-repo`，git 记得带代理前缀）：把该仓库更新到最新，跑 `npm run changelog:page`——它从 `CHANGELOG.md` 重新生成 `page-mask/changelog.html`（生成页勿手改），随落地页一起 commit + push。安装方式、界面措辞或 `docs/PRIVACY.md` 有变化时，同批更新落地页正文与 `page-mask/privacy.html`（中英两份，政策两版必须逐条等义）。
+5. `docs/CHROMEWEBSTORE.md` 同步：头部「对应构建」、材料 §0 清单、材料 §7 版本历史表、材料 §11 复核结论。
+6. `npm run build && npm run zip && npm run check:package` → 得到 `.output/page-mask-<版本>-chrome.zip`。
+7. 打 tag（`v<版本>`，annotated）+ 发 GitHub Release，附上 zip。**要不要同步 GitHub Release？——要。** 它是本项目对外的版本分发渠道（商店条目在审核通过前给不了用户可装的东西），也是审核员备注里可以引用的公开坐标。
+8. 控制台：商品页 → **Package** 标签页 → **Upload New Package** → 选新 zip。
    - **再点一次 Submit for Review**（上传新包不会自动送审）。
    - 审核通过前，已装的用户不受影响（"When you submit an update for review, it doesn't yet affect your published item"）。
    - 新包会发布到**和上一版相同的可见性**（Public 还是 Unlisted），要换可见性得在 Distribution 页改。
    - **新增权限**会弹给用户“接受新权限或停用扩展”的提示——PageMask 权限集合不变就不会有。
-8. 发布后可以开 **Percentage rollout**（灰度放量），但**只有 7 日活跃用户超过 10,000 的 item 才有这个选项**——新扩展用不上。
+9. 发布后可以开 **Percentage rollout**（灰度放量），但**只有 7 日活跃用户超过 10,000 的 item 才有这个选项**——新扩展用不上。
    - <https://developer.chrome.com/docs/webstore/update/>
 
 ### 6.2 出事了怎么办
