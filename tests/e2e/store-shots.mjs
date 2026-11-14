@@ -396,8 +396,11 @@ try {
   );
 
   // 6. 小胶囊「⋯」菜单五项 + 幕布恢复按钮
-  // 重新种回 ORIGIN 的配置（上面为管理页素材清过库），再开一个页面
+  // 重新种回 ORIGIN 的配置（上面为管理页素材清过库），再开一个页面。
+  // 种回触发 storage.onChanged 对账是后台异步的：等对账完成再开页面，否则页面可能
+  // 先于重新注册加载完（registerContentScripts 只影响后续导航），内容脚本永远不会注入。
   await setProfile(control, ORIGIN, demoProfile());
+  await sendToBackground(control, { t: 'reconcile' });
   const cp = await browser.newPage();
   await cp.setViewport({ width: 1280, height: 800 });
   await cp.goto(ORIGIN, { waitUntil: 'load' });
