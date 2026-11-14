@@ -53,6 +53,7 @@ describe('applyKey：判断存储变化是否需要整页重新应用', () => {
       applyKey(presetDoc, settings, URL_A),
       applyKey(presetSheet, settings, URL_A),
       applyKey(profile(), { defaultTitle: '文档' }, URL_A),
+      applyKey(profile(), { defaultTitle: null, uiLanguage: 'en' }, URL_A),
       applyKey(profile(), settings, 'https://site.test/b'),
     ]) {
       expect(key).not.toBe(base);
@@ -66,5 +67,14 @@ describe('applyKey：判断存储变化是否需要整页重新应用', () => {
     const on = profile();
     on.titleIconSet = true;
     expect(applyKey(on, settings, URL_A)).not.toBe(applyKey(base, settings, URL_A));
+  });
+
+  it('界面语言切换：需要重应用（语言兜底标题要跟着变，#214）', () => {
+    // 站点与全局都没设标题时，effectiveTitle 按 settings.uiLanguage 显式选择兜底文案
+    const zh = applyKey(profile(), { defaultTitle: null, uiLanguage: 'zh' }, URL_A);
+    const en = applyKey(profile(), { defaultTitle: null, uiLanguage: 'en' }, URL_A);
+    expect(en).not.toBe(zh);
+    // 缺省（跟随浏览器）与显式选择也不同键
+    expect(applyKey(profile(), settings, URL_A)).not.toBe(zh);
   });
 });

@@ -10,7 +10,7 @@ import type { GlobalSettings, SiteProfile } from './types';
 
 export function applyKey(
   profile: SiteProfile,
-  settings: Pick<GlobalSettings, 'defaultTitle'>,
+  settings: Pick<GlobalSettings, 'defaultTitle' | 'uiLanguage'>,
   url: string,
 ): string {
   // 图标三态（#121）摊成扁平字符串：对象不能直接进键（引用不同会让键恒变）
@@ -29,6 +29,9 @@ export function applyKey(
     // 拨了开关页面不重应用
     profile.mediaGray === true,
     settings.defaultTitle,
+    // 界面语言（#214）：只靠语言兜底标题的站点（站点与全局都没设标题），切换语言后
+    // effectiveTitle 的结果会变，键里不计入就会在「键没变」处提前返回，已开页面的假标题不刷新
+    settings.uiLanguage ?? null,
     profile.hideRules.map(({ lastHealth: _h, lastHealthAt: _t, ...rest }) => rest),
   ]);
 }
