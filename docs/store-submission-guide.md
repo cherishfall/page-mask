@@ -50,7 +50,7 @@ unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json
 | # | 事 | 为什么必须你做 | 见本文 |
 |---|---|---|---|
 | 1 | 注册开发者账号 + 付注册费 + 开两步验证 + 验证邮箱 | 涉及你的 Google 账号与付款 | §1.1–§1.4 |
-| 2 | 确认 `cherishfall@hotmail.com` 能正常收信（要加白名单、防垃圾箱） | 拒审/下架通知只发这一个邮箱 | §1.7 |
+| 2 | 确认通知通道畅通：通知发到登录账号邮箱（Gmail），在 Gmail 设置转发到 hotmail + 白名单 `chromewebstore-noreply@google.com` | 拒审/下架通知强制发到开发者账号邮箱 | §1.7 |
 | 3 | 照材料 §6 八步在**真实 Chrome** 上人工实走一遍；复核两条快捷键真能按 | 自动化触发不了 Chrome 的「允许」授权弹窗和 `chrome://extensions/shortcuts` | §4.2 |
 | 4 | 点「Submit for review」，并决定要不要自动发布 | 这是「提交商店」与「公开发布」的分界点 | §2.7、§5.1 |
 | 5 | 在控制台声明 Trader / Non-Trader 身份（PageMask 免费、无内购，按官方定义大概率 Non-Trader；法律判断由你拍板） | 账号级合规必答，漏报可能被下架或部分地区不可见 | §1.8 |
@@ -87,9 +87,11 @@ unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json
 4. **国家/地区**：官方注册页列出支持的地区，**中国大陆（China）在列表内**，香港、澳门、台湾也在（已核对该页列表）。<https://developer.chrome.com/docs/webstore/register/>
 5. **账号建成后邮箱不能改**："After an account is created, you cannot change its email address."。想换邮箱只能新建账号并提交转移表单。所以这一步的邮箱要选好，不要用临时邮箱。
    - **两个邮箱别混**（官方 set-up-account 页原文口径）：**登录用的 Google 账号邮箱 = 通知邮箱**（"Any notifications will be sent to your Chrome Web Store developer account email"——拒审、下架都强制发到这里）；**Account 页「Verify your email」= 商店对外显示的联系邮箱**（"Only displayed under your extensions' contact information"），点 Add email 填哪个验证哪个，可以与登录邮箱不同。
-   - **两种走法**：A. 直接用现有个人 Gmail 账号注册，Account 页把 `cherishfall@hotmail.com` 加进去验证——对外显示与全部材料一致，个人 Gmail 只收通知不对外公开；B. **用 `cherishfall@hotmail.com` 新建一个专用 Google 账号**（Google 支持用现有邮箱注册，不会产生新 Gmail）——登录、通知、对外联系三者同源，符合官方「发布用专用邮箱」建议，个人 Gmail 完全隔离。**推荐 B**：通知（拒审/下架）发到你天天看的 GitHub 邮箱收件箱，不会漏。
-   - **建新账号时的选择**（2026-11-14 已按 B 走）：账号类型选 **「用于个人用途」**（「用于管理企业」会引导建 Google 商家资料，面向实体商家，与 Non-Trader 口径相悖且多余）；「为何创建」选「为自己创建」；邮箱选 **「使用当前的电子邮件地址」** 填 hotmail（不产生新 Gmail），Google 发验证码到 hotmail 确认归属；建好立刻开两步验证（发布硬要求），并把新账号的辅助邮箱 / 手机设为常用通道（专用账号更要留恢复途径）。
-   - **前提坑**：同一个非 Gmail 邮箱地址同时只能挂在一个 Google 账号上。若 hotmail 已是 Gmail 账号的辅助邮箱（本机实况），先在 Gmail 的 安全性 → 辅助邮箱 里删除解绑（解绑前先给 Gmail 补上手机号等恢复方式），才能拿它注册新账号；不想动 Gmail 就直接走 A。解绑不影响后续在 CWS Account 页把 hotmail 验证为对外联系邮箱（那是 CWS 自己的邮箱验证，与 Google 账号层级绑定无关）。
+   - **两种走法**（2026-11-14 已拍板走 A）：
+     - **A. 用现有个人 Gmail 账号（已拍板）**：Account 页把 `cherishfall@hotmail.com` 加进去验证为对外联系邮箱——对外显示与全部材料一致，个人 Gmail 只收通知、不对外公开。**拍板理由**：老账号状态好（恢复通道齐全、支付与风控摩擦小），免费个人扩展不值得为隔离多养一个账号。**配套动作**：① 确认两步验证开着（发布硬要求）；② Gmail 设置 → 转发和 POP/IMAP → 自动转发到 hotmail（验证 hotmail 后生效；或只建过滤器转发 `chromewebstore-noreply@google.com`）——拒审/下架通知落进你天天看的收件箱；③ 把 `chromewebstore-noreply@google.com` 加进 Gmail 白名单。
+     - **B. 用 `cherishfall@hotmail.com` 新建专用 Google 账号（备选，留档）**：登录、通知、对外联系三者同源，符合官方「发布用专用邮箱」软建议，个人 Gmail 完全隔离；代价是多养一个账号（两步验证、恢复通道）。若日后商业化或需要转移，走法 A 的门也没焊死（Google 有账号间转移表单）。
+   - **建新账号时的选择**（若日后改走 B，2026-11-14 调研留档）：账号类型选 **「用于个人用途」（「用于管理企业」会引导建 Google 商家资料，面向实体商家，与 Non-Trader 口径相悖且多余）；「为何创建」选「为自己创建」；邮箱选 **「使用当前的电子邮件地址」** 填 hotmail（不产生新 Gmail），Google 发验证码到 hotmail 确认归属；建好立刻开两步验证（发布硬要求），并把新账号的辅助邮箱 / 手机设为常用通道（专用账号更要留恢复途径）。
+   - **前提坑（仅走 B 才相关）**：同一个非 Gmail 邮箱地址同时只能挂在一个 Google 账号上。若 hotmail 已是 Gmail 账号的辅助邮箱（本机实况），先在 Gmail 的 安全性 → 辅助邮箱 里删除解绑（解绑前先给 Gmail 补上手机号等恢复方式），才能拿它注册新账号。解绑不影响后续在 CWS Account 页把 hotmail 验证为对外联系邮箱（那是 CWS 自己的邮箱验证，与 Google 账号层级绑定无关）。
 6. 官方建议：用**专门发商店发布用**的邮箱，并且要经常看（拒审、下架通知都发这里）。
 
 > 注册时问“是否同时在 Google Play 上架”之类，PageMask 不涉及。
@@ -159,11 +161,11 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 **点验方法（务必做）**：开一个**没有登录状态**的浏览器窗口（无痕 / 另一台没登过 GitHub 的机器）打开链接。审核员没有你的登录态，你登录状态下能看不代表审核员能看。
 
-### 1.7 确认联系邮箱可用
+### 1.7 确认通知与联系邮箱可用（走法 A，2026-11-14 定）
 
-- `cherishfall@hotmail.com` 要能正常收信。
-- 建议把 `chromewebstore-noreply@google.com` 加进联系人/白名单，官方明确建议："add chromewebstore-noreply@google.com to your contacts so that you receive all communications in a timely manner"（<https://developer.chrome.com/docs/webstore/check-review/>）。
-- 拒审、下架通知只发这个邮箱；漏看邮件会一路拖到下架。
+- **通知发到登录账号邮箱**（Gmail）：把 `chromewebstore-noreply@google.com` 加进 Gmail 联系人/白名单，官方明确建议："add chromewebstore-noreply@google.com to your contacts so that you receive all communications in a timely manner"（<https://developer.chrome.com/docs/webstore/check-review/>）；再设自动转发到 hotmail（Gmail 设置 → 转发和 POP/IMAP，验证 hotmail 后生效），让通知落到天天看的收件箱。
+- **对外联系邮箱**（`cherishfall@hotmail.com`，Account 页验证的那个）：显示在商店页上，用户与审核员看得到，要能正常收信。
+- 拒审、下架通知强制发登录邮箱，漏看会一路拖到下架；控制台商品页 Status 标签页同步显示，两处都看一眼最稳。
 
 ### 1.8 Trader / Non-Trader 声明（账号级必答，漏报会被下架或区域不可见）
 
