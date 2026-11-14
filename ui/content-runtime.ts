@@ -163,6 +163,11 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const shield = createFirstPaintShield(document);
   const media = createMediaController(document);
   const styles = createDocStyles((m: BgRequest) => browser.runtime.sendMessage(m), takeover);
+  // 必须排在实例样式队列的第一位：先撤旧实例的孤儿，之后任何 insert 都在其后——
+  // 「有孤儿」= 先删旧再插新（各一份），「无孤儿」= removeCSS 对不上是空操作。若排在
+  // 首次 insert 之后，无孤儿时会把刚插入的自己那份当成同文本删掉，规则静默失效
+  // （发版门禁 run-e2e 首场景抓到：初始化快路径的 syncFormal 先于 activate 执行）。
+  if (orphanReleaseNeeded) void styles.releaseOrphans(location.href);
   const { prerendering, activated } = whenActivated(ctx);
   /** 依赖 DOM / 需要页面已被用户打开的部分（遮罩、体检回写、悬浮按钮）在此之后进行 */
   const uiReady = Promise.all([whenDomReady(ctx), activated]).then(() => undefined);
@@ -997,10 +1002,7 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     ctx.addEventListener(document, 'visibilitychange', () => void ctx.isValid);
     // 预渲染激活：预渲染期间已注入样式、压过标题（激活瞬间不闪），激活后再按最新状态同步一次并挂界面
     if (prerendering) void activated.then(() => scheduleRefresh({ force: true }));
-    void scheduleRefresh().then(() => {
-      // 自己的一份已经插上（样式链串行），再请后台撤掉旧实例留下的那份：同文本插几次要删几次，中间不闪
-      if (orphanReleaseNeeded) void styles.releaseOrphans(location.href);
-    });
+    void scheduleRefresh();
   }
 
   // ---------- 收尾（ctx 失效） ----------
