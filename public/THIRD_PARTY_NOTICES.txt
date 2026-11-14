@@ -5,7 +5,7 @@ notices and license texts are reproduced below as required by their licenses.
 本扩展打包包含以下第三方软件，按其许可要求在此保留版权声明与许可文本。
 
 ------------------------------------------------------------------------------
-@vue/reactivity@3.5.44
+@vue/reactivity@3.5.45
 License: MIT
 Repository: https://github.com/vuejs/core.git
 
@@ -32,7 +32,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-@vue/runtime-core@3.5.44
+@vue/runtime-core@3.5.45
 License: MIT
 Repository: https://github.com/vuejs/core.git
 
@@ -59,7 +59,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-@vue/runtime-dom@3.5.44
+@vue/runtime-dom@3.5.45
 License: MIT
 Repository: https://github.com/vuejs/core.git
 
@@ -86,7 +86,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-@vue/shared@3.5.44
+@vue/shared@3.5.45
 License: MIT
 Repository: https://github.com/vuejs/core.git
 
@@ -167,7 +167,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ------------------------------------------------------------------------------
-vue@3.5.44
+vue@3.5.45
 License: MIT
 Repository: https://github.com/vuejs/core.git
 
@@ -194,7 +194,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-wxt@0.21.4
+wxt@0.21.5
 License: MIT
 Repository: https://github.com/wxt-dev/wxt.git
 

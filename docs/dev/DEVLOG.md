@@ -2,6 +2,16 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 依赖刷新批（2026-11-14，1.0.0 送审后）：官方源精确版本升级 + 两项兼容性实验
+
+用户拍板「趁现在升到最新」。Dependabot 周检攒的 5 个 PR 先关（每个都留了说明），随后按仓库纪律手动升级（`npm install pkg@精确版本 --save-exact --registry=registry.npmjs.org`，升级后跑 `npm run notices`，lockfile npmmirror 零残留）：
+
+- **已升级**：vue 3.5.44→3.5.45（补丁）、vue-tsc 2.2.12→**3.3.14**（Volar 3 大版本，`vue-tsc --noEmit` 零错误零新告警）、wxt 0.21.4→0.21.5（补丁）、vitest + @vitest/coverage-v8 5.0.5→5.1.0（minor）。
+- **jsdom 29.1.1→31.0.1 试过又回退**：jsdom 31 的 DOM 模拟行为变化会让 css-selector-generator（库本身没动）产出不同选择器——`.side > div` 变 `.side div`（同命中集），且「整页无特征元素」场景候选直接为空。二分定位到 jsdom 31（vitest 5.1.0 无辜）。jsdom 只进测试环境不随包发布，产品零影响；但在没查清是库的问题还是 jsdom 31 更真实之前，改测试期望等于自欺——回退 29.1.1，留票等调查。本机 node 22.20 与 jsdom 31 engines 无冲突。
+- **TypeScript 5.9.3→7.0.2 试过又回退**：vue-tsc 3.3.14 在 TS 7 下直接崩（`ERR_PACKAGE_PATH_NOT_EXPORTED` at `resolveTscPath`——TS 7 不再导出 vue-tsc 解析的 JS 编译器入口）。等 vue-tsc 官方支持 TS 7 再评估；届时收益是编译速度（Go 原生），不急。
+- **门禁**：compile、单测 847 项（57 文件）、E2E 十脚本 1110 项断言（完整记录 tmp/e2e-deps.log）、check:package / check:docs 全绿；产物 manifest 字段与 1.0.0 一致。
+- **与送审的关系**：审核中的 1.0.0 包冻结在 tag `v1.0.0` 与 Release 资产里不受影响；本批只进 master，随下一个版本（审核通过当天如果需要发修复版，就是 1.0.1）带出去。
+
 ## 1.0.0 发版（2026-11-14）：首个 Chrome 应用商店提交版本
 
 - **发版内容**：五票审查修复（#197–#201：材料口径、指南修正、商店元数据禁词、界面文案小修、文档一致性）+ 版本号 1.0.0 + CHANGELOG 双语条目 + 材料/指南全量版本态同步 + package-lock 根包版本对齐（0.5.0 → 1.0.0，`npm install --package-lock-only --registry=https://registry.npmjs.org` 重建，npmmirror 零残留）。
