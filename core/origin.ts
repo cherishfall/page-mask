@@ -182,7 +182,7 @@ export function deriveScopePattern(url: string): ScopePattern | null {
 }
 
 /** 把网址规范成浏览器的标准形式（编码中文、去默认端口），解析失败原样返回 */
-function canonicalUrl(url: string): string {
+export function canonicalUrl(url: string): string {
   try {
     return new URL(url).href;
   } catch {

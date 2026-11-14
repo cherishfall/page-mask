@@ -132,6 +132,34 @@ describe('sanitizeScope 的 label 长度上限（#192）', () => {
   });
 });
 
+describe('sanitizeScope 的前缀归一（#202）', () => {
+  it('显式默认端口归一成不带端口的形式（导入文件可能出现，否则范围静默永不生效）', () => {
+    const scope = sanitizeScope(
+      { type: 'include', patterns: [{ label: '阅读页', prefix: 'https://a.com:443/web/reader' }] },
+      'a.com',
+    );
+    expect(scope).toEqual({
+      type: 'include',
+      patterns: [{ label: '阅读页', prefix: 'https://a.com/web/reader' }],
+    });
+  });
+
+  it('非默认端口保留不动；中文路径编码归一', () => {
+    const scope = sanitizeScope(
+      { type: 'include', patterns: [{ label: '页', prefix: 'https://a.com:8443/读书' }] },
+      'a.com:8443',
+    );
+    expect(scope).toEqual({
+      type: 'include',
+      patterns: [{ label: '页', prefix: 'https://a.com:8443/%E8%AF%BB%E4%B9%A6' }],
+    });
+  });
+
+  it('解析失败的输入维持原行为：交给站点 key 校验把关', () => {
+    expect(sanitizeScope({ type: 'include', patterns: [{ label: '页', prefix: '不是网址' }] }, 'a.com')).toBeNull();
+  });
+});
+
 describe('sanitizeProfile', () => {
   it('capsuleHidden 只有显式 true 才落字段（#111）：缺省 = 显示，旧数据兼容', () => {
     // 显式 true 保留

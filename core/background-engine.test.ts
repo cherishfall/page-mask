@@ -67,6 +67,8 @@ function stubBrowser() {
     getAll: vi.fn(async () => ({ origins: [...granted] })),
     contains: vi.fn(async ({ origins }: { origins: string[] }) => origins.every((o) => granted.has(o))),
     remove: vi.fn(async ({ origins }: { origins: string[] }) => {
+      // Chrome 语义是原子的：批次里任何一条未被授予，整个调用拒绝、一条都不收回（#202）
+      if (!origins.every((o) => granted.has(o))) throw new Error('Non-granted origins cannot be removed');
       for (const o of origins) granted.delete(o);
       return true;
     }),
@@ -818,7 +820,8 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(stubs.sendMessage).not.toHaveBeenCalledWith(otherTab, expect.anything());
       expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
       expect(stubs.registered.size).toBe(0);
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+      // 批次只装实际持有的模式（#202）：configure 只授了裸域一条，子域通配不该进批次
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
 
@@ -844,6 +847,69 @@ describe('后台引擎（fakeBrowser）', () => {
 
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
+
+    it('迁移前只授了旧精确模式：批次只装实际持有的模式（remove 是原子的，#202）', async () => {
+      await configure(ORIGIN);
+      for (const p of sitePatterns(ORIGIN)) stubs.granted.delete(p);
+      const legacy = `https://${ORIGIN}/*`;
+      stubs.granted.add(legacy);
+
+      expect(await send({ t: 'resetSite', origin: ORIGIN })).toEqual({ ok: true });
+
+      // 旧批次把两条从未授予的规范模式也塞进去，真实的 Chrome 会整批拒绝、一条都收不回
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [legacy] });
+      expect(stubs.granted.has(legacy)).toBe(false);
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
+
+    it('该站点名下什么都没授予（或只有归不进站点的全站通配）时：跳过 remove，删除照常（#202）', async () => {
+      await configure(ORIGIN);
+      stubs.granted.clear();
+
+      await send({ t: 'resetSite', origin: ORIGIN });
+
+      expect(stubs.permissions.remove).not.toHaveBeenCalled();
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+
+      // 全站通配（*://*/*）归不进任何站点：删一个站不该动全局授权
+      await configure(ORIGIN, { grant: false });
+      stubs.granted.add('*://*/*');
+
+      await send({ t: 'resetSite', origin: ORIGIN });
+
+      expect(stubs.permissions.remove).not.toHaveBeenCalled();
+      expect(stubs.granted.has('*://*/*')).toBe(true);
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
+
+    it('getAll 瞬时异常：回退规范批次尽力而为，删除动作照常（#186/#202）', async () => {
+      await configure(ORIGIN);
+      stubs.permissions.getAll.mockRejectedValueOnce(new Error('transient'));
+
+      await send({ t: 'resetSite', origin: ORIGIN });
+
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
+
+    it('慢标签页第一轮超时：再等一轮、应答之后才收回授权（#202）', async () => {
+      await configure(ORIGIN);
+      stubs.sendMessage.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 2000)),
+      );
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+      try {
+        const pending = send({ t: 'resetSite', origin: ORIGIN });
+        await vi.advanceTimersByTimeAsync(1600);
+        expect(stubs.permissions.remove).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1500);
+        await pending;
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(stubs.permissions.remove).toHaveBeenCalled();
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
+    });
   });
 
   describe('resetSiteHere（页面 ⋯ 菜单的「删除这个网站的设置」，#56）', () => {
@@ -863,13 +929,15 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(await send({ t: 'resetSiteHere' }, DOC_SENDER)).toEqual({ ok: true });
 
       expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+      // 批次只装实际持有的模式（#202），同 resetSite
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
       expect(stubs.registered.size).toBe(0);
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
 
     it('消息里带的来源不生效：只按 sender 判断（换个来源也删自己这一站）', async () => {
       await configure(OTHER);
+      for (const p of sitePatterns(ORIGIN)) stubs.granted.add(p);
       stubs.sendMessage.mockResolvedValue({ ok: true });
 
       await send({ t: 'resetSiteHere', origin: OTHER }, DOC_SENDER);
@@ -898,8 +966,19 @@ describe('后台引擎（fakeBrowser）', () => {
 
       expect(await send({ t: 'cancelNewSite' }, DOC_SENDER)).toEqual({ ok: true });
 
-      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: sitePatterns(ORIGIN) });
+      // 批次只装实际持有的模式（#202）：fake 只授了裸域一条，子域那条不该进批次
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
       expect(stubs.granted.has(pattern(ORIGIN))).toBe(false);
+    });
+
+    it('迁移前只授了旧精确模式：只收回实际持有的那条（#202）', async () => {
+      const legacy = `https://${ORIGIN}/*`;
+      stubs.granted.add(legacy);
+
+      expect(await send({ t: 'cancelNewSite' }, DOC_SENDER)).toEqual({ ok: true });
+
+      expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [legacy] });
+      expect(stubs.granted.has(legacy)).toBe(false);
     });
 
     it('站点已有配置（例如另一个标签页刚保存过）：什么都不收回', async () => {

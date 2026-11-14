@@ -9,7 +9,7 @@
  * - 生效范围 / 收起方案：白名单；范围前缀必须落在同一个站点内（仍按页面实际 URL 匹配）
  * - 全局设置：按 schema 读取，类型不对用默认值
  */
-import { normalizeOrigin } from './origin';
+import { canonicalUrl, normalizeOrigin } from './origin';
 import { isValidSiteKey, siteKey } from './site-key';
 import { isUiLanguage } from './i18n/locale';
 import { normalizeToggleOpacity } from './toggle-opacity';
@@ -134,13 +134,16 @@ export function sanitizeScope(v: unknown, site?: string): Scope | null {
   const patterns: ScopePattern[] = [];
   for (const p of v.patterns) {
     if (!isObject(p) || typeof p.label !== 'string' || typeof p.prefix !== 'string') return null;
-    const okPrefix = site ? siteKey(p.prefix) === site : normalizeOrigin(p.prefix) !== null;
+    // 前缀先归一（#202）：导入文件可能带显式默认端口（https://x:443/a）——URL 合法、校验放行，
+    // 但页面 URL 规范化后不带默认端口，startsWith 永假，这条范围会静默永不生效
+    const prefix = canonicalUrl(p.prefix);
+    const okPrefix = site ? siteKey(prefix) === site : normalizeOrigin(prefix) !== null;
     if (!okPrefix) return null;
     // 匹配方式白名单：缺省（前缀）或 'exact'（精确页面）
     if (p.match !== undefined && p.match !== 'exact') return null;
     // label 截到与标题同一上限（#192）：slice 按 UTF-16 码元切会劈开代理对，按码点切（#177 同款）
     const label = [...p.label].slice(0, MAX_SCOPE_LABEL_LENGTH).join('');
-    patterns.push(p.match === 'exact' ? { label, prefix: p.prefix, match: 'exact' } : { label, prefix: p.prefix });
+    patterns.push(p.match === 'exact' ? { label, prefix, match: 'exact' } : { label, prefix });
   }
   return { type: v.type, patterns };
 }

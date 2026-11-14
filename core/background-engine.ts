@@ -43,7 +43,7 @@ import type {
   ReconcileResponse,
 } from './messages';
 import { fromExtensionPage as isExtensionPageSender } from './messages';
-import { t } from './i18n';
+import { resolveLocale, setLocale, t } from './i18n';
 import { isSupportedPage } from './origin';
 
 export interface BackgroundDeps {
@@ -68,6 +68,16 @@ function siteKeyOfUrl(url: string | undefined): string | null {
 export function createBackground({ browser }: BackgroundDeps): void {
   const storage = createPageMaskStorage(browser.storage.local);
   const extensionBase = browser.runtime.getURL('/');
+
+  /** 后台也出文案（快捷键被挡的角标悬停说明，#202）：跟随全局设置里的界面语言。
+   *  SW 每次唤醒重跑一遍；运行中 settings 变化由 onChanged 里的再同步跟上 */
+  function syncBackgroundLocale(): void {
+    void storage
+      .getSettings()
+      .then((s) => setLocale(resolveLocale(s.uiLanguage)))
+      .catch(() => undefined);
+  }
+  syncBackgroundLocale();
 
   /** 特权消息只接受本扩展自己的页面（popup / 管理页 / 引导页），网页里的内容脚本一律拒绝（REVIEW B26） */
   function fromExtensionPage(sender: Sender): boolean {
@@ -432,7 +442,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   // ---------- 一键清空 ----------
 
-  /** 通知某站点（含其子域）所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），带超时 */
+  /** 通知某站点（含其子域）所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除）。
+   *  慢页面给两轮超时（#202）：授权收回去之后它的 removeCSS 必败，会留一份删不掉的
+   *  隐藏样式直到下次导航，所以多等一轮再走 REVIEW B7 的收回步骤 */
   async function restoreOpenTabs(key: string): Promise<void> {
     let tabs: Browser.tabs.Tab[] = [];
     try {
@@ -440,14 +452,20 @@ export function createBackground({ browser }: BackgroundDeps): void {
     } catch {
       return;
     }
-    const targets = tabs.filter((t) => t.id !== undefined && siteKeyOfUrl(t.url) === key);
-    await Promise.allSettled(
-      targets.map((t) =>
-        Promise.race([
-          browser.tabs.sendMessage(t.id!, { t: 'siteReset' }),
-          new Promise((resolve) => setTimeout(resolve, SITE_RESET_TIMEOUT_MS)),
-        ]),
-      ),
+    const targets = tabs
+      .filter((t) => t.id !== undefined && siteKeyOfUrl(t.url) === key)
+      .map((t) => t.id!);
+    await Promise.all(
+      targets.map(async (tabId) => {
+        // 应答或送达失败（内容脚本不在）都算「有了结果」；只有干等超时才需要第二轮
+        const ack = browser.tabs.sendMessage(tabId, { t: 'siteReset' }).then(
+          () => true,
+          () => true,
+        );
+        const timeout = () => new Promise<false>((resolve) => setTimeout(() => resolve(false), SITE_RESET_TIMEOUT_MS));
+        if (await Promise.race([ack, timeout()])) return;
+        await Promise.race([ack, timeout()]);
+      }),
     );
   }
 
@@ -456,15 +474,19 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const key = siteKey(input);
     if (!key) return { ok: false, error: 'invalid site key' };
     const granted = await allGrantedPatterns(browser);
-    // 收回这个站点名下的全部模式：规范的两条 + 迁移前用户持有的旧精确模式。
-    // getAll 瞬时异常（#186）时收不回旧精确模式，但删除动作照常完成，不能整个中断
-    const legacy = granted ? grantedPatternsFor(key, granted) : [];
-    const patterns = [...new Set([...sitePatterns(key), ...legacy])];
+    // permissions.remove 是原子的：批次里任何一条当前未被授予，整批拒绝、一条都不收回（#202）。
+    // 批次只能装「实际持有」的模式（含迁移前用户的旧精确模式）；getAll 瞬时异常（#186）拿不到
+    // 实况时，才回退规范两条尽力而为——删除动作照常完成，不能整个中断。
+    // 全站通配（*://*/*）归不进任何站点，同样跳过：删一个站不该动全局授权
+    const held = granted ? grantedPatternsFor(key, granted) : null;
+    const patterns = held ?? sitePatterns(key);
     await restoreOpenTabs(key);
-    try {
-      await browser.permissions.remove({ origins: patterns });
-    } catch {
-      // 忽略
+    if (held === null || held.length > 0) {
+      try {
+        await browser.permissions.remove({ origins: patterns });
+      } catch {
+        // 忽略
+      }
     }
     try {
       await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
@@ -491,18 +513,20 @@ export function createBackground({ browser }: BackgroundDeps): void {
     if (!key) return { ok: false, error: 'no sender tab' };
     if (await storage.getProfile(key)) return { ok: true };
     const granted = await allGrantedPatterns(browser);
-    // getAll 瞬时异常（#186）时同 resetSite：旧精确模式收不回，注销照常完成
-    const legacy = granted ? grantedPatternsFor(key, granted) : [];
-    const patterns = [...new Set([...sitePatterns(key), ...legacy])];
+    // 批次口径同 resetSite（#202）：只装实际持有的模式；getAll 瞬时异常（#186）才回退规范两条
+    const held = granted ? grantedPatternsFor(key, granted) : null;
+    const patterns = held ?? sitePatterns(key);
     try {
       await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
     } catch {
       // 新站点本来就没注册
     }
-    try {
-      await browser.permissions.remove({ origins: patterns });
-    } catch {
-      // 忽略
+    if (held === null || held.length > 0) {
+      try {
+        await browser.permissions.remove({ origins: patterns });
+      } catch {
+        // 忽略
+      }
     }
     return { ok: true };
   }
@@ -791,6 +815,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
   });
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
+    // 界面语言变化（#202）：角标悬停说明跟着设置走
+    if ('settings' in changes) syncBackgroundLocale();
     // 只关心站点配置的创建与删除；规则、开关、体检回写等修改不影响注册
     const lifecycle = Object.entries(changes).some(
       // Chrome 省略不存在的一侧；按 == null 判断，兼容给 null 的实现
