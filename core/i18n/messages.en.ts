@@ -304,7 +304,7 @@ export const en: Messages = {
 
     toggleHeading: 'Floating button',
     toggleOpacityLabel: 'Opacity',
-    toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over where it was and it turns clear',
+    toggleOpacityLowHint: 'The fainter you set it, the harder it is to find; hover over the button and it turns clear',
     toggleOpacityError: 'Couldn’t save the opacity, please try again',
     toggleHint: 'How faint this button sits when idle (lower = fainter); hover brings it back instantly. The button that appears on a covered page is unaffected — always clearly visible.',
 
