@@ -136,9 +136,9 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | `https://cherishfall.github.io/page-mask/privacy.html` | GitHub Pages 已开启并发布，页面返回 200，内容是完整隐私政策（与 `docs/PRIVACY.md` 逐条等义） | ✅ 能用。这就是 `docs/CHROMEWEBSTORE.md` §1 现在写的那个 |
 | `https://github.com/cherishfall/page-mask/blob/master/docs/PRIVACY.md` | 仓库已公开，页面可访问，内容是完整隐私政策 | ✅ 也能用，作为仓库公开后的备用 |
 
-托管现状：`cherishfall/cherishfall.github.io` 的 main 分支现在有 5 个文件——`page-mask/index.html`（PageMask 落地页）、`page-mask/privacy.html`（隐私政策）、根 `index.html`（项目索引页，以后加新项目只需加一行）、根 `privacy.html`（旧地址跳转页）、`.nojekyll`。**该仓库的 GitHub Pages 已开启**（Source = `main` / `/ (root)`）。四个地址都已点验 200：<https://cherishfall.github.io/>、<https://cherishfall.github.io/page-mask/>、<https://cherishfall.github.io/page-mask/privacy.html> 与 <https://cherishfall.github.io/privacy.html>。
+托管现状：`cherishfall/cherishfall.github.io` 的 main 分支现在有 3 个文件——`page-mask/index.html`（PageMask 落地页）、`page-mask/privacy.html`（隐私政策）、根 `index.html`（站点项目索引页，以后加新项目只需加一行），外加 `.nojekyll`。**PageMask 的页面全部在 `/page-mask/` 下**。该仓库的 GitHub Pages 已开启（Source = `main` / `/ (root)`）。三个地址已点验 200：<https://cherishfall.github.io/>、<https://cherishfall.github.io/page-mask/>、<https://cherishfall.github.io/page-mask/privacy.html>。
 
-**旧地址必须留着**：0.9.7 及更早的扩展里把 `https://cherishfall.github.io/privacy.html` 写死在「关于」卡上，商店审核员也可能点这个地址；删掉就是死链、会自动拒审。根 `privacy.html` 因此改成一个跳转页，自动把人送到 `/page-mask/privacy.html`。以后再改地址，同样要留一层跳转，不能直接删。
+**旧地址已移除，返回 404**：`https://cherishfall.github.io/privacy.html` 不再存在，也不做跳转——PageMask 的资源统一收在 `/page-mask/` 下。0.9.7 及更早版本的扩展里写死了这个旧地址，那些版本还没升级时点「关于」卡里的隐私政策会看到找不到页面；升级到 0.9.8 后即指向新地址。**因此商店后台的 Privacy Policy URL 只能填 `https://cherishfall.github.io/page-mask/privacy.html`**，填旧地址会因死链被自动拒审。
 
 **为什么选 Pages 而不是仓库 blob 链接**：Pages 上的页面公开可访问、与仓库是否公开解耦，审核员无需登录、无需担心分支改名或仓库可见性；blob 页面外面包着 GitHub 的代码仓库界面，阅读体验一般。仓库 blob 链接作为备用保留在 `docs/CHROMEWEBSTORE.md` §1 的说明里。
 
@@ -597,7 +597,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 2. **截图 6 张 > 上限 5 张**，按材料 §8 传 1/2/4/5/6。
 3. **`*://*/*` 是官方点名的“拉长审核”因素**，权限理由与审核员备注必须写足（材料 §3、材料 §10、材料 §6），别让审核员自己推。
 4. **`activeTab` 是官方“常见误解权限”清单里的一项**：官方说拥有宽泛主机权限时通常不需要 activeTab。我们的主机权限是可选的、安装时不授予任何站点，所以需要它——**主动说明，别等被问**。
-5. **隐私政策 URL 指向 GitHub Pages**：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200；仓库 blob 那条作为备用）。改 URL 时要**同步改多处**：材料 §1、材料 §2 中英详细描述里的“隐私政策：”行、扩展设置页「关于」卡的「隐私政策」入口（`entrypoints/settings/App.vue` 的 `PRIVACY_URL` 与链接显示文字）、`tests/e2e/check-pages.mjs` 的 href 断言、`README.md` 与 `docs/PRIVACY.md` 的在线版本链接、以及本文件。另外**旧地址 `https://cherishfall.github.io/privacy.html` 的跳转页不能删**：老版本扩展和审核员还会点它（#193 的死链自动拒审）。改完也要发新版，已装着的旧扩展才会指到新地址。
+5. **隐私政策 URL 指向 GitHub Pages**：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200；仓库 blob 那条作为备用）。改 URL 时要**同步改多处**：材料 §1、材料 §2 中英详细描述里的“隐私政策：”行、扩展设置页「关于」卡的「隐私政策」入口（`entrypoints/settings/App.vue` 的 `PRIVACY_URL` 与链接显示文字）、`tests/e2e/check-pages.mjs` 的 href 断言、`README.md` 与 `docs/PRIVACY.md` 的在线版本链接、以及本文件。另外**旧地址 `https://cherishfall.github.io/privacy.html` 已移除并返回 404**（PageMask 资源统一在 `/page-mask/` 下），商店后台只能填新地址，填旧地址会因死链自动拒审。改了 `PRIVACY_URL` 要发新版，已装着的旧扩展才会指到新地址。
 6. **描述里不能出现不实说法**：「任何网站都可用」「完全不出网」「省流量」「挡广告」都不能写；正确口径是「PageMask 自身不发起任何网络请求」「变灰只是去掉颜色，页面照常加载」。
 7. **中英两份描述必须一致**，不一致官方会弹 warning。
 8. **两条快捷键的绑定要在真机复核**：`chrome://extensions/shortcuts` 改键 → 切回插件设置页/欢迎页，键帽要跟着变；自动化触发不了这一步。

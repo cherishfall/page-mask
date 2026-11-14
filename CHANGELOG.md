@@ -15,7 +15,7 @@ Under each version, the Chinese and English sections correspond item by item.
 
 - **欢迎页第 1 步的图示改成真实 Chrome 的样子**：原来把工具栏和扩展菜单画成同一条横条，还用一个字母方块代替插件图标；现在画的是「点拼图图标 → 在扩展列表里找到 PageMask → 点行尾图钉」这两步，图标用的是插件自己的真实图标
 - **删除这个网站的设置，确认框不再贴着弹窗边缘**：宽度算法没把四周留白算进去，288 像素的框实际撑到 330，而弹窗只有 320 像素宽。现在左右各留 16 像素；管理页与设置页里同类的确认框也统一了内边距和边框
-- **插件里的隐私政策网址换新地址**：随这次更新指向 `https://cherishfall.github.io/page-mask/privacy.html`。旧地址 `https://cherishfall.github.io/privacy.html` 仍可打开，会自动跳到新页——已经装着的旧版本和商店审核员还会点它，不能删（隐私政策打不开会被自动拒审）
+- **插件里的隐私政策网址换新地址**：随这次更新指向 `https://cherishfall.github.io/page-mask/privacy.html`。PageMask 的所有页面现在都收在 `/page-mask/` 路径下，旧地址 `https://cherishfall.github.io/privacy.html` 已移除，访问会返回找不到页面（404）——0.9.8 之前的版本还写着旧地址，升级后即指向新页
 - **仓库文档整理**：术语表、隐私政策、商店提交材料三份文档从根目录收进 `docs/`；面向用户的说明书、开发约定里的位置信息和链接全部同步。根目录只留 GitHub 与各类工具默认会去找的 6 份文件
 - **落地页改到 `/page-mask/` 路径**：`https://cherishfall.github.io/page-mask/` 是 PageMask 的主页，站点根页改成项目索引，以后加别的项目不会挤在一起
 
@@ -30,7 +30,7 @@ Under each version, the Chinese and English sections correspond item by item.
 
 - **The first onboarding illustration now matches real Chrome.** It used to show the toolbar and the extensions menu as a single bar, with a letter block standing in for the extension icon. It now shows the actual two steps — click the puzzle icon, find PageMask in the list of extensions, click the pin at the end of that row — and uses the extension's real icon
 - **"Delete this site's settings" no longer fills the popup edge to edge.** The dialog width was calculated without its padding, so a 288 px box rendered at 330 px inside a 320 px popup. It now leaves 16 px on each side, and the same dialogs in the management and settings pages share one set of padding and border styles
-- **The privacy policy link inside the extension points at the new address**: `https://cherishfall.github.io/page-mask/privacy.html`. The old address, `https://cherishfall.github.io/privacy.html`, still works and redirects to the new page — older installed versions and store reviewers still follow it, so it cannot be removed (a dead privacy-policy link is an automatic rejection)
+- **The privacy policy link inside the extension points at the new address**: `https://cherishfall.github.io/page-mask/privacy.html`. Every PageMask page now lives under the `/page-mask/` path; the old address, `https://cherishfall.github.io/privacy.html`, has been removed and returns not found (404). Versions before 0.9.8 still carry the old address and point at the new page once updated
 - **Repository docs tidied up.** The glossary, privacy policy and store submission material moved from the root into `docs/`; location references and links in the user-facing docs and contributor guidance were updated. Six files remain at the root because GitHub and common tools look for them there
 - **The landing page moved to `/page-mask/`**: `https://cherishfall.github.io/page-mask/` is now PageMask's home, and the site root is a simple index of projects, so future projects get their own paths
 
