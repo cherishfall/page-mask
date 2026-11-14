@@ -1,14 +1,14 @@
 {
   "extName": {
-    "message": "PageMask — Hide the Parts You Don't Want",
+    "message": "PageMask — Hide the Parts You Don’t Want",
     "description": "Extension name shown in Chrome and the Chrome Web Store. Max 45 characters."
   },
   "extDescription": {
-    "message": "Hide the page elements you don't want, on sites you choose. Optional tab title and icon. Settings stay on this computer.",
+    "message": "Hide the page elements you don’t want, only on sites you choose. Optional tab title and icon. Settings stay on this computer.",
     "description": "Short description shown in Chrome and the Chrome Web Store. Max 132 characters."
   },
   "actionTitle": {
-    "message": "PageMask: change this site's tab title or hide things",
+    "message": "PageMask: change this site’s title & icon or hide items",
     "description": "Tooltip of the toolbar button."
   },
   "commandToggleCurtain": {

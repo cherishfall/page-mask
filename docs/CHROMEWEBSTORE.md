@@ -23,7 +23,7 @@
 | 字段 | en（default_locale） | zh_CN |
 |---|---|---|
 | 名称（≤45） | `PageMask — Hide the Parts You Don't Want`（40） | `PageMask · 收起网页上不想看的部分`（22） |
-| 简短说明（≤132） | `Hide the page elements you don't want, on sites you choose. Optional tab title and icon. Settings stay on this computer.`（120） | `点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只处理你添加的网站，设置只存在这台电脑上。`（52） |
+| 简短说明（≤132） | `Hide the page elements you don't want, only on sites you choose. Optional tab title and icon. Settings stay on this computer.`（125） | `点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只对你添加的网站起作用，设置只存在这台电脑上。`（54） |
 
 - 类别：`Productivity › Tools`（备选 `Make Chrome Yours › Functionality & UI`，以控制台当次选项为准）
 - 语言：简体中文（主）+ English
@@ -69,7 +69,7 @@ PageMask 让你自己选的网站更清爽：用鼠标点选页面上不想看�
 4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「收起内容」「标题和图标」，或悬浮按钮旁边的「⋯」菜单；想让整个页面变黑白，点悬浮按钮上的「媒体」钮，或在弹窗、站点设置页的「整页变灰」里拨开关，三处是同一组设置
 
 【隐私与权限】
-• 只处理你添加的网站；没添加的网站，PageMask 不会运行任何内容
+• 只对你添加的网站起作用；没添加的网站，PageMask 不会运行任何内容
 • 访问某个网站的权限只在你点「收起内容」或「标题和图标」时申请，而且只申请这一个网站
 • 所有设置只保存在你的浏览器里；PageMask 自身不发起任何网络请求，没有统计，没有第三方代码
 • 隐私政策：https://cherishfall.github.io/page-mask/privacy.html

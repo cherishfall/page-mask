@@ -4,11 +4,11 @@
     "description": "扩展名称，显示在 Chrome 与应用商店中，最多 45 个字符。"
   },
   "extDescription": {
-    "message": "点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只处理你添加的网站，设置只存在这台电脑上。",
+    "message": "点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只对你添加的网站起作用，设置只存在这台电脑上。",
     "description": "简短说明，显示在 Chrome 与应用商店中，最多 132 个字符。"
   },
   "actionTitle": {
-    "message": "PageMask：设置这个网站的标签页标题、收起内容",
+    "message": "PageMask：改这个网站的标题和图标、收起内容",
     "description": "工具栏按钮的悬停提示。"
   },
   "commandToggleCurtain": {
