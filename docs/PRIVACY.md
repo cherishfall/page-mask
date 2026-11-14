@@ -1,9 +1,9 @@
 # PageMask 隐私政策 / Privacy Policy
 
-生效日期 / Effective: 2026-10-27 · 最后更新 / Last updated: 2026-11-11
+生效日期 / Effective: 2026-10-27 · 最后更新 / Last updated: 2026-11-14
 
-PageMask 是一个 Chrome 扩展：在你主动添加的网站上收起你选择的页面元素，可把图片 / 视频变成黑白的（变灰），遮住整页时连标签页声音一起按住，也可为该网站设置标签页标题与图标。本政策说明它处理哪些数据。
-PageMask is a Chrome extension that hides page elements you choose on websites you add, can turn pictures and videos gray, hold a tab's sound together with the full-page cover, and set a tab title and icon for that site. This policy explains what data it handles.
+PageMask 是一个 Chrome 扩展：在你主动添加的网站上收起你选择的页面元素，可把整个页面变成黑白的（整页变灰），遮住整页时连标签页声音一起按住，也可为该网站设置标签页标题与图标。本政策说明它处理哪些数据。
+PageMask is a Chrome extension that hides page elements you choose on websites you add, can turn the whole page gray, hold a tab's sound together with the full-page cover, and set a tab title and icon for that site. This policy explains what data it handles.
 
 > 下方为英文全文（Chrome 应用商店的官方口径），其后是中文译文，两者内容一致。
 > The English text below is the canonical version for the Chrome Web Store; a Chinese translation follows. Both say the same thing.

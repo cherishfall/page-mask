@@ -48,7 +48,7 @@ Under each version, the Chinese and English sections correspond item by item.
 #### 改动
 
 - **插件设置页「关于」卡补「隐私政策」入口**：一行链接指向在线隐私政策页。Chrome 商店的隐私披露要求「显著披露必须在扩展界面内」，商店描述页不算——此前扩展里没有政策入口，现在有了
-- **在线落地页上线**：<https://cherishfall.github.io/>（中英双语，含功能说明、三步用法、安装方式、隐私四问、常见问题），隐私政策页 <https://cherishfall.github.io/privacy.html> 与仓库里的 `PRIVACY.md` 逐条等义
+- **在线落地页上线**：<https://cherishfall.github.io/>（中英双语，含功能说明、三步用法、安装方式、隐私四问、常见问题），隐私政策页 <https://cherishfall.github.io/privacy.html>（该地址已随 0.9.8 迁移至 `/page-mask/privacy.html`，旧地址现为 404）与仓库里的 `PRIVACY.md` 逐条等义
 - **隐私政策链接改指已上线的页面**：商店材料、README、隐私政策文件的链接统一指向上面那个公开地址，不再依赖仓库是否公开（商店对隐私政策死链直接拒审）
 - 「关于」卡原为每行各自排布，各行值起点不齐（英文态 127/144/138/163 像素），改成两列网格后齐平
 
@@ -62,7 +62,7 @@ Under each version, the Chinese and English sections correspond item by item.
 #### Changes
 
 - **"Privacy policy" link added to the About card** in plugin settings, pointing at the online policy page. The store's disclosure rules require prominent disclosure inside the extension UI (a store listing does not count) — there was no policy entry before, now there is
-- **Landing page is live**: <https://cherishfall.github.io/> (bilingual: features, three-step usage, install, four privacy answers, FAQ), with the policy at <https://cherishfall.github.io/privacy.html>, equivalent item by item to the repository's `PRIVACY.md`
+- **Landing page is live**: <https://cherishfall.github.io/> (bilingual: features, three-step usage, install, four privacy answers, FAQ), with the policy at <https://cherishfall.github.io/privacy.html> (that address moved to `/page-mask/privacy.html` in 0.9.8; the old one is a 404 now), equivalent item by item to the repository's `PRIVACY.md`
 - **Privacy policy links now point at the live page** in the store materials, README and the policy file itself — no longer dependent on whether the repository is public (a dead privacy-policy link is an automatic rejection)
 - The About card's rows now share a two-column grid, so their values line up (previously 127/144/138/163 px in English)
 
@@ -1517,3 +1517,49 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.3.0]: https://github.com/cherishfall/page-mask/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cherishfall/page-mask/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cherishfall/page-mask/releases/tag/v0.1.0
+[0.4.1]: https://github.com/cherishfall/page-mask/compare/v0.4.0...v0.4.1
+[0.5.0]: https://github.com/cherishfall/page-mask/compare/v0.4.1...v0.5.1
+[0.5.1]: https://github.com/cherishfall/page-mask/compare/v0.4.1...v0.5.1
+[0.5.2]: https://github.com/cherishfall/page-mask/compare/v0.5.1...v0.5.2
+[0.5.3]: https://github.com/cherishfall/page-mask/compare/v0.5.2...v0.5.3
+[0.5.4]: https://github.com/cherishfall/page-mask/compare/v0.5.3...v0.5.4
+[0.5.5]: https://github.com/cherishfall/page-mask/compare/v0.5.4...v0.5.5
+[0.6.0]: https://github.com/cherishfall/page-mask/compare/v0.5.5...v0.6.1
+[0.6.1]: https://github.com/cherishfall/page-mask/compare/v0.5.5...v0.6.1
+[0.6.2]: https://github.com/cherishfall/page-mask/compare/v0.6.1...v0.6.2
+[0.6.3]: https://github.com/cherishfall/page-mask/compare/v0.6.2...v0.6.3
+[0.6.4]: https://github.com/cherishfall/page-mask/compare/v0.6.3...v0.6.4
+[0.6.5]: https://github.com/cherishfall/page-mask/compare/v0.6.4...v0.6.5
+[0.6.6]: https://github.com/cherishfall/page-mask/compare/v0.6.5...v0.6.6
+[0.6.7]: https://github.com/cherishfall/page-mask/compare/v0.6.6...v0.6.7
+[0.7.0]: https://github.com/cherishfall/page-mask/compare/v0.6.7...v0.7.0
+[0.7.1]: https://github.com/cherishfall/page-mask/compare/v0.7.0...v0.7.1
+[0.8.0]: https://github.com/cherishfall/page-mask/compare/v0.7.1...v0.8.0
+[0.8.1]: https://github.com/cherishfall/page-mask/compare/v0.8.0...v0.8.1
+[0.8.2]: https://github.com/cherishfall/page-mask/compare/v0.8.1...v0.8.2
+[0.8.3]: https://github.com/cherishfall/page-mask/compare/v0.8.2...v0.8.3
+[0.8.4]: https://github.com/cherishfall/page-mask/compare/v0.8.3...v0.8.4
+[0.8.5]: https://github.com/cherishfall/page-mask/compare/v0.8.4...v0.8.5
+[0.8.6]: https://github.com/cherishfall/page-mask/compare/v0.8.5...v0.8.6
+[0.8.7]: https://github.com/cherishfall/page-mask/compare/v0.8.6...v0.8.7
+[0.8.8]: https://github.com/cherishfall/page-mask/compare/v0.8.7...v0.8.8
+[0.8.9]: https://github.com/cherishfall/page-mask/compare/v0.8.8...v0.8.9
+[0.8.10]: https://github.com/cherishfall/page-mask/compare/v0.8.9...v0.8.10
+[0.8.11]: https://github.com/cherishfall/page-mask/compare/v0.8.10...v0.8.11
+[0.8.12]: https://github.com/cherishfall/page-mask/compare/v0.8.11...v0.8.12
+[0.8.13]: https://github.com/cherishfall/page-mask/compare/v0.8.12...v0.8.13
+[0.8.14]: https://github.com/cherishfall/page-mask/compare/v0.8.13...v0.8.14
+[0.8.15]: https://github.com/cherishfall/page-mask/compare/v0.8.14...v0.8.15
+[0.8.16]: https://github.com/cherishfall/page-mask/compare/v0.8.15...v0.8.16
+[0.8.17]: https://github.com/cherishfall/page-mask/compare/v0.8.16...v0.8.17
+[0.8.18]: https://github.com/cherishfall/page-mask/compare/v0.8.17...v0.8.18
+[0.8.19]: https://github.com/cherishfall/page-mask/compare/v0.8.18...v0.8.19
+[0.9.0]: https://github.com/cherishfall/page-mask/compare/v0.8.19...v0.9.0
+[0.9.1]: https://github.com/cherishfall/page-mask/compare/v0.9.0...v0.9.1
+[0.9.2]: https://github.com/cherishfall/page-mask/commit/65b68bb
+[0.9.3]: https://github.com/cherishfall/page-mask/commit/76b54c8
+[0.9.4]: https://github.com/cherishfall/page-mask/compare/v0.9.1...v0.9.4
+[0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
+[0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
+[0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[0.9.8]: https://github.com/cherishfall/page-mask/compare/v0.9.7...v0.9.8

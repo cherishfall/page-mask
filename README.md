@@ -25,7 +25,7 @@
 
 **悬浮按钮** — 页面右下角的一颗胶囊：点它在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变；按住它拖到页面任何位置；不透明度 10%–100% 可调（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方可以在弹窗里按网站把它关掉，再打开时回到右下角。
 
-**设置与数据** — 「全部网站设置」列出你添加过的网站，点进去是每个网站的设置页；「插件设置」放默认标题、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」。全部网站的设置和插件设置能导出成一个文件（文件名带版本号与导出时间），换电脑后导入。全界面中英双语，切换马上生效。
+**设置与数据** — 「全部网站设置」列出你添加过的网站，点进去是每个网站的设置页；「插件设置」放默认标题、快捷键、悬浮按钮的不透明度、导出 / 导入、界面语言与版本信息，也是 Chrome 的「扩展程序选项」。全部网站的设置和插件设置能导出成一个文件（文件名带版本号与导出时间），换电脑后导入。全界面中英双语，切换马上生效。
 
 **隐私基线** — 只有你主动添加的网站才被处理，其它网站完全不受影响；没有账号、没有同步，设置只存在本机；PageMask 自身不发起任何网络请求，没有统计，没有第三方代码。
 
@@ -42,7 +42,7 @@
 
 ### 安装
 
-Chrome 应用商店版本正在审核中，通过后这里会补上商店安装链接。目前可从源码安装（开发者模式自用），需要 **Chrome 116 或更高版本**：
+Chrome 应用商店版本准备提交审核，通过后这里会补上商店安装链接。目前可从源码安装（开发者模式自用），需要 **Chrome 116 或更高版本**：
 
 1. 下载或克隆本仓库
 2. `npm ci && npm run build`
@@ -64,7 +64,7 @@ Chrome 应用商店版本正在审核中，通过后这里会补上商店安装�
 1. 打开要设置的网站，点工具栏的 PageMask 图标，点「收起内容」或「标题和图标」，在 Chrome 的提示里选「允许」（每个网站第一次会问这一次）
 2. 「收起内容」分两步：先在页面上点选要收起的内容（已经收起的项也在清单里，点它就去掉），再「看效果」确认——保存就完成了；「标题和图标」填完点「保存」
 3. 点页面上的悬浮按钮可以临时看网站原样；想改设置，用弹窗里的「收起内容」「标题和图标」，或悬浮按钮的「⋯」菜单
-4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题、导出 / 导入、界面语言）
+4. 弹窗底部两个入口：「全部网站设置」（网站列表与每个网站的设置页）、「插件设置」（默认标题、快捷键、不透明度、导出 / 导入、界面语言）
 5. 想整个页面变黑白，点悬浮按钮上的「媒体」钮（或弹窗、站点设置页里的「整页变灰」，三处是同一组设置）；想临时遮住整页，用「遮住这一页」，恢复时点页面上的睁眼小按钮
 
 ### 已知限制
@@ -129,7 +129,7 @@ npm run check:package # 构建产物 manifest 守门
 
 **Floating button** — a capsule at the bottom-right of the page: click it to flip between "Your settings" and "As is" (all tabs of that site switch together); press and drag it anywhere; its idle opacity is adjustable from 10% to 100% (how faint it sits when idle is your call; it turns clear the moment you touch it); if it feels intrusive, hide it per site from the popup — showing it again puts it back at the bottom-right.
 
-**Settings & data** — "All site settings" lists the sites you added; click one for its settings page. "Settings" holds the default title, export / import, interface language and version info, and is registered as Chrome's "Options" page. All site settings plus the plugin settings export as one file (the file name carries the version and the export time); import it on another computer. The whole interface is bilingual (Chinese and English) and switching takes effect immediately.
+**Settings & data** — "All site settings" lists the sites you added; click one for its settings page. "Settings" holds the default title, the keyboard shortcuts, the floating button's opacity, export / import, interface language and version info, and is registered as Chrome's "Options" page. All site settings plus the plugin settings export as one file (the file name carries the version and the export time); import it on another computer. The whole interface is bilingual (Chinese and English) and switching takes effect immediately.
 
 **Privacy baseline** — only sites you explicitly add are touched; everything else is completely unaffected. No account, no sync — settings stay on this device. PageMask itself makes no network requests; there is no analytics and no third-party code.
 
@@ -146,7 +146,7 @@ In one line: **a clean page without learning rules or switching layouts — and 
 
 ### Install
 
-The Chrome Web Store version is under review; the store link will be added here once it is approved. For now you can install from source (developer mode, for personal use). Requires **Chrome 116 or later**:
+The Chrome Web Store version is being prepared for review; the store link will be added here once it is approved. For now you can install from source (developer mode, for personal use). Requires **Chrome 116 or later**:
 
 1. Clone or download this repo
 2. `npm ci && npm run build`
@@ -168,7 +168,7 @@ An unpacked extension is identified by the folder it was loaded from, and settin
 1. Open the site you want to tidy up, click the PageMask toolbar icon, click "Hide items" or "Title & icon", and choose Allow in Chrome's prompt (asked once per site, the first time)
 2. "Hide items" takes two steps: pick what to hide on the page (what you hid before is already in the list — click it to take it out), then check the result — saving completes it; "Title & icon" is saved with "Save"
 3. Click the floating button to see the site as it is; to change settings, use the popup's two buttons or the "⋯" menu on the floating button
-4. Two entries at the bottom of the popup: "All site settings" (the site list and each site's settings page) and "Settings" (default title, export / import, interface language)
+4. Two entries at the bottom of the popup: "All site settings" (the site list and each site's settings page) and "Settings" (default title, keyboard shortcuts, opacity, export / import, interface language)
 5. To turn the whole page black & white, click the floating button's "Media" button (or the "Whole-page gray" switch in the popup or on the site's settings page — all three are the same setting); to cover the page for a moment, use "Cover this page" and click the small open-eye button to restore
 
 ### Known limitations
