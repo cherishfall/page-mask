@@ -261,6 +261,7 @@
                 v-model="d.name"
                 class="pm-wiz-name"
                 type="text"
+                maxlength="60"
                 :placeholder="d.autoName"
                 :aria-label="t.wizard.nameLabel(i + 1)"
                 :data-testid="`pm-draft-name-${i + 1}`"

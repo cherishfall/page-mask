@@ -186,6 +186,8 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   let wizardHost: PageHost | null = null;
   let wizardApp: App | null = null;
   let wizardActive = false;
+  /** openWizard 的同步占位（#203）：wizardActive 要等两次 await 之后才置位，这个窗口靠它挡住并发第二次打开 */
+  let wizardOpening = false;
   /** 入口核对通过（本页有站点配置或正有打开向导的请求），已挂上监听 */
   let active = false;
   /** 入口核对（读配置）是否已完成；完成前到来的打开请求先记下 */
@@ -460,7 +462,19 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
   const initialRulesFor = (url: string) => rulesApplicableAt(profile?.hideRules ?? [], url);
 
   async function openWizard(mode: OpenIntent) {
-    if (wizardActive || disposed) return;
+    // 并发闸（#203）：wizardActive 要等下面两次 await 之后才置位，毫秒级窗口内第二次调用
+    // 会重建宿主，第一个向导的全屏捕获层滞留页面、整页点死。进入即同步占位，
+    // 早退与意外抛错都在 finally 放开
+    if (wizardActive || wizardOpening || disposed) return;
+    wizardOpening = true;
+    try {
+      await openWizardInner(mode);
+    } finally {
+      wizardOpening = false;
+    }
+  }
+
+  async function openWizardInner(mode: OpenIntent) {
     // 排在进行中的状态刷新之后再判断（刚激活时配置可能还在读）
     await exclusive(async () => undefined);
     if (wizardActive || resetting || disposed) return;

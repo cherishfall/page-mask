@@ -171,7 +171,10 @@ export function sanitizeRule(
   if (candidates.length === 0) return null;
   const rule: HideRule = {
     id: v.id,
-    elementName: typeof v.elementName === 'string' && v.elementName.trim() ? v.elementName : t().common.unnamedElement,
+    // 名称长度上限（#203）：标题（#177）与范围 label（#192）都有 60 上限，这里此前漏了——
+    // 导入文件带超长名称会原样落库，渲染进向导清单行名与读屏文案。同口径按码点截断
+    elementName:
+      typeof v.elementName === 'string' && v.elementName.trim() ? [...v.elementName].slice(0, 60).join('') : t().common.unnamedElement,
     candidates,
     strategy: v.strategy,
     scope,

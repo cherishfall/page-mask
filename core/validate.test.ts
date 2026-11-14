@@ -14,6 +14,7 @@ import {
 } from './validate';
 import { isValidSiteKey } from './site-key';
 import { createEmptyProfile } from './types';
+import { t } from './i18n';
 
 describe('候选选择器校验（表格驱动）', () => {
   const rejected: [string, unknown][] = [
@@ -220,6 +221,25 @@ describe('sanitizeProfile', () => {
     expect(res.profile.floatingBtnPos).toBeNull();
     expect(res.profile.hideRules.map((r) => r.id)).toEqual(['r1']);
     expect(res.droppedRules).toBe(2);
+  });
+
+  it('elementName 超长按码点截断到 60（#203，与标题 #177 同口径），不劈开代理对', () => {
+    const nameOf = (elementName: unknown) =>
+      sanitizeProfile({
+        ...createEmptyProfile('https://a.com'),
+        hideRules: [
+          { id: 'r1', elementName, candidates: ['#ok'], strategy: 'remove', scope: { type: 'all' }, onlyThis: false, createdAt: 1 },
+        ],
+      })!.profile.hideRules[0]!.elementName;
+
+    expect([...nameOf('长'.repeat(500))]).toHaveLength(60);
+    // 59 个 ASCII + 2 个 emoji = 61 个码点 → 截到 60 = 59 个 a + 完整 1 个 emoji
+    const mixed = nameOf('a'.repeat(59) + '🌍🌍');
+    expect([...mixed]).toHaveLength(60);
+    expect(mixed.endsWith('🌍')).toBe(true);
+    // 上限内原样保留；非字符串回落未命名
+    expect(nameOf('正常名称')).toBe('正常名称');
+    expect(nameOf(42)).toBe(t().common.unnamedElement);
   });
 
   it('「保存过标题和图标」（#98）：显式值优先，旧数据按有没有标题推导', () => {
