@@ -51,6 +51,21 @@ const PAGES = {
 
 const handler = (req, res) => {
   const { pathname } = new URL(req.url, 'http://localhost');
+  if (pathname === '/slowdoc') {
+    // #212：先冲出 head + 目标元素（文档立刻建立并渐进渲染），尾巴拖 1200ms 再到——
+    // DOMContentLoaded 明显晚于首帧。若整体拖响应，Chrome 会推迟建文档，loading 窗口反而不存在
+    // （探针实测 deferred commit）。1200ms < shield 的 1.5s 兜底，loading 全程落在遮挡生命期内。
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.write(
+      '<!doctype html><html><head><meta charset="utf-8"><title>slowdoc</title>' +
+      '<style>body{margin:0;font-family:system-ui,sans-serif;background:#fff}.late-ad{height:60px;margin:16px;background:#f60}</style>' +
+      '</head><body><main><h1>慢文档</h1><div class="late-ad">盖住目标</div>',
+    );
+    setTimeout(() => {
+      res.end(`${'<p>填充段落，用于拉长解析时间。</p>'.repeat(6000)}</main></body></html>`);
+    }, 1200);
+    return;
+  }
   const body = PAGES[pathname];
   if (!body) {
     res.writeHead(404);
@@ -316,6 +331,34 @@ async function main() {
     });
     await sleep(600);
     check((await boxCount(page)) === 0 && !(await page.$(MASK_HOST)), '原样态下插入命中元素，没有遮罩出现');
+
+    // ===================== 慢文档：mask 规则的首屏防闪（#212） =====================
+    console.log('\n--- 慢文档：mask 规则的首屏遮挡保持到遮罩层建好（#212） ---');
+    // mask 规则不产生 CSS（盖住由遮罩层元素承担）：首屏遮挡若在这之前 narrow 成规则文本
+    // 或提前 release，文档渐进渲染时目标会先画出来。
+    // CDP evaluate 在加载窗口里会阻塞数秒、报上下文销毁（探针实测），不能靠它采样——
+    // 改在页内装记录器（主世界 25ms 一采，加载完自动停），导航结束后回读。
+    // 夹具页没有别的 adopted 样式表，「表数量 ≥1」即 shield 在场（cssRules 跨 world 受限不依赖）。
+    await page.evaluateOnNewDocument(() => {
+      window.__shieldLog = [];
+      const timer = setInterval(() => {
+        const loading = document.readyState === 'loading';
+        window.__shieldLog.push({ t: performance.now(), loading, n: document.adoptedStyleSheets.length });
+        if (!loading) clearInterval(timer);
+      }, 25);
+    });
+    await patchProfile(ext.control, ORIGIN, { switchState: 'disguised' });
+    await page.goto(`${ORIGIN}/slowdoc`, { waitUntil: 'load', timeout: 20000 });
+    const log = await page.evaluate(() => window.__shieldLog);
+    const loadingSamples = log.filter((s) => s.loading);
+    const absent = loadingSamples.filter((s) => s.n < 1);
+    check(
+      loadingSamples.length >= 20 && absent.length === 0,
+      `文档 loading 期间整页防闪遮挡始终在场（${loadingSamples.length} 次采样，缺席 ${absent.length} 次）`,
+    );
+    await waitCovered(page, '.late-ad', '慢文档加载完目标被遮住', { timeout: 15000 });
+    const shieldGone = await page.evaluate(() => document.adoptedStyleSheets.length === 0);
+    check(shieldGone, '遮罩层建好后防闪遮挡撤掉（页面正常可见）');
   } catch (e) {
     r.fail(e);
   } finally {

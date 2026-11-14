@@ -569,16 +569,28 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     } else {
       guard.restore();
     }
-    // 首屏遮挡用的是同一份正式样式文本：媒体灰度也要在首帧前生效，不能露一帧真图
-    shield.narrow(buildDisguiseCss(profile, location.href));
+    // 首屏遮挡用的是同一份正式样式文本：媒体灰度也要在首帧前生效，不能露一帧真图。
+    // 方案 C（盖住）不产生 CSS、由遮罩层元素承担（css-builder 铁律）——本页有 mask 规则时，
+    // narrow 成规则文本或提前 release 都会让目标在 rebuildMasks() 前闪现（#212）：保持
+    // 整页透明不放，等遮罩层建好再撤（shield 自带 1.5s 兜底，任何异常都不会一直白屏）。
+    const masksPending =
+      profile.switchState === 'disguised' && maskRulesAt(profile.hideRules, location.href).length > 0;
+    if (!masksPending) shield.narrow(buildDisguiseCss(profile, location.href));
     const ok = await syncFormalStyles();
-    shield.release();
+    if (!masksPending) shield.release();
     await uiReady;
-    if (disposed || wizardActive) return ok;
+    if (disposed || wizardActive) {
+      if (masksPending) shield.release();
+      return ok;
+    }
     // 幕布开着时重新压住标题与覆盖层（#45）
     reassertCurtain();
-    if (!profile || profile.switchState !== 'disguised') return ok;
+    if (!profile || profile.switchState !== 'disguised') {
+      if (masksPending) shield.release();
+      return ok;
+    }
     rebuildMasks();
+    if (masksPending) shield.release();
     mountToggle();
     scheduleHealthCheck();
     return ok;
