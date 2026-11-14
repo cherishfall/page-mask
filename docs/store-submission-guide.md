@@ -220,7 +220,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | 字段（控制台英文） | 在哪个标签页 | 填什么 | 出处 | 详见 |
 |---|---|---|---|---|
 | **Name**（名称） | —— **控制台没有输入框** | 来自 `public/_locales/*/messages.json`（`__MSG_extName__`）：en `PageMask — Hide the Parts You Don't Want`（40 字）、zh_CN `PageMask · 收起网页上不想看的部分`（22 字） | 材料 §1 | §2.1 |
-| **Short description**（简短说明） | —— **控制台没有输入框** | 同样来自 `_locales`（`__MSG_extDescription__`）：en 120 字 / zh_CN 52 字（上限 132） | 材料 §1 | §2.1 |
+| **Short description**（简短说明） | —— **控制台没有输入框** | 同样来自 `_locales`（`__MSG_extDescription__`）：en 125 字 / zh_CN 54 字（上限 132） | 材料 §1 | §2.1 |
 | **Detailed description**（详情说明） | Store listing | 材料 §2 的 zh-CN 全文；再切 English 贴 en-US 全文 | 材料 §2 | §2.3 |
 | **Category**（类别） | Store listing | `Productivity › Tools`（控制台无此项时取最接近的） | 材料 §1 | §2.3 |
 | **Language**（商店页语言） | Store listing | 简体中文 + English | 材料 §1 | §2.3 |
@@ -414,7 +414,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 - [ ] 包在：`.output/page-mask-1.0.0-chrome.zip`；版本号 `1.0.0`（`unzip -p .output/page-mask-1.0.0-chrome.zip manifest.json | grep version`）
 - [ ] `manifest.json` 在 zip 根目录；无 `.map`、无 README/CHANGELOG/CHROMEWEBSTORE.md、无测试与配置文件（`npm run check:package` 会验）
 - [ ] manifest 里 `permissions` = `storage`/`scripting`/`activeTab`，`optional_host_permissions` = `["*://*/*"]`，**没有** `content_scripts`、**没有** `host_permissions`
-- [ ] 名称/简介与 `_locales` 一致：en 40/120 字符、zh_CN 22/52 字符（≤45 / ≤132）
+- [ ] 名称/简介与 `_locales` 一致：en 40/125 字符、zh_CN 22/54 字符（≤45 / ≤132）
 - [ ] 截图 5 张（1/2/4/5/6），每张 1280×800；宣传图块 440×280；图标 128×128
 - [ ] **隐私政策 URL（<https://cherishfall.github.io/page-mask/privacy.html>）用无登录浏览器能打开**，且页面里确实有「收集什么、怎么用、怎么共享」的说明
 - [ ] Support URL（`.../issues`）与 Homepage URL 无痕能打开

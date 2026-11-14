@@ -23,9 +23,10 @@ Only for sites you add, PageMask stores in your browser's local extension storag
 - the tab title and icon image you set for that site, and the site's on/off state;
 - one per-site switch for "Turn the whole page gray" (whether the entire page is shown in black & white);
 - the position of the on-page button, and whether each rule still found its element the last time the page was opened (with a timestamp);
+- local interface preferences: whether the on-page button is shown on that site, the display language of PageMask's own pages, and the button's opacity;
 - one global default tab title.
 
-To work, PageMask reads the page structure locally on sites you added (to let you pick elements, to check that rules still match, and — only while the gray switch is on — to hold videos that the site autoplays). That page content is not stored except for the short label above, and is never transmitted.
+To work, PageMask reads the page structure locally on sites you added (to let you pick elements, to check that your settings still match, and — only while the gray switch is on — to hold videos that the site autoplays). That page content is not stored except for the short label above, and is never transmitted.
 
 Covering the page ("Cover this page") also mutes that tab using Chrome's own tab mute. That mute state is held by the browser on the tab, not stored by PageMask; it is not synced, not uploaded, and does not add a `tabs` permission. The mute lives exactly as long as the cover: uncovering, refreshing or leaving the page removes it. PageMask only removes the mute it set itself, and does not touch a mute you or another extension set.
 
@@ -72,9 +73,10 @@ PageMask 不向开发者或任何第三方发送任何数据。它没有服务�
 - 你为该网站设置的标签页标题与图标图片，以及该网站的开关状态；
 - 该网站的一个开关：「整页变灰」（该网站是否整页黑白显示）；
 - 页面内按钮的位置，以及每条规则最近一次打开页面时是否仍找到目标（带时间戳）；
+- 本机的界面偏好：该网站是否显示页面内按钮、PageMask 自己界面的显示语言、按钮的不透明度；
 - 一个全局默认的标签页标题。
 
-为了工作，PageMask 会在你添加的网站上于本地读取页面结构（让你点选元素、核对规则是否仍然命中；只在变灰开关打开期间，还会用来按住自动播放的视频）。除上面那个短标签之外，页面内容不会被保存，也永远不会被发送出去。
+为了工作，PageMask 会在你添加的网站上于本地读取页面结构（让你点选元素、核对保存的设置是否仍然找得到目标；只在变灰开关打开期间，还会用来按住自动播放的视频）。除上面那个短标签之外，页面内容不会被保存，也永远不会被发送出去。
 
 遮住整页（「遮住这一页」）时会把该标签页静音，用的是 Chrome 自带的标签页静音。这个状态由浏览器记在标签页上，不由 PageMask 保存；不同步、不上传，也不需要 `tabs` 权限。静音与幕布同生共死：撤幕布、刷新或离开页面即解除。PageMask 只解除自己设置的那一份静音，不会动你或别的扩展设置的静音。
 
