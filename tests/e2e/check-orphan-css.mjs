@@ -100,6 +100,10 @@ async function main() {
     r.fail(e);
   } finally {
     await ext.browser.close().catch(() => undefined);
+    // 测试服务器必须关：监听 socket 会钉住事件循环，进程永远不退出——
+    // && 门禁链会在这里永久卡死（1.0.3 轮实测两次：挂 32 分钟 / 上一轮 7.5 小时）。
+    // 十二个脚本里本文件是唯一漏网的（其余十一个都在 finally 里 srv.close()）。
+    await srv.close().catch(() => undefined);
   }
   process.exitCode = r.summary();
 }
