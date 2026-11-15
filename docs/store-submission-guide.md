@@ -119,6 +119,8 @@ unzip -p .output/page-mask-1.0.1-chrome.zip manifest.json
 
 在注册页用 Google 支持的付款方式付掉那笔一次性注册费（金额以注册页为准）。**PageMask 不在商店里卖东西、不做内购**，不需要接支付。
 
+> **发布者商品数上限**（2026-11-15 官方核对，publish 页 "Item limits"）：新创建的发布者账号**最多发布 2 个扩展**，超限要向商店团队申请提升额度；未上架的草稿与被拒的也占额度。PageMask 是第一个，不触发，知道即可。
+
 ### 1.5 「verified publisher」与官方网址（可选）
 
 商店页可以显示一个经过验证的官方网址（在标题下方），前提是该网址通过 Google Search Console 验证归属你。

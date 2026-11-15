@@ -8,8 +8,8 @@
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.3-chrome.zip`
-- [x] 版本号已改（`package.json` → `1.0.3`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.3` 已打、Release 已发
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.4-chrome.zip`
+- [x] 版本号已改（`package.json` → `1.0.4`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.4` 已打、Release 已发
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [x] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「整页变灰」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）——1.0.2 走查回填见 §6 末尾：可自动化部分（harness 八步 + 真机三站 + 既有断言）已过；授权气泡 / 改键 / 小喇叭 / 视频观感四项提交时人工顺手核
@@ -23,7 +23,7 @@
 | 字段 | en（default_locale） | zh_CN |
 |---|---|---|
 | 名称（≤45） | `PageMask — Hide the Parts You Don’t Want`（40） | `PageMask · 收起网页上不想看的部分`（22） |
-| 简短说明（≤132） | `Hide the page elements you don't want, only on sites you choose. Optional tab title and icon. Settings stay on this computer.`（125） | `点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只对你添加的网站起作用，设置只存在这台电脑上。`（54） |
+| 简短说明（≤132） | `Hide the page elements you don’t want, only on sites you choose. Optional tab title and icon. Settings stay on this computer.`（125） | `点选网页上不想看的元素把它们收起来，也可以改标签页标题和图标。只对你添加的网站起作用，设置只存在这台电脑上。`（54） |
 
 - 类别：`Productivity › Tools`（备选 `Make Chrome Yours › Functionality & UI`，以控制台当次选项为准）
 - 语言：简体中文（主）+ English
@@ -76,9 +76,9 @@ PageMask 收起网页上你不想看的部分：在你自己选的网站上，�
 
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
-• 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；`<audio>` 与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
+• 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；网页里的音频与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
 • 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
-• 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；iframe 和 shadow DOM 里的元素暂时无法选择
+• 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；网页里另一层页面和网页组件内部区域里的元素暂时无法点选
 • 两条快捷键都能在 Chrome 自己的「扩展程序 → 键盘快捷键」页改：插件设置页有「到 Chrome 里设置快捷键」入口。Chrome 不允许扩展替你改键，所以这一步要在 Chrome 里做；改完切回插件设置页，键帽就显示新键，你在那一页设过的键不会被新版本覆盖
 • 反馈与支持：https://github.com/cherishfall/page-mask/issues
 ```
@@ -122,9 +122,9 @@ PRIVACY & PERMISSIONS
 
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
-• "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included; PageMask's own interface turns black & white with the page and keeps working; `<audio>` and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on a few players with an unusual structure you may need to click the video itself
+• "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included; PageMask's own interface turns black & white with the page and keeps working; audio and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on a few players with an unusual structure you may need to click the video itself
 • The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
-• Doesn't run on browser pages, local files or the Chrome Web Store; elements inside iframes/shadow DOM can't be picked yet
+• Doesn't run on browser pages, local files or the Chrome Web Store; elements inside a page embedded in this page, or inside nested widget areas, can't be picked yet
 • Both shortcuts can be changed at Chrome's own "Extensions → Keyboard shortcuts" page; Settings has a "Manage shortcuts in Chrome" button. Chrome doesn't let extensions change bindings themselves, so that step belongs in the browser. The keycaps show the new key when you come back, and keys you set there are kept across updates
 • Support: https://github.com/cherishfall/page-mask/issues
 ```
@@ -146,7 +146,7 @@ Lets users declutter the pages they choose — hide the elements they pick, opti
 
 ## 5. 隐私表单填法
 
-控制台分两组，别混：
+控制台分三处，别混：
 
 1. **数据类型**（你处理哪些用户数据）：勾选 **Website content** 与 **Web history**。
    - Website content：为了让你点选元素、以及核对规则是否仍然命中，扩展会读取你已添加网站的页面结构；短标签（最长 60 字符）会存在本机。
@@ -158,6 +158,7 @@ Lets users declutter the pages they choose — hide the elements they pick, opti
    - 不用于与单一用途无关的目的
    - 不用于判断信用或放贷
    - 并勾选「遵守 Chrome 应用商店用户数据政策（含 Limited Use 要求）」——`docs/PRIVACY.md` 的 "What we don't do" 一节已有对应声明。
+3. **Remote Code 声明**（"Declare any remote code" 字段）：选 **`No, I am not using remote code`**——官方要求不用远程代码也要显式声明，用了不申报会被直接拒审（2026-11-15 官方原文："If your extension doesn't need to execute remote code, make sure that it does not and select 'No, I am not using remote code.'"）。本项目零远程代码（§3、§11 已核）。
 
 ## 6. 审核员备注（Notes / Test instructions）
 
@@ -189,7 +190,7 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.3 时 release notes 可用：`1.0.3 — Walkthrough sign-off: hide rules for elements without any class/id (bare paragraphs etc.) no longer silently break — the pick cursor no longer leaves an inline trace on the page, the style attribute is never used as a candidate feature, and minimal pages fall back to a root-anchored precise path; features and permissions unchanged.`
+> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.4 时 release notes 可用：`1.0.4 — Consistent keyboard behavior: opening the floating button's "⋯" menu now puts focus on the first menu item, same as the site settings row menu; features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
@@ -239,7 +240,7 @@ Test steps (no login needed):
 
 ## 8. 截图与素材清单
 
-商店要求（官方现行口径，2026-11-14 核对）：截图 1280×800，**至少 1 张、最多 5 张**；小型宣传图块 440×280（官方文档把它列在必传项里，只有 1400×560 marquee 标明 optional，照传）。
+商店要求（官方现行口径，2026-11-15 复核官方原文）：截图 1280×800，**至少 1 张、最多 5 张**；**只有商店图标与至少 1 张截图是必传**（官方原句 "Only the store icon and at least one screenshot are mandatory"），440×280 小宣传图块与 1400×560 marquee 均为可选——宣传图块照传：官方明示不传的扩展在推荐位排在有图的后面。
 
 | 素材 | 文件 | 说明 |
 |---|---|---|
@@ -261,6 +262,7 @@ Test steps (no login needed):
 - 「之前 / 之后」、popup、两个管理页与「菜单 + 幕布」都是拼版：每一块都来自上面的真实截图或扩展自己的图标资源，没有画假界面。
 - 标签栏那张的浏览器边框是拼版出来的示意（headless 截不到真实标签栏），但标题文字与图标就是扩展在该页面上实际设置的值（标题「阅读」、透明图标）。
 - 尺寸全部 1280×800（PNG）；宣传图块 440×280。
+- 宣传图块不可本地化（官方明示 small promo tile 与 marquee 不随商店语言切换）：图上的定位语是中文，英文用户看到的也是这一张——有意以中文用户为主，不是疏漏。
 
 ## 9. 已知限制（写给审核员，也写给用户）
 
@@ -297,7 +299,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `1.0.3`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `1.0.4`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54（2026-11-14 随 #199 文案修订后实测） |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`curtain-oneshot.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
