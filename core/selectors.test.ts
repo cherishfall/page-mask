@@ -106,6 +106,46 @@ describe('generateCandidates（happy-dom 真实 DOM）', () => {
     for (const c of cands) expect(containsMachineClass(c)).toBe(false);
     expect(cands[0]).toContain('[aria-label');
   });
+
+  it('style 属性不算候选特征（#225）：过滤后无特征元素仍能拿到 :root 兜底路径', () => {
+    const main = document.createElement('main');
+    const p1 = document.createElement('p');
+    p1.className = 'article-p';
+    p1.textContent = 'first';
+    const bare = document.createElement('p');
+    bare.textContent = 'second';
+    main.append(p1, bare);
+    document.body.append(main);
+    // 点选期把光标压在 html 内联 style 上（旧实现），退出时清成空串——属性还在
+    document.documentElement.setAttribute('style', '');
+
+    const cands = generateCandidates(bare);
+    expect(cands.length).toBeGreaterThan(0);
+    for (const c of cands) {
+      expect(c).not.toContain('[style');
+      expect(bare.matches(c)).toBe(true);
+    }
+    // 泛化（同类一起藏）：:root 兜底路径剥掉最后一级 nth，命中 main 下全部段落
+    expect(document.querySelectorAll(cands[0]!).length).toBe(2);
+  });
+
+  it('style 属性不算候选特征（#225）：点选进行中（光标值在内）同样不出 [style] 候选', () => {
+    const main = document.createElement('main');
+    const bare = document.createElement('p');
+    bare.textContent = 'second';
+    main.append(bare);
+    document.body.append(main);
+    document.documentElement.setAttribute('style', 'cursor: crosshair;');
+
+    for (const opts of [{ onlyThis: false }, { onlyThis: true }]) {
+      const cands = generateCandidates(bare, opts);
+      expect(cands.length).toBeGreaterThan(0);
+      for (const c of cands) {
+        expect(c).not.toContain('[style');
+        expect(bare.matches(c)).toBe(true);
+      }
+    }
+  });
 });
 
 /** 选择器在当前文档里命中的元素集合 */

@@ -89,6 +89,9 @@ export function isUnstableSelectorItem(item: string): boolean {
     if (!m) return false;
     const name = cssUnescape(m[1] ?? '');
     if (isUnstableAttributeName(name)) return true;
+    // style 属性运行时随时可变（本扩展退出点选时清掉内联光标、网站的 JS 动画也在不停改它），
+    // 值留空 / 变样后选择器就落空（#225）——与机器类名同口径，一律不作候选特征
+    if (name.toLowerCase() === 'style') return true;
     // 引用了不稳定 id 的属性值，如 aria-labelledby=":r1:"
     return m[2] !== undefined && isUnstableId(cssUnescape(m[2]));
   }
@@ -231,6 +234,10 @@ const MAX_ANCHOR_DEPTH = 4;
  * 元素自身没有特征时（库只能给出 `div:nth-child(4)` 这类纯位置写法），向上找最近的有特征祖先，
  * 拼成 `.side > div:nth-child(4)`；中间没特征的层级用 `标签:nth-child(n)` 逐级连起来。
  * 这些候选只命中该元素，后续再按模式泛化（同类模式下变成 `.side > div`）。
+ *
+ * 一路走到根都没有有特征祖先（style 属性被过滤后，极简页面 <html><body><main><p> 全体裸元素），
+ * 以 `:root` 收尾产出全位置路径——isFeaturelessSelector 本就放行 :root 锚定的页面根路径（库的
+ * 兜底输出同形），精确命中点选的那一个，失效时由失效体检提醒用户重选（#225）。
  */
 function anchoredCandidates(el: Element): string[] {
   let path = `${el.localName}:nth-child(${nthChildIndex(el)})`;
@@ -244,7 +251,7 @@ function anchoredCandidates(el: Element): string[] {
     path = `${cur.localName}:nth-child(${nthChildIndex(cur)}) > ${path}`;
     cur = cur.parentElement;
   }
-  return [];
+  return cur === el.ownerDocument.documentElement ? [`:root > ${path}`] : [];
 }
 
 function queryAll(root: ParentNode, selector: string): Element[] {

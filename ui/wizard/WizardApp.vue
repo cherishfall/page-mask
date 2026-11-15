@@ -872,15 +872,14 @@ onMounted(() => {
   // 一打开就用旧规则铺草稿起点（#69 / #81 无首次模式）：没有配置时是空清单，同一条路
   initEditDrafts();
   nextTick(updateListFades); // 首屏草稿铺好后算一次清单要不要渐隐（#223）
-  // 打开时不是点选阶段（「标题和图标」是单步表单）：捕获层不接管指针，光标也不改
+  // 打开时不是点选阶段（「标题和图标」是单步表单）：捕获层不接管指针，也不用十字光标
   if (phase.value !== 'pick') {
     pickLayer.style.display = 'none';
     pick.stop();
-    document.documentElement.style.cursor = '';
     // 标题和图标：一打开就把默认标题 / 图标压到当前标签页（之后每次改动即时更新，退出时运行时还原）
     pushTitlePreview();
   } else {
-    document.documentElement.style.cursor = 'crosshair';
+    void pushPageCss(); // 十字光标走 draft CSS 通道（#225），此时 focused 组必为空，只有光标一份
   }
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('resize', reclampToolbar);
@@ -908,7 +907,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  document.documentElement.style.cursor = '';
   window.removeEventListener('keydown', onKeyDown, true);
   window.removeEventListener('resize', reclampToolbar);
   draftObserver?.disconnect();
@@ -1047,9 +1045,9 @@ function goBack() {
   if (prev === 'pick') void backToPick();
 }
 
-/** 点选阶段的页内状态：十字光标 + 全屏捕获层 + 已有序号牌 */
+/** 点选阶段的页内状态：十字光标（draft CSS 通道，#225）+ 全屏捕获层 + 已有序号牌 */
 function enterPickUI() {
-  document.documentElement.style.cursor = 'crosshair';
+  void pushPageCss(); // 光标随阶段走；与 backToPick 的推送同文，setDraft 对相同文本是空操作
   if (pickLayer) {
     pickLayer.style.display = '';
     pick.attach(pickLayer);
@@ -1806,7 +1804,6 @@ function newDraft(el: Element): Draft {
 async function enterPreview() {
   if (previewCount.value === 0) return;
   phase.value = 'preview';
-  document.documentElement.style.cursor = '';
   pick.stop();
   if (pickLayer) pickLayer.style.display = 'none';
   updateHoverBox(null);
@@ -1857,18 +1854,27 @@ async function backToPick() {
 }
 
 /**
+ * 点选阶段的十字光标（#225）：走 draft CSS 通道（用户样式表），不在 documentElement 上写内联
+ * style——内联 style 是页面 DOM 的一部分，候选选择器生成器会把 `html[style]` 当成祖先的「特征」
+ * 编进候选里，退出点选清掉光标后规则就静默失效。用户样式表不碰 DOM，生成器无从看到；
+ * !important 压过页面自己的 cursor 设置，语义与原先的内联写法一致（同为可继承值）。
+ */
+const PICK_CURSOR_CSS = 'html { cursor: crosshair !important; }';
+
+/**
  * 当前该注入页面的整份样式（走同一条预览通道，#82）：
  * - 看效果阶段：预览样式（预览所见 = 保存所得）；
  * - 选内容阶段：勾了同类的行整片描边（小组与大组同一形态，#100）——一条样式规则，
- *   滚动新加载的元素自动带上，不为成员逐个建 DOM。
+ *   滚动新加载的元素自动带上，不为成员逐个建 DOM；外加十字光标（#225）。
  * 两个阶段互斥，任何时刻都只注其中一份。
  */
 async function pushPageCss() {
   const outline =
     phase.value === 'pick' ? buildSameGroupOutlineCss([...focusedGroupCandidates()]) : null;
   const preview = phase.value === 'preview' ? buildPreviewCss(drafts.value) : null;
-  const css = outline || preview ? [preview, outline].filter((s): s is string => !!s).join('\n') : null;
-  await setDraftCss(css);
+  const cursor = phase.value === 'pick' ? PICK_CURSOR_CSS : null;
+  const parts = [preview, outline, cursor].filter((s): s is string => !!s);
+  await setDraftCss(parts.length ? parts.join('\n') : null);
 }
 
 /** 重画标记并应用预览样式（与正式样式同一个生成函数 core/css-builder，预览所见 = 保存所得） */
