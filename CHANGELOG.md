@@ -5,6 +5,32 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.4] - 2026-11-15
+
+走查遗留的最后一处键盘行为一致性。
+
+### 中文
+
+#### 改动
+
+- **键盘操作一致**：悬浮按钮「⋯」菜单打开后，焦点直接落在第一个菜单项上——与站点设置页行尾菜单同一行为，键盘用户不再需要按 Tab 摸进菜单
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.3 完全一致；单行交互修复
+- 门禁：编译、单测 864 项（57 文件）、E2E 十二脚本全绿
+
+### English
+
+#### Changes
+
+- **Consistent keyboard behavior**: opening the floating button's "⋯" menu now puts focus on the first menu item — same as the site settings row menu, so keyboard users no longer have to Tab into the menu
+
+#### For reviewers
+
+- Features and permission set are identical to 1.0.3; a one-line interaction fix
+- Gates: compile, 864 unit tests (57 files), E2E across twelve scripts all green
+
 ## [1.0.3] - 2026-11-15
 
 提审前最后一轮走查收口：修复审核员八步走查挖出的一个真缺陷（无特征元素的收起规则静默失效），并定界另一个走查现象为测试编排问题（运行时无缺陷）。功能与权限集合不变。
