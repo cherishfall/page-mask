@@ -5,6 +5,38 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.3] - 2026-11-15
+
+提审前最后一轮走查收口：修复审核员八步走查挖出的一个真缺陷（无特征元素的收起规则静默失效），并定界另一个走查现象为测试编排问题（运行时无缺陷）。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **收起「没有特征」的元素后规则不再悄悄失效**：裸段落这类没有 class、id 的元素，此前点选时留在网页上的临时光标样式会被当成它的「特征」写进收起规则——点选结束光标撤走，规则就匹配不到元素了（开关打开页面纹丝不动）。现在点选不再在网页上留下任何痕迹，保存的都是稳定特征
+- **极简页面也能正常收起无特征元素**：整页都挑不出稳定特征的页面（祖先元素同样没有 class / id），现在改用「从页面根逐级锚定的精确位置」保存，规则命中点选的那一个元素；页面改版导致位置变化时，失效体检照常提醒重新选一次
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.2 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点
+- 门禁：编译、单测 864 项（57 文件）、E2E 十二脚本全绿、审核员八步走查全绿（夹具站点，含无特征元素点选→保存→生效全流程）
+- 走查另一现象（向导保存后刷新链停摆）定界为走查脚本编排缺陷：脚本没应答「先保持原样」一问，向导未关期间页面刷新按设计被屏蔽——运行时零改动，脚本已修（#226）
+- 测试基建两处：E2E 门禁链卡死修复（check-orphan-css 漏关测试服务器，#227）、一处断言跟进光标通道改动
+
+### English
+
+#### Changes
+
+- **Hide rules for "featureless" elements no longer silently break**: for bare paragraphs and other elements without a class or id, the temporary pick cursor left on the page used to be mistaken for a "feature" of the element and baked into the saved rule — once picking ended and the cursor was removed, the rule matched nothing (flipping the switch did nothing on the page). Picking now leaves no trace on the page at all, so only stable features get saved
+- **Featureless elements can now be hidden on minimal pages too**: on pages where nothing has a stable feature (ancestors without classes or ids as well), rules are now saved as a precise position path anchored from the page root, matching exactly the picked element; if a redesign moves things, the rule health check still prompts to pick again as usual
+
+#### For reviewers
+
+- Features and permission set are identical to 1.0.2 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); no site access is granted at install time
+- Gates: compile, 864 unit tests (57 files), E2E across twelve scripts, full eight-step walkthrough green (fixture site, including pick → save → effect for a featureless element)
+- Another walkthrough observation (refresh chain stalling after wizard save) was scoped to a test-orchestration flaw: the script never answered the "keep as is" prompt, and page refreshes are blocked by design while the wizard is open — zero runtime changes, script fixed (#226)
+- Two test-infrastructure fixes: E2E gate chain hang (check-orphan-css leaked its test server, #227) and one assertion updated to follow the cursor channel change
+
 ## [1.0.2] - 2026-11-15
 
 提审前最后一轮自主收敛：四路深审（核心引擎 / 界面文案 / 商店政策 / 真实渲染与真机）+ 两轮新眼睛目检 + 审核员八步走查。功能与权限集合不变，改动集中在首屏体验、键盘可达性与正确性。

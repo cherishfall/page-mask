@@ -3,13 +3,13 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-15 · 对应构建 **1.0.2**（`.output/page-mask-1.0.2-chrome.zip`，商店提交版本）
+> 最后更新：2026-11-15 · 对应构建 **1.0.3**（`.output/page-mask-1.0.3-chrome.zip`，商店提交版本）
 
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.1-chrome.zip`
-- [x] 版本号已改（`package.json` → `1.0.1`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.1` 已打、Release 已发
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.3-chrome.zip`
+- [x] 版本号已改（`package.json` → `1.0.3`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.3` 已打、Release 已发
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [x] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「整页变灰」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）——1.0.2 走查回填见 §6 末尾：可自动化部分（harness 八步 + 真机三站 + 既有断言）已过；授权气泡 / 改键 / 小喇叭 / 视频观感四项提交时人工顺手核
@@ -189,10 +189,11 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.1 时 release notes 可用：`1.0.1 — Accessibility and correctness fixes from a final pre-submission audit: screen-reader labels match visible text, a confirmation dialog before restoring a site's own title & icon, cleaner permission revocation on site deletion, unified dialog widths; features and permissions unchanged.`
+> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.3 时 release notes 可用：`1.0.3 — Walkthrough sign-off: hide rules for elements without any class/id (bare paragraphs etc.) no longer silently break — the pick cursor no longer leaves an inline trace on the page, the style attribute is never used as a candidate feature, and minimal pages fall back to a root-anchored precise path; features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 1.0.3 | 2026-11-15 | 走查收口修复批：无特征元素（裸段落等没有 class/id 的元素）的收起规则不再被点选光标的临时内联样式污染而静默失效（点选光标改走用户样式表通道，style 属性不再作为候选特征，极简页面改用页面根锚定的精确路径保存）；另一走查现象定界为测试编排问题（运行时零改动）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.2 | 2026-11-15 | 提审前最后一轮自主收敛：正确性（「盖住」首屏不闪现、扩展更新后旧样式正确接管、切界面语言标题即刷、慢设备遮住不误报）；无障碍（删行 / 撤销 / 授权后焦点归还、深色界面点选描边对比度）；界面（向导清单渐隐提示、幽灵号牌半透明、快捷键入口对齐）；文案与隐私文档口径对齐。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.1 | 2026-11-14 | 提交前最后一轮全量审查修复批：无障碍（幕布恢复钮可及名含可见词、恢复标题图标补二次确认框）；正确性（删站点权限收回补原子性口径、一键清空慢页面多等一轮、导入端口归一、向导并发闸、名称截断）；界面一致性（对话框族统一宽度、错误消息句尾统一 + 两条新守门）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.0 | 2026-11-14 | 首个商店提交版本：商店元数据与描述按审核口径打磨（权限申请时点写全、界面钮名按实名、禁词清零、中英描述四处取齐、截图口径与测试数字刷新）；界面文案小修（失效说明两处同句式、常驻说明句号规矩补守门）；文档一致性收口（隐私政策首段改「整页变灰」口径、CHANGELOG 版本链接补齐）。权限集合不变。详见 `CHANGELOG.md` |
@@ -295,7 +296,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `1.0.1`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `1.0.3`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54（2026-11-14 随 #199 文案修订后实测） |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`curtain-oneshot.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
