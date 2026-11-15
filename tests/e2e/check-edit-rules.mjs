@@ -170,9 +170,11 @@ async function openEditRules(ext, page) {
   await waitForShadow(page, HOST, tid('pm-wizard-toolbar'), { timeout: 8000 });
 }
 
-/** 等选择阶段真正接管指针（拾取层挂上、光标变十字），避免抢在 setDraft 往返之前点页面 */
+/** 等选择阶段真正接管指针（拾取层挂上、光标变十字），避免抢在 setDraft 往返之前点页面。
+ *  #225 起十字光标走 draft CSS 通道（用户样式表），不再写 documentElement 内联 style——
+ *  等计算值变 crosshair 等于等样式表真正落地，行为等价于旧的内联断言 */
 const waitPickReady = (page, label) =>
-  waitFor(page, label, () => document.documentElement.style.cursor === 'crosshair', [], { timeout: 5000 });
+  waitFor(page, label, () => getComputedStyle(document.documentElement).cursor === 'crosshair', [], { timeout: 5000 });
 
 /** 键顺序无关的 JSON 比较（存储层规范化后键顺序会变） */
 const canonical = (v) =>
