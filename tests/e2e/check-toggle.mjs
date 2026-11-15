@@ -358,6 +358,9 @@ async function main() {
     await clickInShadow(page, TOGGLE, tid('pm-toggle-more'));
     await waitFor(page, '菜单打开', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-toggle-menu"]').matches(':popover-open'), [TOGGLE], { timeout: 3000 });
     check(true, '点「⋯」打开菜单');
+    // 打开后焦点进第一个菜单项（#210）：与管理页行尾菜单同一键盘行为
+    const menuFocus = await page.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.getAttribute('data-testid') ?? null, TOGGLE);
+    check(menuFocus === 'pm-toggle-title', `菜单打开后焦点在第一个菜单项（${menuFocus ?? '无'}，#210）`);
     const menu = await rectIn(page, TOGGLE, tid('pm-toggle-menu'));
     check(
       menu.x >= 0 && menu.y >= 0 && menu.right <= 1000 && menu.bottom <= 700,

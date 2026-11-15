@@ -376,6 +376,10 @@ function toggleMenu() {
   else {
     menu.showPopover();
     positionMenu();
+    // 打开后焦点进第一个菜单项（#210）：与管理页行尾菜单同一键盘行为——
+    // 焦点停在「⋯」上时键盘用户要靠 Tab 摸进菜单，两处同类控件不该两种走法。
+    // 关闭路径由 popover light-dismiss 自动还焦点到「⋯」，无需另改。
+    menu.querySelector<HTMLButtonElement>('button')?.focus();
   }
 }
 
