@@ -1,12 +1,12 @@
 /**
- * 落地页截图生成（中英两套）：7 张真实运行画面 × 2 种界面语言。
+ * 落地页截图生成（中英两套）：4 张真实运行画面 × 2 种界面语言。
  *
  * 运行：npm run build && node tests/e2e/landing-shots.mjs
  * 输出：默认 docs/store-assets/landing/<lang>/，可用 LANDING_SHOTS_OUT=<目录> 改位置。
  *       落地页仓库使用 screens/<lang>/，生成后复制过去即可（文件同名）。
  *
  * 与 store-shots.mjs 的区别：商店素材是 1280×800 的大字拼版；落地页需要能直接嵌进
- * 页面的干净截图——图内不放任何说明文字，说明全部由网页的双语 figcaption 承担。
+ * 页面的干净截图——图内不放任何说明文字，说明全部由网页的双语文案承担。
  * 两种语言的界面都从真实构建跑出来：设置 uiLanguage 后重开页面，扩展 UI 跟着换语言；
  * 示例站点本身也出中英两版，避免「英文界面截图里夹着中文网页」的割裂感。
  *
@@ -15,16 +15,19 @@
  *   保留 TLD，经 --host-resolver-rules 指向本地服务；截图里不出现 127.0.0.1 / 端口。
  * - 不含第三方商标、真人照片、用户内容；封面与推荐卡片全部是 CSS 渐变占位。
  *
- * 取景：
- * - before / after / pick / gray-*：1280×800 视口，1.5 倍像素密度（落地页展示 2 倍左右）。
- * - popup：弹窗元素本体，1 倍（弹窗 target 不支持改像素密度，落地页按 320px 原尺寸展示）。
- * - menu：页面右下角 220×240 取景（含「⋯」菜单与胶囊），2 倍。
+ * 取景（均为 1280×800 视口、1.5 倍像素密度）：
+ * - before：原样页面，首屏第一步。
+ * - after：收起 4 项，第二步。
+ * - gray-hidden：收起 4 项 + 整页变灰，第三步。
+ * - pick：「怎么用」里第 3 步的点选界面。
+ * 首屏的「标签页标题」变化由落地页用 HTML 画标签页示意，不生成截图（浏览器 UI
+ * 不在页面截图里，伪造一张反而变成效果图）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { poll, resultsDir, startServer, waitFor } from './lib/harness.mjs';
-import { evalInContentWorld, launchExtension, openPopup, patchProfile, patchSettings, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
-import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
+import { evalInContentWorld, launchExtension, patchSettings, sendToBackground, sendToTab, setProfile, tabIdOf } from './lib/extension.mjs';
+import { waitForShadow } from './lib/shadow.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
 const OUT = process.env.LANDING_SHOTS_OUT
@@ -50,6 +53,9 @@ const COPY = {
     quote: '「把不想看的部分收起来，剩下的才是你打开这个网站的原因。」',
     p2: '整页变灰只去掉颜色，不拦截内容：文字仍然清晰，链接照常能点，视频的声音仍由播放器自己的按钮控制。',
     p3: '所有设置都只保存在这台电脑的浏览器里。没有账号，没有同步，也不会上传任何数据。',
+    chapterTitle: '第 6 章 · 潮汐',
+    p4: '夜里两点，海面开始退潮。她沿着码头一直走到尽头，把灯举高了一些——远处的船影正一点一点靠近，像一句被风吹散的话重新拼了起来。',
+    p5: '「你迟到了。」她说。对方没有回答，只把一封信递过来。信封上没有名字，只有一个被海水泡开的蓝色印章。',
     recTitle: '本周推荐',
     recs: [
       ['雾中灯塔', '示例作者 · 示例评分 4.6'],
@@ -75,6 +81,9 @@ const COPY = {
     quote: '“Hide what you did not come for; what is left is the reason you opened the site.”',
     p2: 'Whole-page gray only removes color. Nothing is blocked: text stays readable, links still work, and video sound stays with the player’s own control.',
     p3: 'Every setting stays in the browser on this computer. No account, no sync, and nothing is uploaded.',
+    chapterTitle: 'Chapter 6 · The Tide',
+    p4: 'At two in the morning the sea began to ebb. She walked to the end of the pier and raised the lamp — the shape of a boat was drawing closer, like a sentence scattered by wind piecing itself back together.',
+    p5: '“You’re late,” she said. There was no answer; the other only handed her a letter. It had no name on it, just a blue seal blurred by seawater.',
     recTitle: 'This week',
     recs: [
       ['The Fog Lighthouse', 'Demo author · Demo rating 4.6'],
@@ -130,6 +139,7 @@ function pageHtml(lang) {
   .intro{color:#374151;font-size:15px;line-height:1.9;margin:0}
   article p{color:#374151;font-size:15px;line-height:1.9;margin:0 0 15px}
   blockquote{border-left:3px solid #dbe3f0;margin:20px 0;padding:2px 0 2px 16px;color:#4b5563;font-size:15px;line-height:1.8}
+  article h2.chapter{font-size:18px;margin:26px 0 12px}
   #rec{width:300px;flex:none}
   #rec h2{font-size:16px;margin:2px 0 14px}
   #rec ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
@@ -156,6 +166,9 @@ function pageHtml(lang) {
     <blockquote>${c.quote}</blockquote>
     <p>${c.p2}</p>
     <p>${c.p3}</p>
+    <h2 class="chapter">${c.chapterTitle}</h2>
+    <p>${c.p4}</p>
+    <p>${c.p5}</p>
   </article>
   <aside id="rec">
     <h2>${c.recTitle}</h2>
@@ -246,10 +259,13 @@ async function waitForApplied(page, sel = '#site-header') {
   );
 }
 
+const STALE = ['popup', 'menu', 'gray-before', 'gray-after'];
 const dirs = Object.fromEntries(
   LANGS.map((lang) => {
     const dir = path.join(OUT, lang);
     fs.mkdirSync(dir, { recursive: true });
+    // 旧版落地页的素材不再使用，重跑时清掉，避免 pages 仓库里留下死图
+    for (const name of STALE) fs.rmSync(path.join(dir, `${name}.webp`), { force: true });
     return [lang, dir];
   }),
 );
@@ -287,20 +303,22 @@ try {
     await waitForApplied(pAfter);
     await waitForToggle(pAfter);
     await shot(pAfter, lang, 'after');
-
-    // ---------- popup：在清爽态页面上打开真实弹窗 ----------
-    const popup = await openPopup(ext, pAfter);
-    await popup.waitForSelector('[data-testid="pm-popup-cover"]', { timeout: 6000 });
-    await sleep(400);
-    // 弹窗是独立 target（320×480 视口），setViewport / CDP metrics override 都不支持；
-    // 元素本身高 480.9，裁切或放大都会触发「超出视口」的重复渲染，所以按 1 倍截元素本体，
-    // 落地页按 320px 原尺寸展示（1:1，不放大）。
-    const popupEl = await popup.$('main.popup');
-    if (!popupEl) throw new Error('找不到弹窗主体 main.popup');
-    await popupEl.screenshot({ type: 'webp', quality: 84, path: path.join(dirs[lang], 'popup.webp') });
-    written.push(path.join(dirs[lang], 'popup.webp'));
-    await popup.close();
     await pAfter.close();
+
+    // ---------- gray-hidden：收起 4 项 + 整页变灰（首屏第三步） ----------
+    await setProfile(control, ORIGIN, profileFor(lang, { mediaGray: true }));
+    const pGrayHidden = await newPage(lang);
+    await waitForApplied(pGrayHidden);
+    await waitFor(
+      pGrayHidden,
+      '整页变灰',
+      () => getComputedStyle(document.documentElement).filter === 'grayscale(1)',
+      [],
+      { timeout: 8000 },
+    );
+    await waitForToggle(pGrayHidden);
+    await shot(pGrayHidden, lang, 'gray-hidden');
+    await pGrayHidden.close();
 
     // ---------- pick：设置向导第 1 步（点选），已有规则自动铺成草稿 ----------
     await setProfile(control, ORIGIN, profileFor(lang, { switchState: 'original' }));
@@ -316,38 +334,6 @@ try {
     await sleep(700);
     await shot(pPick, lang, 'pick');
     await pPick.close();
-
-    // ---------- menu：原样页面右下角的「⋯」菜单 ----------
-    await setProfile(control, ORIGIN, profileFor(lang, { switchState: 'original' }));
-    const pMenu = await newPage(lang);
-    await waitForToggle(pMenu);
-    await clickInShadow(pMenu, 'pagemask-toggle', '[data-testid="pm-toggle-more"]');
-    await waitForShadow(pMenu, 'pagemask-toggle', '[data-testid="pm-toggle-menu"]');
-    await sleep(450);
-    // 取景只圈住右下角的悬浮按钮与展开的菜单（含页面底边）；2 倍像素密度，
-    // 落地页里按 440px 展示时菜单文字才够清楚
-    await pMenu.setViewport({ ...VIEW, deviceScaleFactor: 2 });
-    await sleep(300);
-    await shot(pMenu, lang, 'menu', { clip: { x: 1060, y: 560, width: 220, height: 240 } });
-    await pMenu.close();
-
-    // ---------- gray：原样页面（彩色）→ 整页变灰 ----------
-    await setProfile(control, ORIGIN, profileFor(lang, { switchState: 'original', mediaGray: false }));
-    const pGray = await newPage(lang);
-    await waitForToggle(pGray);
-    const grayClip = { x: 0, y: 0, width: 1280, height: 800 };
-    await shot(pGray, lang, 'gray-before', { clip: grayClip });
-    await patchProfile(control, ORIGIN, { mediaGray: true });
-    await waitFor(
-      pGray,
-      '整页变灰',
-      () => getComputedStyle(document.documentElement).filter === 'grayscale(1)',
-      [],
-      { timeout: 8000 },
-    );
-    await sleep(300);
-    await shot(pGray, lang, 'gray-after', { clip: grayClip });
-    await pGray.close();
   }
 
   console.log(`\n已生成 ${written.length} 张：`);
