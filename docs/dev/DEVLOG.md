@@ -2,6 +2,19 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 落地页真实截图（2026-11-16）：首屏前后对比 + 实际界面区
+
+用户要把 PageMask 介绍给别人，纯文字传达不了实际长相，要求落地页放真实截图。
+
+- **素材生成**：新增 `tests/e2e/landing-shots.mjs`，用真实构建的扩展在虚构示例站点上跑，中英各 7 张（原样 / 收起后 / 点选 / 弹窗 / 悬浮按钮菜单 / 变灰前后），输出 `docs/store-assets/landing/<lang>/`，再复制到落地页仓库 `page-mask/screens/<lang>/`。「原色 vs 整页变灰」直接复用 `before.webp`，`gray-before` 不重复上传。
+- **素材纪律**：沿用 store-shots 的虚构站点 Acme 书房 / Acme Library（`acme-journal.test`，RFC 6761 保留 TLD + `--host-resolver-rules` + `--no-proxy-server`），封面与推荐卡全为 CSS 渐变，无第三方商标、真人、用户内容；图内不放说明文字，说明交给网页双语 figcaption。
+- **弹窗取景**：popup 是独立 target（320×480 视口、DPR 1），`setViewport` 会崩、CDP `Emulation.setDeviceMetricsOverride` 不支持、`--force-device-scale-factor` 反过来破坏弹窗尺寸；元素高 480.89 超出视口，放大或裁切会触发重复渲染。最终按 1 倍截元素本体，落地页 320px 1:1 展示。菜单取景收紧到 220×240（菜单 + 胶囊 + 页面底边）并按 2 倍像素密度重拍，落地页按 440px 展示，菜单文字清楚。
+- **落地页改动**（`cherishfall.github.io` 的 `page-mask/index.html`）：首屏信任行下方加「原样 / 收起 4 项后」前后对比；新增「实际界面」区（点选、弹窗、悬浮按钮菜单、原色 vs 整页变灰）。图片带 `data-src-zh/en` 与 `data-alt-zh/en`，语言切换的 `apply()` 同步换图、alt 与看图链接；`width`/`height` 写死防 CLS（英文弹窗比中文高 34px，尺寸按语言切），首屏两张不设 lazy、其余 `loading="lazy"`；截图整体可点开，在新标签页看大图。
+- **顺手修复真 bug**：`ui/wizard/WizardApp.vue` 的 `{{ t.wizard.adjustNow }}<strong>` 少一个空格，英文界面渲染成「AdjustingItem 4 (Footer)」——重拍截图时发现。审计 `ui/` 与 `entrypoints/` 全部模板，`}}<tag>` 相邻插值只此一处；修后重建并重拍。
+- **同类审计**：中英两套截图逐张核对界面语言与站点语言一致；截图 alt、图上标签、图下说明三处都随语言切换（同一个 `apply()`）；标签用词对照 `GLOSSARY`（「原样」「整页变灰」「悬浮按钮」「收起设置」），未使用 Avoid 叫法。
+- **目检**：落地页四配置真实渲染（中 / 英、1280 桌面、390 移动、深色）逐张看过；无横向溢出、无 CLS 占位跳变。
+- **门禁**：compile ✓、单测 864 ✓、check-wizard 217 项 ✓；落地页仓库单独提交并推送。
+
 ## 1.0.4 发版（2026-11-15）：#210 收口
 
 走查遗留的最后一处键盘行为一致性：胶囊 ⋯ 菜单打开后焦点进第一个菜单项（#210，与站点设置页行尾菜单对齐），check-toggle 补焦点断言。单行交互修复，另补关 #217/#219（活已在 1.0.2 完成、漏关票）。**票面清零**：#207–#227 全部关闭。
