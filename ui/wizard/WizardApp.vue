@@ -108,7 +108,7 @@
             <!-- h3 与清单组标题同级（0.8.12 准则审查：p/h3 混用让读屏标题导航漏掉这一组） -->
             <p class="pm-wiz-group-note" data-testid="pm-wiz-adjust-target">
               <template v-if="lastSel">
-                {{ t.wizard.adjustNow }}<strong>{{ t.wizard.adjustTarget(lastSelIndex + 1, lastSelName) }}</strong>
+                {{ t.wizard.adjustNow }} <strong>{{ t.wizard.adjustTarget(lastSelIndex + 1, lastSelName) }}</strong>
               </template>
               <template v-else>{{ t.wizard.adjustPickFirst }}</template>
             </p>
