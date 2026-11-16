@@ -1,5 +1,5 @@
 /**
- * 落地页截图生成（中英两套）：4 张真实运行画面 × 2 种界面语言。
+ * 落地页截图生成（中英两套）：5 张真实运行画面 × 2 种界面语言。
  *
  * 运行：npm run build && node tests/e2e/landing-shots.mjs
  * 输出：默认 docs/store-assets/landing/<lang>/，可用 LANDING_SHOTS_OUT=<目录> 改位置。
@@ -16,12 +16,13 @@
  * - 不含第三方商标、真人照片、用户内容；封面与推荐卡片全部是 CSS 渐变占位。
  *
  * 取景（均为 1280×800 视口、1.5 倍像素密度）：
- * - before：原样页面，首屏第一步。
- * - after：收起 4 项，第二步。
- * - gray-hidden：收起 4 项 + 整页变灰，第三步。
- * - pick：「怎么用」里第 3 步的点选界面。
- * 首屏的「标签页标题」变化由落地页用 HTML 画标签页示意，不生成截图（浏览器 UI
- * 不在页面截图里，伪造一张反而变成效果图）。
+ * - before：原样页面，演示第 1 步。
+ * - title：「标题和图标」表单，已填入「阅读」，演示第 2 步。
+ * - after：收起 4 项，演示第 5 步。
+ * - gray-hidden：收起 4 项 + 整页变灰，演示第 6 步。
+ * - pick：「收起内容」的点选界面，演示第 4 步。
+ * 第 3 步「标题改为阅读」用 before 截图 + 落地页画的标签页示意：浏览器 UI
+ * 不在页面截图里，伪造一张反而变成效果图。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -296,6 +297,40 @@ try {
     await waitForToggle(pBefore);
     await shot(pBefore, lang, 'before');
     await pBefore.close();
+
+    // ---------- title：标题和图标表单，已填入「阅读」 ----------
+    // 这是「还没收起任何内容」的一步：资料里不能带收起项，否则页面会浮出点选编号，
+    // 把第 4 步的画面提前泄漏到第 2 步。图标保持网站原来的，本步只改标题。
+    await setProfile(
+      control,
+      ORIGIN,
+      profileFor(lang, {
+        switchState: 'original',
+        disguisedTitle: null,
+        icon: { kind: 'site' },
+        hideRules: [],
+      }),
+    );
+    const pTitle = await newPage(lang);
+    // 这一步配置里还没有任何效果，胶囊按设计不挂；直接经后台消息打开「标题和图标」。
+    await poll(
+      async () => evalInContentWorld(pTitle, ext.extOrigin, 'window.__pagemask?.alive()').catch(() => false),
+      '内容脚本就绪',
+    );
+    await sendToTab(control, await tabIdOf(control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editTitle' });
+    await waitForShadow(pTitle, 'pagemask-wizard', '[data-testid="pm-wizard-toolbar"]');
+    await waitForShadow(pTitle, 'pagemask-wizard', '[data-testid="pm-wiz-title-input"]');
+    await pTitle.evaluate((title) => {
+      const input = document
+        .querySelector('pagemask-wizard')
+        ?.shadowRoot?.querySelector('[data-testid="pm-wiz-title-input"]');
+      if (!input) return;
+      input.value = title;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }, COPY[lang].disguisedTitle);
+    await sleep(500);
+    await shot(pTitle, lang, 'title');
+    await pTitle.close();
 
     // ---------- after：同一页面，收起 4 项 ----------
     await setProfile(control, ORIGIN, profileFor(lang));
