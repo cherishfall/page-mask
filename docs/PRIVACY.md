@@ -1,6 +1,6 @@
 # PageMask 隐私政策 / Privacy Policy
 
-生效日期 / Effective: 2026-10-27 · 最后更新 / Last updated: 2026-11-14
+生效日期 / Effective: 2026-10-27 · 最后更新 / Last updated: 2026-11-18
 
 PageMask 是一个 Chrome 扩展：在你主动添加的网站上收起你选择的页面元素，可把整个页面变成黑白的（整页变灰），遮住整页时连标签页声音一起按住，也可为该网站设置标签页标题与图标。本政策说明它处理哪些数据。
 PageMask is a Chrome extension that hides page elements you choose on websites you add, can turn the whole page gray, hold a tab's sound together with the full-page cover, and set a tab title and icon for that site. This policy explains what data it handles.
@@ -12,7 +12,7 @@ PageMask is a Chrome extension that hides page elements you choose on websites y
 
 ### Summary
 
-PageMask does not send any data to the developer or to anyone else. There is no server, account, analytics, advertising or third-party code. Everything described below stays in your own browser.
+PageMask does not send any data to the developer or to anyone else. There is no server, account, analytics or advertising. It loads no external scripts or remote code and makes no network requests: all code, including the open-source libraries bundled in the package (see [THIRD_PARTY_NOTICES](../public/THIRD_PARTY_NOTICES.txt)), ships with the extension. Everything described below stays in your own browser.
 
 ### Data stored on your device
 
@@ -62,7 +62,7 @@ Online version of this policy: https://cherishfall.github.io/page-mask/privacy.h
 
 ### 概要
 
-PageMask 不向开发者或任何第三方发送任何数据。它没有服务器、没有账号、没有统计、没有广告、没有第三方代码。下面描述的一切都只留在你自己的浏览器里。
+PageMask 不向开发者或任何第三方发送任何数据。它没有服务器、没有账号、没有统计、没有广告；不加载任何外部脚本或远程代码，也不发起网络请求。包括随包分发的开源库在内的全部代码都来自扩展包内（见 [THIRD_PARTY_NOTICES](../public/THIRD_PARTY_NOTICES.txt)）。下面描述的一切都只留在你自己的浏览器里。
 
 ### 保存在你设备上的数据
 
