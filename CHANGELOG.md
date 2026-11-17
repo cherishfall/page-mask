@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.5] - 2026-11-18
+
+第五轮上架前审查（Chrome 平台一致性 + 无障碍 + 商店材料）的修复批。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **英文界面的页内读屏发音**：页内小胶囊、向导、幕布恢复按钮所在容器的界面语言标记此前固定为中文——英文界面上读屏会按中文念；现在跟着界面语言走（WCAG 3.1.2）
+- **快捷键被挡的提示结束后，图标说明还在**：在不支持快捷键的页面按一下，图标角标 3 秒后消失时，悬停说明恢复为默认文案；此前被清成空标题，Chrome 里只剩扩展名
+- **弹窗不会永远停在「读取中」**：读取当前标签页失败时，落到「这个页面用不了」的说明，而不是一直转圈（与 #168 同一口径）
+
+#### 文档与商店材料
+
+- 隐私政策与商店描述里「没有第三方代码」改为可核对的「不加载外部脚本或远程代码，不发起网络请求」——界面运行时等开源库随包分发，列在 `THIRD_PARTY_NOTICES`
+- 提交指南与商店材料中的示例包名 / 版本号统一到当前构建，不再引用 1.0.1、1.0.0 的旧包
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.4 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点
+- 门禁：编译、单测 864 项（57 文件）、E2E 十二脚本全绿
+
+### English
+
+#### Changes
+
+- **Screen-reader language for in-page UI on the English interface**: the shared container for the floating button, picker and restore button had its language fixed to Chinese, so screen readers pronounced the English UI with Chinese phonetics; it now follows the interface language (WCAG 3.1.2)
+- **The icon tooltip survives the blocked-shortcut hint**: after the 3-second badge on an unsupported page, the tooltip now returns to the default text; it used to be cleared to an empty title, leaving only the extension name in Chrome
+- **The popup no longer hangs on "Loading"**: if reading the active tab fails, it falls back to the existing "this page is not available" explanation instead of spinning forever (same rule as #168)
+
+#### Docs and store materials
+
+- Replaced "no third-party code" in the privacy policy and store copy with the verifiable "no external scripts or remote code is loaded, and no network requests are made" — open-source libraries such as the UI runtime ship inside the package and are listed in `THIRD_PARTY_NOTICES`
+- Aligned example package names and version numbers in the submission guide and store materials with the current build; removed references to the old 1.0.1 / 1.0.0 packages
+
+#### For reviewers
+
+- Features and permission set are identical to 1.0.4 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); no site access is granted at install time
+- Gates: compile, 864 unit tests (57 files), E2E across twelve scripts all green
+
 ## [1.0.4] - 2026-11-15
 
 走查遗留的最后一处键盘行为一致性。
