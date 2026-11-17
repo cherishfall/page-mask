@@ -11,8 +11,9 @@
  *
  * 记录是「恢复副本」，不是正常路径的事实源：正常换入换出仍以内容脚本带来的 prev 为准。
  * 每份文档一个键（draft:<tabId>:<documentId|frameId>），值带写入时间（{ css, at }）；
- * 文档消失后没人 take 的残留键由 sweep() 在 onInstalled / onStartup 清掉（>24h），
- * 防止无界累积（local 总配额 10MB，单条草稿文本很小）。
+ * 文档消失后没人 take 的残留键由 sweep() 只在 onStartup 清掉（>24h）——不能挂在
+ * onInstalled：update 的 sweep 会抢在 reinject 后的孤儿清理前面删掉活文档仍需要的
+ * 超龄记录（#249）。防止无界累积（local 总配额 10MB，单条草稿文本很小）。
  * storage.local 不可用时全部退化为无记录：孤儿清理退回按配置重算的现状（导航兜底）。
  */
 import type { Browser } from 'wxt/browser';
@@ -38,7 +39,7 @@ export interface DraftTracker {
   get(key: string): Promise<string | null>;
   /** 读取并删除该文档的草稿记录（孤儿只撤一次） */
   take(key: string): Promise<string | null>;
-  /** 清扫超龄的残留键（onInstalled / onStartup 调用）：文档消失后没人 take 的记录不能累积 */
+  /** 清扫超龄的残留键（只在 onStartup 调用，#249）：文档消失后没人 take 的记录不能累积 */
   sweep(now?: number): Promise<void>;
 }
 
@@ -81,7 +82,7 @@ export function createDraftTracker(area: Browser.storage.StorageArea | undefined
           .map(([k]) => k);
         if (stale.length > 0) await area.remove(stale);
       } catch {
-        // 清扫失败不影响功能：残留键等下一次 install / startup 再扫
+        // 清扫失败不影响功能：残留键等下一次 onStartup 再扫（#249：只在启动时扫）
       }
     },
   };
