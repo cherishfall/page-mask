@@ -10,6 +10,8 @@
  *
  * 无状态：注入记录由内容脚本按文档持有，随请求带来（见 core/messages.ts 顶部说明），
  * SW 随时被回收都不影响还原；对账每次都从存储、权限、注册表重新读取。
+ * 唯一的会话级例外是预览草稿的恢复副本（core/draft-tracker.ts，#239）：正式样式可由配置
+ * 重算，草稿不能——扩展更新时旧实例冻结交接、撤不掉，需要这份记录供孤儿清理。
  *
  * 对账触发点（任何一个都可能在 SW 刚被唤醒时到来，都是幂等的）：
  * - runtime.onInstalled（install / update / chrome_update）：扩展更新或重载会清空动态注册（REVIEW B1）
@@ -43,6 +45,7 @@ import type {
   ReconcileResponse,
 } from './messages';
 import { fromExtensionPage as isExtensionPageSender } from './messages';
+import { createDraftTracker, draftKeyOf } from './draft-tracker';
 import { resolveLocale, setLocale, t } from './i18n';
 import { isSupportedPage } from './origin';
 
@@ -67,6 +70,8 @@ function siteKeyOfUrl(url: string | undefined): string | null {
 
 export function createBackground({ browser }: BackgroundDeps): void {
   const storage = createPageMaskStorage(browser.storage.local);
+  // 预览草稿的会话记录（#239）：draftCss 实际落进文档的文本，供孤儿清理。见 core/draft-tracker.ts
+  const draftRecords = createDraftTracker(browser.storage.session);
   const extensionBase = browser.runtime.getURL('/');
 
   /** 后台也出文案（快捷键被挡的角标悬停说明，#202）：跟随全局设置里的界面语言。
@@ -703,13 +708,37 @@ export function createBackground({ browser }: BackgroundDeps): void {
       }
       case 'restoreOriginal':
         return swapCss(target, prev, null);
-      case 'draftCss':
-        return swapCss(target, prev, typeof msg.next === 'string' && msg.next ? msg.next : null);
+      case 'draftCss': {
+        const next = typeof msg.next === 'string' && msg.next ? msg.next : null;
+        const draftKey = draftKeyOf(target);
+        // 新实例以 prev=null 起步但文档里可能还留着上一份草稿：扩展更新 / 重载时旧实例
+        // 冻结交接（core/doc-styles.ts），撤预览的请求发不出来。先按会话记录把那份残留
+        // 撤掉再插新的（与 releaseOrphanCss 同一记录来源，#239）
+        if (prev === null) {
+          const orphan = await draftRecords.get(draftKey);
+          if (orphan !== null) {
+            if (orphan === next) {
+              await draftRecords.set(draftKey, next);
+              return { ok: true, css: next };
+            }
+            try {
+              await browser.scripting.removeCSS({ target, css: orphan, origin: 'USER' });
+            } catch {
+              // 文档已不在 / 没有这份样式
+            }
+          }
+        }
+        const res = await swapCss(target, prev, next);
+        if (res.ok) await draftRecords.set(draftKey, res.css ?? null);
+        return res;
+      }
       case 'hostShield':
         // 文本固定由后台决定（core/host-shield.ts）；交接来的旧版本文本在这里换成当前版本
         return swapCss(target, prev, msg.on === true ? HOST_SHIELD_CSS : null);
       case 'releaseOrphanCss': {
-        // 失联旧实例留下的样式各撤一份（文本按当前版本与配置重算；对不上时 removeCSS 是空操作）
+        // 失联旧实例留下的样式各撤一份：预览草稿按会话记录（#239），保护 / 正式样式按当前
+        // 版本与配置重算（对不上时 removeCSS 是空操作）
+        const orphanDraft = await draftRecords.take(draftKeyOf(target));
         const url = scopeUrl(sender, msg.url);
         let formal: string | null = null;
         try {
@@ -717,7 +746,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
         } catch {
           // 地址异常：只撤保护样式
         }
-        for (const css of [HOST_SHIELD_CSS, formal]) {
+        for (const css of [orphanDraft, HOST_SHIELD_CSS, formal]) {
           if (!css) continue;
           try {
             await browser.scripting.removeCSS({ target, css, origin: 'USER' });

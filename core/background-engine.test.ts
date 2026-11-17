@@ -786,6 +786,57 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1' }));
   });
 
+  it('draftCss：实际落进文档的文本记入 storage.session，作为孤儿恢复副本（#239）', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
+    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({ 'draft:7:doc-A': 'D1' });
+
+    await send({ t: 'draftCss', prev: 'D1', next: null }, DOC_SENDER);
+    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({});
+  });
+
+  it('draftCss：新实例以 prev=null 换草稿时，先撤会话记录里的残留再插新的（#239）', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
+    stubs.scripting.insertCSS.mockClear();
+    stubs.scripting.removeCSS.mockClear();
+
+    // 模拟扩展更新后的新实例：旧实例冻结交接、prev 带不出来，文档里的 D1 还在
+    const res = await send({ t: 'draftCss', prev: null, next: 'D2' }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: 'D2' });
+    expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1', origin: 'USER' }));
+    expect(stubs.scripting.insertCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D2' }));
+    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({ 'draft:7:doc-A': 'D2' });
+  });
+
+  it('draftCss：残留文本与新草稿相同时不重复插入（只刷新记录）', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
+    stubs.scripting.insertCSS.mockClear();
+    stubs.scripting.removeCSS.mockClear();
+
+    const res = await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: 'D1' });
+    expect(stubs.scripting.insertCSS).not.toHaveBeenCalled();
+    expect(stubs.scripting.removeCSS).not.toHaveBeenCalled();
+  });
+
+  it('releaseOrphanCss：会话记录里的孤儿预览一并撤掉（#239）', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'DRAFT-ORPHAN' }, DOC_SENDER);
+    stubs.scripting.removeCSS.mockClear();
+
+    const res = await send({ t: 'releaseOrphanCss', url: `${BASE}/home` }, DOC_SENDER);
+
+    expect(res).toEqual({ ok: true, css: null });
+    const removed = (stubs.scripting.removeCSS.mock.calls as unknown as [{ css: string }][]).map(([a]) => a.css);
+    expect(removed).toContain('DRAFT-ORPHAN');
+    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({});
+  });
+
+  it('draftCss：会话记录键在无 documentId 时退回 frameId', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 3, url: `${BASE}/home` });
+    expect(await fakeBrowser.storage.session.get('draft:7:3')).toEqual({ 'draft:7:3': 'D1' });
+  });
+
   it('注入失败：回复 ok:false，并告知文档里仍是旧样式', async () => {
     stubs.scripting.insertCSS.mockRejectedValueOnce(new Error('No document with id'));
 
