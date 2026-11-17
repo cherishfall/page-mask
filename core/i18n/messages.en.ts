@@ -14,12 +14,6 @@
 import type { Messages } from './messages.zh';
 
 /**
- * The "a title can't be blank" caveat used to be copy-pasted into three keys (0.8.15 #151).
- * One source of truth; declared outside the object because an object literal can't reference itself.
- */
-const titleBlankHint = 'if you clear it completely, Chrome will show the address instead';
-
-/**
  * "Couldn't save" was copy-pasted into four keys (media / notice / management.error.rules / common,
  * #172) with small drift: a straight apostrophe here, a final period there. One shared const.
  */
@@ -61,8 +55,6 @@ export const en: Messages = {
     quickTitle: 'Common titles',
     /** Accessible name for the ⓘ info tag (#161): shared key, used by popup / management / settings / wizard */
     infoLabel: 'More information',
-    /** Blank-title caveat shared by three keys (see the const above) */
-    titleBlankHint,
     unnamedElement: 'Unnamed hidden item',
     languageNameZh: '简体中文',
     languageNameEn: 'English',
@@ -231,7 +223,7 @@ export const en: Messages = {
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title',
     titleFootnote: (fallback: string) =>
-      `Saved automatically once you stop typing; leave it empty to use the default title “${fallback}” — ${titleBlankHint}`,
+      `Saved automatically once you stop typing; leave it empty to use the default title “${fallback}”`,
 
     iconHeading: 'Tab icon',
     // #191: "uses this icon" read oddly with “No icon” picked — the choice covers all three
@@ -303,7 +295,7 @@ export const en: Messages = {
     titleIntro: 'Pre-filled when you open “Title & icon” for a site; also used when you cover a page on a site that has no title of its own',
     titleLabel: 'Default title',
     titleFootnote: (fallback: string) =>
-      `Leave it empty to use “${fallback}” (follows the interface language) — ${titleBlankHint}`,
+      `Leave it empty to use “${fallback}” (follows the interface language)`,
 
 
     toggleHeading: 'Floating button',
@@ -408,7 +400,7 @@ export const en: Messages = {
     },
     progress: (index: number, total: number) => `Step ${index} of ${total}`,
     titleHint: (fallback: string) =>
-      `Whatever you type here is what the tab shows, right now; leave it empty to use “${fallback}” — ${titleBlankHint}`,
+      `Whatever you type here is what the tab shows, right now; leave it empty to use “${fallback}”`,
     pickLead: [
       'Click something on the page to pick it',
       'Click it again to deselect it; you can pick several in a row',

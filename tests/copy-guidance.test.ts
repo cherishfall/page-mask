@@ -260,7 +260,7 @@ describe('必须留下、不许收起清单（验收 3；tests/media-ui.test.ts:
   const site = read('../entrypoints/management/views/SiteSettingsView.vue');
   const settings = read('../entrypoints/settings/App.vue');
 
-  it('中英两侧六个清单键都还在', () => {
+  it('中英两侧五个清单键都还在', () => {
     for (const lang of ['zh', 'en'] as const) {
       const m = MESSAGES[lang];
       expect(m.media.hint, `${lang}.media.hint`).toBeTruthy();
@@ -268,7 +268,6 @@ describe('必须留下、不许收起清单（验收 3；tests/media-ui.test.ts:
       expect(m.popup.coverHint, `${lang}.popup.coverHint`).toBeTruthy();
       expect(m.management.deleteSite.impact, `${lang}.management.deleteSite.impact`).toBeTruthy();
       expect(m.settings.replaceDialog.irreversible, `${lang}.settings.replaceDialog.irreversible`).toBeTruthy();
-      expect(m.common.titleBlankHint, `${lang}.common.titleBlankHint`).toBeTruthy();
     }
   });
 
@@ -281,9 +280,8 @@ describe('必须留下、不许收起清单（验收 3；tests/media-ui.test.ts:
     expect(read('../ui/wizard/WizardApp.vue')).toContain('t.wizard.titleHint');
   });
 
-  it('空白标题坑的三处脚注都插值同一份 const（DEVLOG #151 同值双键教训）', () => {
-    expect((zhSrc.match(/\$\{titleBlankHint\}/g) ?? []).length).toBeGreaterThanOrEqual(3);
-    expect((enSrc.match(/\$\{titleBlankHint\}/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  it('「清成空白 Chrome 显示网址」的过时警告已移除（#246：标题兜底永不空白，警告与「留空就用「阅读」」自相矛盾）', () => {
+    for (const src of [zhSrc, enSrc]) expect(src.includes('titleBlankHint')).toBe(false);
   });
 });
 

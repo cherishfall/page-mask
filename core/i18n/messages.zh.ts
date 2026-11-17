@@ -19,12 +19,6 @@
  * - 宁可长一点、朴素一点，也不要短得让人猜
  */
 /**
- * 「标题不能留成空白」这句坑提示原本逐字重复在三个键里（0.8.15 #151）：改一处漏两处的风险。
- * 收成一份出处；对象字面量里不能自引用，所以在对象外声明，三处用模板串插进去。
- */
-const titleBlankHint = '如果清成完全空白再保存，Chrome 会改成显示网址';
-
-/**
  * 「没能保存」这句原来逐字重复在四个键里（media / notice / management.error.rules / common，
  * #172）：en 侧还出现过直撇号与句尾句号两种微差。四键共用一份 const，一处改处处改。
  */
@@ -73,8 +67,6 @@ export const zh = {
     quickTitle: '常用标题',
     /** ⓘ 信息标的读屏名（#161）：公共键，弹窗 / 管理页 / 插件设置 / 向导共用，不绑死 popup.* */
     infoLabel: '更多信息',
-    /** 标题留空的坑提示，三处共用（见文件头的 const） */
-    titleBlankHint,
     /** 坏数据里没有名字的收起项（清单内同类都叫「项」，#184） */
     unnamedElement: '未命名的收起项',
     /** 语言名各用本语言书写，不翻译 */
@@ -256,7 +248,7 @@ export const zh = {
     titleUnsetPlaceholder: '没设置过：标签页保持网站原来的标题',
     titleFootnoteUnset: '在这里输入并保存后，这个网站才开始用你设置的标题',
     titleFootnote: (fallback: string) =>
-      `停止输入后自动保存；留空就用默认标题「${fallback}」——${titleBlankHint}`,
+      `停止输入后自动保存；留空就用默认标题「${fallback}」`,
 
     iconHeading: '标签页图标',
     // #191：「才用这里选的图标」在选中「不显示图标」时读着别扭（选了「不显示」却说「用图标」）。
@@ -326,7 +318,7 @@ export const zh = {
     titleHeading: '默认标题',
     titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住这一页时，没单独设过标题的网站也用它',
     titleLabel: '默认标题',
-    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随界面语言）——${titleBlankHint}`,
+    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随界面语言）`,
 
 
     toggleHeading: '悬浮按钮',
@@ -428,7 +420,7 @@ export const zh = {
       preview: '看效果',
     },
     progress: (index: number, total: number) => `第 ${index} 步 / 共 ${total} 步`,
-    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到；留空就用「${fallback}」——${titleBlankHint}`,
+    titleHint: (fallback: string) => `上面写什么，标签页就显示什么，现在就能看到；留空就用「${fallback}」`,
     /** 选内容这一步的说明：一行一件事（#184：行内分句用分号，不带句号） */
     pickLead: ['点一下页面上的东西，就选中它', '再点一下取消选中；可以连着选好几个', '选中的都列在下面'],
     adjustGroup: '调整最后选中的那一项',
