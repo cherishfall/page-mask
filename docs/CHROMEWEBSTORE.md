@@ -3,13 +3,13 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-18 · 对应构建 **1.0.8**（`.output/page-mask-1.0.8-chrome.zip`，商店提交版本）
+> 最后更新：2026-11-18 · 对应构建 **1.0.9**（`.output/page-mask-1.0.9-chrome.zip`，商店提交版本）
 
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.8-chrome.zip`
-- [x] 版本号已改（`package.json` → `1.0.8`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.8` 已打、Release 已发
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.9-chrome.zip`
+- [x] 版本号已改（`package.json` → `1.0.9`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.9` 已打、Release 已发
 - [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）；1.0.5/1.0.6 无界面视觉变化，沿用 1.0.4 的截图；1.0.7 截图 5 有内容变化（列表页提示文案、设置页「关于」卡数据说明行、默认标题脚注收短）按 1.0.7 构建重拍入库，其余五张无内容变化沿用；1.0.8 无界面变化（后台与消息顺序），沿用
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [x] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「整页变灰」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）——1.0.2 走查回填见 §6 末尾：可自动化部分（harness 八步 + 真机三站 + 既有断言）已过；授权气泡 / 改键 / 小喇叭 / 视频观感四项提交时人工顺手核
@@ -190,10 +190,11 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表列出对外可考的发版（与 CHANGELOG.md 的对外版本对应；上列内部版本不在此表）；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.8 时 release notes 可用：`1.0.8 — Round-8 verification pass: the wizard-preview recovery copy now lives in storage.local (the session area is cleared on extension update, exactly the orphan scenario); reset deletes the profile before revoking the permission so a failed delete wakes the page into a fully restored state. Features and permissions unchanged.`
+> 本表列出对外可考的发版（与 CHANGELOG.md 的对外版本对应；上列内部版本不在此表）；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.9 时 release notes 可用：`1.0.9 — Round-9 hardening: draft-record sweeping now happens only at browser startup, so it can never race ahead of the orphan cleanup after an extension update; one comment corrected to state what actually happens to a leftover permission grant. Features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 1.0.9 | 2026-11-18 | 第九轮对抗扫修正批（两票）：草稿残留清扫只留在浏览器启动时——原挂在扩展更新上会抢在孤儿清理前面，「向导开着过夜」遇上后台更新残留记录被先删、预览又没人能撤（#249 收紧 #247）；一处注释如实化（删除后残留授权产品内无收回路径，只能用户在 Chrome 站点权限里手动撤，#250）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.8 | 2026-11-18 | 第八轮复审修正批（两票）：向导预览的恢复副本从 storage.session 改记 storage.local——session 随扩展更新被清空，恰是孤儿预览的目标场景（#247 修正 1.0.7 的 #239）；一键清空的删除挪到收权限之前，删除失败叫醒后的页面可完整恢复（#248 补全 #243）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.7 | 2026-11-18 | 第七轮上架前确认审查修复批（九票）：扩展更新时开着的向导预览样式不再残留（后台按文档记草稿副本，孤儿清理一并撤）；一键清空删配置失败时叫醒已清空的页面并如实报失败；设置页「关于」卡与首次引导直述「数据只存本机、不上传」（2026-07 政策）；「界面语言」说明与兜底标题展示对齐实际行为；删掉「清成空白显示网址」的过时警告（目检发现）；「未添加网站不运行任何内容」类绝对化表述改口（幕布例外如实写明）；导入路径收口（id 100 码点 / 候选 8 / 范围行 20 / 规则 500）；样式档位收口。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.6 | 2026-11-18 | 第六轮上架前确认审查修复批：未添加网站上的幕布由一次性脚本铺开，此前不应用界面语言——英文界面下恢复按钮的文字与读屏名称始终是中文、shadow 根语言标记也是中文（WCAG 3.1.2）；现在铺幕布时应用语言，开着幕布切换语言也立即生效。语言判定下沉到 core/i18n，三处运行环境共用。功能与权限集合不变。详见 `CHANGELOG.md` |
@@ -303,7 +304,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `1.0.8`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `1.0.9`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54（2026-11-14 随 #199 文案修订后实测） |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`curtain-oneshot.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
@@ -360,7 +361,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 880 项（57 个文件，1.0.8 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.8 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 881 项（57 个文件，1.0.9 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.9 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |

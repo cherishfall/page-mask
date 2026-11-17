@@ -5,6 +5,34 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.9] - 2026-11-18
+
+第九轮对抗扫发现的两处小修正。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **草稿残留清扫只留在浏览器启动时（#249，收紧 1.0.8 的 #247）**：清扫原本也挂在扩展更新上，且抢在「重新注入后的孤儿清理」前面执行——「向导开着过夜」（预览 24 小时没动）的文档遇上后台更新，残留记录会被先删掉，孤儿预览又没人能撤了。现在清扫只在浏览器启动时做：重启后旧的文档标识必不可能复活，全量清扫安全；更新场景的记录跨更新保留，孤儿清理一定读得到
+- **一处注释改为如实表述（#250）**：「删除后残留的授权下次对账 / 管理页可收」不成立——对账从不收权、管理页列表来自站点配置（删除后站点已不在列表里）；残留授权只能由用户在 Chrome 的站点权限设置里手动撤。罕见且无害不可见，注释如实记录
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.8 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限）；两处都是后台侧的时序与注释，界面零变化
+- 门禁：编译、单测 881 项（57 文件）、E2E 十二脚本全绿（1.0.9 构建实测）、`check:docs` / `check:package` 通过
+
+### English
+
+#### Changes
+
+- **Draft-record sweeping now happens only at browser startup (#249, tightening 1.0.8's #247)**: sweeping also ran on extension update, ahead of the orphan cleanup that follows script re-injection — for a document whose wizard sat open overnight (preview untouched for 24h), a background update would sweep the record first and the orphan preview would again be unremovable. Sweeping at startup only is safe: after a restart the old tab/document identifiers can never come back; on update the record survives and the orphan cleanup always finds it
+- **One comment corrected to state what actually happens (#250)**: "the leftover grant can be collected at the next reconcile / in the management page" is wrong — the reconcile never revokes and the management list comes from site configs (the deleted site is gone); a leftover grant can only be revoked by hand in Chrome's site permission settings. Rare, harmless, and invisible; the comment now says so
+
+#### For reviewers
+
+- Features and the permission set are identical to 1.0.8 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); both changes are background-side timing and comments; the UI is untouched
+- Gates: compile, 881 unit tests (57 files), all twelve E2E scripts green (measured on the 1.0.9 build), `check:docs` / `check:package` pass
+
 ## [1.0.8] - 2026-11-18
 
 第八轮复审（对 1.0.7 修复批逐票对抗性验证）发现的两处修正。功能与权限集合不变。
@@ -1884,6 +1912,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.9]: https://github.com/cherishfall/page-mask/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/cherishfall/page-mask/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/cherishfall/page-mask/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cherishfall/page-mask/compare/v1.0.5...v1.0.6
