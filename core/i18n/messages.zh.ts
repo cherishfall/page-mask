@@ -45,6 +45,10 @@ export const zh = {
     shortcutBlocked: '这个页面不能遮住',
     /** 整页变灰快捷键在不支持的页面上（0.9.2）：同款角标说明 */
     shortcutBlockedGray: '这个页面不能变灰',
+    /** 直述的数据披露（#241）：2026-07 商店政策要求显著披露写在产品界面里，商店描述不算数。
+     *  插件设置「关于」卡与首次引导共用同一句（同一件事只有一种叫法） */
+    dataLabel: '你的数据',
+    dataNote: '你的设置和点选记录只保存在这台电脑的浏览器里，PageMask 不上传任何数据',
     resetTitleIconHint: '只恢复标题和图标，收起的内容不受影响',
     /** 回退出口（#160）：与 #99 对称，两处同名同物；只说「恢复内容」，不用「清空 / 重置」 */
     resetSiteContent: '恢复网站原来的内容',
@@ -226,7 +230,7 @@ export const zh = {
     pageTitle: 'PageMask · 全部网站设置',
 
     sitesTitle: '全部网站设置',
-    sitesHint: '你没添加的网站，PageMask 完全不碰',
+    sitesHint: '你没添加的网站保持原样；「遮住这一页」是唯一的临时例外——点一下才遮，刷新即消失',
     /** 行尾「⋯」按钮（#113）：读屏名带域名，一行一个互不混淆 */
     moreActions: (label: string) => `更多操作：${label}`,
     sitesEmpty: '还没有添加任何网站。打开一个要设置的网站，点浏览器工具栏上的 PageMask 图标就能开始设置',
@@ -379,7 +383,7 @@ export const zh = {
   onboarding: {
     pageTitle: 'PageMask · 开始使用',
     title: '欢迎使用 PageMask',
-    sub: '在常看的网站上点选不想看的部分，把它们收起；你没添加的网站，PageMask 完全不碰',
+    sub: '在常看的网站上点选不想看的部分，把它们收起；没添加的网站保持原样，需要时「遮住这一页」随时可用',
     prev: '上一步',
     next: '下一步',
     start: '开始使用',

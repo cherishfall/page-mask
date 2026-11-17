@@ -240,6 +240,11 @@
               <dt>{{ t.settings.feedback }}</dt>
               <dd><a :href="ISSUES_URL" target="_blank" rel="noopener noreferrer">{{ t.settings.feedbackLink }}</a></dd>
             </div>
+            <!-- 直述的数据披露（#241）：2026-07 商店政策要求显著披露写在产品界面里，商店描述不算数 -->
+            <div class="about-row" data-testid="pm-settings-data-note">
+              <dt>{{ t.common.dataLabel }}</dt>
+              <dd>{{ t.common.dataNote }}</dd>
+            </div>
             <div class="about-row">
               <dt>{{ t.settings.privacyPolicy }}</dt>
               <dd><a :href="PRIVACY_URL" target="_blank" rel="noopener noreferrer">cherishfall.github.io/page-mask/privacy.html</a></dd>

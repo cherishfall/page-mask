@@ -7,6 +7,9 @@
       <div class="head-text">
         <h1 translate="no">{{ t.onboarding.title }}</h1>
         <p class="sub">{{ t.onboarding.sub }}</p>
+        <!-- 首次运行就直述数据去向（#241）：2026-07 商店政策要求显著披露写在产品界面里；
+             与设置页「关于」卡同一句（t.common.dataNote），同一件事只有一种叫法 -->
+        <p class="sub" data-testid="onboard-data-note">{{ t.common.dataNote }}</p>
       </div>
       <!-- 退路在最轻的位置（AGENTS 整屏审查第 4 条 / #175 视觉审查）：装完就绑定三步不合情理，
            随时可以跳过；跳过与看完最后一步走同一个出口（关掉这一页），不丢任何东西。

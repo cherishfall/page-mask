@@ -37,6 +37,10 @@ export const en: Messages = {
     shortcutBlocked: 'This page can’t be covered',
     /** Gray command on an unsupported page (0.9.2): same badge treatment */
     shortcutBlockedGray: 'This page can’t be turned gray',
+    // Straight-talking data disclosure (#241): the 2026-07 store policy asks for it inside the product; the listing doesn't count.
+    // Shared by Settings → About and onboarding (one name per thing).
+    dataLabel: 'Your data',
+    dataNote: 'Your settings and the items you pick are stored only in this browser on this computer — PageMask uploads nothing',
     resetTitleIconHint: 'Only the title and icon — hidden items stay as they are',
     /** Back-out entry (#160), symmetric with #99; same action, same words in both places */
     resetSiteContent: 'Use the site’s own content',
@@ -197,7 +201,7 @@ export const en: Messages = {
     pageTitle: 'PageMask · All site settings',
 
     sitesTitle: 'All site settings',
-    sitesHint: 'PageMask never touches sites you didn’t add',
+    sitesHint: 'Sites you haven’t added stay as they are — Cover this page is the one temporary exception: one click to cover, gone on refresh',
     /** Row-end "more" button (#113): accessible name carries the host so rows never blur together */
     moreActions: (label: string) => `More actions: ${label}`,
     sitesEmpty: 'No sites yet. Open a site you want to set up and click the PageMask icon in the toolbar to start',
@@ -357,7 +361,7 @@ export const en: Messages = {
   onboarding: {
     pageTitle: 'PageMask · Getting started',
     title: 'Welcome to PageMask',
-    sub: 'Pick the parts you don’t want on the sites you visit often and hide them; PageMask never touches sites you didn’t add',
+    sub: 'Pick the parts you don’t want on the sites you visit often and hide them; sites you haven’t added stay as they are, and Cover this page is there whenever you need it',
     prev: 'Back',
     next: 'Next',
     start: 'Start using it',
