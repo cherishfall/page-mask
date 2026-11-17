@@ -524,7 +524,7 @@ function onReplaceClose() {
 .row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--pm-space-2);
   margin: var(--pm-space-2) 0;
   flex-wrap: wrap;
 }

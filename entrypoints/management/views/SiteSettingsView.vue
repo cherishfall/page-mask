@@ -494,7 +494,7 @@ async function onRulesResetClosed(confirmed: boolean) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--pm-space-2);
   margin: var(--pm-space-2) 0;
 }
 

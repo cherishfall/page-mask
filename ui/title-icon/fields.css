@@ -121,7 +121,8 @@
   block-size: 36px;
   box-sizing: border-box;
   border: 2px solid transparent;
-  border-radius: 6px;
+  /* 圆角走控件档 8px（#245 收口）：36px 的格子与输入框/按钮同一控制语言 */
+  border-radius: var(--pm-radius-control);
   cursor: pointer;
 }
 .pm-icon-tile:hover {
