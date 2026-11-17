@@ -75,6 +75,9 @@ try {
   const titleOf = (p, sel) =>
     p.evaluate((h, s2) => document.querySelector(h)?.shadowRoot?.querySelector(s2)?.title.trim() ?? '', TOGGLE, sel);
   const bodyHas = async (p, text) => p.evaluate((t) => document.body.textContent.includes(t), text);
+  /** 页内界面的 shadow 根 lang：必须跟着界面语言走，否则读屏按中文念英文（WCAG 3.1.2） */
+  const rootLangOf = (p, hostSel) =>
+    p.evaluate((h) => document.querySelector(h)?.shadowRoot?.querySelector('.pm-root')?.lang ?? '', hostSel);
 
   // ---------- 初始：auto = 浏览器中文 ----------
   console.log('\n--- 初始状态（自动 → 浏览器中文） ---');
@@ -82,6 +85,7 @@ try {
   // 这个用例要守的是「语言真的换了」，不是某个按钮叫什么。
   const hasCJK = (s) => /[\u4e00-\u9fff]/.test(s);
   check(hasCJK(await titleOf(page, tid('pm-toggle-main'))), '小胶囊悬停提示显示中文');
+  check((await rootLangOf(page, TOGGLE)) === 'zh-CN', '页内胶囊 shadow 根的 lang 是 zh-CN');
   check(await bodyHas(mgmt, '全部网站设置'), '管理页是中文');
   check(await bodyHas(settingsPage, '插件设置'), '插件设置页是中文');
   const autoLabel = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
@@ -129,10 +133,12 @@ try {
     TOGGLE,
   );
   check(true, '页面内小胶囊没刷新就变英文');
+  check((await rootLangOf(page, TOGGLE)) === 'en', '页内胶囊 shadow 根的 lang 跟着变 en');
 
   await sendToTab(ext.control, await tabIdOf(ext.control, `${ORIGIN}/*`), { t: 'openWizard', mode: 'editContent' });
   await waitForShadow(page, WIZARD, tid('pm-wiz-heading'));
   check((await shadowText(page, WIZARD, tid('pm-wiz-heading'))) === 'Pick what to hide', '向导变英文');
+  check((await rootLangOf(page, WIZARD)) === 'en', '页内向导 shadow 根的 lang 是 en');
   // 内容页此刻在后台：确认框里的「退出」要用真实鼠标点，先把这一页切到前台
   await page.bringToFront();
   await exitWizardByButton(page, WIZARD);

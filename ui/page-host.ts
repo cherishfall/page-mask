@@ -12,6 +12,7 @@
  */
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { HOST_TAGS, HOST_Z_INDEX, type HostKind } from '@/core/host-shield';
+import { getLocale, htmlLangOf, onLocaleChange } from '@/core/i18n';
 import { adoptPageMaskStyles } from './shadow-styles';
 
 /** 在 shadow root 上拦下的按键事件：输入框里打字不会冒泡到页面，触发站点快捷键（REVIEW N27） */
@@ -20,7 +21,7 @@ const ISOLATED_EVENTS = ['keydown', 'keyup', 'keypress'] as const;
 export interface PageHost {
   host: HTMLElement;
   shadow: ShadowRoot;
-  /** shadow 内的根容器（lang="zh-CN"，界面基准字体 / 颜色的起点），Vue 应用挂在这里 */
+  /** shadow 内的根容器（lang 跟随界面语言，界面基准字体 / 颜色的起点），Vue 应用挂在这里 */
   root: HTMLElement;
   /** 移除宿主（可重复调用） */
   remove(): void;
@@ -47,8 +48,13 @@ export function createPageHost(ctx: ContentScriptContext | null, kind: HostKind)
   adoptPageMaskStyles(shadow);
   const root = document.createElement('div');
   root.className = 'pm-root';
-  // 界面文案是中文：英文页面上读屏也按中文念（REVIEW N35）
-  root.lang = 'zh-CN';
+  // 界面文案不只有中文（#57 起跟随界面语言）：shadow 根的 lang 必须与文案一致，
+  // 否则英文界面上读屏仍按中文念（WCAG 3.1.2 / REVIEW N35）
+  const syncLang = () => {
+    root.lang = htmlLangOf(getLocale());
+  };
+  syncLang();
+  const offLang = onLocaleChange(syncLang);
   shadow.appendChild(root);
   // 冒泡阶段在 shadow root 上截住：shadow 内自己的监听（Vue @keydown 等）照常先收到；
   // 向导的 Esc 监听挂在 window 捕获阶段（pick-controller），先于这里执行，不受影响
@@ -60,6 +66,7 @@ export function createPageHost(ctx: ContentScriptContext | null, kind: HostKind)
   const remove = () => {
     if (removed) return;
     removed = true;
+    offLang();
     host.remove();
   };
   const off = ctx ? ctx.onInvalidated(remove) : () => undefined;
