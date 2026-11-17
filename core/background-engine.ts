@@ -404,9 +404,12 @@ export function createBackground({ browser }: BackgroundDeps): void {
     } catch {
       return;
     }
+    // 3 秒后恢复成 manifest 的默认标题。不能写空串：空标题在 Chrome 里等于「没设标题」，
+    // 悬停会退回扩展名（实测 getTitle 返回 ''），默认那句说明就再也看不到了
+    const defaultTitle = browser.i18n.getMessage('actionTitle');
     setTimeout(() => {
       void browser.action.setBadgeText({ tabId, text: '' }).catch(() => undefined);
-      void browser.action.setTitle({ tabId, title: '' }).catch(() => undefined);
+      void browser.action.setTitle({ tabId, title: defaultTitle }).catch(() => undefined);
     }, SHORTCUT_BADGE_MS);
   }
 

@@ -102,7 +102,7 @@ function stubBrowser() {
   type ShortcutTab = { id?: number; url?: string };
   const onCommand = fakeEvent<[string, ShortcutTab?]>();
   const commands = { onCommand };
-  const fake = fakeBrowser as unknown as { commands?: object; action?: object };
+  const fake = fakeBrowser as unknown as { commands?: object; action?: object; i18n?: object };
   fake.commands ??= {};
   Object.assign(fake.commands, commands);
   const action = {
@@ -112,7 +112,14 @@ function stubBrowser() {
   };
   fake.action ??= {};
   Object.assign(fake.action, action);
-  return { scripting, permissions, registered, granted, sendMessage, onCommand, action, muted, update };
+  // manifest 的 action 默认标题走 chrome.i18n；fakeBrowser 没有 i18n，给个可辨认的替身，
+  // 用来验证「角标消失后标题恢复成默认文案，而不是空串」
+  const i18n = {
+    getMessage: vi.fn((key: string) => (key === 'actionTitle' ? 'PageMask — 默认标题' : '')),
+  };
+  fake.i18n ??= {};
+  Object.assign(fake.i18n, i18n);
+  return { scripting, permissions, registered, granted, sendMessage, onCommand, action, muted, update, i18n };
 }
 
 /** 内容脚本所在文档（后台按 sender 定位文档、判断生效范围） */
@@ -1084,9 +1091,10 @@ describe('后台引擎（fakeBrowser）', () => {
         expect.objectContaining({ tabId: 42, title: expect.stringMatching(/.+/) }),
       );
 
-      // 3 秒后自己消失，不在图标上留一个常驻的错误标记
+      // 3 秒后自己消失，不在图标上留一个常驻的错误标记；标题恢复成默认文案而不是空串
       await vi.runAllTimersAsync();
       expect(stubs.action.setBadgeText).toHaveBeenLastCalledWith({ tabId: 42, text: '' });
+      expect(stubs.action.setTitle).toHaveBeenLastCalledWith({ tabId: 42, title: 'PageMask — 默认标题' });
       vi.useRealTimers();
       restore();
     });
@@ -1193,6 +1201,7 @@ describe('后台引擎（fakeBrowser）', () => {
 
       await vi.runAllTimersAsync();
       expect(stubs.action.setBadgeText).toHaveBeenLastCalledWith({ tabId: tab.id, text: '' });
+      expect(stubs.action.setTitle).toHaveBeenLastCalledWith({ tabId: tab.id, title: 'PageMask — 默认标题' });
       vi.useRealTimers();
     });
 
