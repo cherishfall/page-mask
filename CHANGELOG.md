@@ -5,6 +5,56 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.7] - 2026-11-18
+
+第七轮上架前确认审查的修复批（多角度：MV3 技能标尺、谷歌官方政策逐条核对、代码深查、文案 / i18n、商店材料、构建打包、落地页同步），共九票。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **扩展更新 / 重载时开着的向导，预览样式不再永久残留**（#239）：旧实例冻结交接后撤预览的请求发不出去，草稿文本又不可由配置重算——预览残留成「免保存临时隐藏」，只有刷新页面能除掉。现在后台把每份文档实际插入的草稿文本记入会话存储（SW 回收不丢、浏览器重启即清），孤儿清理时一并撤掉；新实例首次换草稿也先撤残留再插入
+- **「界面语言」的说明与兜底标题展示对齐实际行为**（#240）：说明原写「默认标题仍跟随浏览器语言」——那是旧决策的残留，实际显式选了语言就跟所选语言走，仅「自动」跟浏览器；「留空就用「阅读」」的展示值原来取浏览器语言且创建后不随设置重算（浏览器中文 + 界面锁英文时页面写「阅读」、标签页实际显示 "Reading"），改为与标题生效逻辑同一份口径
+- **产品内直述数据去向**（#241，2026-07 商店政策更新要求披露写在产品界面里、商店描述不算数）：插件设置「关于」卡与首次引导各加一句「你的设置和点选记录只保存在这台电脑的浏览器里，PageMask 不上传任何数据」；同类清扫修掉「没添加的网站完全不碰 / never touches」两处绝对化表述（「遮住这一页」在那类网站可用）
+- **「清成完全空白再保存，Chrome 会显示网址」的过时警告删掉**（#246，交接关目检新眼睛发现）：标题兜底自「永不返回空白」起，清空保存显示的是兜底标题——这句警告与前半句「留空就用「阅读」」自相矛盾且陈述了不存在的后果，三处常驻脚注一并收短
+- **一键清空删配置失败不再把页面留在「像被删光」的假象**（#243）：存储异常时配置还在、页面却已清空且从此不再恢复。现在后台删除失败会叫醒已清空的页面恢复界面，并把失败如实报给入口（弹窗 / 管理页显示既有的失败提示）
+- **导入路径收口**（#242）：规则 id 超长按码点截到 100（与标题同口径）；候选 8 条 / 范围行 20 条 / 规则 500 条上限，超量规则如实计入「跳过」计数
+- **样式档位收口**（#245）：图标格圆角 6px 并入控件档 8px；两处共用行距 10px 收进 `--pm-space-2`（8px）；组件内微间距在设计规范登记为允许值
+
+#### 文档与商店材料
+
+- 对外材料去掉「未添加的网站不运行任何内容」类绝对化表述（幕布正是用一次性脚本在那类网站上运行的）：商店详细描述中英、单一用途、§10 答问、README 中英标语六处一次改齐（#238）
+- 商店材料与历史记录一致性六项：CHANGELOG 两处 404 版本链接改指实际提交；「全量发版史」措辞自洽；编辑入口列举顺序对齐实际界面（「标题和图标」在前）；两处逐字引用的弯引号对齐 `_locales`；历史审查记录一条「已修」更正（随机 id 未落地且不该落地）；API 版本核实表补 commands 两行（#244）
+- 商店截图：设置页 / 列表页那张（截图 5）按 1.0.7 构建重拍入库；其余五张无内容变化沿用 1.0.0 重拍的版本
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.6 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点
+- 门禁：编译、单测 878 项（57 文件）、E2E 十二脚本全绿（1.0.7 构建实测）、`check:docs` / `check:package` 通过
+
+### English
+
+#### Changes
+
+- **No more leftover wizard-preview styles after an extension update or reload** (#239): the old instance's teardown freezes its style record, so the request that removes the preview never goes out, and preview text cannot be recomputed from settings — the preview stayed as unsaved hiding until a manual refresh. The background now keeps each document's last-applied preview text in session storage (survives service-worker restarts, cleared on browser restart), removes it along with the other orphan styles, and clears a leftover before inserting a new draft in a fresh instance
+- **The interface-language copy and the fallback-title display now match actual behavior** (#240): the description still said the default tab title follows the browser language — the old decision's leftover; it follows the language picked here, and only Automatic follows the browser. The “leave it empty to use 「阅读」” display value was taken from the browser language and never recomputed (a Chinese browser with the interface locked to English showed 阅读 while the tab actually said "Reading"); it now shares one code path with the actual title logic
+- **A plain-language data disclosure inside the product** (#241, the 2026-07 store policy update requires prominent disclosure in the product UI; the listing doesn't count): Settings → About and onboarding each say "Your settings and the items you pick are stored only in this browser on this computer — PageMask uploads nothing". Same-class sweep also fixed two "never touches sites you didn't add" absolutes (Cover this page works on those sites)
+- **The stale “clear it completely and Chrome shows the address” warning is gone** (#246, caught by a fresh-eyes visual review): the title fallback has guaranteed a non-blank result for a long time, so clearing and saving shows the fallback title — the warning contradicted its own first half and described behavior that no longer exists; all three footnotes got shorter
+- **A failed reset no longer leaves the page looking deleted** (#243): when the final delete step fails (storage error), the settings remain but the page had already cleared itself and never recovered. The background now wakes those pages back up and reports the failure honestly to the entry point
+- **Import-path hardening** (#242): rule ids are truncated to 100 code points (same as titles); caps of 8 candidates / 20 scope rows / 500 rules per site, with overflow rules counted honestly in the import result
+- **Style tokens consolidated** (#245): the icon tile's fourth radius literal 6px joined the control tier at 8px; two shared row gaps of 10px became `--pm-space-2` (8px); component-internal micro-spacing is now a registered exception in the design spec
+
+#### Docs & store materials
+
+- The absolute claims "on every other site PageMask runs nothing" are gone (the cover is exactly a one-shot script running on those sites): six places aligned at once — the zh/en detailed descriptions, the single purpose, a §10 answer, and the README taglines (both languages) (#238)
+- Six store-material/records consistency fixes: two 404 version links in CHANGELOG now point at real commits; the "full release history" wording is self-consistent; the edit-entry order matches the actual UI (Title & icon first); two verbatim quotes now use the same curly apostrophes as `_locales`; one "fixed" claim in the historical review record corrected; two commands-API rows added to the API-version table (#244)
+- Store screenshots: the settings/management shot (screenshot 5) was re-shot on the 1.0.7 build; the other five carry no content change and are kept
+
+#### For reviewers
+
+- Features and the permission set are identical to 1.0.6 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); nothing is granted at install time
+- Gates: compile, 878 unit tests (57 files), all twelve E2E scripts green (measured on the 1.0.7 build), `check:docs` / `check:package` pass
+
 ## [1.0.6] - 2026-11-18
 
 第六轮上架前确认审查的修复批（一轮）：未添加网站上的幕布恢复按钮没有跟随界面语言。功能与权限集合不变。
@@ -1806,6 +1856,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.7]: https://github.com/cherishfall/page-mask/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cherishfall/page-mask/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/cherishfall/page-mask/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cherishfall/page-mask/compare/v1.0.3...v1.0.4
