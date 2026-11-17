@@ -959,6 +959,12 @@ export function initContentRuntime(ctx: ContentScriptContext, takeover?: Promise
     } else if (msg?.t === 'siteReset') {
       void handleSiteReset().then(sendResponse, () => sendResponse({ ok: false }));
       return true; // 异步回复：后台等本页还原完再收回授权
+    } else if (msg?.t === 'siteResetUndone') {
+      // 一键清空的「删配置」失败（存储异常等），配置还在：解除粘滞、按存储恢复界面（#243）。
+      // appliedKey 清空让下一次 refresh 走完整应用（界面刚在 handleSiteReset 里被卸干净）
+      resetting = false;
+      appliedKey = null;
+      void scheduleRefresh();
     }
     return false;
   }

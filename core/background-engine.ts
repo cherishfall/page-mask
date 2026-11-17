@@ -453,15 +453,16 @@ export function createBackground({ browser }: BackgroundDeps): void {
 
   // ---------- 一键清空 ----------
 
-  /** 通知某站点（含其子域）所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除）。
+  /** 通知某站点（含其子域）所有已打开的标签页立即还原（内容脚本按自己记录的样式文本移除），
+   *  返回收到通知的标签页 id（删除失败时要叫醒这些页面，#243）。
    *  慢页面给两轮超时（#202）：授权收回去之后它的 removeCSS 必败，会留一份删不掉的
    *  隐藏样式直到下次导航，所以多等一轮再走 REVIEW B7 的收回步骤 */
-  async function restoreOpenTabs(key: string): Promise<void> {
+  async function restoreOpenTabs(key: string): Promise<number[]> {
     let tabs: Browser.tabs.Tab[] = [];
     try {
       tabs = await browser.tabs.query({});
     } catch {
-      return;
+      return [];
     }
     const targets = tabs
       .filter((t) => t.id !== undefined && siteKeyOfUrl(t.url) === key)
@@ -478,6 +479,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
         await Promise.race([ack, timeout()]);
       }),
     );
+    return targets;
   }
 
   /** 顺序：先还原已打开页面（此时仍有站点授权，样式才删得掉），再收回授权、注销、删配置（REVIEW B7） */
@@ -491,7 +493,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
     // 全站通配（*://*/*）归不进任何站点，同样跳过：删一个站不该动全局授权
     const held = granted ? grantedPatternsFor(key, granted) : null;
     const patterns = held ?? sitePatterns(key);
-    await restoreOpenTabs(key);
+    const notified = await restoreOpenTabs(key);
     if (held === null || held.length > 0) {
       try {
         await browser.permissions.remove({ origins: patterns });
@@ -504,7 +506,16 @@ export function createBackground({ browser }: BackgroundDeps): void {
     } catch {
       // 未注册过时忽略
     }
-    await storage.deleteProfile(key);
+    try {
+      await storage.deleteProfile(key);
+    } catch {
+      // 删除失败（存储异常等）配置还在：页面刚被清空、且内容脚本从此不再按存储恢复
+      //（resetting 粘滞）——把收到通知的页面叫醒恢复界面，失败如实报给入口（#243）
+      for (const tabId of notified) {
+        void browser.tabs.sendMessage(tabId, { t: 'siteResetUndone' }).catch(() => undefined);
+      }
+      return { ok: false, error: 'delete profile failed' };
+    }
     return { ok: true };
   }
 

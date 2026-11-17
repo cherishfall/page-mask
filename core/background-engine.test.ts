@@ -915,6 +915,20 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
 
+    it('删配置失败（存储异常）：配置保留、如实报失败，并向已清空的标签页发 siteResetUndone（#243）', async () => {
+      await configure(ORIGIN);
+      const removeSpy = vi.spyOn(fakeBrowser.storage.local, 'remove').mockRejectedValueOnce(new Error('storage broken'));
+
+      const res = await send({ t: 'resetSite', origin: ORIGIN });
+
+      expect(res).toEqual({ ok: false, error: 'delete profile failed' });
+      // 配置还在：页面不该处于「被删光」的假象
+      expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toHaveProperty(`profile:${ORIGIN}`);
+      // 已清空的页面被叫醒恢复界面
+      expect(stubs.sendMessage).toHaveBeenCalledWith(siteTabId, { t: 'siteResetUndone' });
+      removeSpy.mockRestore();
+    });
+
     it('迁移前只授了旧精确模式：批次只装实际持有的模式（remove 是原子的，#202）', async () => {
       await configure(ORIGIN);
       for (const p of sitePatterns(ORIGIN)) stubs.granted.delete(p);

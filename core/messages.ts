@@ -165,6 +165,11 @@ export interface OpenWizardMsg {
 export interface SiteResetMsg {
   t: 'siteReset';
 }
+/** 后台 → 内容脚本：一键清空的「删配置」一步失败（存储异常等），配置还在——
+ *  解除本页的清空粘滞，按存储恢复界面（#243）。删除成功时不会有这条消息 */
+export interface SiteResetUndoneMsg {
+  t: 'siteResetUndone';
+}
 /**
  * 扩展页面 → 内容脚本 / 一次性脚本：本页当前是不是遮着的（#50）。
  * 没遮住时回 { ok: true, covered: false }，不报错。
@@ -266,6 +271,7 @@ export type BgRequest =
 export type ContentMsg =
   | OpenWizardMsg
   | SiteResetMsg
+  | SiteResetUndoneMsg
   | CurtainStateMsg
   | CurtainCoverMsg
   | CurtainDismissMsg
