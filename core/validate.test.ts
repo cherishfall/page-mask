@@ -11,6 +11,10 @@ import {
   sanitizeScope,
   sanitizeTabIcon,
   MAX_SCOPE_LABEL_LENGTH,
+  MAX_RULE_ID_LENGTH,
+  MAX_CANDIDATES,
+  MAX_SCOPE_PATTERNS,
+  MAX_HIDE_RULES,
 } from './validate';
 import { isValidSiteKey } from './site-key';
 import { createEmptyProfile } from './types';
@@ -256,6 +260,64 @@ describe('sanitizeProfile', () => {
     expect(derive({ titleIconSet: true })).toBe(true);
     // 坏类型按推导走，不炸
     expect(derive({ disguisedTitle: '阅读', titleIconSet: 'yes' })).toBe(true);
+  });
+});
+
+describe('导入路径的个数与长度上限（#242，#192/#177/#203 同类收口）', () => {
+  const rule = (over: Record<string, unknown>) => ({
+    id: 'r1',
+    elementName: 'x',
+    candidates: ['#ok'],
+    strategy: 'remove',
+    scope: { type: 'all' },
+    onlyThis: false,
+    createdAt: 1,
+    ...over,
+  });
+
+  it('超长 id 按码点截断到 100（与标题 #177 同口径），规则保留', () => {
+    const res = sanitizeProfile({
+      ...createEmptyProfile('https://a.com'),
+      hideRules: [rule({ id: 'x'.repeat(1000) })],
+    })!;
+    expect(res.profile.hideRules).toHaveLength(1);
+    expect([...res.profile.hideRules[0]!.id]).toHaveLength(MAX_RULE_ID_LENGTH);
+    expect(res.droppedRules).toBe(0);
+  });
+
+  it('截断后撞车由去重兜住：多条截到同长的 id 只留第一条，如实计数', () => {
+    const res = sanitizeProfile({
+      ...createEmptyProfile('https://a.com'),
+      hideRules: [rule({ id: 'a'.repeat(150) + '1' }), rule({ id: 'a'.repeat(150) + '2' }), rule({ id: 'unique' })],
+    })!;
+    expect(res.profile.hideRules.map((r) => r.id)).toEqual(['a'.repeat(MAX_RULE_ID_LENGTH), 'unique']);
+    expect(res.droppedRules).toBe(1);
+  });
+
+  it('候选超量截到 8（保存路径本来就截到 3），保序留最靠前的', () => {
+    const candidates = Array.from({ length: 20 }, (_, i) => `#c${i}`);
+    const res = sanitizeProfile({ ...createEmptyProfile('https://a.com'), hideRules: [rule({ candidates })] })!;
+    expect(res.profile.hideRules[0]!.candidates).toEqual(candidates.slice(0, MAX_CANDIDATES));
+  });
+
+  it('范围行超量截到 20，先到的保留', () => {
+    const patterns = Array.from({ length: 30 }, (_, i) => ({ label: `p${i}`, prefix: `https://a.com/p${i}/` }));
+    const res = sanitizeProfile({
+      ...createEmptyProfile('https://a.com'),
+      hideRules: [rule({ scope: { type: 'include', patterns } })],
+    })!;
+    const scope = res.profile.hideRules[0]!.scope;
+    expect(scope.type).toBe('include');
+    if (scope.type !== 'include') return;
+    expect(scope.patterns).toHaveLength(MAX_SCOPE_PATTERNS);
+    expect(scope.patterns[0]!.label).toBe('p0');
+  });
+
+  it('规则超量截到 500，多出的如实计入 droppedRules', () => {
+    const hideRules = Array.from({ length: 600 }, (_, i) => rule({ id: `r${i}` }));
+    const res = sanitizeProfile({ ...createEmptyProfile('https://a.com'), hideRules })!;
+    expect(res.profile.hideRules).toHaveLength(MAX_HIDE_RULES);
+    expect(res.droppedRules).toBe(100);
   });
 });
 

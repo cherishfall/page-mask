@@ -37,6 +37,23 @@ export const MAX_SELECTOR_LENGTH = 1000;
  */
 export const MAX_SCOPE_LABEL_LENGTH = 60;
 
+/**
+ * 规则 id 的长度上限（#242）：正常 id 是 `r_<时间>_<随机>` 十几个字符；导入 / 坏数据路径
+ * 此前无界——1MB 的 id 会原样落库，渲染进站点设置页的 data-testid，还要在每次页面应用的
+ * applyKey 序列化里扛着。超限按码点截断（与标题 #177 同口径）；截到同长的多条由
+ * sanitizeProfile 的 seen 去重兜住，少掉的如实计入 droppedRules。
+ */
+export const MAX_RULE_ID_LENGTH = 100;
+
+/**
+ * 数组个数的上限（#242）：候选保存时截到 3、范围行正常个位数、规则正常几十条；
+ * 导入文件超量属于畸形 / 滥造，截断而不是整份拒绝——合法前缀保留，规则少掉的条数
+ * 如实计入 droppedRules；候选与范围行是同一条规则的重复展开，静默截断（见各处注释）。
+ */
+export const MAX_CANDIDATES = 8;
+export const MAX_SCOPE_PATTERNS = 20;
+export const MAX_HIDE_RULES = 500;
+
 export const STRATEGY_IDS: readonly StrategyId[] = ['remove', 'blank', 'mask'];
 const SWITCH_STATES: readonly SwitchState[] = ['disguised', 'original'];
 
@@ -133,6 +150,8 @@ export function sanitizeScope(v: unknown, site?: string): Scope | null {
   if (!Array.isArray(v.patterns) || v.patterns.length === 0) return null;
   const patterns: ScopePattern[] = [];
   for (const p of v.patterns) {
+    // 个数上限（#242）：正常由界面推导出个位数；超量的截断保留（多出来的不进存储）
+    if (patterns.length >= MAX_SCOPE_PATTERNS) break;
     if (!isObject(p) || typeof p.label !== 'string' || typeof p.prefix !== 'string') return null;
     // 前缀先归一（#202）：导入文件可能带显式默认端口（https://x:443/a）——URL 合法、校验放行，
     // 但页面 URL 规范化后不带默认端口，startsWith 永假，这条范围会静默永不生效
@@ -163,14 +182,21 @@ export function sanitizeRule(
 ): HideRule | null {
   if (!isObject(v)) return null;
   if (typeof v.id !== 'string' || !v.id) return null;
+  // id 长度上限（#242）：超长按码点截断（与标题 #177 同口径）
+  const id = [...v.id].slice(0, MAX_RULE_ID_LENGTH).join('');
   if (!isValidStrategy(v.strategy)) return null;
   const scope = sanitizeScope(v.scope, site);
   if (!scope) return null;
   if (!Array.isArray(v.candidates)) return null;
-  const candidates = v.candidates.filter((c) => isSafeSelector(c, probe)).map((c) => (c as string).trim());
+  const candidates = v.candidates
+    .filter((c) => isSafeSelector(c, probe))
+    .map((c) => (c as string).trim())
+    // 个数上限（#242）：保存路径本来就截到 3，这里只对导入 / 坏数据路径兜底；
+    // 截断保序，留下的是稳定度排序里最靠前的几个
+    .slice(0, MAX_CANDIDATES);
   if (candidates.length === 0) return null;
   const rule: HideRule = {
-    id: v.id,
+    id,
     // 名称长度上限（#203）：标题（#177）与范围 label（#192）都有 60 上限，这里此前漏了——
     // 导入文件带超长名称会原样落库，渲染进向导清单行名与读屏文案。同口径按码点截断
     elementName:
@@ -212,6 +238,11 @@ export function sanitizeProfile(v: unknown, probe: SelectorProbe = defaultSelect
   const seen = new Set<string>();
   let droppedRules = 0;
   for (const r of v.hideRules) {
+    // 条数上限（#242）：超量的不算合法规则，如实计入 droppedRules
+    if (hideRules.length >= MAX_HIDE_RULES) {
+      droppedRules++;
+      continue;
+    }
     const rule = sanitizeRule(r, key, probe);
     if (!rule || seen.has(rule.id)) {
       droppedRules++;
