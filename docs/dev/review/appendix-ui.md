@@ -1,6 +1,6 @@
 # PageMask 前端 + 无障碍审查（UI 层，只读）
 
-审查对象：`/Users/lifan/AiCodingProjects/page-mask`（WXT 0.21 + Vue 3 + TS，HEAD = da59f89，工作区仅多一个未跟踪的 CLAUDE.md）
+审查对象：本仓库（WXT 0.21 + Vue 3 + TS，HEAD = da59f89，工作区仅多一个未跟踪的 CLAUDE.md）
 范围：`ui/content-runtime.ts`、`ui/FloatingToggle.vue`、`ui/follow.ts`、`ui/wizard/*`、`ui/editor/EditorPanel.vue`、`core/wizard-logic.ts`、`core/naming.ts`、`entrypoints/{popup,management,onboarding}/*`，外加 `docs/store-assets/*.png`。
 依据：chrome-extensions skill；modern-web-guidance 指南 `dialog`、`light-dismiss-a-dialog`、`menu`、`viewport-aware-dropdowns`、`switch`、`drag`、`dark-mode`、`color`、`accessibility`、`html`、`shadow-dom`、`styling-web-components`、`persistent-toast-notifications`；项目文档 `docs/design.md`（含「永不做」清单）、`GLOSSARY.md`、`docs/dev/REVIEW-2026-10-27.md`（下称「旧审查」）。
 方法：通读代码、手工追踪代码路径；对比度用 WCAG 2.x 相对亮度公式算出（半透明色先和底色混合）；截图用肉眼检查。**没有跑浏览器**，凡是依赖运行时行为的结论都写了置信度，单独待实测的项列在第 6 节。

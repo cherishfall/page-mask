@@ -95,7 +95,7 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 
 ## 关联仓库（落地页）
 
-落地页是独立仓库 `cherishfall/cherishfall.github.io`（GitHub Pages 静态站点，线上地址 <https://cherishfall.github.io/page-mask/>），本地检出固定放在**与本仓库平级的 `../cherishfall.github.io`**（本机为 `/Users/lifan/AiCodingProjects/cherishfall.github.io`）。
+落地页是独立仓库 `cherishfall/cherishfall.github.io`（GitHub Pages 静态站点，线上地址 <https://cherishfall.github.io/page-mask/>），本地检出固定放在**与本仓库平级的 `../cherishfall.github.io`**。
 
 它是长期工作副本，不是临时文件：
 
