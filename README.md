@@ -16,7 +16,7 @@
 
 ## 中文
 
-**PageMask** 是一个 Chrome 扩展：在你主动添加的网站上，用鼠标点选页面上不想看的部分（推广位、推荐流、侧栏……）把它们收起来。**你不主动设置，它对任何网站都没有影响。**
+**PageMask** 是一个 Chrome 扩展：在你主动添加的网站上，用鼠标点选页面上不想看的部分（推广位、推荐流、侧栏……）把它们收起来。**你不主动设置，它不会改动任何网站；唯一的临时动作是「遮住这一页」，点一下才遮、刷新即消失。**
 
 ### 功能
 
@@ -80,7 +80,7 @@ npm run test:e2e      # 真实 Chrome 全量 E2E
 
 ## English
 
-**PageMask** is a Chrome extension: on sites you add yourself, click the parts of a page you don't want (promos, feeds, sidebars…) and they're gone. **Until you set it up, it touches no site at all.**
+**PageMask** is a Chrome extension: on sites you add yourself, click the parts of a page you don't want (promos, feeds, sidebars…) and they're gone. **Until you set it up, it changes no site — the only temporary action is Cover this page: one click to cover, gone on refresh.**
 
 ### Features
 

@@ -69,7 +69,7 @@ PageMask 收起网页上你不想看的部分：在你自己选的网站上，�
 4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「收起内容」「标题和图标」，或悬浮按钮旁边的「⋯」菜单；想让整个页面变黑白，点悬浮按钮上的「整页变灰」钮（一颗图标按钮，悬停会显示这个名字），或在弹窗、站点设置页的「整页变灰」里拨开关，三处是同一组设置
 
 【隐私与权限】
-• 只对你添加的网站起作用；没添加的网站，PageMask 不会运行任何内容
+• 只对你添加的网站起作用：没添加的网站，PageMask 不注册任何内容脚本、不保存任何设置——唯一的临时例外是「遮住这一页」，点一下才遮、不留任何东西、刷新或离开页面即消失
 • 访问某个网站的权限，只在你为这个网站做设置时申请——点「收起内容」或「标题和图标」，或对没设置过的网站在弹窗里 / 用快捷键开「整页变灰」——而且只申请这一个网站
 • 所有设置只保存在你的浏览器里；PageMask 不加载外部脚本或远程代码，不发起任何网络请求，没有统计
 • 隐私政策：https://cherishfall.github.io/page-mask/privacy.html
@@ -115,7 +115,7 @@ HOW TO USE
 4. To see the site as it is, click the floating button; to change what's hidden or the title and icon, use the popup's two buttons or the "⋯" menu on the floating button. To turn the whole page black & white, click the floating button's whole-page-gray button (an icon-only button; its tooltip says "Turn the whole page gray"), or flip the switch in the popup or on the site's settings page — all three are the same setting
 
 PRIVACY & PERMISSIONS
-• Runs only on sites you add. On every other site, PageMask runs nothing
+• Runs only on sites you add: on every other site, PageMask registers no content scripts and stores no settings — the one temporary exception is "Cover this page", which runs only after you click it, leaves nothing behind, and is gone on refresh
 • Access to a site is requested only when you set that site up — clicking "Hide items" or "Title & icon", or turning the whole-page gray on for a site you haven't added (from the popup or the shortcut) — and only for that one site
 • Settings are stored only in your browser. PageMask loads no external scripts or remote code, makes no network requests, and has no analytics
 • Privacy policy: https://cherishfall.github.io/page-mask/privacy.html
@@ -141,7 +141,7 @@ NOTES
 ## 4. 单一用途（Single purpose）
 
 ```
-Lets users declutter the pages they choose — hide the elements they pick, optionally turn the whole page gray per site, set an optional per-site tab title and icon, and briefly cover a page (holding its sound). All of it is one narrow thing: controlling what each page shows the user. It does nothing on sites the user has not added.
+Lets users declutter the pages they choose — hide the elements they pick, optionally turn the whole page gray per site, set an optional per-site tab title and icon, and briefly cover a page (holding its sound). All of it is one narrow thing: controlling what each page shows the user. Sites the user has not added get no content scripts and no stored settings; the only thing that can run there is that one-shot, click-triggered cover, which leaves nothing behind.
 ```
 
 ## 5. 隐私表单填法
@@ -284,7 +284,7 @@ Test steps (no login needed):
 | 问题 | 回答 |
 |---|---|
 | 为什么要声明 `*://*/*`？范围太大了 | 用户可能想对任意一个网站生效，声明时只能先报一个足够宽的范围；**安装时一个站点都不授予**，只有用户为某个网站做设置时才按站点请求（点「收起内容」/「标题和图标」，或对没设置过的网站在弹窗里 / 用快捷键开「整页变灰」；普通域名是裸域 + 子域两条模式）；唯一例外是管理页对用户已配置站点的批量授权（同一手势、仅限已配置站点）。 |
-| 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上扩展完全不运行，安装时也只有一个「读取和更改您在 xxx 上的数据」之外的零警告（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
+| 为什么安装后看不到内容脚本？ | 内容脚本不写死在 manifest 里，而是用户授权后用 `scripting.registerContentScripts` 按 source 动态注册。这样未添加的网站上没有常驻的内容脚本——唯一的临时例外是「遮住这一页」的一次性脚本（靠点击手势授予的 activeTab 运行，不落任何东西，见 activeTab 的权限理由）。安装时的权限警告为零（实测 `getPermissionWarningsByManifest` 返回空数组）。 |
 | 扩展会改网页内容吗？ | 只是「做减法」：用 `scripting.insertCSS` 注入用户自己点选出来的选择器（`display:none` / 透明占位 / 盖一块与背景同色的遮罩），以及可选地替换标签页标题与图标。变灰开关同样是一份用户样式表（grayscale 滤镜）；内容脚本只在变灰开关打开期间按住站点自动播放的视频（用户点过的放行）。不改网页原有 DOM、不发请求、不注入远程代码。 |
 | 变灰开关会拦网络请求吗？ | 不会。黑白观感是 `scripting.insertCSS` 的用户样式表（`grayscale(1)` 滤镜），图片 / 视频请求照发，因此也不省流量、不挡广告；扩展没有 `declarativeNetRequest` 权限，也没有拦截任何请求的代码。 |
 | 为什么能静音标签页却没申请 `tabs` 权限？ | 遮住整页时用 `chrome.tabs.update(tabId, { muted })` 按住该标签页的声音，改的是 Chrome 自己的标签页静音状态，按官方文档不需要 `tabs` 权限（`tabs` 权限主要用于 `tabs.query` 读 `url` / `title` / `favIconUrl` 等敏感字段）。消息用 `sender.tab.id` 定位当前标签页。静音与幕布同生共灭，不写进扩展存储；解除前核对 `mutedInfo.reason === 'extension' && extensionId === 本扩展`，不动用户手动静音、Chrome 自带「静音网站」或其他扩展设置的静音。 |
