@@ -514,7 +514,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
       try {
         await browser.permissions.remove({ origins: patterns });
       } catch {
-        // 忽略：配置已删，多留一条无害授权，下次对账 / 管理页可收
+        // 忽略：配置已删，这条授权会一直留着——对账从不收权（reconcile 只有 register /
+        // update / unregister / pending），管理页列表来自站点配置（删除后站点已不在），
+        // 只能由用户在 Chrome 的站点权限设置里手动撤（第 9 轮复审核实，罕见且无害不可见）
       }
     }
     try {
