@@ -5,6 +5,34 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.6] - 2026-11-18
+
+第六轮上架前确认审查的修复批（一轮）：未添加网站上的幕布恢复按钮没有跟随界面语言。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **未添加的网站上，「遮住这一页」的恢复按钮也说界面语言**：这类网站没有内容脚本，遮住时由一次性脚本铺幕布——它此前从不应用界面语言设置，英文界面上恢复按钮的文字与读屏名称始终是中文、shadow 根的语言标记也是中文（WCAG 3.1.2）。现在铺幕布时应用语言，幕布开着时在设置里切换语言也立即生效
+- 语言判定从界面层移到 `core/i18n`（不依赖 Vue），扩展页面、内容脚本与一次性幕布脚本共用同一份实现
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.5 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限）；只影响页内恢复按钮的语言与无障碍名称
+- 门禁：编译、单测 866 项（57 文件）、E2E 十二脚本全绿（含新增「未添加网站的一次性幕布语言」断言，1.0.6 构建实测）
+
+### English
+
+#### Changes
+
+- **The cover's restore button now speaks the interface language on sites you haven't added**: those sites have no content script, so covering the page injects a one-shot script — it never applied the interface-language setting, leaving the English UI with a Chinese restore button and screen-reader name, plus a Chinese language tag on the shadow root (WCAG 3.1.2). The language is now applied when covering, and switching the interface language while the cover is up takes effect immediately
+- The language decision moved from the UI layer to `core/i18n` (no Vue dependency), so extension pages, content scripts and the one-shot cover script share one implementation
+
+#### For reviewers
+
+- Features and permission set are identical to 1.0.5 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); only the in-page restore button's language and accessible name change
+- Gates: compile, 866 unit tests (57 files), E2E across twelve scripts all green (including the new "one-shot cover language" assertion, measured on the 1.0.6 build)
+
 ## [1.0.5] - 2026-11-18
 
 第五轮上架前审查（Chrome 平台一致性 + 无障碍 + 商店材料）的修复批。功能与权限集合不变。
@@ -1778,6 +1806,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.6]: https://github.com/cherishfall/page-mask/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/cherishfall/page-mask/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cherishfall/page-mask/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/cherishfall/page-mask/compare/v1.0.2...v1.0.3

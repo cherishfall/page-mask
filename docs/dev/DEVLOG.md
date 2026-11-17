@@ -2,6 +2,17 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 第六轮上架前确认审查（2026-11-18）：一次性幕布的恢复按钮原来不跟随界面语言
+
+用户要求在第 4 轮「无发现」之后再做一次多角度确认，发现即提票、修复、补丁版本 +1、发版，循环到无发现为止。
+
+- **角度**：平台一致性（chrome-extensions 清单 20 条）、静态安全（eval / innerHTML / 远程请求）、产物与图标、文档与商店政策一致性、无障碍与 i18n 运行环境审计、单测 + 十二脚本 E2E。
+- **发现（#236）**：未添加的网站没有内容脚本，「遮住这一页」由一次性注入脚本（entrypoints/curtain-oneshot.ts）铺幕布；它从不应用界面语言设置，英文界面上恢复按钮文字与 aria-label 始终是中文，shadow 根 lang 也是 zh-CN（WCAG 3.1.2）。已添加的网站走 content-runtime，一直是对的。
+- **修法**：把 applySettingsLanguage 从 ui/i18n 移到 core/i18n（不依赖 Vue），一次性脚本动态导入后应用；并监听 settings 变化，幕布开着时切语言立即生效。ui/i18n 保留同名 re-export，调用点零改动。
+- **同类审计**：全仓库 createPageHost 调用点共 7 处——content-runtime 的 mask/toggle/wizard/curtain、page-notice 都在内容脚本内（locale 已应用）；只有 curtain-oneshot 缺这一句。无其他非 Vue 页内界面。
+- **验证**：单测新增 2 项（applySettingsLanguage 的锁定 / auto 与坏值），866 项全绿；E2E check-language 新增「未添加网站的一次性幕布」场景，先用 1.0.5 构建跑到红（确认测的是真缺陷），换 1.0.6 构建转绿；十二脚本全绿。
+- **发版**：1.0.6；CHANGELOG、商店材料、提交指南、在线更新日志页同步。
+
 ## 落地页仓库移出 tmp（2026-11-17）：独立仓库的检出不是临时文件
 
 - **问题**：落地页是独立仓库 `cherishfall/cherishfall.github.io`，此前工作副本放在本仓库 `tmp/pages-repo`。但 `tmp/` 的规矩是「可随时整个清空、不影响项目」，与长期工作副本冲突；且它被 `.gitignore` 忽略，另一个仓库的 `.git` 嵌套在本仓库内部，搜索与编辑器索引也会扫到。

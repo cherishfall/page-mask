@@ -3,14 +3,14 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-18 · 对应构建 **1.0.5**（`.output/page-mask-1.0.5-chrome.zip`，商店提交版本）
+> 最后更新：2026-11-18 · 对应构建 **1.0.6**（`.output/page-mask-1.0.6-chrome.zip`，商店提交版本）
 
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.5-chrome.zip`
-- [x] 版本号已改（`package.json` → `1.0.5`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.5` 已打、Release 已发
-- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）；1.0.5 无界面视觉变化（只有读屏语言标记与兜底逻辑），沿用 1.0.4 的截图
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.6-chrome.zip`
+- [x] 版本号已改（`package.json` → `1.0.6`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.6` 已打、Release 已发
+- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）；1.0.5 无界面视觉变化（只有读屏语言标记与兜底逻辑），1.0.6 也无视觉变化（只影响未添加网站上幕布恢复钮的语言与读屏名称），沿用 1.0.4 的截图
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [x] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「整页变灰」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）——1.0.2 走查回填见 §6 末尾：可自动化部分（harness 八步 + 真机三站 + 既有断言）已过；授权气泡 / 改键 / 小喇叭 / 视频观感四项提交时人工顺手核
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -190,10 +190,11 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.5 时 release notes 可用：`1.0.5 — Accessibility and robustness: the in-page UI now follows the interface language for screen readers; the toolbar tooltip is restored after the blocked-shortcut hint; the popup no longer stays on "Loading" if the active tab cannot be read. Features and permissions unchanged.`
+> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.6 时 release notes 可用：`1.0.6 — Language fix for the full-page cover: on sites you haven't added, the restore button now follows the interface language (including its screen-reader name). Features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 1.0.6 | 2026-11-18 | 第六轮上架前确认审查修复批：未添加网站上的幕布由一次性脚本铺开，此前不应用界面语言——英文界面下恢复按钮的文字与读屏名称始终是中文、shadow 根语言标记也是中文（WCAG 3.1.2）；现在铺幕布时应用语言，开着幕布切换语言也立即生效。语言判定下沉到 core/i18n，三处运行环境共用。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.5 | 2026-11-18 | 第五轮上架前审查修复批：页内界面（胶囊 / 向导 / 幕布恢复钮）的读屏语言标记跟随界面语言（WCAG 3.1.2）；快捷键被挡提示结束后图标悬停说明恢复默认文案（不再被清成空标题）；弹窗读取当前标签页失败时落到「这个页面用不了」说明。隐私与商店材料措辞改为「不加载外部脚本或远程代码」，提交指南版本号对齐当前构建。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.4 | 2026-11-15 | 键盘操作一致性：悬浮按钮「⋯」菜单打开后焦点直接落在第一个菜单项，与站点设置页行尾菜单同一行为。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.3 | 2026-11-15 | 走查收口修复批：无特征元素（裸段落等没有 class/id 的元素）的收起规则不再被点选光标的临时内联样式污染而静默失效（点选光标改走用户样式表通道，style 属性不再作为候选特征，极简页面改用页面根锚定的精确路径保存）；另一走查现象定界为测试编排问题（运行时零改动）。功能与权限集合不变。详见 `CHANGELOG.md` |
@@ -300,7 +301,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `1.0.5`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `1.0.6`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54（2026-11-14 随 #199 文案修订后实测） |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`curtain-oneshot.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
@@ -357,7 +358,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 864 项（57 个文件，1.0.5 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.5 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 866 项（57 个文件，1.0.6 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.6 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |
