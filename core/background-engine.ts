@@ -12,7 +12,8 @@
  * SW 随时被回收都不影响还原；对账每次都从存储、权限、注册表重新读取。
  * 唯一的例外是预览草稿的恢复副本（core/draft-tracker.ts，#239/#247）：正式样式可由配置
  * 重算，草稿不能——扩展更新时旧实例冻结交接、撤不掉，需要这份记录供孤儿清理。
- * 记录放 storage.local（跨更新持久），残留键由 onInstalled / onStartup 的 sweep 清扫。
+ * 记录放 storage.local（跨更新持久），残留键由 onStartup 的 sweep 清扫（#249：不挂在
+ * onInstalled——update 时会抢在孤儿清理前面删掉活文档仍需要的超龄记录）。
  *
  * 对账触发点（任何一个都可能在 SW 刚被唤醒时到来，都是幂等的）：
  * - runtime.onInstalled（install / update / chrome_update）：扩展更新或重载会清空动态注册（REVIEW B1）
@@ -835,8 +836,6 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 生命周期事件 → 对账 ----------
 
   browser.runtime.onInstalled.addListener((details) => {
-    // 草稿残留键清扫（#247）：文档消失后没人 take 的记录最多留 24h，install / update / startup 都扫一遍
-    void draftRecords.sweep();
     if (details.reason === 'update') {
       // 扩展更新 / 重载：已打开页面里的旧内容脚本失联了（界面还在、标题守卫还在压标题，却连不上扩展）。
       // 对账补注册后，向这些标签页注入新脚本：新实例接管（旧实例收尾、交出样式记录，见 entrypoints/content.ts）
@@ -855,6 +854,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
     }
   });
   browser.runtime.onStartup.addListener(() => {
+    // 草稿残留键清扫（#247）只在启动时扫（#249）：重启后旧 tabId / documentId 必不可能复活，
+    // 全量清安全；不能挂在 onInstalled——update 的 sweep 会抢在 reinject 后的孤儿清理之前，
+    // 删掉「向导开着过夜」的活文档仍需要的超龄记录，孤儿预览又没人能撤了
     void draftRecords.sweep();
     reconcileInBackground('onStartup');
   });

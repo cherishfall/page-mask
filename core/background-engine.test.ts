@@ -861,6 +861,17 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(left['profile:reader.example']).toEqual(profile['profile:reader.example']);
   });
 
+  it('超龄残留键跨 onInstalled(update) 保留、onStartup 清掉（#249：sweep 不抢在孤儿清理前面）', async () => {
+    const stale = { 'draft:9:old': { css: 'OLD', at: Date.now() - 25 * 60 * 60 * 1000 } };
+    await fakeBrowser.storage.local.set(stale);
+
+    await fakeBrowser.runtime.onInstalled.trigger({ reason: 'update', previousVersion: '1.0.8' } as never);
+    expect(((await fakeBrowser.storage.local.get('draft:9:old'))['draft:9:old'] as { css: string }).css).toBe('OLD');
+
+    await fakeBrowser.runtime.onStartup.trigger();
+    expect(await fakeBrowser.storage.local.get('draft:9:old')).toEqual({});
+  });
+
   it('注入失败：回复 ok:false，并告知文档里仍是旧样式', async () => {
     stubs.scripting.insertCSS.mockRejectedValueOnce(new Error('No document with id'));
 
