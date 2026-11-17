@@ -2,6 +2,12 @@
 
 按时间倒序记录开发过程中的关键事件、超出 `docs/design.md` 范围的临时决策及其理由。正式的架构决策写 `docs/adr/`，这里只记过程。
 
+## 落地页仓库移出 tmp（2026-11-17）：独立仓库的检出不是临时文件
+
+- **问题**：落地页是独立仓库 `cherishfall/cherishfall.github.io`，此前工作副本放在本仓库 `tmp/pages-repo`。但 `tmp/` 的规矩是「可随时整个清空、不影响项目」，与长期工作副本冲突；且它被 `.gitignore` 忽略，另一个仓库的 `.git` 嵌套在本仓库内部，搜索与编辑器索引也会扫到。
+- **改法**：检出移到与本仓库平级的 `../cherishfall.github.io`（本机 `~/AiCodingProjects/cherishfall.github.io`）；`scripts/gen-changelog-page.mjs` 默认读平级目录，可用环境变量 `PAGES_REPO` 覆盖；AGENTS.md 新增「关联仓库（落地页）」一节，「发版四件套」「临时文件」两处改为指向该节；`docs/dev/AGENT-KICKOFF.md`、`docs/store-submission-guide.md` §6.1 同步。
+- **验证**：`npm run changelog:page` 在新路径生成成功，落地页仓库 `git status` 无 diff（生成结果与移动前一致）。
+
 ## 落地页 slogan 与演示细节（2026-11-16，第六轮）：一句话说清，标签页留出真实间距
 
 用户反馈：首屏 slogan 不好听也不够简洁；功能卡里「收错了，5 秒内可撤销」这类细节不该出现在展示页；演示图的模拟标签页上沿和窗口贴在同一条线上，真实浏览器有间距；六步描述用语不准确。

@@ -93,6 +93,17 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 | `docs/dev/` | 开发过程文档（开发日志 `DEVLOG.md`、测试与验证记录等）。过程文档**不要**堆在仓库根目录 |
 | `HANDOFF.md` | 仅在任务中断需要交接时临时放根目录，交接完成后删除 |
 
+## 关联仓库（落地页）
+
+落地页是独立仓库 `cherishfall/cherishfall.github.io`（GitHub Pages 静态站点，线上地址 <https://cherishfall.github.io/page-mask/>），本地检出固定放在**与本仓库平级的 `../cherishfall.github.io`**（本机为 `/Users/lifan/AiCodingProjects/cherishfall.github.io`）。
+
+它是长期工作副本，不是临时文件：
+
+- 不放进 `tmp/`、不随 `tmp/` 清空；也不要嵌套在本仓库内部——即使 `.gitignore` 忽略，搜索与编辑器索引仍会扫到另一个仓库的 `.git` 和文件。
+- 在它里面的改动单独 `git commit` / `git push`，不要与本仓库的提交混在一起；改动完成后先给用户过目，确认后再提交。
+- 检出在别的位置时，`npm run changelog:page` 用环境变量 `PAGES_REPO=/path/to/repo` 指定。
+- 该目录在仓库外，但 agent 可以直接读写；不要因为它不在仓库内就改写到仓库内路径。
+
 ## 开发纪律
 
 - **实现过程同样要思考，不许机械执行**：开工前把这张票对应的准则条款、`docs/design-ui.md`、`docs/GLOSSARY.md` 和成熟产品的同类做法再确认一遍。实现中遇到设计细节拿不准（间距、文案分寸、交互先后、边界状态、异常路径），先查 AGENTS.md 的 UI/UX 来源与相关 skill（尤其 `chrome-extensions` 的 MV3 约束），再决定；查完仍拿不准的，写进 commit 正文或票里留痕，不要默默选一个。每改完一处界面，按「界面整屏审查」五条自查一遍。
@@ -101,7 +112,7 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 - commit message 用 Conventional Commits（type/scope 英文，正文可中文）。
 - **发版前对外文档同步（四件套，漏一件就是没发完版）**：升版本号的每次发版，以下对外公开文档必须同步更新并推送——
   1. `CHANGELOG.md` 中英双语条目（Keep a Changelog 结构）；
-  2. **在线更新日志页**：落地页仓库（`cherishfall/cherishfall.github.io`，工作副本放 `tmp/pages-repo`）里跑 `npm run changelog:page`，从 `CHANGELOG.md` 重新生成 `page-mask/changelog.html`（生成页勿手改，样式与页头页脚随 privacy.html 模板走），随落地页一起 commit + push；
+  2. **在线更新日志页**：落地页仓库（`cherishfall/cherishfall.github.io`，本地检出见上「关联仓库」）里跑 `npm run changelog:page`，从 `CHANGELOG.md` 重新生成 `page-mask/changelog.html`（生成页勿手改，样式与页头页脚随 privacy.html 模板走），随落地页一起 commit + push；
   3. `README.md`：安装方式、使用方法、权限说明有变化时同步（中英两份）；
   4. **在线隐私政策页**：`docs/PRIVACY.md` 内容有变化时同步落地页仓库的 `page-mask/privacy.html`（两版逐条等义是商店要求，措辞漂移会让审核员比对不上）。
   落地页正文（功能介绍、安装、FAQ）有变化时同批更新。发版完整流程见 `docs/store-submission-guide.md` §6.1。
@@ -120,9 +131,9 @@ Single-context: one `docs/GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.
 
 ## 临时文件
 
-- agent 与脚本产生的一切临时文件（草稿、日志、探针脚本、导出的 issue 正文、浏览器测试配置等）**一律放在仓库内 `tmp/`**（已在 `.gitignore`），不要写到系统 `/tmp`、家目录或其它位置。用完可删，`tmp/` 整个清空也不影响项目。
+- agent 与脚本产生的一切临时文件（草稿、日志、探针脚本、导出的 issue 正文、浏览器测试配置等）**一律放在仓库内 `tmp/`**（已在 `.gitignore`），不要写到系统 `/tmp`、家目录或其它位置。用完可删，`tmp/` 整个清空也不影响项目。落地页仓库的检出不算临时文件，见上「关联仓库」。
 - E2E 工具（`tests/e2e/lib/tmp.mjs`）与脚本已默认使用 `tmp/`；新写的脚本要用临时目录时同样指向 `tmp/`。
-- 所有文件路径用仓库内路径；写仓库外的路径（例如误把 `docs/...` 写到上一级目录）会被权限配置直接拒绝，出现时检查路径而不是重试。
+- 所有文件路径用仓库内路径。唯一例外是「关联仓库」里的落地页检出 `../cherishfall.github.io`；其余写仓库外的路径（例如误把 `docs/...` 写到上一级目录）都说明路径算错了，检查路径而不是换写法。
 
 ## 会话与上下文
 

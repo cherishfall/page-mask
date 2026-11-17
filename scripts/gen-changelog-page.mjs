@@ -1,14 +1,15 @@
 /**
  * 从 CHANGELOG.md 生成落地页的「更新日志」页。
  *
- * 产出：tmp/pages-repo/page-mask/changelog.html（落地页仓库 cherishfall/cherishfall.github.io 的
- * 工作区）。模板直接取该仓库的 privacy.html —— 页面的设计 token、页头 / 页脚 / 语言切换脚本
- * 与隐私政策页共用同一份，改样式只需要改 privacy.html，本脚本重新生成即自动同步。
+ * 产出：../cherishfall.github.io/page-mask/changelog.html（落地页仓库 cherishfall/cherishfall.github.io
+ * 的本地检出，与本仓库平级）。模板直接取该仓库的 privacy.html —— 页面的设计 token、页头 / 页脚 /
+ * 语言切换脚本与隐私政策页共用同一份，改样式只需要改 privacy.html，本脚本重新生成即自动同步。
  *
  * 用法：
- *   1. 落地页仓库克隆或更新到 tmp/pages-repo（git 记得带 HTTPS_PROXY=http://127.0.0.1:7890 前缀）
+ *   1. 落地页仓库克隆或更新到 ../cherishfall.github.io（git 记得带 HTTPS_PROXY=http://127.0.0.1:7890 前缀）；
+ *      检出在别处时用 PAGES_REPO=/path/to/repo 指定
  *   2. npm run changelog:page
- *   3. 在 tmp/pages-repo 里 commit + push（页面不要手改，手改会在下次生成时被覆盖）
+ *   3. 在落地页仓库里 commit + push（页面不要手改，手改会在下次生成时被覆盖）
  *
  * 解析规则（与 CHANGELOG.md 现行格式一一对应）：
  *   ## [版本] - 日期        一个版本块
@@ -24,13 +25,15 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const changelogPath = resolve(repoRoot, 'CHANGELOG.md');
-const pagesRepo = resolve(repoRoot, 'tmp/pages-repo');
+const pagesRepo = process.env.PAGES_REPO
+  ? resolve(process.env.PAGES_REPO)
+  : resolve(repoRoot, '../cherishfall.github.io');
 const templatePath = resolve(pagesRepo, 'page-mask/privacy.html');
 const outPath = resolve(pagesRepo, 'page-mask/changelog.html');
 
 if (!existsSync(templatePath)) {
   console.error(`找不到模板 ${templatePath}`);
-  console.error('先克隆落地页仓库：HTTPS_PROXY=http://127.0.0.1:7890 git clone https://github.com/cherishfall/cherishfall.github.io tmp/pages-repo');
+  console.error('先克隆落地页仓库：HTTPS_PROXY=http://127.0.0.1:7890 git clone https://github.com/cherishfall/cherishfall.github.io ../cherishfall.github.io（或用 PAGES_REPO 指定检出位置）');
   process.exit(1);
 }
 
@@ -207,4 +210,4 @@ if (!page.includes('</main>') || !page.includes('lang-group')) {
 writeFileSync(outPath, page);
 console.log(`已生成 ${outPath}`);
 console.log(`共 ${count} 个版本（最新 ${latest.version} · ${latest.date}）。`);
-console.log('下一步：在 tmp/pages-repo 里 commit + push（page-mask/changelog.html 与落地页改动一起）。');
+console.log('下一步：在落地页仓库里 commit + push（page-mask/changelog.html 与落地页改动一起）。');
