@@ -12,7 +12,7 @@ import { reactive } from 'vue';
 import { browser } from 'wxt/browser';
 import { createPageMaskStorage, invalidExportFile, type ImportResult } from '@/core/storage';
 import { mediaFlagPatch, type MediaFlagKey } from '@/core/media';
-import { currentUiLanguage, defaultTitleFor, quickTitleValue, type QuickTitle } from '@/core/titles';
+import { currentUiLanguage, defaultTitleFor, quickTitleValue, resolveTitleLanguage, type QuickTitle } from '@/core/titles';
 import { getLocale, t, type UiLanguage } from '@/core/i18n';
 import type { HideRule, SiteProfile, TabIcon } from '@/core/types';
 import { sitePatterns } from '@/core/site-key';
@@ -42,6 +42,8 @@ export interface ManagementState {
   defaultTitle: string | null;
   /** 界面语言偏好（#57）：auto 跟随浏览器，zh / en 锁定 */
   uiLanguage: UiLanguage;
+  /** 兜底标题的展示值（「留空就用「阅读」」）：按解析后的界面语言取，随 uiLanguage 设置更新（#240） */
+  languageDefaultTitle: string;
   /** 右下角小胶囊的闲置不透明度（#110）：0.1–1，全局偏好 */
   toggleOpacity: number;
   /** 输入框草稿：键 = origin，全局默认标题用 DEFAULT_KEY */
@@ -67,18 +69,13 @@ export interface ManagementState {
 
 export function createManagementStore() {
   const storage = createPageMaskStorage(browser.storage.local);
-  /**
-   * 浏览器界面语言：只用于兜底标题的默认值（「留空则用「阅读」」）。
-   * 快捷标题填入什么跟着**界面语言**走（按钮上写什么就填什么），见 pickTitle。
-   */
-  const uiLanguage = currentUiLanguage();
-  const languageDefaultTitle = defaultTitleFor(uiLanguage);
-
   const state = reactive<ManagementState>({
     profiles: [],
     loaded: false,
     defaultTitle: null,
     uiLanguage: 'auto',
+    // 初始按 auto（浏览器语言）取；reload 读到设置后按解析后的语言重算（#240）
+    languageDefaultTitle: defaultTitleFor(currentUiLanguage()),
     toggleOpacity: DEFAULT_TOGGLE_OPACITY,
     drafts: {},
     focusedKey: null,
@@ -117,6 +114,8 @@ export function createManagementStore() {
     state.profiles = list;
     state.defaultTitle = settings.defaultTitle;
     state.uiLanguage = settings.uiLanguage;
+    // 展示用的兜底标题与 effectiveTitle 同口径：显式选 zh / en 跟所选语言，auto 跟浏览器语言（#240）
+    state.languageDefaultTitle = defaultTitleFor(resolveTitleLanguage(settings.uiLanguage));
     state.toggleOpacity = settings.toggleOpacity;
     state.pendingOrigins = list.filter((_, i) => pending[i]).map((p) => p.origin);
     state.loaded = true;
@@ -407,8 +406,6 @@ export function createManagementStore() {
 
   return {
     state,
-    uiLanguage,
-    languageDefaultTitle,
     init,
     reload,
     focus,

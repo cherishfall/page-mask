@@ -73,7 +73,7 @@
               id="pm-settings-default-title"
               v-model="store.state.drafts[DEFAULT_KEY]"
               data-testid="pm-settings-default-title"
-              :placeholder="store.languageDefaultTitle"
+              :placeholder="store.state.languageDefaultTitle"
               aria-labelledby="pm-settings-title-heading"
               aria-describedby="pm-settings-title-hint"
               @focus="store.focus(DEFAULT_KEY)"
@@ -97,7 +97,7 @@
             </button>
           </div>
           <p id="pm-settings-title-hint" class="hint">
-            {{ t.settings.titleFootnote(store.languageDefaultTitle) }}
+            {{ t.settings.titleFootnote(store.state.languageDefaultTitle) }}
           </p>
         </section>
 

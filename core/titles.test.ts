@@ -6,6 +6,7 @@ import {
   effectiveTitle,
   QUICK_TITLES,
   quickTitleValue,
+  resolveTitleLanguage,
 } from './titles';
 
 describe('defaultTitleFor 按界面语言取默认标题', () => {
@@ -47,6 +48,14 @@ describe('effectiveTitle 站点覆盖 > 全局设置 > 界面语言默认 > 常�
   it("auto / 没写 uiLanguage 仍按浏览器语言（#89 不改存量行为）", () => {
     expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'auto' }, 'zh-CN')).toBe('阅读');
     expect(effectiveTitle({ disguisedTitle: null }, { defaultTitle: null, uiLanguage: 'auto' }, 'en-US')).toBe('Reading');
+  });
+  it('resolveTitleLanguage：展示口径与 effectiveTitle 同源（#240）——显式选择优先，auto / 缺失 / 坏值跟浏览器', () => {
+    expect(resolveTitleLanguage('en', 'zh-CN')).toBe('en');
+    expect(resolveTitleLanguage('zh', 'en-US')).toBe('zh');
+    expect(resolveTitleLanguage('auto', 'zh-CN')).toBe('zh-CN');
+    expect(resolveTitleLanguage(undefined, 'en-US')).toBe('en-US');
+    expect(resolveTitleLanguage(null, 'en-US')).toBe('en-US');
+    expect(resolveTitleLanguage(42, 'zh-CN')).toBe('zh-CN');
   });
   it('空白 / 非字符串一律跳过，最终返回非空常量', () => {
     for (const bad of ['', '   ', '\t\n', 42, {}, [], undefined, null]) {

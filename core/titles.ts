@@ -58,6 +58,15 @@ function nonBlank(v: unknown): v is string {
   return typeof v === 'string' && v.trim() !== '';
 }
 
+/** 兜底标题跟随的界面语言：显式选了 zh / en 就用它，'auto'（或缺失）按浏览器界面语言（#89）。
+ *  管理页「留空就用「阅读」」的展示值与 effectiveTitle 用同一份口径（#240） */
+export function resolveTitleLanguage(
+  pref: unknown,
+  browserLang: string | null | undefined = currentUiLanguage(),
+): string {
+  return pref === 'zh' || pref === 'en' ? pref : (browserLang ?? '');
+}
+
 /**
  * 站点配置的生效标题：站点覆盖 > 全局设置 > 界面语言默认 > 常量 "Reading"。
  * 永不返回空白——标题为空时 Chrome 会在标签页上显示网址。
@@ -73,8 +82,6 @@ export function effectiveTitle(
 ): string {
   if (nonBlank(profile.disguisedTitle)) return profile.disguisedTitle;
   if (nonBlank(settings?.defaultTitle)) return settings.defaultTitle;
-  const chosen = settings?.uiLanguage;
-  const lang =
-    chosen === 'zh' || chosen === 'en' ? defaultTitleFor(chosen) : defaultTitleFor(uiLanguage);
+  const lang = defaultTitleFor(resolveTitleLanguage(settings?.uiLanguage, uiLanguage));
   return nonBlank(lang) ? lang : DEFAULT_TITLE_EN;
 }

@@ -299,7 +299,7 @@ export const en: Messages = {
     titleIntro: 'Pre-filled when you open “Title & icon” for a site; also used when you cover a page on a site that has no title of its own',
     titleLabel: 'Default title',
     titleFootnote: (fallback: string) =>
-      `Leave it empty to use “${fallback}” (follows the browser language) — ${titleBlankHint}`,
+      `Leave it empty to use “${fallback}” (follows the interface language) — ${titleBlankHint}`,
 
 
     toggleHeading: 'Floating button',
@@ -336,7 +336,7 @@ export const en: Messages = {
 
     languageHeading: 'Language',
     languageIntro:
-      'Every open PageMask page switches right away; the default tab title still follows the browser language',
+      'Every open PageMask page switches right away; the default tab title follows the language picked here (Automatic follows the browser)',
     languageAuto: (current: string) => `Automatic (now: ${current})`,
     languageZh: '简体中文',
     languageEn: 'English',

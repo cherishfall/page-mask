@@ -322,7 +322,7 @@ export const zh = {
     titleHeading: '默认标题',
     titleIntro: '打开某个网站的「标题和图标」时，这一项会预先填进去；遮住这一页时，没单独设过标题的网站也用它',
     titleLabel: '默认标题',
-    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随浏览器语言）——${titleBlankHint}`,
+    titleFootnote: (fallback: string) => `留空就用「${fallback}」（跟随界面语言）——${titleBlankHint}`,
 
 
     toggleHeading: '悬浮按钮',
@@ -358,7 +358,7 @@ export const zh = {
 
     /** 界面语言（#57）：三选一，语言名各用本语言书写 */
     languageHeading: '界面语言',
-    languageIntro: '切换后马上就换成新语言；标签页的默认标题仍跟随浏览器语言',
+    languageIntro: '切换后马上就换成新语言；标签页的默认标题也按这里选的语言走，选自动时跟随浏览器',
     languageAuto: (current: string) => `自动（现在：${current}）`,
     languageZh: '简体中文',
     languageEn: 'English',
