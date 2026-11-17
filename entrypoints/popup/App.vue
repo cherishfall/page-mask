@@ -143,8 +143,13 @@ const phase = computed<'loading' | 'unsupported' | 'new' | 'pending' | 'ready'>(
 });
 
 onMounted(async () => {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  tab.value = tabs[0] ?? null;
+  // tabs.query 失败也不能永远停在「读取中」（与 #168 同一口径）：按「读不出当前页面」处理
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    tab.value = tabs[0] ?? null;
+  } catch {
+    tab.value = null;
+  }
   tabLoaded.value = true;
   await refresh();
   browser.storage.onChanged.addListener((_, area) => {
