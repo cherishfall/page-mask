@@ -8,6 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { createBackground } from './background-engine';
+import { createDraftTracker } from './draft-tracker';
 import { registrationPlan } from './registration';
 import { sitePatterns } from './site-key';
 import { createEmptyProfile, type SiteProfile } from './types';
@@ -786,12 +787,14 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1' }));
   });
 
-  it('draftCss：实际落进文档的文本记入 storage.session，作为孤儿恢复副本（#239）', async () => {
+  it('draftCss：实际落进文档的文本记入 storage.local（跨更新持久，#239/#247），作为孤儿恢复副本', async () => {
     await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
-    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({ 'draft:7:doc-A': 'D1' });
+    const stored = (await fakeBrowser.storage.local.get('draft:7:doc-A'))['draft:7:doc-A'] as { css: string; at: number };
+    expect(stored.css).toBe('D1');
+    expect(typeof stored.at).toBe('number');
 
     await send({ t: 'draftCss', prev: 'D1', next: null }, DOC_SENDER);
-    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({});
+    expect(await fakeBrowser.storage.local.get('draft:7:doc-A')).toEqual({});
   });
 
   it('draftCss：新实例以 prev=null 换草稿时，先撤会话记录里的残留再插新的（#239）', async () => {
@@ -805,7 +808,7 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(res).toEqual({ ok: true, css: 'D2' });
     expect(stubs.scripting.removeCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D1', origin: 'USER' }));
     expect(stubs.scripting.insertCSS).toHaveBeenCalledWith(expect.objectContaining({ css: 'D2' }));
-    expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({ 'draft:7:doc-A': 'D2' });
+    expect(((await fakeBrowser.storage.local.get('draft:7:doc-A'))['draft:7:doc-A'] as { css: string }).css).toBe('D2');
   });
 
   it('draftCss：残留文本与新草稿相同时不重复插入（只刷新记录）', async () => {
@@ -820,7 +823,7 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(stubs.scripting.removeCSS).not.toHaveBeenCalled();
   });
 
-  it('releaseOrphanCss：会话记录里的孤儿预览一并撤掉（#239）', async () => {
+  it('releaseOrphanCss：跨更新记录里的孤儿预览一并撤掉（#239）', async () => {
     await send({ t: 'draftCss', prev: null, next: 'DRAFT-ORPHAN' }, DOC_SENDER);
     stubs.scripting.removeCSS.mockClear();
 
@@ -829,12 +832,33 @@ describe('后台引擎（fakeBrowser）', () => {
     expect(res).toEqual({ ok: true, css: null });
     const removed = (stubs.scripting.removeCSS.mock.calls as unknown as [{ css: string }][]).map(([a]) => a.css);
     expect(removed).toContain('DRAFT-ORPHAN');
+    expect(await fakeBrowser.storage.local.get('draft:7:doc-A')).toEqual({});
+  });
+
+  it('draftCss：记录键在无 documentId 时退回 frameId', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 3, url: `${BASE}/home` });
+    expect(((await fakeBrowser.storage.local.get('draft:7:3'))['draft:7:3'] as { css: string }).css).toBe('D1');
+  });
+
+  it('草稿记录在 storage.local 而非 session（session 随扩展更新被清空，够不着孤儿场景，#247）', async () => {
+    await send({ t: 'draftCss', prev: null, next: 'D1' }, DOC_SENDER);
+    expect(((await fakeBrowser.storage.local.get('draft:7:doc-A'))['draft:7:doc-A'] as { css: string }).css).toBe('D1');
     expect(await fakeBrowser.storage.session.get('draft:7:doc-A')).toEqual({});
   });
 
-  it('draftCss：会话记录键在无 documentId 时退回 frameId', async () => {
-    await send({ t: 'draftCss', prev: null, next: 'D1' }, { tab: TAB, frameId: 3, url: `${BASE}/home` });
-    expect(await fakeBrowser.storage.session.get('draft:7:3')).toEqual({ 'draft:7:3': 'D1' });
+  it('sweep：超龄 / 畸形残留键清掉，新鲜键与站点配置不动（#247）', async () => {
+    const stale = { 'draft:9:old': { css: 'OLD', at: Date.now() - 25 * 60 * 60 * 1000 } };
+    const fresh = { 'draft:9:new': { css: 'NEW', at: Date.now() } };
+    const profile = { 'profile:reader.example': { formatVersion: 1 } };
+    await fakeBrowser.storage.local.set({ ...stale, ...fresh, ...profile, 'draft:9:bad': 'junk' });
+
+    await createDraftTracker(fakeBrowser.storage.local).sweep();
+
+    const left = await fakeBrowser.storage.local.get(null);
+    expect(left['draft:9:old']).toBeUndefined();
+    expect(left['draft:9:bad']).toBeUndefined();
+    expect(left['draft:9:new']).toEqual(fresh['draft:9:new']);
+    expect(left['profile:reader.example']).toEqual(profile['profile:reader.example']);
   });
 
   it('注入失败：回复 ok:false，并告知文档里仍是旧样式', async () => {
@@ -867,7 +891,7 @@ describe('后台引擎（fakeBrowser）', () => {
   // ---------- 一键清空 ----------
 
   describe('resetSite（扩展页面发起的删除设置）', () => {
-    it('先通知该站点已打开的标签页还原，再收回授权、注销、删配置', async () => {
+    it('先通知该站点已打开的标签页还原，再删配置、收回授权、注销（#248 起删除先于收权）', async () => {
       await configure(ORIGIN);
       const otherTab = (await fakeBrowser.tabs.create({ url: `${OTHER_BASE}/x` })).id!;
       const order: string[] = [];
@@ -880,12 +904,17 @@ describe('后台引擎（fakeBrowser）', () => {
         for (const o of origins) stubs.granted.delete(o);
         return true;
       });
+      const originalRemove = fakeBrowser.storage.local.remove.bind(fakeBrowser.storage.local);
+      vi.spyOn(fakeBrowser.storage.local, 'remove').mockImplementation(async (keys) => {
+        order.push('deleteProfile');
+        return originalRemove(keys);
+      });
 
       expect(await send({ t: 'resetSite', origin: ORIGIN })).toEqual({ ok: true });
 
       expect(stubs.sendMessage).toHaveBeenCalledWith(siteTabId, { t: 'siteReset' });
       expect(stubs.sendMessage).not.toHaveBeenCalledWith(otherTab, expect.anything());
-      expect(order).toEqual([`siteReset:${siteTabId}`, 'permissions.remove']);
+      expect(order).toEqual([`siteReset:${siteTabId}`, 'deleteProfile', 'permissions.remove']);
       expect(stubs.registered.size).toBe(0);
       // 批次只装实际持有的模式（#202）：configure 只授了裸域一条，子域通配不该进批次
       expect(stubs.permissions.remove).toHaveBeenCalledWith({ origins: [pattern(ORIGIN)] });
@@ -915,7 +944,7 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toEqual({});
     });
 
-    it('删配置失败（存储异常）：配置保留、如实报失败，并向已清空的标签页发 siteResetUndone（#243）', async () => {
+    it('删配置失败（存储异常）：配置保留、权限不收，如实报失败并向已清空的标签页发 siteResetUndone（#243/#248）', async () => {
       await configure(ORIGIN);
       const removeSpy = vi.spyOn(fakeBrowser.storage.local, 'remove').mockRejectedValueOnce(new Error('storage broken'));
 
@@ -924,6 +953,9 @@ describe('后台引擎（fakeBrowser）', () => {
       expect(res).toEqual({ ok: false, error: 'delete profile failed' });
       // 配置还在：页面不该处于「被删光」的假象
       expect(await fakeBrowser.storage.local.get(`profile:${ORIGIN}`)).toHaveProperty(`profile:${ORIGIN}`);
+      // 删除先于收权（#248）：叫醒后的页面 insertCSS 仍可用，可完整恢复
+      expect(stubs.permissions.remove).not.toHaveBeenCalled();
+      expect(stubs.granted.size).toBeGreaterThan(0);
       // 已清空的页面被叫醒恢复界面
       expect(stubs.sendMessage).toHaveBeenCalledWith(siteTabId, { t: 'siteResetUndone' });
       removeSpy.mockRestore();

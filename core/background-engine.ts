@@ -10,8 +10,9 @@
  *
  * 无状态：注入记录由内容脚本按文档持有，随请求带来（见 core/messages.ts 顶部说明），
  * SW 随时被回收都不影响还原；对账每次都从存储、权限、注册表重新读取。
- * 唯一的会话级例外是预览草稿的恢复副本（core/draft-tracker.ts，#239）：正式样式可由配置
+ * 唯一的例外是预览草稿的恢复副本（core/draft-tracker.ts，#239/#247）：正式样式可由配置
  * 重算，草稿不能——扩展更新时旧实例冻结交接、撤不掉，需要这份记录供孤儿清理。
+ * 记录放 storage.local（跨更新持久），残留键由 onInstalled / onStartup 的 sweep 清扫。
  *
  * 对账触发点（任何一个都可能在 SW 刚被唤醒时到来，都是幂等的）：
  * - runtime.onInstalled（install / update / chrome_update）：扩展更新或重载会清空动态注册（REVIEW B1）
@@ -70,8 +71,9 @@ function siteKeyOfUrl(url: string | undefined): string | null {
 
 export function createBackground({ browser }: BackgroundDeps): void {
   const storage = createPageMaskStorage(browser.storage.local);
-  // 预览草稿的会话记录（#239）：draftCss 实际落进文档的文本，供孤儿清理。见 core/draft-tracker.ts
-  const draftRecords = createDraftTracker(browser.storage.session);
+  // 预览草稿的跨更新记录（#239，选型修订 #247）：draftCss 实际落进文档的文本，供孤儿清理。
+  // 必须放 storage.local——session 区随扩展更新 / 重载被清空，恰好够不着目标场景。见 core/draft-tracker.ts
+  const draftRecords = createDraftTracker(browser.storage.local);
   const extensionBase = browser.runtime.getURL('/');
 
   /** 后台也出文案（快捷键被挡的角标悬停说明，#202）：跟随全局设置里的界面语言。
@@ -482,7 +484,9 @@ export function createBackground({ browser }: BackgroundDeps): void {
     return targets;
   }
 
-  /** 顺序：先还原已打开页面（此时仍有站点授权，样式才删得掉），再收回授权、注销、删配置（REVIEW B7） */
+  /** 顺序：先还原已打开页面（此时仍有站点授权，样式才删得掉），再删配置，最后收回授权、注销
+   *  （REVIEW B7 的约束是「removeCSS 须在权限在时完成」，还原始终第一步；#248 起删除先于收权：
+   *  删除失败就不收权限，叫醒后页面可完整恢复） */
   async function resetSite(input: string): Promise<Ack> {
     const key = siteKey(input);
     if (!key) return { ok: false, error: 'invalid site key' };
@@ -494,27 +498,28 @@ export function createBackground({ browser }: BackgroundDeps): void {
     const held = granted ? grantedPatternsFor(key, granted) : null;
     const patterns = held ?? sitePatterns(key);
     const notified = await restoreOpenTabs(key);
+    try {
+      await storage.deleteProfile(key);
+    } catch {
+      // 删除失败（存储异常等）配置还在：页面刚被清空、且内容脚本从此不再按存储恢复
+      //（resetting 粘滞）——把收到通知的页面叫醒恢复界面，失败如实报给入口（#243）。
+      // 权限此刻尚未收回，叫醒后的重应用（insertCSS）可以成功，页面完整恢复（#248）
+      for (const tabId of notified) {
+        void browser.tabs.sendMessage(tabId, { t: 'siteResetUndone' }).catch(() => undefined);
+      }
+      return { ok: false, error: 'delete profile failed' };
+    }
     if (held === null || held.length > 0) {
       try {
         await browser.permissions.remove({ origins: patterns });
       } catch {
-        // 忽略
+        // 忽略：配置已删，多留一条无害授权，下次对账 / 管理页可收
       }
     }
     try {
       await browser.scripting.unregisterContentScripts({ ids: [registrationPlan(key, patterns).id] });
     } catch {
       // 未注册过时忽略
-    }
-    try {
-      await storage.deleteProfile(key);
-    } catch {
-      // 删除失败（存储异常等）配置还在：页面刚被清空、且内容脚本从此不再按存储恢复
-      //（resetting 粘滞）——把收到通知的页面叫醒恢复界面，失败如实报给入口（#243）
-      for (const tabId of notified) {
-        void browser.tabs.sendMessage(tabId, { t: 'siteResetUndone' }).catch(() => undefined);
-      }
-      return { ok: false, error: 'delete profile failed' };
     }
     return { ok: true };
   }
@@ -723,8 +728,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
         const next = typeof msg.next === 'string' && msg.next ? msg.next : null;
         const draftKey = draftKeyOf(target);
         // 新实例以 prev=null 起步但文档里可能还留着上一份草稿：扩展更新 / 重载时旧实例
-        // 冻结交接（core/doc-styles.ts），撤预览的请求发不出来。先按会话记录把那份残留
-        // 撤掉再插新的（与 releaseOrphanCss 同一记录来源，#239）
+        // 冻结交接（core/doc-styles.ts），撤预览的请求发不出来。先按跨更新记录把那份残留
+        // 撤掉再插新的（与 releaseOrphanCss 同一记录来源，#239/#247）
         if (prev === null) {
           const orphan = await draftRecords.get(draftKey);
           if (orphan !== null) {
@@ -747,7 +752,7 @@ export function createBackground({ browser }: BackgroundDeps): void {
         // 文本固定由后台决定（core/host-shield.ts）；交接来的旧版本文本在这里换成当前版本
         return swapCss(target, prev, msg.on === true ? HOST_SHIELD_CSS : null);
       case 'releaseOrphanCss': {
-        // 失联旧实例留下的样式各撤一份：预览草稿按会话记录（#239），保护 / 正式样式按当前
+        // 失联旧实例留下的样式各撤一份：预览草稿按跨更新记录（#239/#247），保护 / 正式样式按当前
         // 版本与配置重算（对不上时 removeCSS 是空操作）
         const orphanDraft = await draftRecords.take(draftKeyOf(target));
         const url = scopeUrl(sender, msg.url);
@@ -830,6 +835,8 @@ export function createBackground({ browser }: BackgroundDeps): void {
   // ---------- 生命周期事件 → 对账 ----------
 
   browser.runtime.onInstalled.addListener((details) => {
+    // 草稿残留键清扫（#247）：文档消失后没人 take 的记录最多留 24h，install / update / startup 都扫一遍
+    void draftRecords.sweep();
     if (details.reason === 'update') {
       // 扩展更新 / 重载：已打开页面里的旧内容脚本失联了（界面还在、标题守卫还在压标题，却连不上扩展）。
       // 对账补注册后，向这些标签页注入新脚本：新实例接管（旧实例收尾、交出样式记录，见 entrypoints/content.ts）
@@ -847,7 +854,10 @@ export function createBackground({ browser }: BackgroundDeps): void {
       browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
     }
   });
-  browser.runtime.onStartup.addListener(() => reconcileInBackground('onStartup'));
+  browser.runtime.onStartup.addListener(() => {
+    void draftRecords.sweep();
+    reconcileInBackground('onStartup');
+  });
   browser.permissions.onAdded.addListener(() => reconcileInBackground('permissions.onAdded'));
   browser.permissions.onRemoved.addListener(() => reconcileInBackground('permissions.onRemoved'));
 
