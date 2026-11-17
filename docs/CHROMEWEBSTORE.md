@@ -66,7 +66,7 @@ PageMask 收起网页上你不想看的部分：在你自己选的网站上，�
 1. 打开要设置的网站，点工具栏的 PageMask 图标
 2. 第一次用：在 Chrome 的提示里点「允许」——点「收起内容」或「标题和图标」时都会问这一次
 3. 「收起内容」分两步：在页面上点选要收起的内容 → 「看效果」确认，保存即完成；「标题和图标」填完点「保存」
-4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「收起内容」「标题和图标」，或悬浮按钮旁边的「⋯」菜单；想让整个页面变黑白，点悬浮按钮上的「整页变灰」钮（一颗图标按钮，悬停会显示这个名字），或在弹窗、站点设置页的「整页变灰」里拨开关，三处是同一组设置
+4. 想看网站原样，点悬浮按钮；想改收起的内容或标题图标，点弹窗里的「标题和图标」「收起内容」，或悬浮按钮旁边的「⋯」菜单；想让整个页面变黑白，点悬浮按钮上的「整页变灰」钮（一颗图标按钮，悬停会显示这个名字），或在弹窗、站点设置页的「整页变灰」里拨开关，三处是同一组设置
 
 【隐私与权限】
 • 只对你添加的网站起作用：没添加的网站，PageMask 不注册任何内容脚本、不保存任何设置——唯一的临时例外是「遮住这一页」，点一下才遮、不留任何东西、刷新或离开页面即消失
@@ -174,13 +174,13 @@ No network requests, no analytics, no remote code, no bundled site rules. Image/
 Privacy policy: https://cherishfall.github.io/page-mask/privacy.html — the same page is linked from the extension itself (Settings → 关于 / About → 隐私政策 / Privacy policy), so the disclosure is available inside the extension, not only in this listing.
 
 Test steps (no login needed):
-1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow — if the popup on a page (for example a subdomain of that site) instead shows 「需要允许访问」 / "Needs access" with 「这个页面还没允许访问」 / "This page isn't allowed yet", click 「允许访问」 ("Allow access") on that page and then 「收起内容」 again; your settings are kept.
+1. Open https://en.wikipedia.org/wiki/Main_Page, click the PageMask icon, click 「收起内容」 ("Hide items"), choose Allow — if the popup on a page (for example a subdomain of that site) instead shows 「需要允许访问」 / "Needs access" with 「这个页面还没允许访问」 / "This page isn’t allowed yet", click 「允许访问」 ("Allow access") on that page and then 「收起内容」 again; your settings are kept.
 2. The page enters pick mode: click on the "From today's featured article" box (or any element you'd like to hide) — it is highlighted and listed in the toolbar's picked list. Click 「下一步：看效果（N）」 ("Next: check the result (N)" — N is the number of items that will be listed).
 3. The picked element is hidden with ghost markers; the list on the right lets you change the hide method or remove an item, and the "where it applies" options are in each row's 「调整」 (Adjust). Click 保存 (Save). The element is hidden.
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it (leave it empty and the fallback title applies: "Reading" in an English browser, 「阅读」 in a Chinese one).
 5. Click the floating button to switch the site back to "As is": the element reappears and the title reverts.
-6. Click 「⋯」 on the floating button. By default the menu has four items in three groups: 「收起内容」 (Hide items — opens pick mode again) / 「标题和图标」 (Title & icon — opens the one-step form) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, a fifth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that second group. The button itself carries a whole-page-gray button (one click turns the whole page black & white; the tooltip says 「整页变灰」 / "Turn the whole page gray").
-7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「收起内容」 / 「标题和图标」, the 「整页变灰」 ("Turn the whole page gray") switch with the same icon as the floating button's gray button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Whole-page gray" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
+6. Click 「⋯」 on the floating button. By default the menu has four items in three groups: 「标题和图标」 (Title & icon — opens the one-step form) / 「收起内容」 (Hide items — opens pick mode again) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, a fifth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that second group. The button itself carries a whole-page-gray button (one click turns the whole page black & white; the tooltip says 「整页变灰」 / "Turn the whole page gray").
+7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「标题和图标」 / 「收起内容」, the 「整页变灰」 ("Turn the whole page gray") switch with the same icon as the floating button's gray button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Whole-page gray" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
 8. Whole-page grayscale (no new permission): turn it on with the floating button's whole-page-gray button (tooltip 「整页变灰」 / "Turn the whole page gray"), in the popup, or in the 「整页变灰」 card on the site's settings page — the places stay in sync. The whole page turns black & white (text, pictures, videos, backgrounds, canvas, iframe content), stays in place and keeps its links; videos that the site autoplays are held, and clicking one lets that one play (still black & white). The gray switch is independent of the 「按你的设置显示」 / 「原样」 switch: flipping that switch restores the hidden parts and the tab title/icon while the gray stays as set. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
 ```
 
@@ -190,7 +190,7 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表是仓库全量发版史；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.6 时 release notes 可用：`1.0.6 — Language fix for the full-page cover: on sites you haven't added, the restore button now follows the interface language (including its screen-reader name). Features and permissions unchanged.`
+> 本表列出对外可考的发版（与 CHANGELOG.md 的对外版本对应；上列内部版本不在此表）；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.6 时 release notes 可用：`1.0.6 — Language fix for the full-page cover: on sites you haven't added, the restore button now follows the interface language (including its screen-reader name). Features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|

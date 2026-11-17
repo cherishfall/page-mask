@@ -100,7 +100,7 @@
 | B27 | P2 | enableSite 不核对标签页当前 origin；双击重复注册抛错 | 授权落到别的站点、或注册报错 | 先 `tabs.get` 核对；重复 id 幂等处理 | 推断 | 新 |
 | B28 | P2 | 匹配模式不写端口＝匹配所有端口 | `a.com` 的脚本也注入 `a.com:8443` 并常驻 | 内容脚本入口先核对 origin，不符立即退出 | 已验证（官方文档） | 回答旧 §9 |
 | B29 | P2 | 「原地留白」用 `visibility:hidden`，后代写了 `visibility:visible` 会重新显示 | 留白不彻底 | 加 `opacity:0` | 已验证 | 新 |
-| B18–B20、B32、B33 | P2 | 机器类名判定误伤（`react-select__control`、`btn_primary1`）；候选先截断后排序；`/g` 正则写法脆弱（**旧审查猜测的 lastIndex bug 不成立**）；IDN/中文路径显示成编码；旧商店域名 `chrome.google.com/webstore` 未拦截；PDF 页可启用但无效；`newRuleId` 改用 `crypto.randomUUID()`；预览 CSS 与正式 CSS 两份实现 | 小 | 见各条 | 已验证 | 新 |
+| B18–B20、B32、B33 | P2 | 机器类名判定误伤（`react-select__control`、`btn_primary1`）；候选先截断后排序；`/g` 正则写法脆弱（**旧审查猜测的 lastIndex bug 不成立**）；IDN/中文路径显示成编码；旧商店域名 `chrome.google.com/webstore` 未拦截；PDF 页可启用但无效；`newRuleId` 改用 `crypto.randomUUID()`（**2026-11-18 更正（#244）：未落地，实现仍是 `Date.now`+`Math.random`（`core/types.ts:180`）；且经复核 `crypto.randomUUID` 仅安全上下文可用，http 页面的内容脚本会抛错——现实现反而更稳，不再改码**）；预览 CSS 与正式 CSS 两份实现 | 小 | 见各条 | 已验证 | 新 |
 
 ## 4. 页面内界面与扩展页面（N 编号，细节见 appendix-ui.md）
 

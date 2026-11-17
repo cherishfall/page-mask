@@ -221,7 +221,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 
 | 字段（控制台英文） | 在哪个标签页 | 填什么 | 出处 | 详见 |
 |---|---|---|---|---|
-| **Name**（名称） | —— **控制台没有输入框** | 来自 `public/_locales/*/messages.json`（`__MSG_extName__`）：en `PageMask — Hide the Parts You Don't Want`（40 字）、zh_CN `PageMask · 收起网页上不想看的部分`（22 字） | 材料 §1 | §2.1 |
+| **Name**（名称） | —— **控制台没有输入框** | 来自 `public/_locales/*/messages.json`（`__MSG_extName__`）：en `PageMask — Hide the Parts You Don’t Want`（40 字）、zh_CN `PageMask · 收起网页上不想看的部分`（22 字） | 材料 §1 | §2.1 |
 | **Short description**（简短说明） | —— **控制台没有输入框** | 同样来自 `_locales`（`__MSG_extDescription__`）：en 125 字 / zh_CN 54 字（上限 132） | 材料 §1 | §2.1 |
 | **Detailed description**（详情说明） | Store listing | 材料 §2 的 zh-CN 全文；再切 English 贴 en-US 全文 | 材料 §2 | §2.3 |
 | **Category**（类别） | Store listing | `Productivity › Tools`（控制台无此项时取最接近的） | 材料 §1 | §2.3 |

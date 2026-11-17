@@ -1759,8 +1759,8 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 
 [0.4.0]: https://github.com/cherishfall/page-mask/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cherishfall/page-mask/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/cherishfall/page-mask/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/cherishfall/page-mask/releases/tag/v0.1.0
+[0.2.0]: https://github.com/cherishfall/page-mask/commit/2ee15d1
+[0.1.0]: https://github.com/cherishfall/page-mask/commit/597afc6
 [0.4.1]: https://github.com/cherishfall/page-mask/compare/v0.4.0...v0.4.1
 [0.5.0]: https://github.com/cherishfall/page-mask/compare/v0.4.1...v0.5.1
 [0.5.1]: https://github.com/cherishfall/page-mask/compare/v0.4.1...v0.5.1

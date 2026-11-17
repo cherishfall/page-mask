@@ -815,6 +815,8 @@
 | `runtime.onMessage` 用 `sendResponse` 回复 | 所有版本 | — | runtime |
 | 构建产物 JS 语法：Vite 8 默认 `build.target` 为 Baseline Widely Available（2025-05-01）= `chrome111`，WXT 0.21 未覆盖 | 111 | 是 | `node_modules/vite/dist/node/chunks/node.js` |
 | Popover API | 114 | 是（#25 计划用） | [Introducing the popover API](https://developer.chrome.com/blog/introducing-popover-api) |
+| `commands` manifest 键（两条快捷键，0.9.2 起用） | 远低于 116（commands 是很早的 API，MV3 沿用） | 否 | [commands](https://developer.chrome.com/docs/extensions/reference/api/commands) |
+| `commands.onCommand` 回调的 `tab` 参数（`core/background-engine.ts:816` 在用；回调已兼容 tab 缺失，见 :329-330/:362-364） | 远低于 116（MDN 兼容数据口径在 9x 量级，未逐版核实） | 否 | [MDN commands.onCommand](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/commands/onCommand) |
 | CSS `@starting-style`（若用于入场动画） | 117 | 渐进 | [New in Chrome 117](https://developer.chrome.com/blog/new-in-chrome-117) |
 | CSS `light-dark()`（已有兜底） | 123 | 渐进 | [New in Chrome 123](https://developer.chrome.com/blog/new-in-chrome-123) |
 | `<dialog>` | 37 | — | MDN |
