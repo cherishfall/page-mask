@@ -5,6 +5,34 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.8] - 2026-11-18
+
+第八轮复审（对 1.0.7 修复批逐票对抗性验证）发现的两处修正。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **向导预览的恢复副本改记 `storage.local`（#247，修正 1.0.7 的 #239 修复）**：1.0.7 把副本记在 `storage.session`——但 session 区随扩展更新 / 重载被清空（官方文档原句），而「扩展更新时开着的向导」恰是孤儿预览的目标场景，副本在更新瞬间就没了，撤不掉。改记 `storage.local`（跨更新持久，扩展卸载才清），值带写入时间，`onInstalled` / `onStartup` 清扫超 24 小时的残留键防累积
+- **一键清空的删除先于收权（#248，补全 #243）**：1.0.7 的「删除失败叫醒页面」发生在收回权限之后——叫醒后悬浮按钮和自定义标题回来了，但隐藏样式重新插入因无权限必败，页面停在半截态。顺序改为：还原已打开页面 → 删配置 → 收回权限 → 注销；删除失败就不收权限，叫醒后的页面可完整恢复
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.7 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点；两处改动都在后台与消息顺序，界面零变化
+- 门禁：编译、单测 880 项（57 文件）、E2E 十二脚本全绿（1.0.8 构建实测）、`check:docs` / `check:package` 通过
+
+### English
+
+#### Changes
+
+- **The wizard-preview recovery copy now lives in `storage.local` (#247, correcting 1.0.7's #239 fix)**: 1.0.7 kept the copy in `storage.session` — but the session area is cleared when the extension is disabled, reloaded, or updated (per the official docs), and "wizard open during an extension update" is exactly the orphan-preview scenario: the copy vanished at the moment it was needed. It now lives in `storage.local` (persists across updates, cleared on uninstall), values carry a timestamp, and `onInstalled` / `onStartup` sweep leftovers older than 24 hours
+- **Reset deletes the profile before revoking the permission (#248, completing #243)**: 1.0.7's "wake the page up on delete failure" ran after `permissions.remove` — the wake-up brought the floating button and title back, but re-inserting the hidden-item CSS then failed for lack of permission, leaving a half state. The order is now: restore open tabs → delete profile → revoke permission → unregister. If the delete fails, the permission stays and the woken page recovers fully
+
+#### For reviewers
+
+- Features and the permission set are identical to 1.0.7 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); nothing is granted at install time. Both changes are background-side logic and message ordering; the UI is untouched
+- Gates: compile, 880 unit tests (57 files), all twelve E2E scripts green (measured on the 1.0.8 build), `check:docs` / `check:package` pass
+
 ## [1.0.7] - 2026-11-18
 
 第七轮上架前确认审查的修复批（多角度：MV3 技能标尺、谷歌官方政策逐条核对、代码深查、文案 / i18n、商店材料、构建打包、落地页同步），共九票。功能与权限集合不变。
@@ -1856,6 +1884,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.8]: https://github.com/cherishfall/page-mask/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/cherishfall/page-mask/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cherishfall/page-mask/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/cherishfall/page-mask/compare/v1.0.4...v1.0.5
