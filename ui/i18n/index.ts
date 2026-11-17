@@ -22,7 +22,11 @@ import {
   type Messages,
   type UiLanguage,
 } from '@/core/i18n';
+import { applySettingsLanguage } from '@/core/i18n';
 import { createPageMaskStorage } from '@/core/storage';
+
+// 判定逻辑在 core/i18n（不依赖 Vue，一次性幕布脚本也能用）；这里保留原有导出名
+export { applySettingsLanguage } from '@/core/i18n';
 
 /** 语言变化的版本号：computed 依赖它，语言一变就重算 */
 const version = ref(0);
@@ -41,11 +45,6 @@ export const t = computed<Messages>(() => {
   void version.value;
   return MESSAGES[getLocale()];
 });
-
-/** 从设置里取语言并应用；设置缺失 / 坏值时按 auto 处理 */
-export function applySettingsLanguage(settings: { uiLanguage?: unknown } | null | undefined): void {
-  setLocale(resolveLocale(isUiLanguage(settings?.uiLanguage) ? settings.uiLanguage : 'auto'));
-}
 
 export interface UiLanguageInit {
   /** 扩展页面自己的 <title>（随语言变） */

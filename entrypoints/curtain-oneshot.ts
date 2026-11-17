@@ -89,6 +89,7 @@ async function run(): Promise<void> {
     { TRANSPARENT_PNG },
     { registerCurtainController },
     { siteKey },
+    { applySettingsLanguage },
   ] = await Promise.all([
     import('wxt/browser'),
     import('@/ui/curtain'),
@@ -102,6 +103,7 @@ async function run(): Promise<void> {
     import('@/core/icon'),
     import('@/ui/curtain-controller'),
     import('@/core/site-key'),
+    import('@/core/i18n'),
   ]);
 
   const w = window as unknown as OneshotWindow;
@@ -154,6 +156,9 @@ async function run(): Promise<void> {
         storage.getProfile(site).catch(() => null),
         storage.getSettings().catch(() => null),
       ]);
+      // 界面语言（#236）：未添加的网站没有内容脚本，没人替这个上下文应用语言设置——
+      // 不应用的话恢复按钮永远是中文、shadow 根的 lang 也是中文（WCAG 3.1.2）
+      applySettingsLanguage(settings);
       // 遮住时固定空白图标（#121）：不能按站点配置取图标，否则选「网站原来的图标」
       // 或预置图标的站点一遮住就露出真图标
       guard.apply(curtainTitle(profile, settings), TRANSPARENT_PNG);
@@ -193,6 +198,13 @@ async function run(): Promise<void> {
   };
   registerCurtainController('oneshot', controller);
   w.__pagemaskCurtainPending = false;
+
+  // 界面语言（#236）：幕布开着时在设置里切换语言，恢复按钮立即跟着换（与内容脚本同一口径）
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !('settings' in changes)) return;
+    const wrapped = changes.settings as { newValue?: { uiLanguage?: unknown } } | undefined;
+    applySettingsLanguage(wrapped?.newValue);
+  });
 
   // 整页跳转 / 刷新 / 关标签页：幕布随文档消失，声音跟着还原（后台 onUpdated 兜底覆盖脚本被杀的路径）
   window.addEventListener('pagehide', () => {

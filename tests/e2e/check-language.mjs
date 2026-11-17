@@ -27,6 +27,9 @@ const tid = (id) => `[data-testid="${id}"]`;
 
 const srv = await startServer(fixtureHandler);
 const ORIGIN = srv.origin;
+// 第二个站点：不添加、只授予主机权限——幕布走一次性注入脚本（没有内容脚本），#236 的现场
+const srv2 = await startServer(fixtureHandler);
+const ORIGIN2 = srv2.origin;
 
 const now = Date.now();
 const profileOf = (o) => ({
@@ -55,7 +58,7 @@ const profileOf = (o) => ({
 /** 把浏览器界面启动成中文（macOS CfT 只认 -AppleLanguages，见 check-i18n.mjs） */
 const langArgs = ['--lang=zh-CN', '-AppleLanguages', '(zh-CN)'];
 
-const ext = await launchExtension({ hostOrigins: [ORIGIN], args: langArgs, extraPermissions: ['tabs'] });
+const ext = await launchExtension({ hostOrigins: [ORIGIN, ORIGIN2], args: langArgs, extraPermissions: ['tabs'] });
 try {
   await patchProfile(ext.control, ORIGIN, profileOf(ORIGIN));
   // 固定站点页面（小胶囊 / 向导 / 编辑面板住在这里）
@@ -169,7 +172,21 @@ try {
   check(enHeight <= 600, `英文弹窗（ready）面板高度 ${enHeight.toFixed(1)}px 不超过 Chrome 弹窗上限 600px`);
   await popup.close();
 
-  // 语言名不翻译：英文界面下仍是 简体中文 / English
+  // 一次性幕布（未添加的网站没有内容脚本，脚本自己应用界面语言，#236）
+  const other = await ext.browser.newPage();
+  await other.setViewport({ width: 1000, height: 700 });
+  await other.goto(`${ORIGIN2}/`, { waitUntil: 'load' });
+  await sendToBackground(ext.control, { t: 'coverPage', tabId: await tabIdOf(ext.control, `${ORIGIN2}/*`) });
+  await waitForShadow(other, 'pagemask-curtain', tid('pm-curtain-restore'));
+  const restoreAria = (p) =>
+    p.evaluate(
+      (h, s) => document.querySelector(h)?.shadowRoot?.querySelector(s)?.getAttribute('aria-label') ?? '',
+      'pagemask-curtain',
+      tid('pm-curtain-restore'),
+    );
+  check((await restoreAria(other)).startsWith('Restore'), '英文界面下：未添加网站的一次性幕布按钮是英文');
+  check((await rootLangOf(other, 'pagemask-curtain')) === 'en', '一次性幕布 shadow 根的 lang 是 en');
+
   check((await textOf(settingsPage, 'label[for="pm-settings-lang-zh"]')) === '简体中文', '英文界面下「简体中文」不翻译');
   const intro = await textOf(settingsPage, 'label[for="pm-settings-lang-auto"]');
   check(intro.startsWith('Automatic (now: '), `英文下「自动」显示探测结果（${intro}）`);
@@ -198,6 +215,20 @@ try {
   check(hasCJK(await popup2.evaluate(() => document.body.textContent)), '重开的弹窗也是中文');
   await popup2.close();
 
+  // 一次性幕布跟着切回中文（#236）：不刷新、幕布一直开着
+  await other.waitForFunction(
+    (h, s) => /[\u4e00-\u9fff]/.test(document.querySelector(h)?.shadowRoot?.querySelector(s)?.getAttribute('aria-label') ?? ''),
+    { timeout: 5000 },
+    'pagemask-curtain',
+    tid('pm-curtain-restore'),
+  );
+  check(true, '一次性幕布按钮没刷新就变回中文');
+  await other.bringToFront();
+  await clickInShadow(other, 'pagemask-curtain', tid('pm-curtain-restore'));
+  await other.waitForFunction((h) => !document.querySelector(h), { timeout: 5000 }, 'pagemask-curtain');
+  check(true, '点恢复按钮后一次性幕布撤掉');
+  await other.close();
+
   // 设置确实落库（uiLanguage 回到 auto）
   const settings = await getSettings(ext.control);
   check(settings.uiLanguage === 'auto', `uiLanguage 落库为 auto（${settings.uiLanguage}）`);
@@ -207,6 +238,7 @@ try {
 } finally {
   await ext.cleanup();
   srv.close();
+  srv2.close();
 }
 
 process.exitCode = r.summary();

@@ -6,7 +6,7 @@
  * 防止「英文漏了一句」上线。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MESSAGES, en, resolveLocale, zh, type Locale } from './i18n';
+import { MESSAGES, applySettingsLanguage, en, getLocale, resolveLocale, setLocale, zh, type Locale } from './i18n';
 
 describe('resolveLocale 三档偏好 → 渲染语言', () => {
   it.each([
@@ -39,6 +39,30 @@ describe('resolveLocale 三档偏好 → 渲染语言', () => {
   });
 
   afterEach(() => vi.unstubAllGlobals());
+});
+
+describe('applySettingsLanguage 从设置应用到当前上下文（#236）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setLocale('zh');
+  });
+
+  it('锁定语言设置直接生效', () => {
+    setLocale('zh');
+    applySettingsLanguage({ uiLanguage: 'en' });
+    expect(getLocale()).toBe('en');
+    applySettingsLanguage({ uiLanguage: 'zh' });
+    expect(getLocale()).toBe('zh');
+  });
+
+  it('auto / 缺失 / 坏值都按浏览器语言判定', () => {
+    vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'en-US' } });
+    for (const settings of [{ uiLanguage: 'auto' }, null, undefined, {}, { uiLanguage: 123 }]) {
+      setLocale('zh');
+      applySettingsLanguage(settings as Parameters<typeof applySettingsLanguage>[0]);
+      expect(getLocale()).toBe('en');
+    }
+  });
 });
 
 describe('可及名与可见文字（WCAG 2.5.3 Label in Name，#204）', () => {

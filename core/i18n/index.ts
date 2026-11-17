@@ -12,7 +12,7 @@
  */
 import { en } from './messages.en';
 import { zh, type Messages } from './messages.zh';
-import type { Locale } from './locale';
+import { isUiLanguage, resolveLocale, type Locale } from './locale';
 
 export { en, zh, type Messages };
 export {
@@ -54,6 +54,14 @@ export function setLocale(next: Locale): void {
 export function onLocaleChange(fn: () => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
+}
+
+/**
+ * 从设置里取语言并应用；设置缺失 / 坏值时按 auto 处理。
+ * 不依赖 Vue，扩展页面、内容脚本与一次性注入的幕布脚本共用这一份判定。
+ */
+export function applySettingsLanguage(settings: { uiLanguage?: unknown } | null | undefined): void {
+  setLocale(resolveLocale(isUiLanguage(settings?.uiLanguage) ? settings.uiLanguage : 'auto'));
 }
 
 /** 当前语言的那套文案 */
