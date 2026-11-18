@@ -399,10 +399,16 @@ describe('四处收口（验收 3 / 5）', () => {
       }
       expect(onboardingSrc).toBeTruthy();
     }
-    // 第 3 步：并列事项进要点列表（1.0.10 反馈：几句话连成一段没人读），说明段只留一句引导
+    // 第 3 步：并列事项进要点列表（1.0.10 反馈：几句话连成一段没人读），说明段只留一句引导。
+    // 1.0.10 复审：要点必须与图里从左到右的四颗控件一一对应（面具 / 圆圈 / 闭眼 / ⋯），
+    // 不再把两颗按钮并成一句「点它」，也不把第二颗说成「另有一颗」。
     for (const lang of ['zh', 'en'] as const) {
       const s3 = MESSAGES[lang].onboarding.steps[2]!;
-      expect(s3.features.length, `${lang} 第 3 步的并列事项应当分点列出`).toBeGreaterThanOrEqual(3);
+      expect(s3.features.length, `${lang} 第 3 步的要点数应与图里的控件数一致`).toBe(4);
+      const icons = lang === 'zh' ? ['面具', '圆圈', '闭眼', '⋯'] : ['Mask', 'Circle', 'Eye', '⋯'];
+      icons.forEach((icon, i) => {
+        expect(s3.features[i], `${lang} 第 3 步第 ${i + 1} 条应与第 ${i + 1} 颗控件对应`).toContain(icon);
+      });
       const ends = lang === 'zh' ? /。/g : /[.!?](?=\s|$)/g;
       expect((s3.text.match(ends) ?? []).length, `${lang} 第 3 步说明段只留一句引导`).toBeLessThanOrEqual(1);
       expect(JSON.stringify(s3.text).length, `${lang} 第 3 步说明段不再复述要点`).toBeLessThan(

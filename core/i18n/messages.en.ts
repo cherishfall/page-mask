@@ -404,11 +404,15 @@ export const en: Messages = {
         // #191: cover the third capsule segment (whole-page gray) that was missing, and
         // state which state the illustration shows — the embedded real capsule renders
         // "Your settings" on (the two states look different, #152)
-        text: 'On sites you’ve added, a floating button sits on the page.',
+        // 1.0.10 follow-up: each bullet must match one control in the picture, in the same
+        // left-to-right order (mask / circle / eye / ⋯). Dragging moves the whole capsule,
+        // so it belongs in the lead sentence rather than the bullet list.
+        text: 'On sites you’ve added, a floating button sits on the page; drag it anywhere.',
         features: [
-          'Click it to switch “Your settings / As is”, or to cover this page.',
-          'Drag it to move it anywhere.',
-          'It also has “Turn the whole page gray”: one click makes the page black & white, another click brings the colors back.',
+          'Mask icon: click to switch between “Your settings” and “As is”.',
+          'Circle icon: click to make the whole page black & white; click again for color.',
+          'Eye with a slash: cover this page; click again to restore it.',
+          '“⋯” menu: title & icon, hidden items, opacity, and deleting this site’s settings.',
         ],
       },
     ],
