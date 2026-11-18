@@ -90,10 +90,16 @@ describe('常驻 hint 标点守门（design-copy 二、d 的自动化，#184）'
   // 反向登记（2026-11-14 #200 目检发现）：键名不含上面五个词、因此扫描天然漏掉、
   // 但呈现形态同为「常驻说明」的键——规矩相同：结尾不带句号，分句用分号。
   // - popup.mediaNotReady：弹窗 role=status 常驻说明（ui/popup/PopupBody.vue）
-  // - onboarding.sub / onboarding.tip：欢迎页常驻说明（entrypoints/onboarding）
+  // - onboarding.sub / onboarding.tips.*：欢迎页常驻说明（entrypoints/onboarding）
   // - wizard.staleWhy：看效果清单的失效行说明（ui/wizard/WizardApp.vue）
   // 这些键改成 ⓘ / 对话框等允许句号的形态时，从这里移回并注明理由。
-  const NO_PERIOD = ['popup.mediaNotReady', 'onboarding.sub', 'onboarding.tip', 'wizard.staleWhy'];
+  const NO_PERIOD = [
+    'popup.mediaNotReady',
+    'onboarding.sub',
+    'onboarding.tips.popup',
+    'onboarding.tips.floating',
+    'wizard.staleWhy',
+  ];
 
   function textAt(lang: 'zh' | 'en', path: string): string {
     let value: unknown = MESSAGES[lang];

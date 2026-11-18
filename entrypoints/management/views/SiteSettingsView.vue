@@ -23,7 +23,7 @@
             role="switch"
             data-testid="pm-mgmt-switch"
             :checked="profile.switchState === 'disguised'"
-            :aria-describedby="switchEmpty ? 'pm-mgmt-switch-empty' : undefined"
+            :aria-describedby="switchEmpty ? 'pm-mgmt-switch-empty' : 'pm-mgmt-switch-summary'"
             @change="onToggle"
           />
         </div>
@@ -35,9 +35,11 @@
         {{ t.common.switchNoEffectHint }}
       </p>
 
-      <!-- 0 条规则时不写「已收起 0 项」：没有内容可收起是很正常的状态 -->
-      <p class="state" data-testid="pm-mgmt-count">
-        {{ profile.hideRules.length > 0 ? t.common.hiddenCount(profile.hideRules.length) : t.common.hiddenNone }}
+      <!-- 开关下的配置摘要（1.0.10）：与弹窗面具卡同一句（common.switchSummary）——标题和图标 +
+           收起项一起报，不再只报收起项（改过标题的网站也曾显示「还没有收起设置」）。
+           三样全空时上面那句完整说明已经说了三样都没设置，这里不再重复一行 -->
+      <p v-else id="pm-mgmt-switch-summary" class="state" data-testid="pm-mgmt-count">
+        {{ switchSummary }}
         <template v-if="stale.length > 0">
           ·
           <span class="pm-mark pm-mark-danger" data-testid="pm-mgmt-stale-count">
@@ -86,7 +88,7 @@
             @focus="store.focus(profile.origin)"
             @blur="store.onBlur(profile.origin)"
             @input="store.onInput(profile.origin)"
-            @change="store.saveDraft(profile.origin)"
+            @change="onTitleCommit"
           />
           <div class="row quick" role="group" aria-labelledby="pm-site-title-quick" data-testid="pm-mgmt-title-quick">
             <span id="pm-site-title-quick" class="hint">{{ t.common.quickTitle }}</span>
@@ -95,7 +97,7 @@
               :key="q.id"
               type="button"
               class="chip"
-              @click="store.pickTitle(profile.origin, q)"
+              @click="onQuickTitle(q)"
             >
               {{ quickTitleValue(q, locale) }}
             </button>
@@ -118,6 +120,18 @@
           />
           <p class="hint">{{ t.management.iconIntro }}</p>
           <p v-if="iconError" class="hint error" role="alert" data-testid="pm-mgmt-icon-error">{{ iconError }}</p>
+        </div>
+
+        <!-- 存了但看不到（1.0.10，ADR-0021）：本页自动保存，开关关着时不能只靠脚注解释。
+             不弹窗、不挡继续编辑；两个出口与向导 openBody 同一句问题、同一组选择 -->
+        <div v-if="savedOffNotice" class="row saved-off" role="status" data-testid="pm-mgmt-saved-off">
+          <span class="saved-off-text">{{ t.management.savedOffNotice }}</span>
+          <button type="button" class="ghost saved-off-stay" @click="dismissSavedOffNotice">
+            {{ t.management.savedOffStay }}
+          </button>
+          <button type="button" class="ghost saved-off-open" @click="openFromSavedOffNotice">
+            {{ t.management.savedOffOpen }}
+          </button>
         </div>
 
         <!-- 恢复出口（#99）进卡（#182）：与「收起的内容」卡底的「恢复网站原来的内容」（#160）
@@ -266,13 +280,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { getLocale } from '@/core/i18n';
 import { scopeHumanLabel } from '@/core/scope';
 import { deleteSiteAction, deleteSiteHeading, deleteSiteImpact } from '@/core/site-delete';
-import { QUICK_TITLES, quickTitleValue } from '@/core/titles';
+import { QUICK_TITLES, quickTitleValue, type QuickTitle } from '@/core/titles';
 // 空设置判据（#158）：三处主开关共用一份（弹窗 / 胶囊 / 这里）
-import { hasSwitchEffect } from '@/core/site-state';
+import { hasSwitchEffect, hasTitleIcon } from '@/core/site-state';
 import { MEDIA_FLAG_KEYS, MEDIA_HINT_KEYS, type MediaFlagKey } from '@/core/media';
 import InfoTip from '@/ui/info-tip/InfoTip';
 import type { HideRule, TabIcon } from '@/core/types';
@@ -296,6 +310,10 @@ const stale = computed(() => (profile.value ? staleRulesOf(profile.value) : []))
 const isPending = computed(() => (profile.value ? store.state.pendingOrigins.includes(profile.value.origin) : false));
 /** 开关管不到任何东西（#158）：收起的内容、标签页标题和图标都空。只有灰度仍算空（灰度独立于主开关） */
 const switchEmpty = computed(() => (profile.value ? !hasSwitchEffect(profile.value) : false));
+/** 页头开关下的配置摘要（1.0.10）：与弹窗面具卡同一句，标题和图标与收起项一起报 */
+const switchSummary = computed(() =>
+  profile.value ? t.value.common.switchSummary(hasTitleIcon(profile.value), profile.value.hideRules.length) : '',
+);
 
 /** 站点没单独设置时的实际标题（全局默认 > 界面语言默认），用作输入框占位与提示 */
 const fallbackTitle = computed(() => (store.state.defaultTitle ?? '').trim() || store.state.languageDefaultTitle);
@@ -323,6 +341,51 @@ const rulesHeading = ref<HTMLElement | null>(null);
 /** 「恢复网站原来的内容」确认框是否打开（只在本视图挂一个实例） */
 const rulesResetOpen = ref(false);
 const titleIconResetOpen = ref(false);
+
+/** 「存了但看不到」的页内提示（1.0.10，ADR-0021）：只在本次改过标题/图标且开关关着时出现 */
+const savedOffNotice = ref(false);
+
+function maybeShowSavedOffNotice(hasIconOverride = false) {
+  const p = profile.value;
+  if (!p || p.switchState !== 'original') return;
+  const hasTitle = (store.state.drafts[p.origin] ?? '').trim().length > 0;
+  if (hasTitle || hasIconOverride || p.icon.kind !== 'site') savedOffNotice.value = true;
+}
+
+/** 标题输入框提交（blur / Enter）：自动保存后补「开关还关着」的提示 */
+async function onTitleCommit() {
+  const p = profile.value;
+  if (!p) return;
+  await store.saveDraft(p.origin);
+  maybeShowSavedOffNotice();
+}
+
+/** 快捷标题：与手输一样走自动保存，同样补提示 */
+async function onQuickTitle(q: QuickTitle) {
+  const p = profile.value;
+  if (!p) return;
+  await store.pickTitle(p.origin, q);
+  maybeShowSavedOffNotice();
+}
+
+function dismissSavedOffNotice() {
+  savedOffNotice.value = false;
+}
+
+/** 「现在打开」与页头开关同一条写入通道；失败时 toggleError 按既有位置显示 */
+async function openFromSavedOffNotice() {
+  const p = profile.value;
+  if (!p) return;
+  const ok = await store.setSwitch(p, true);
+  if (ok) savedOffNotice.value = false;
+}
+
+watch(
+  () => profile.value?.switchState,
+  (s) => {
+    if (s === 'disguised') savedOffNotice.value = false;
+  },
+);
 
 function onToggle(e: Event) {
   if (profile.value) void store.toggleSite(profile.value, e);
@@ -369,6 +432,7 @@ async function onIconPick(icon: TabIcon) {
   iconError.value = '';
   try {
     await store.setIcon(p.origin, icon);
+    maybeShowSavedOffNotice(icon.kind !== 'site');
   } catch {
     iconError.value = t.value.management.error.icon;
   }
@@ -402,6 +466,7 @@ async function onTitleIconResetClosed(confirmed: boolean) {
   const p = profile.value;
   if (!confirmed || !p) return;
   await store.resetTitleIcon(p.origin);
+  savedOffNotice.value = false;
 }
 
 /**
@@ -513,6 +578,29 @@ async function onRulesResetClosed(confirmed: boolean) {
 }
 .reset-row .hint {
   margin: 0;
+}
+
+/* 「存了但看不到」页内提示（1.0.10，ADR-0021）：贴着标题/图标字段，不弹窗、不挡继续编辑。
+   两个出口沿用页内文字按钮（正文色 + 下划线），与撤销条 / 恢复出口同一档，不新增控件样式 */
+.saved-off {
+  align-items: baseline;
+  margin: var(--pm-space-2) 0 var(--pm-space-3);
+  padding: var(--pm-space-2) var(--pm-space-3);
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-control);
+  background: var(--pm-bg-subtle);
+}
+
+.saved-off-text {
+  flex: 1 1 16em;
+  font-size: var(--pm-font-size-body);
+  color: var(--pm-fg);
+}
+
+.saved-off .ghost {
+  color: var(--pm-fg);
+  text-decoration: underline;
+  text-underline-offset: var(--pm-underline-offset);
 }
 
 /* 合卡（#182）后的两个字段：各自成组，字段名用向导同款 caption 档（.pm-tif-label），

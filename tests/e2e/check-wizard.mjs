@@ -11,7 +11,7 @@
  * - 标题和图标（单步）：默认标题已填、快捷标题、选预置图标后标签页标题 / 图标实时跟着变；
  *   保存 0 条收起设置的清爽态配置、向导关闭、页面上仍然显示小胶囊（有设置就显示，#67），
  *   列表里能看到它；关掉向导后有一句轻提示说明标签页标题已经换了（#53）
- * - 新网站取消：确认框说明已选内容不保存、标签页会变回原来的标题；退出后完全还原、授权收回（#81）
+ * - 新网站取消：确认框说明已选内容不保存、页面回到上次保存的收起设置；退出后完全还原、授权收回（#81）
  * - 页内空清单：空状态说明（#71）；不把空清单摆给用户看
  * - 选 A/B/C 后取消 A：序号牌只剩 1、2 并跟着 B、C（N6）；「选大一点」作用对象显示为最后选中的那项（N13）
  * - 预览：默认行只有序号 / 名字 / 一句话摘要 / 调整 / ✕，收起方式等折在「调整」里（#69、审查第 8 条）；
@@ -729,8 +729,8 @@ async function main() {
     check(true, '预览阶段没有浮层时按 Esc：弹出退出确认');
     const dialogText = await page.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText, HOST);
     check(
-      dialogText.includes('不会保存') && dialogText.includes('标签页会变回原来的标题'),
-      `退出确认说清楚已选内容不保存、标签页会变回原来的标题（${dialogText.split('\n').join(' / ')}）`,
+      dialogText.includes('不会保存') && dialogText.includes('回到上次保存的收起设置'),
+      `退出确认说清楚已选内容不保存、页面回到上次保存的收起设置（${dialogText.split('\n').join(' / ')}）`,
     );
     // 两个按钮同一档（#175 视觉审查）：退出不丢任何已保存的东西，草稿丢了可以重选——
     // 不是「严重且不可撤销」的破坏动作，GOV.UK 的危险色不适用，两颗都是普通次按钮
@@ -1342,8 +1342,8 @@ async function main() {
     await waitFor(pageCancel, '弹出退出确认', (h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').open, [HOST], { timeout: 3000 });
     const newExitText = await pageCancel.evaluate((h) => document.querySelector(h).shadowRoot.querySelector('[data-testid="pm-wizard-exit-confirm"]').innerText, HOST);
     check(
-      newExitText.includes('不会保存') && newExitText.includes('标签页会变回原来的标题'),
-      `退出确认写明已选内容不保存、标签页会变回原来的标题（${newExitText.split('\n').join(' / ')}）`,
+      newExitText.includes('不会保存') && newExitText.includes('回到上次保存的收起设置'),
+      `退出确认写明已选内容不保存、页面回到上次保存的收起设置（${newExitText.split('\n').join(' / ')}）`,
     );
     const newFocus = await pageCancel.evaluate((h) => document.querySelector(h).shadowRoot.activeElement?.dataset.testid, HOST);
     check(newFocus === 'pm-wiz-exit-no', `退出确认默认焦点在「继续设置」（${newFocus}）`);
@@ -1610,7 +1610,9 @@ async function main() {
       };
     }, HOST);
     check(
-      resetDlgInfo.tag === 'DIALOG' && resetDlgInfo.heading === '恢复网站原来的内容？' && resetDlgInfo.body === '2 项收起设置会全部删除。',
+      resetDlgInfo.tag === 'DIALOG' &&
+        resetDlgInfo.heading === '恢复网站原来的内容？' &&
+        resetDlgInfo.body === '2 项收起设置会全部删除，删掉后不能撤销。',
       `确认框标题与正文逐字对（${resetDlgInfo.heading} / ${resetDlgInfo.body}）`,
     );
     const resetCancelBtn = resetDlgInfo.buttons.find((b) => b.testid === 'pm-wizard-rules-reset-cancel');

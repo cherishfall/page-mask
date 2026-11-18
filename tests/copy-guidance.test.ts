@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { createApp, h, nextTick } from 'vue';
 import { describe, expect, it } from 'vitest';
 import { MESSAGES } from '@/core/i18n';
+import { importErrorText } from '@/core/import-preview';
 import { createStyleAdopter } from '@/ui/adopt-css';
 import InfoTip, {
   INFO_TIP_BUBBLE_CLASS,
@@ -398,7 +399,60 @@ describe('四处收口（验收 3 / 5）', () => {
       }
       expect(onboardingSrc).toBeTruthy();
     }
-    // 第 3 步长句不再把胶囊逐字复述进去（压成一句短句）
-    expect(JSON.stringify(MESSAGES.zh.onboarding.steps[2]!.text).length).toBeLessThan(120);
+    // 第 3 步：并列事项进要点列表（1.0.10 反馈：几句话连成一段没人读），说明段只留一句引导
+    for (const lang of ['zh', 'en'] as const) {
+      const s3 = MESSAGES[lang].onboarding.steps[2]!;
+      expect(s3.features.length, `${lang} 第 3 步的并列事项应当分点列出`).toBeGreaterThanOrEqual(3);
+      const ends = lang === 'zh' ? /。/g : /[.!?](?=\s|$)/g;
+      expect((s3.text.match(ends) ?? []).length, `${lang} 第 3 步说明段只留一句引导`).toBeLessThanOrEqual(1);
+      expect(JSON.stringify(s3.text).length, `${lang} 第 3 步说明段不再复述要点`).toBeLessThan(
+        lang === 'zh' ? 40 : 80,
+      );
+    }
+  });
+});
+
+describe('死路文案必须给下一步（1.0.10 全面审计）', () => {
+  it('受限页面：每条原因都说怎么办，不只说「不行」', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      const p = MESSAGES[lang].popup;
+      const steps =
+        lang === 'zh' ? /换一个普通网页再试|打开网上的页面再试/ : /Try a normal web page|Open a page on the web/;
+      for (const [key, text] of Object.entries(p.unsupported)) {
+        expect(text, `${lang}.popup.unsupported.${key} 只说了不行，没说下一步`).toMatch(steps);
+      }
+      expect(p.unsupportedFallback, `${lang}.popup.unsupportedFallback 没说下一步`).toMatch(steps);
+      const c = MESSAGES[lang].common;
+      expect(c.shortcutBlocked, `${lang}.common.shortcutBlocked 没说下一步`).toMatch(steps);
+      expect(c.shortcutBlockedGray, `${lang}.common.shortcutBlockedGray 没说下一步`).toMatch(steps);
+    }
+  });
+
+  it('导入失败：告诉用户换一个文件，合法但空的文件不再说成「不是导出文件」', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      const e = MESSAGES[lang].errors;
+      const next = lang === 'zh' ? /请换一个文件再试/ : /Choose another file/;
+      expect(e.invalidExportFile, `${lang} 不是导出文件`).toMatch(next);
+      expect(e.noSitesInFile, `${lang} 空导出文件`).toMatch(next);
+    }
+    // 合法但空的导出文件：只说「文件里没有能导入的设置」，不能说「不是 PageMask 导出的文件」
+    const text = importErrorText(new Error(MESSAGES.zh.errors.noSitesInFile));
+    expect(text).toContain(MESSAGES.zh.errors.noSitesInFile);
+    expect(text).not.toContain(MESSAGES.zh.errors.invalidExportFile);
+  });
+
+  it('删除类确认框说明不能撤销；可重设的标题和图标不写这句', () => {
+    for (const lang of ['zh', 'en'] as const) {
+      const m = MESSAGES[lang];
+      const undo = lang === 'zh' ? /不能撤销/ : /can’t be undone/;
+      expect(m.common.resetSiteContentImpact(2), `${lang} 恢复网站原来的内容`).toMatch(undo);
+      expect(m.management.deleteSite.impact, `${lang} 删除这个网站的设置`).toMatch(undo);
+      expect(m.common.resetTitleIconImpact, `${lang} 标题和图标可以重新设置，不该吓人`).not.toMatch(undo);
+    }
+  });
+
+  it('新站点弹窗的说明指向下面两处编辑入口，不只报「没设置过」', () => {
+    expect(MESSAGES.zh.popup.newSiteHint).toContain('从下面任选一项开始');
+    expect(MESSAGES.en.popup.newSiteHint).toMatch(/start with either option below/i);
   });
 });

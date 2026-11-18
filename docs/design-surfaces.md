@@ -42,7 +42,7 @@
 
 | 序 | 功能项 | 组 | 说明 |
 |---:|---|---|---|
-| 1 | 标题和图标 | 内容 | 四处同一概念；站点设置页 #182 起也是一张卡（卡头取 management.titleIconHeading），不再拆成「标签页标题」「标签页图标」两张卡 |
+| 1 | 标题和图标 | 内容 | 四处同一概念；站点设置页 #182 起也是一张卡（卡头取 management.titleIconHeading），不再拆成「标签页标题」「标签页图标」两张卡。两种保存模型见 ADR-0021：向导点「保存」，设置页停止输入自动保存；开关关着时两处都要给「现在打开」出口 |
 | 2 | 收起内容 | 内容 | 胶囊主按钮与弹窗面具卡都管这一项 |
 | 3 | 调整不透明度 | 按钮 | 只属于胶囊菜单；全局设置，不按网站 |
 | 4 | 按钮放回右下角 | 按钮 | 只属于胶囊菜单；拖过之后才出现 |
@@ -87,7 +87,7 @@
 
 | 序 | 功能项 | 控件 | 界面用词（中） | 界面用词（英） | 文案键 | 备注 |
 |---:|---|---|---|---|---|---|
-| 1 | 标题和图标 | pm-mgmt-card-title-icon | 标题和图标 | Title & icon | management.titleIconHeading | 一张卡（#182）：卡内两个字段沿用「标签页标题」（management.titleHeading）与「标签页图标」（management.iconHeading）的名字；卡内底部有「恢复网站原来的标题和图标」出口（#99），不是新的功能项，不加行 |
+| 1 | 标题和图标 | pm-mgmt-card-title-icon | 标题和图标 | Title & icon | management.titleIconHeading | 一张卡（#182）：卡内两个字段沿用「标签页标题」（management.titleHeading）与「标签页图标」（management.iconHeading）的名字；卡内底部有「恢复网站原来的标题和图标」出口（#99），不是新的功能项，不加行。保存模型见 ADR-0021：本页自动保存，开关关着时改过标题/图标要在卡内出现「现在打开」提示（management.savedOffNotice） |
 | 2 | 收起内容 | pm-mgmt-card-rules | 收起的内容 | Hidden items | management.rulesHeading | 只读清单；卡内底部有「恢复网站原来的内容」出口（#160），不是新的功能项，不加行 |
 | 5 | 整页变灰 | pm-mgmt-card-media | 整页变灰 | Whole-page gray | media.heading | 开关标签取 media.mediaGray，中文同名 |
 | 7 | 删除这个网站的设置 | pm-mgmt-card-delete | 删除这个网站的设置 | Delete this site’s settings | management.deleteSite.heading | 页脚危险区 |
@@ -101,9 +101,21 @@
 
 **例外② 胶囊主按钮在空设置时的说明形态。**
 开关管不到任何东西时（收起的内容、标签页标题和图标都空；只有灰度不算，灰度独立于主开关），
-三处都要说一句 `打开后页面不变`（`common.switchNoEffectHint`），判据只有一份：`core/site-state.ts`
-的 `hasSwitchEffect`。弹窗与站点设置页把这句话当常驻 hint 放在开关下面；胶囊本体只有图标、
-写不下文字，所以**点主按钮照常切换开关**，同时用一颗原生模态对话框
+三处都要说一句 `还没有设置标题、图标和收起内容，打开后页面不变`（`common.switchNoEffectHint`），
+判据只有一份：`core/site-state.ts` 的 `hasSwitchEffect`。1.0.10 起这句连原因一起说：胶囊弹出的
+说明框只有这一句，光说「打开后页面不变」没有上下文，用户不知道为什么不变化。
+
+**弹窗的面具卡**：这句话当常驻 hint 放在开关下面；有设置时同一位置换成配置摘要
+`common.switchSummary`（`已设置标题和图标 · 2 项收起设置` / `还没有设置标题和图标 · 还没有收起设置`），
+标题和图标与收起项一起报。摘要跟着开关走、不发在站名下面（它说的是开关管的那几样，
+不是网站身份；Material 3 supporting text / Apple HIG 分组脚注 / 格式塔邻近）。待授权阶段面具卡
+不出来、开关不可用，摘要临时回到站名下面当站点信息（此时没有可归组的开关）。
+
+**站点设置页**：常驻 hint 放在页头开关下面——三样全空时用同一句 `common.switchNoEffectHint`；
+有设置时同一位置换成与弹窗同一句 `common.switchSummary`（标题和图标 + 收起项一起报），
+三样全空时不再另起一行「还没有收起设置」（完整说明已经说了三样都空）。
+
+**胶囊本体**：只有图标、写不下文字，所以**点主按钮照常切换开关**，同时用一颗原生模态对话框
 （`ui/toggle/EmptySettingsDialog.vue`，`data-testid="pm-tg-empty-dialog"`，与删除确认同款外壳）
 显示同一句话 + 一个「知道了」，Esc / 回车 / 点框外都能关。
 

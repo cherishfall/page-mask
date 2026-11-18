@@ -20,6 +20,15 @@ import type { SiteProfile } from './types';
 /** 判据需要的字段（只读三样，调用方传整份配置也满足） */
 export type SwitchScopedProfile = Pick<SiteProfile, 'hideRules' | 'titleIconSet' | 'disguisedTitle'>;
 
+/** 摘要只需要的两样：标题 / 图标是否保存过 */
+export type TitleIconScopedProfile = Pick<SiteProfile, 'titleIconSet' | 'disguisedTitle'>;
+
+/** 保存过标题或图标任一项（ADR-0021：界面上是同一个功能项「标题和图标」）。
+ *  弹窗面具卡与站点设置页页头的配置摘要都靠它决定前半句报「已设置」还是「还没有设置」。 */
+export function hasTitleIcon(p: TitleIconScopedProfile): boolean {
+  return p.titleIconSet === true || !!p.disguisedTitle;
+}
+
 /**
  * 打开「按你的设置显示」之后，这个页面会不会有变化。
  * false = 只有灰度、或者四项全空：此时拨主开关零可见变化，界面要说一句「打开后页面不变」。

@@ -817,8 +817,9 @@ const progressText = computed(() => {
 const exitBody = computed(() => {
   // 按钮点进来时可能什么都没有改（#123）：如实说明为什么要问这一次
   if (!isDirty()) return t.value.wizard.exitBodyNoChanges;
-  // 「收起内容」草稿里有多少项就提示多少；「标题和图标」没有清单，只说标题与图标不保存
-  return previewCount.value > 0 ? t.value.wizard.exitBodySelected(previewCount.value) : t.value.wizard.exitBodyPlain;
+  // 按流程选句子，不按「预览了几项」：两条流程动的是不同的东西（1.0.10，ADR-0021）
+  if (phase.value === 'title') return t.value.wizard.exitBodyTitle;
+  return t.value.wizard.exitBodyRules(previewCount.value);
 });
 
 /**

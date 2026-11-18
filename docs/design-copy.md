@@ -28,7 +28,7 @@ WCAG 2.2 1.4.13；混进外观规范会把一份文档撑成两种性质。`docs
    - 1.4.13：hover / focus 触发的内容必须可撤下（dismissible）、可悬停（hoverable）、常驻（persistent）；键盘可达、读屏可达，不能只靠鼠标。
    - 0.8.17 WIG（`docs/dev/DEVLOG.md`）：ⓘ 信息标此前聚焦只播报「更多信息」，浮层正文对读屏完全不可达——视觉审查抓不到这类问题，必须让 `aria-describedby` 指向常驻 DOM 里的正文，由代码级断言兜住。
 
-## 二、三条整屏规矩
+## 二、整屏规矩
 
 **a. 常驻：多数人每次都需要 / 完成操作必需 / 危险与后果 / 状态与错误 / 边界坑。**
 跟着它解释的那个对象走、不进操作栏；只许一句短句（GOV.UK + Carbon + 项目既有「说明跟着对象走」
@@ -51,6 +51,35 @@ Carbon 要求 helper text 始终可得、NN/g 要求按需可得；自动隐藏�
 本文件二、a 的「一句短句」在标点上落成：hint / intro / 行说明结尾**不带句号**，分句之间用分号。
 句号保留给完整句的场合：对话框正文、错误消息（role=alert）、ⓘ 浮层内容、撤销条、导入结果。
 zh 与 en 同步执行；en 侧以弯撇号（’）为准，不用直撇号。
+
+**e. 一句提示只说自己这条流程里真的会变的东西（1.0.10，向导退出提示事故）。**
+「收起内容」和「标题和图标」是两条不同的流程：前者只动页面上的收起项，后者只动标签页标题与图标。
+一句模板套两条流程，就会出现「收起内容的退出提示去说标签页标题」「标题和图标去说页面」这种张冠李戴。
+写提示前先问：用户点下去之后，这条流程实际会动哪几样？只写那几样；另一条流程另写一句。
+守门测试按流程分别断言，不许两条流程共用一句——`tests/wizard-copy.test.ts` 守「退出提示不串场」。
+
+**f. 同一张卡里的同类字段，条件句用同一个句式（1.0.10）。**
+「标题和图标」卡里，标题下写「开关关着时……」、图标下写「开关打开时……」，单看都对，并排读像两个人写的。
+同类字段要么都说打开时、要么都说关着时；本项目统一说「关着时」——那是用户最容易误会「我改了怎么没反应」的状态。
+例外只在字段的行为真的不同时才允许，并在旁边写清为什么不同。
+
+**g. 并列的动作或事实进要点列表，不要连成一段（1.0.10，欢迎页第 3 步事故）。**
+一段话里如果装着三件以上并列的事（点它做什么、怎么拖、另一颗按钮做什么），拆成无序列表；
+列表前只留一句「这是什么」。列表、图、表的一句话说明贴着它解释的对象走，不混进要点里。
+依据：Apple HIG · Writing「If you're trying to convey more than one idea, consider breaking up the text」、
+GOV.UK · [Bullet points](https://www.gov.uk/guidance/content-design/writing-for-gov-uk#bullet-points)
+「use bullet points to make lists easier to read」、NN/g 用户只扫描不逐字读、Laws of UX 米勒定律（分块）。
+守门：`tests/copy-guidance.test.ts` 断言欢迎页第 3 步要点 ≥ 3、说明段 ≤ 1 句。
+
+**h. 每条死路都要给下一步；删除类确认框写明能不能撤销（1.0.10 全面审计）。**
+只说「这个页面不能遮住」「这个文件不是导出文件」，用户知道了坏消息，却不知道接下来做什么。
+受限状态和错误信息一律补一个能立刻做的动作（换一个普通网页、换一个文件、刷新重试）；
+删除 / 清空类确认框补一句「删掉后不能撤销」，能重做的（标题、图标）不写，避免吓人。
+依据：NN/g [Error Message Guidelines](https://www.nngroup.com/articles/error-message-guidelines/)
+（说清问题 + 给出建设性下一步）、GOV.UK [Error messages](https://design-system.service.gov.uk/components/error-message/)
+「tell the user what to do next」、Microsoft Writing Style Guide「give the user a solution」、
+WCAG 2.2 SC 3.3.3（能给出修改建议时就要给）。
+守门：`tests/copy-guidance.test.ts` 断言每条受限原因都带下一步、删除类确认带「不能撤销」。
 
 ## 三、必须留下、不许收起（逐条有断言守着）
 

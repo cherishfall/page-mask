@@ -96,7 +96,7 @@
               host="example.com"
               :has-profile="false"
               :switch-on="false"
-              rule-summary=""
+              switch-summary=""
               :stale-count="0"
               message=""
               busy=""
@@ -117,10 +117,9 @@
             />
           </div>
         </div>
-        <!-- 这句讲的是弹窗里那两个入口在哪（#187：说明跟着它解释的对象走——从页面底部
-             挪进步骤卡、贴着弹窗示意图）：只配第 2 步（弹窗那一步）——0.8.11 目检指出
-             它在第 1 步提前引用了还没介绍的弹窗、又与第 3 步逐字重复 -->
-        <p v-if="step === 2" class="tip">{{ t.onboarding.tip }}</p>
+        <!-- 图下的一句话说明（#187：说明跟着它解释的对象走——贴着图，不塞进操作栏）：
+             第 2 步讲设置入口在哪，第 3 步讲图中是哪种状态；第 1 步的图不用补充 -->
+        <p v-if="stepTip" class="tip">{{ stepTip }}</p>
       </section>
       </div>
     </div>
@@ -154,6 +153,13 @@ const grayShortcut = ref('');
 const stepCount = computed(() => t.value.onboarding.steps.length);
 /** 当前步（分步单屏，#139）：标题 / 说明 / 功能列表都来自文案表（step 恒在 1..length 内） */
 const current = computed(() => t.value.onboarding.steps[step.value - 1]!);
+/** 图下的一句话说明：第 2 步讲设置入口、第 3 步讲图中状态；没有就整行不出现 */
+const stepTip = computed(() => {
+  const tips = t.value.onboarding.tips;
+  if (step.value === 2) return tips.popup;
+  if (step.value === 3) return tips.floating;
+  return '';
+});
 /** 读屏播报（#108）：「第 N 步，共 M 步：<标题>」 */
 const stepStatus = computed(() =>
   t.value.onboarding.stepStatus(step.value, stepCount.value, t.value.onboarding.steps[step.value - 1]?.title ?? ''),
@@ -229,7 +235,10 @@ body {
 .head {
   padding: calc(var(--pm-space-8) + var(--pm-space-4)) var(--pm-space-6) 0;
   display: flex;
-  align-items: center;
+  /* 退出引导与标题同一条基线（2026-11 反馈：原来 center 让它垂直居中于整块说明文字，
+     夹在三行小字中间，读起来像说明段落里的一个链接，而不是随时可走的退路）。
+     基线对齐后它固定贴在第一行标题右侧，说明文字换行、增多都不会把它推进正文 */
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--pm-space-4);
 }
@@ -249,11 +258,12 @@ h1 {
  * 它是「结束引导」的动作不是去向，语义留在 <button>（Carbon：动作不用链接）；
  * 形态取「次级入口链接」档——muted 灰 + 常驻下划线。文字按钮档的「悬停出浅灰底」
  * 只有指针看得见（规则自己在嵌流档承认过：悬停是鼠标才有的状态，键盘与触屏没有悬停），
- * 而它静置在标题与副标题两行说明文字旁边，同灰无下划线时读不出能点（#74 的教训；
- * 弹窗删除入口 #175 先例：按钮 + 常驻下划线治「长得不像入口」）。
+ * 而它静置在页面右上角、与标题同一条基线上——不加下划线时同灰小字读不出能点
+ * （#74 的教训；弹窗删除入口 #175 先例：按钮 + 常驻下划线治「长得不像入口」）。
  * 与设置页那个「到 Chrome 里设置快捷键」不共形不冲突：它独占一行、悬停信号够用，
  * 「跳过引导」与说明文字同排——文字入口规则按上下文分档 */
 .skip {
+  flex: none;
   text-decoration: underline;
   text-underline-offset: var(--pm-underline-offset);
 }

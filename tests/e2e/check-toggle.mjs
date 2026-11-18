@@ -908,7 +908,7 @@ async function main() {
     await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '点主按钮仍照常切换开关');
     check(true, '空设置时点主按钮：开关照常切到「按设置」（不是死按钮，三处行为一致）');
     const note = await noteStage();
-    check(note.text === '打开后页面不变', `说明框写同一句话（${note.text}）`);
+    check(note.text === '还没有设置标题、图标和收起内容，打开后页面不变', `说明框写同一句话（${note.text}）`);
     check(note.buttons.length === 1 && note.buttons[0] === '知道了', `只有一个「${note.buttons.join(' / ')}」，没有第二个选择`);
     check(note.focus === 'pm-tg-empty-ok', `默认焦点在「知道了」上（${note.focus}）`);
 

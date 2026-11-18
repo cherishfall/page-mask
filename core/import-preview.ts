@@ -60,7 +60,11 @@ export function previewReplace(local: SiteProfile[], bundle: unknown): ReplaceIm
 export function importErrorText(err: unknown): string {
   const msg = err instanceof Error ? err.message : '';
   const messages = t().errors;
-  if (msg.startsWith(messages.invalidExportFile) || msg.includes(messages.newerImport)) {
+  if (
+    msg.startsWith(messages.invalidExportFile) ||
+    msg.includes(messages.newerImport) ||
+    msg === messages.noSitesInFile
+  ) {
     return messages.importFailed(msg);
   }
   return messages.importFailedGeneric;

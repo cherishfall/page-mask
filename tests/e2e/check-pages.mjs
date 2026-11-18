@@ -687,7 +687,10 @@ async function main() {
       tid('pm-popup-switch-empty'),
       tid('pm-popup-switch'),
     );
-    check(emptyHint.text === '打开后页面不变', `空设置时开关下方写「${emptyHint.text}」（只有灰度也算空）`);
+    check(
+      emptyHint.text === '还没有设置标题、图标和收起内容，打开后页面不变',
+      `空设置时开关下方连原因一起说（${emptyHint.text}）`,
+    );
     check(emptyHint.inCard && emptyHint.belowSwitch, '说明在面具卡内、开关下方（跟着它解释的那个开关走）');
     check(emptyHint.disabled === false, '开关照常可拨：不禁用、不隐藏（GOV.UK 禁用态口径）');
     check(emptyHint.fontSize === '13px', `说明与卡内其他说明同档 13px（${emptyHint.fontSize}）`);
@@ -700,16 +703,32 @@ async function main() {
     await patchProfile(ext.control, ORIGIN, { hideRules: [rule('r1', '页头', ['#site-header'])] });
     await waitFor(popup, '有了收起内容后说明消失', (s) => !document.querySelector(s), [tid('pm-popup-switch-empty')], { timeout: 5000 });
     check(true, '有收起内容后说明自动消失');
+    const summaryOf = () => popup.$eval(tid('pm-popup-switch-summary'), (e) => e.textContent.trim());
+    await poll(
+      async () => (await summaryOf()) === '还没有设置标题和图标 · 1 项收起设置',
+      '只有收起项时，摘要把标题状态和收起项一起报出来',
+    );
+    check(true, '只设置收起项：摘要 =「还没有设置标题和图标 · 1 项收起设置」');
     // 改过标签页标题同样算「有设置」（只改图标同口径，单测覆盖四种情形）
     await patchProfile(ext.control, ORIGIN, { hideRules: [], disguisedTitle: '阅读', titleIconSet: true });
     await new Promise((res) => setTimeout(res, 250));
     check(!(await popup.$(tid('pm-popup-switch-empty'))), '改过标题后说明也不出现');
+    await poll(
+      async () => (await summaryOf()) === '已设置标题和图标 · 还没有收起设置',
+      '只改标题时，摘要写明标题已设置、收起项为空',
+    );
+    check(true, '只设置标题：摘要 =「已设置标题和图标 · 还没有收起设置」');
     // 复原成后续用例的基线（2 条规则、无灰度、原样态）
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
     await poll(async () => {
       const p = await getProfile(ext.control, ORIGIN);
       return p.hideRules.length === 2 && p.mediaGray === undefined && p.switchState === 'original';
     }, '复原 popup 用例基线');
+    await poll(
+      async () => (await summaryOf()) === '还没有设置标题和图标 · 2 项收起设置',
+      '基线下摘要同时报标题状态与 2 项收起设置',
+    );
+    check(true, '基线摘要 =「还没有设置标题和图标 · 2 项收起设置」');
 
     await checkSchemes(popup, 'popup', 'bg');
     await checkPopupChrome(popup, '已添加');
@@ -1115,7 +1134,8 @@ async function main() {
     );
     check(rulesResetInfo.focus === '取消', `原生模态框，默认焦点在「${rulesResetInfo.focus}」`);
     check(
-      rulesResetInfo.title === '恢复网站原来的内容？' && rulesResetInfo.impact === '2 项收起设置会全部删除。',
+      rulesResetInfo.title === '恢复网站原来的内容？' &&
+        rulesResetInfo.impact === '2 项收起设置会全部删除，删掉后不能撤销。',
       `确认框标题与正文逐字对（${rulesResetInfo.title} / ${rulesResetInfo.impact}）`,
     );
     check(
@@ -1152,8 +1172,8 @@ async function main() {
     await m.waitForSelector(tid('pm-mgmt-no-rules'), { timeout: 5000 });
     check(!(await m.$(tid('pm-mgmt-rule-list'))), '清单消失，换成空状态');
     check(!(await m.$(tid('pm-mgmt-rules-reset-row'))), '没有收起项后复位行自己消失');
-    const clearedCount = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
-    check(clearedCount.includes('还没有收起设置'), `计数改成「${clearedCount}」`);
+    await waitFor(m, '状态行随空设置一起消失', (s) => !document.querySelector(s), [tid('pm-mgmt-count')], { timeout: 5000 });
+    check(true, '清到空设置后状态行不再单独写「还没有收起设置」（完整说明已包含三样）');
     const undoAfterReset = await m.$eval(tid('pm-mgmt-undo'), (e) => e.innerText.trim());
     check(!undoAfterReset.includes('已删除'), `复位后撤销条消失（${undoAfterReset || '空'}）`);
     // 标题图标都空着时，#158 那句「打开后页面不变」跟着出现
@@ -1243,7 +1263,7 @@ async function main() {
       tid('pm-mgmt-switch-empty'),
       tid('pm-mgmt-switch'),
     );
-    check(mgmtEmpty.text === '打开后页面不变', `站点设置页同一句话（${mgmtEmpty.text}）`);
+    check(mgmtEmpty.text === '还没有设置标题、图标和收起内容，打开后页面不变', `站点设置页同一句话（${mgmtEmpty.text}）`);
     check(mgmtEmpty.belowSwitch, '说明在页头开关下方');
     check(mgmtEmpty.disabled === false, '设置页开关照常可拨（不禁用、不隐藏）');
     check(mgmtEmpty.describedby, '说明用 aria-describedby 挂在开关上（读屏一起播报）');
@@ -1251,12 +1271,20 @@ async function main() {
     await setProfile(ext.control, ORIGIN, profileOf(ORIGIN));
     await waitFor(m, '有设置后站点设置页的说明消失', (s) => !document.querySelector(s), [tid('pm-mgmt-switch-empty')], { timeout: 5000 });
     check(true, '有设置后站点设置页的说明自动消失');
+    const rulesOnlySummary = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
+    check(
+      rulesOnlySummary === '还没有设置标题和图标 · 2 项收起设置',
+      `只有收起项时，页头摘要把标题状态与收起项一起报（${rulesOnlySummary}）`,
+    );
 
     console.log('\n--- 管理页：0 条规则的站点 ---');
     await setProfile(ext.control, ORIGIN, { ...profileOf(ORIGIN), disguisedTitle: SITE_TITLE, hideRules: [] });
     await m.waitForSelector(tid('pm-mgmt-no-rules'), { timeout: 5000 });
     const zeroCount = await m.$eval(tid('pm-mgmt-count'), (e) => e.innerText.trim());
-    check(zeroCount.includes('还没有收起设置') && !zeroCount.includes('0 项'), `0 条规则时本页说「${zeroCount}」`);
+    check(
+      zeroCount === '已设置标题和图标 · 还没有收起设置',
+      `只设标题时本页摘要写明标题已设置、收起项为空（${zeroCount}）`,
+    );
     await m.click(tid('pm-mgmt-reset'));
     await waitFor(m, '0 条规则的确认框打开', (s) => document.querySelector(s).matches(':modal'), [tid('pm-mgmt-reset-dialog')]);
     const zeroImpact = await m.$eval(tid('pm-mgmt-reset-impact'), (e) => e.innerText);

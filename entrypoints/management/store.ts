@@ -216,26 +216,34 @@ export function createManagementStore() {
 
   // 写入均为原子更新：基于最新存储值只改本次操作涉及的字段
 
-  async function toggleSite(p: SiteProfile, e: Event) {
-    const input = e.target as HTMLInputElement;
-    // 上一次写入还没回来：忽略这一次拨动并拨回存储里的状态（开关不设禁用态，避免出现没有原因的禁用）
-    if (state.toggling[p.origin]) {
-      input.checked = p.switchState === 'disguised';
-      return;
-    }
-    const target = input.checked ? 'disguised' : 'original';
+  /** 开关写入（页头开关与「现在打开」提示共用，ADR-0021）：返回是否写入成功 */
+  async function setSwitch(p: SiteProfile, on: boolean): Promise<boolean> {
+    // 上一次写入还没回来：不叠第二次写入（开关不设禁用态，避免出现没有原因的禁用）
+    if (state.toggling[p.origin]) return false;
+    const target = on ? 'disguised' : 'original';
     state.toggling[p.origin] = true;
     state.toggleError[p.origin] = '';
     try {
       await storage.updateProfile(p.origin, (d) => {
         d.switchState = target;
       });
+      return true;
     } catch {
-      input.checked = p.switchState === 'disguised';
       state.toggleError[p.origin] = t().management.error.toggle;
+      return false;
     } finally {
       state.toggling[p.origin] = false;
     }
+  }
+
+  async function toggleSite(p: SiteProfile, e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (state.toggling[p.origin]) {
+      input.checked = p.switchState === 'disguised';
+      return;
+    }
+    const ok = await setSwitch(p, input.checked);
+    if (!ok) input.checked = p.switchState === 'disguised';
   }
 
   /**
@@ -415,6 +423,7 @@ export function createManagementStore() {
     pickTitle,
     authorize,
     toggleSite,
+    setSwitch,
     updateRules,
     setMedia,
     setIcon,

@@ -309,7 +309,7 @@ export function createPageMaskStorage(area: KVArea) {
       incoming.set(key, prev ? mergeProfiles(prev, s.profile) : s.profile);
     }
     if (incoming.size === 0) {
-      throw new Error(t().errors.noSitesInFile(invalidExportFile()));
+      throw new Error(t().errors.noSitesInFile);
     }
     // 导出文件从 0.2.0 起才带全局设置，不存在 0.1.0 旧值的问题，按 schema 读取即可（不做旧版迁移）
     const importedSettings = isObject(bundle.settings) ? readSettings(bundle.settings) : null;

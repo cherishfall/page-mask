@@ -28,9 +28,9 @@ export const en: Messages = {
     opening: 'Opening…',
     saveFailed,
     resetTitleIcon: 'Use the site’s own title and icon',
-    shortcutBlocked: 'This page can’t be covered',
+    shortcutBlocked: 'This page can’t be covered. Try a normal web page',
     /** Gray command on an unsupported page (0.9.2): same badge treatment */
-    shortcutBlockedGray: 'This page can’t be turned gray',
+    shortcutBlockedGray: 'This page can’t be turned gray. Try a normal web page',
     // Straight-talking data disclosure (#241): the 2026-07 store policy asks for it inside the product; the listing doesn't count.
     // Shared by Settings → About and onboarding (one name per thing).
     dataLabel: 'Your data',
@@ -41,7 +41,9 @@ export const en: Messages = {
     resetSiteContentHint: 'Only hidden items — the title and icon stay as they are',
     resetSiteContentTitle: 'Use the site’s own content?',
     resetSiteContentImpact: (n: number) =>
-      n === 1 ? '1 item set to hide will be deleted.' : `All ${n} items set to hide will be deleted.`,
+      n === 1
+        ? '1 item set to hide will be deleted. This can’t be undone.'
+        : `All ${n} items set to hide will be deleted. This can’t be undone.`,
     resetSiteContentConfirm: 'Restore content',
     // Confirmation for “use the site’s own title and icon” (#204; GLOSSARY: destructive actions confirm first, focus lands on Cancel)
     resetTitleIconTitle: 'Use the site’s own title and icon?',
@@ -51,7 +53,12 @@ export const en: Messages = {
     original: 'As is',
     cleanMode: 'Show this site your way',
     /** Hint beside the main switch when there is nothing for it to apply (#158); same meaning, not a literal translation */
-    switchNoEffectHint: 'Nothing changes on the page',
+    switchNoEffectHint: 'No title, icon, or hidden content is set yet — the page won’t change when this is on',
+    /** One-line summary inside the mask card (1.0.10): title/icon and hidden items together */
+    switchSummary: (hasTitleIcon: boolean, rules: number) =>
+      `${hasTitleIcon ? 'Title & icon set' : 'No title or icon set'} · ${
+        rules > 0 ? (rules === 1 ? '1 item set to hide' : `${rules} items set to hide`) : 'Nothing set to hide'
+      }`,
     quickTitle: 'Common titles',
     /** Accessible name for the ⓘ info tag (#161): shared key, used by popup / management / settings / wizard */
     infoLabel: 'More information',
@@ -126,13 +133,14 @@ export const en: Messages = {
 
   popup: {
     loading: 'Reading this page…',
-    unsupportedFallback: 'PageMask can’t be used on this page',
+    unsupportedFallback: 'PageMask can’t be used on this page. Try a normal web page',
+    /** Unsupported reasons (core/origin.ts isSupportedPage): say why and what to do next */
     unsupported: {
-      unparsable: 'This address can’t be recognized',
+      unparsable: 'This address can’t be recognized. Try a normal web page',
       internal: 'Chrome’s own pages don’t let extensions change them. Try a normal web page',
       localFile: 'Extensions can’t change files on your computer. Open a page on the web instead',
-      webStore: 'Chrome Web Store pages don’t let extensions change them',
-      other: 'Extensions can’t change this kind of page',
+      webStore: 'Chrome Web Store pages don’t let extensions change them. Try a normal web page',
+      other: 'Extensions can’t change this kind of page. Try a normal web page',
     },
     pendingBadge: 'Needs access',
     /** The stale mark in the summary is now clickable (#175): the screen-reader name spells out where it goes, the visible text stays the short form */
@@ -140,8 +148,8 @@ export const en: Messages = {
       n === 1
         ? '1 item may be broken. Open “Hide items” to pick it again'
         : `${n} items may be broken. Open “Hide items” to pick it again`,
-    /** One short line for an unset site; the two edit buttons in the card are the first step (#148) */
-    newSiteHint: 'This site isn’t set up yet',
+    /** One short line for an unset site; the same line points to the two edit buttons (#148) */
+    newSiteHint: 'This site isn’t set up yet — start with either option below',
     pendingHint: 'The browser took away access to this site; your settings are still here and come back once you allow access again',
     /** The site was allowed, but this page isn’t covered (#162: allowed weibo.com, now on s.weibo.com) */
     pageNotAllowed: 'This page isn’t allowed yet',
@@ -217,8 +225,13 @@ export const en: Messages = {
     // entry, the capsule menu item and the wizard (guarded by the same-key rule in surfaces test)
     titleIconHeading: 'Title & icon',
     titleHeading: 'Tab title',
+    /** Page notice after auto-save while the switch is off (ADR-0021): same question as wizard.openBody, two exits */
+    savedOffNotice: 'Saved. “Show this site your way” is off — turn it on now?',
+    savedOffStay: 'Keep as is',
+    savedOffOpen: 'Turn it on now',
     // The two intros (#182) follow their own fields and name the switch instead of “the switch
-    // above” — the switch lives in the page header, not in this card (copy audit, 0.9.4)
+    // above” — the switch lives in the page header, not in this card (copy audit, 0.9.4).
+    // 1.0.10: both describe the off state, the condition users misread as “my edit didn’t save”
     titleIntro: 'When “Show this site your way” is off, the site’s own title comes back',
     titleUnsetPlaceholder: 'Not set: the tab keeps the site’s own title',
     titleFootnoteUnset: 'Type here and save, and this site starts using your title',
@@ -228,7 +241,7 @@ export const en: Messages = {
     iconHeading: 'Tab icon',
     // #191: "uses this icon" read oddly with “No icon” picked — the choice covers all three
     // kinds (site's own / none / a preset), so say "the icon follows what is picked here"
-    iconIntro: 'When “Show this site your way” is on, the tab icon is whatever is picked here',
+    iconIntro: 'When “Show this site your way” is off, the site’s own icon comes back',
     iconSite: 'The site’s own icon',
     iconNone: 'No icon',
     iconPreset: 'Use a different icon',
@@ -260,7 +273,7 @@ export const en: Messages = {
       action: 'Delete settings',
       title: (label: string) => `Delete the settings for ${label}?`,
       impact:
-        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and the site will disappear from the list.',
+        'Its tab title, icon and hidden items will be deleted, PageMask’s access to this site will be withdrawn, and the site will disappear from the list. This can’t be undone.',
     },
 
     error: {
@@ -358,7 +371,11 @@ export const en: Messages = {
     next: 'Next',
     start: 'Start using it',
     skip: 'Skip this guide',
-    tip: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”',
+    /** One line under each picture: step 2 says where the settings entries are, step 3 which state is shown */
+    tips: {
+      popup: 'Both settings entries sit at the bottom of the popup: “All site settings” and “Settings”',
+      floating: 'The picture shows “Your settings” turned on',
+    },
     /** Screen-reader announcement for the current step (#108): updated on step change, never steals focus */
     stepStatus: (n: number, m: number, title: string) => `Step ${n} of ${m}: ${title}`,
     steps: [
@@ -374,7 +391,7 @@ export const en: Messages = {
           // #187: follow the canonical order in docs/design-surfaces.md §三 (1 = title & icon,
           // 2 = hide items), matching the real popup embedded on the same screen; the order is
           // guarded by tests/onboarding-sync.test.ts against the surfaces table
-          'Title & icon: give the tab a name and icon of your choosing.',
+          'Title & icon: the tab shows the title and icon you set.',
           'Hide items: click the parts of a page you don’t want; they disappear.',
           'Turn the whole page gray: the page turns black & white, same place.',
           'Cover this page: covers it for now; reloading or leaving the page restores it.',
@@ -382,11 +399,17 @@ export const en: Messages = {
       },
       {
         title: 'The floating button on the page',
+        // 1.0.10: parallel actions are listed as bullets (they used to be four sentences in one
+        // paragraph); the state note stays as one line under the picture
         // #191: cover the third capsule segment (whole-page gray) that was missing, and
         // state which state the illustration shows — the embedded real capsule renders
         // "Your settings" on (the two states look different, #152)
-        text: 'On sites you’ve added, a floating button sits on the page: click it to switch “Your settings / As is” or cover this page. Drag it to move it anywhere. Another button on it turns the whole page gray: one click makes the page black & white, another click brings the colors back. The picture shows “Your settings” turned on.',
-        features: [],
+        text: 'On sites you’ve added, a floating button sits on the page.',
+        features: [
+          'Click it to switch “Your settings / As is”, or to cover this page.',
+          'Drag it to move it anywhere.',
+          'It also has “Turn the whole page gray”: one click makes the page black & white, another click brings the colors back.',
+        ],
       },
     ],
   },
@@ -461,12 +484,14 @@ export const en: Messages = {
     saving: 'Saving…',
     exit: 'Exit setup',
     exitTitle: 'Exit setup?',
-    exitBodySelected: (n: number) =>
+    exitBodyRules: (n: number) =>
       n === 1
-        ? 'The item you picked won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.'
-        : `The ${n} picked items won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.`,
-    exitBodyPlain:
-      'The title and icon you changed won’t be saved. After you exit, the tab goes back to the site’s own title and the page to its original look.',
+        ? 'The item you picked won’t be saved. After you exit, the page goes back to the hidden items you saved last time.'
+        : n > 1
+          ? `The ${n} picked items won’t be saved. After you exit, the page goes back to the hidden items you saved last time.`
+          : 'Your changes won’t be saved. After you exit, the page goes back to the hidden items you saved last time.',
+    exitBodyTitle:
+      'The title and icon you changed won’t be saved. After you exit, the tab goes back to the title and icon you saved last time.',
     exitBodyNoChanges: 'Nothing has been changed yet this time; exiting won’t change your current settings.',
     exitStay: 'Keep setting up',
     exitConfirm: 'Exit',
@@ -532,10 +557,10 @@ export const en: Messages = {
   },
 
   errors: {
-    invalidExportFile: 'This file isn’t a settings file exported by PageMask',
+    invalidExportFile: 'This file isn’t a settings file exported by PageMask. Choose another file',
     fileTooLarge: 'This file is over 20 MB, which is too large; PageMask settings files aren’t this big',
     newerImport: 'This file comes from a newer PageMask. Update PageMask before importing',
-    noSitesInFile: (base: string) => `${base}: it has no site settings to import, so nothing on this computer was changed`,
+    noSitesInFile: 'This file has no site settings to import, so nothing on this computer was changed. Choose another file',
     invalidProfile: 'The site settings are malformed and weren’t saved',
     invalidOrigin: (origin: string) => `Invalid site address: ${origin}`,
     importFailed: (reason: string) => `Import failed: ${reason}`,

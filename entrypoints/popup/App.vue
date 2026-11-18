@@ -7,7 +7,7 @@
     :has-profile="!!profile"
     :switch-on="profile?.switchState === 'disguised'"
     :empty-settings="!!profile && !hasSwitchEffect(profile)"
-    :rule-summary="ruleSummary"
+    :switch-summary="switchSummary"
     :stale-count="staleCount"
     :message="message"
     :busy="busy"
@@ -63,7 +63,7 @@ import { isSupportedPage } from '@/core/origin';
 import { siteKey } from '@/core/site-key';
 import { grantedPatternsOfSite, isOriginCovered } from '@/core/site-grant';
 // 空设置判据（#158）：三处主开关共用一份，别在这里另算一遍
-import { hasSwitchEffect } from '@/core/site-state';
+import { hasSwitchEffect, hasTitleIcon } from '@/core/site-state';
 import { siteLabelOf } from '@/entrypoints/management/site';
 import type { SiteProfile } from '@/core/types';
 import type {
@@ -123,10 +123,13 @@ const pageCovered = computed(() => {
 /** 有站点授权、但这个页面没被覆盖：pending 档换一句更具体的提示 */
 const pageUncovered = computed(() => granted.value && !pageCovered.value);
 const staleCount = computed(() => profile.value?.hideRules.filter((r) => r.lastHealth === 'stale').length ?? 0);
-/** 0 条规则不写「已收起 0 项」：没有内容可收起是「只想改标题」站点的正常形态 */
-const ruleSummary = computed(() => {
-  const n = profile.value?.hideRules.length ?? 0;
-  return n > 0 ? t.value.common.hiddenCount(n) : t.value.common.hiddenNone;
+/** 面具卡里的一句配置摘要（1.0.10）：标题和图标 + 收起项一起说，不再只报收起项。
+ *  标题和图标是一个功能项（ADR-0021），保存过标题或图标任一项就算已设置（titleIconSet）；
+ *  判据与 hasSwitchEffect 的「有没有东西生效」对齐，避免摘要和开关说明互相打架 */
+const switchSummary = computed(() => {
+  const p = profile.value;
+  const hasTitle = p ? hasTitleIcon(p) : false;
+  return t.value.common.switchSummary(hasTitle, p?.hideRules.length ?? 0);
 });
 
 /**

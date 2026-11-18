@@ -35,23 +35,12 @@
           </span>
         </div>
 
-        <p v-if="hasProfile" class="meta">
-          {{ ruleSummary }}<template v-if="staleCount > 0">
-            ·
-            <!-- 失效项给出去处（#175 视觉审查，Nielsen 错误可恢复）：点它 = 打开「收起内容」
-                 在页面上重新选一次；读屏名把动作说全，可见文字保持短名 -->
-            <button
-              type="button"
-              class="pm-mark pm-mark-danger stale-link"
-              data-testid="pm-popup-stale"
-              :aria-label="t.popup.staleAction(staleCount)"
-              @click="emit('setup')"
-            >
-              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount) }}
-            </button>
-          </template>
+        <!-- 待授权时面具卡不出来（开关不可用），配置摘要留在站名下面当站点信息；
+             new / ready 时摘要跟着开关走、进面具卡（1.0.10：它说的是开关管的那几样） -->
+        <p v-if="hasProfile && phase === 'pending'" class="meta" data-testid="pm-popup-switch-summary">
+          {{ switchSummary }}
         </p>
-        <p v-else class="hint" data-testid="pm-popup-hint-new">{{ t.popup.newSiteHint }}</p>
+        <p v-else-if="!hasProfile" class="hint" data-testid="pm-popup-hint-new">{{ t.popup.newSiteHint }}</p>
       </div>
 
       <p v-if="message" class="hint error" role="alert" data-testid="pm-popup-error">{{ message }}</p>
@@ -100,16 +89,40 @@
             role="switch"
             data-testid="pm-popup-switch"
             :checked="switchOn"
-            :aria-describedby="emptySettings ? 'pm-popup-switch-empty' : undefined"
+            :aria-describedby="
+              hasProfile ? (emptySettings ? 'pm-popup-switch-empty' : 'pm-popup-switch-summary') : undefined
+            "
             @change="emit('toggleSwitch', $event.target as HTMLInputElement)"
           />
         </div>
         <p v-if="!hasProfile" class="hint card-switch-hint">{{ t.popup.cardSwitchHintNew }}</p>
-        <!-- 空设置的事前说明（#158）：开关下面一句短句，说明打开后页面不会有变化。
-             判据是三处共用的 core/site-state.ts（不含灰度）；ready 态才可能为空，
-             new 态上面那句已经讲了设置好之后的事，两句不叠加。开关照常可拨，不禁用、不隐藏 -->
+        <!-- 开关下的一句摘要（1.0.10）：ready 时始终说明「打开后有哪些东西生效」——
+             标题和图标 + 收起项一起说（原来只有收起项，改过标题的网站仍显示「还没有收起设置」）；
+             三样全空时换成一句完整说明（原因 + 结果）。说明用 aria-describedby 挂在开关上，
+             开关照常可拨，不禁用、不隐藏（GOV.UK 禁用态口径） -->
         <p v-if="emptySettings" id="pm-popup-switch-empty" class="hint card-empty-hint" data-testid="pm-popup-switch-empty">
           {{ t.common.switchNoEffectHint }}
+        </p>
+        <p
+          v-else-if="hasProfile"
+          id="pm-popup-switch-summary"
+          class="hint card-empty-hint"
+          data-testid="pm-popup-switch-summary"
+        >
+          {{ switchSummary }}<template v-if="staleCount > 0">
+            ·
+            <!-- 失效项给出去处（#175 视觉审查，Nielsen 错误可恢复）：点它 = 打开「收起内容」
+                 在页面上重新选一次；读屏名把动作说全，可见文字保持短名 -->
+            <button
+              type="button"
+              class="pm-mark pm-mark-danger stale-link"
+              data-testid="pm-popup-stale"
+              :aria-label="t.popup.staleAction(staleCount)"
+              @click="emit('setup')"
+            >
+              <span class="pm-mark-dot" aria-hidden="true"></span>{{ t.common.staleCount(staleCount) }}
+            </button>
+          </template>
         </p>
         <div class="edit-actions">
           <button data-testid="pm-popup-title" @click="emit('editTitle')">
@@ -252,10 +265,11 @@ const props = defineProps<{
   /**
    * 这个网站还没有开关管得到的设置（#158）：收起的内容、标签页标题和图标都空。
    * 由 core/site-state.ts 的 hasSwitchEffect 取反得来，三处共用同一个判断；只有灰度不算有。
-   * 成立时在开关下方说一句「打开后页面不变」，开关照常可拨。
+   * 成立时在开关下方说一句完整说明（三样都没设置 + 打开后页面不变），开关照常可拨。
    */
   emptySettings?: boolean;
-  ruleSummary: string;
+  /** 面具卡里的配置摘要（1.0.10）：标题和图标 + 收起项一起说；空设置时改用上面的完整说明 */
+  switchSummary: string;
   staleCount: number;
   /** 失败时给用户看的一句话（父组件已按语言取好） */
   message: string;
@@ -540,6 +554,11 @@ const deleteLabel = deleteSiteHeading();
 .popup .hint.error {
   margin: 0;
   font-size: var(--pm-font-size-body);
+}
+/* 开关下这两行在 320px 弹窗里可能折成两行（1.0.10）：用 pretty 让末行不只剩一两个字
+   （CSS Text 4 `text-wrap: pretty`，Chrome 117+；不影响单行时的高度） */
+.popup .card-empty-hint {
+  text-wrap: pretty;
 }
 /* 媒体开关一组（0.8.0）：开关与它的说明贴在一起，读成一件事；
    说明与错误都跟着这一组走（0.8.10 起与面具卡同款卡片框） */
