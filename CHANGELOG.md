@@ -5,6 +5,56 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.10] - 2026-11-18
+
+界面文案与交互的全量收口（#252），以及随版本发布的对外材料审查（#253）。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **弹窗与站点设置页改为「配置摘要」（#252）**：开关下面那行现在把开关管的三样一起说——「已设置标题和图标 · 6 项收起设置」。只改过标题的网站也会如实写「已设置标题和图标」；三样都没设置时，整行换成「还没有设置标题、图标和收起内容，打开后页面不变」，不再只有一句「打开后页面不变」让人猜原因。待授权时摘要临时回到站名下面（面具卡还没出现）
+- **设置页保存后不再静默（#252，ADR-0021）**：在站点设置页改过标题或图标、而「按你的设置显示」关着时，卡内当场问「已保存；「按你的设置显示」还关着，现在打开吗？」，给「先保持原样 / 现在打开」两个出口；不弹窗、不挡继续编辑。弹窗进入的单步表单仍是「编辑 → 保存 / 退出」，两套保存模型各自保留
+- **向导退出提示按流程说后果（#252）**：「收起内容」流程说「页面回到上次保存的收起设置」；「标题和图标」流程说「标签页回到上次保存的标题和图标」。原来两条都提标签页标题，而标题流程并没有动页面
+- **死路都补下一步（#252）**：未设置站点提示补「从下面任选一项开始」；受限页面与快捷键被挡的每条原因补「换一个普通网页再试」（本地文件是「打开网上的页面再试」）；导入文件不对补「请换一个文件再试」；删除站点 / 恢复内容确认框写明「删掉后不能撤销」，可重设的标题和图标恢复不写
+- **导入空文件不再自相矛盾（#252）**：合法但没有网站设置的文件，原来被说成「不是 PageMask 导出的设置文件」；现在是独立一句「这个文件里没有能导入的网站设置，本机的数据没有改动，请换一个文件再试」
+- **首次引导（#252）**：第 3 步一大段拆成一句说明 + 三条要点；「跳过引导」从说明文字中间挪到右上角、与标题同基线
+- **用词统一（#252）**：标签页「名字 / 样子」回到「标签页标题」；「网站本来」改「网站原来」；悬浮按钮开关标签写「显示悬浮按钮」；标题与图标卡的条件句同构
+
+#### 文档与商店材料
+
+- **README 中英（#253）**：安装改为先装 Releases 的 zip（商店未上架时不用编译），源码构建归到开发者；已知限制改用「嵌在页面里的另一层页面 / 组件内部区域」的白话
+- **落地页（#253）**：安装说明如实写「还没上架」；更新日志页从本文件重新生成
+- **商店材料（#253）**：详细描述去掉内部叫法「幕布」，直接写「遮住这一页」；英文侧补齐漏掉的「快捷键」；版本口径与版本历史同步 1.0.10，截图 4 按 1.0.10 构建重拍（配置摘要入图，开关名改为「显示悬浮按钮」）
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.9 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限），安装时不授予任何站点；本轮只改界面文案、提示位置与两处问答流程
+- 门禁：编译、单测 897 项（58 文件）、E2E 十二脚本全绿（1.0.10 构建实测）、`check:docs` / `check:package` 通过
+
+### English
+
+#### Changes
+
+- **The popup and the site settings page now show a settings summary (#252)**: the line under the main switch names everything the switch controls — "Title & icon set · 6 items set to hide". A site with only a title now says "Title & icon set" instead of "Nothing set to hide"; when none of the three is set, the line becomes "No title, icon or hidden items yet — the page stays as it is", so the result is no longer left without a reason. While access is pending, the summary temporarily sits under the site name (the mask card isn't drawn yet)
+- **Saving on the settings page no longer falls silent (#252, ADR-0021)**: after a title or icon is saved while "Show this site your way" is off, the card asks "Saved. The switch is still off — turn it on now?" with "Keep as is" / "Turn on now". No modal, and editing continues freely. The single-step form opened from the popup keeps edit → save / exit; both save models remain
+- **The wizard's exit message now states what each flow restores (#252)**: the hide-items flow says "the page returns to the last saved hidden items"; the title-and-icon flow says "the tab returns to the last saved title and icon". Both used to mention the tab title, even though the title flow never touched the page
+- **Dead ends now say what to do next (#252)**: the unconfigured-site hint adds "start with either option below"; every limited-page reason and every blocked-shortcut notice adds "Try a normal web page" (local files say "Open a page on the web instead"); import errors add "Choose another file"; the delete-site and restore-content dialogs state "This can't be undone", while the redoable title/icon restore does not
+- **An empty but valid import no longer contradicts itself (#252)**: a file with no site settings used to be reported as "not a settings file exported by PageMask"; it now has its own message — "This file has no site settings to import, so nothing on this computer was changed. Choose another file"
+- **Onboarding (#252)**: step 3's wall of text is now one sentence plus three bullet points; "Skip" moved from the middle of the description to the top right, on the title's baseline
+- **Wording unified (#252)**: "name / look" of a tab is back to "tab title"; "originally" replaces "actually" for the site's own title; the floating-button switch reads "Show floating button"; the two condition sentences in the title and icon card share one pattern
+
+#### Docs and store listing
+
+- **README, both languages (#253)**: install now starts with the Releases zip (no build needed while the store listing is pending), with the source build under developers; known limitations use plain words ("an embedded page / a widget's internal area")
+- **Landing page (#253)**: the install note now says the store version isn't live yet; the changelog page is regenerated from this file
+- **Store listing (#253)**: the detailed description drops the internal name "Curtain" and says "Cover this page"; the English side now lists shortcuts too; version references and the version history are on 1.0.10, and screenshot 4 is re-shot on the 1.0.10 build (the summary is now in the picture, and the switch reads "Show floating button")
+
+#### For reviewers
+
+- Features and the permission set are identical to 1.0.9 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); nothing is granted at install time. This round changes interface copy, hint placement and two question-and-answer flows only
+- Gates: compile, 897 unit tests (58 files), all twelve E2E scripts green (measured on the 1.0.10 build), `check:docs` / `check:package` pass
+
 ## [1.0.9] - 2026-11-18
 
 第九轮对抗扫发现的两处小修正。功能与权限集合不变。
@@ -1912,6 +1962,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.10]: https://github.com/cherishfall/page-mask/compare/v1.0.9...v1.0.10
 [1.0.9]: https://github.com/cherishfall/page-mask/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/cherishfall/page-mask/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/cherishfall/page-mask/compare/v1.0.6...v1.0.7

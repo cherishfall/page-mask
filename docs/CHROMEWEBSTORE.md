@@ -3,14 +3,14 @@
 本文件是提交 Chrome 应用商店的唯一依据：名称与简介、详细描述、权限理由、单一用途、审核员测试步骤、隐私表单填法、版本历史与素材清单。
 提交时逐项复制粘贴；控制台里的选项与本文不一致时，以本文为准并回来更新这里。
 
-> 最后更新：2026-11-18 · 对应构建 **1.0.9**（`.output/page-mask-1.0.9-chrome.zip`，商店提交版本）
+> 最后更新：2026-11-18 · 对应构建 **1.0.10**（`.output/page-mask-1.0.10-chrome.zip`，商店提交版本）
 
 ## 0. 提交前清单
 
 - [x] **仓库已公开**（`cherishfall/page-mask` 已核实为 Public，匿名访问可打开）；**隐私政策 URL 已由 GitHub Pages 承载并点验 200**：<https://cherishfall.github.io/page-mask/privacy.html>（CWS 对死链自动拒审，#193）——两条路径都通，审核员无需登录即可打开
-- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.9-chrome.zip`
-- [x] 版本号已改（`package.json` → `1.0.9`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.9` 已打、Release 已发
-- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）；1.0.5/1.0.6 无界面视觉变化，沿用 1.0.4 的截图；1.0.7 截图 5 有内容变化（列表页提示文案、设置页「关于」卡数据说明行、默认标题脚注收短）按 1.0.7 构建重拍入库，其余五张无内容变化沿用；1.0.8 无界面变化（后台与消息顺序），沿用
+- [x] `npm run build && npm run zip && npm run check:package` 通过（`check-package` 校验产物 manifest 没有 `content_scripts` / `host_permissions`、图标齐全、多语言键一致）；产物：`.output/page-mask-1.0.10-chrome.zip`
+- [x] 版本号已改（`package.json` → `1.0.10`），`CHANGELOG.md` 有对应版本的双语条目，tag `v1.0.10` 已打、Release 已发
+- [x] 6 张截图与宣传图块已按 §8 用修通的 `store-shots.mjs` 重生成（0.9.5，#190/#191：站点设置页合卡、ⓘ 贴开关、文字入口下划线等新形态已入图；虚构域名 `acme-journal.test` 映射本地，无 127.0.0.1）；1.0.0 发版重跑逐字节一致；1.0.1 发版用 1.0.1 构建重拍入库（与提交包同源；肉眼与 1.0.0 零差，字节差为渲染环境反锯齿级别，已人工抽比确认）；1.0.5/1.0.6 无界面视觉变化，沿用 1.0.4 的截图；1.0.7 截图 5 有内容变化（列表页提示文案、设置页「关于」卡数据说明行、默认标题脚注收短）按 1.0.7 构建重拍入库，其余五张无内容变化沿用；1.0.8 无界面变化（后台与消息顺序），沿用；1.0.10 截图 4 有内容变化（面具卡内改为配置摘要、悬浮按钮开关改「显示悬浮按钮」）按 1.0.10 构建重拍入库，其余五张无内容变化沿用（字节差为渲染环境反锯齿级别）
 - [ ] 快捷键真机复核：卸载重装后在 `chrome://extensions/shortcuts` 确认两条命令都有键；在那一页改一次键，切回插件设置页与欢迎页确认键帽跟着变（浏览器级按键自动化触发不了，只能人工）
 - [x] §6 的测试步骤在真实 Chrome 上重走一遍（弹窗四块卡与两颗编辑入口「标题和图标」「收起内容」、按设置 / 原样、全部网站设置、允许访问；胶囊「整页变灰」钮与「遮住」钮；变灰开关在弹窗、站点设置页两处互通）——1.0.2 走查回填见 §6 末尾：可自动化部分（harness 八步 + 真机三站 + 既有断言）已过；授权气泡 / 改键 / 小喇叭 / 视频观感四项提交时人工顺手核
 - [ ] 隐私表单按 §5 填写（在控制台操作）
@@ -50,8 +50,8 @@ PageMask 收起网页上你不想看的部分：在你自己选的网站上，�
 • 在哪些页面收起：整个网站，或只在这类页面 / 除了这类页面
 • 标签页标题与图标：可为该网站设置标签页标题；图标三选一——网站原来的、不显示、或换成内置的 10 个图标之一
 • 整页变灰：按网站的一个开关（悬浮按钮上的「整页变灰」钮、弹窗、站点设置页三处都能改）。整个页面变成黑白——文字、图片、视频、按钮、背景图全都一样，位置大小不变、链接还能点、文字照样读。会自动播放的视频会被暂停，点一下视频就能看。声音完全不参与——音量归播放器自己的按钮和 Chrome 右键「静音网站」。独立开关，不受「按你的设置显示」影响——切「原样」是把收起的内容和标签页标题图标还给你，灰度按自己的开关走。没设置过的网站也能用：在弹窗里拨这个开关时会申请那个网站的权限，之后只做这一件事——变灰
-• 幕布：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时），并把这个标签页的声音一起静音；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
-• 幕布快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；悬浮按钮、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
+• 遮住这一页：弹窗上的「遮住这一页 / 恢复这一页」把整页连同标签页标题一起遮住（比如有人走近时），并把这个标签页的声音一起静音；遮住后页面上是一颗可拖动的睁眼小按钮，点一下就恢复。没添加过的网站也能用
+• 遮住这一页的快捷键：按一下遮住、再按一下恢复（默认 Ctrl+Shift+X，Mac 是 ⌘+Shift+X）；悬浮按钮、弹窗、快捷键三个入口互相通用，任何一处遮住，另两处都能恢复
 • 整页变灰快捷键：按一下变灰、再按一下恢复彩色（默认 Ctrl+Shift+Y，Mac 是 ⌘+Shift+Y）；状态按网站记，第一次按键就会申请这个网站的权限，不必先打开弹窗
 • 悬浮按钮可调可藏：10%–100% 的不透明度滑杆（调它闲着的时候有多淡，鼠标移上去立刻清楚）；嫌占地方也可以在弹窗里按网站把它关掉
 • 每个网站一个开关：点页面上的悬浮按钮，就在「按你的设置显示」和「原样」之间切换，同一网站的所有标签页一起变
@@ -77,7 +77,7 @@ PageMask 收起网页上你不想看的部分：在你自己选的网站上，�
 【说明】
 • 界面语言默认跟随浏览器，可在插件设置里切换简体中文 / English
 • 「整页变灰」只是去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具。一条 CSS 规则像素级覆盖整页——背景图、canvas、iframe 内容、SVG、视频全部包含；本扩展自己的悬浮按钮等界面也会跟着变黑白（功能不受影响）；网页里的音频与一切声音不参与。视频的「点击放行」按最近一次点击位置判断，个别播放器结构特殊的站点可能需要直接点视频本体
-• 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响
+• 遮住时标签页会静音：遮住即静音，恢复（或刷新、离开页面）就还原；你自己用 Chrome 右键或播放器静音的不受影响
 • 不支持浏览器内部页面、本地文件和 Chrome 应用商店页面；网页里另一层页面和网页组件内部区域里的元素暂时无法点选
 • 两条快捷键都能在 Chrome 自己的「扩展程序 → 键盘快捷键」页改：插件设置页有「到 Chrome 里设置快捷键」入口。Chrome 不允许扩展替你改键，所以这一步要在 Chrome 里做；改完切回插件设置页，键帽就显示新键，你在那一页设过的键不会被新版本覆盖
 • 反馈与支持：https://github.com/cherishfall/page-mask/issues
@@ -96,13 +96,13 @@ FEATURES
 • Where it applies: the whole site, only these pages, or except these pages
 • Tab title & icon: set the tab title and icon per site; the icon has three choices — the site's own, no icon, or one of ten built-in icons
 • Whole-page gray: one per-site switch (the floating button's whole-page-gray button — an icon-only button whose tooltip says "Turn the whole page gray" — plus the popup and the site's settings page). The entire page turns black & white — text, pictures, videos, buttons, background images alike; same place, same size, links still work, text stays readable. Videos that autoplay are held down; click a video to watch that one. Sound is not touched at all — volume belongs to the player's own button and Chrome's "Mute site". An independent switch: it does not follow "Your settings" — "As is" gives the hidden parts and the tab title/icon back, while the gray follows its own switch. Works on sites you haven't set up either: flipping it in the popup asks for that site's access (first-time-style) and then does exactly one thing — the gray
-• Curtain: the "Cover this page / Restore this page" switch covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
-• Curtain shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the floating button, the popup and the shortcut all work on the same state — any of them can undo any other
+• Cover this page: the "Cover this page / Restore this page" control covers the whole page and the tab title (say, when someone walks over) and holds that tab's sound; a small draggable open-eye button stays on the page — one click restores it. Works on sites you have not added either
+• Cover-this-page shortcut: press to cover, press again to restore (Ctrl+Shift+X by default, ⌘+Shift+X on Mac); the floating button, the popup and the shortcut all work on the same state — any of them can undo any other
 • Whole-page gray shortcut: press to turn gray, press again to turn back to color (Ctrl+Shift+Y by default, ⌘+Shift+Y on Mac); the setting is remembered per site, and the first press asks for that site's access, so there is no need to open the popup first
 • A floating button you can tune or hide: a 10%–100% opacity slider (how faint it sits when idle is your call; it turns clear the moment you touch it), and the popup can hide it per site
 • One switch per site: the floating button flips between "Your settings" and "As is"; all tabs of that site switch together
 • On-page editing: the floating button's "⋯" menu edits the tab title and icon in place, or edits what's hidden (change the hide method or where it applies, pick an element again; rows you take out are removed when you save)
-• Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, export / import, interface language, the floating button's opacity and version info, and is registered as Chrome's "Options" page
+• Settings split into two pages: "All site settings" lists the sites you added — click one for its settings page; "Settings" holds the default title, shortcuts, export / import, interface language, the floating button's opacity and version info, and is registered as Chrome's "Options" page
 • Delete is always reachable: the very bottom of the popup and every row's "⋯" menu in "All site settings" both carry "Delete this site's settings" — no need to open the details page first
 • Broken-item notices: if a site redesign means an item can no longer be found, you're asked to pick it again
 • Bilingual: the popup, management pages, settings and on-page controls all have Chinese and English; pick the interface language in Settings
@@ -123,7 +123,7 @@ PRIVACY & PERMISSIONS
 NOTES
 • The interface language follows the browser by default; switch to Simplified Chinese or English in Settings
 • "Turn the whole page gray" only removes the color: the page still loads as usual, so this is neither a data saver nor an ad blocker. One CSS rule covers the entire page pixel by pixel — background images, canvas, iframe content, inline SVG and videos included; PageMask's own interface turns black & white with the page and keeps working; audio and sound in general are not touched. The click-to-allow rule for videos looks at where you last clicked; on a few players with an unusual structure you may need to click the video itself
-• The curtain's mute lives exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
+• Covering a page mutes its tab, and the mute lasts exactly as long as the cover: uncovering, reloading or leaving the page removes it; a mute you set yourself is not touched
 • Doesn't run on browser pages, local files or the Chrome Web Store; elements inside a page embedded in this page, or inside nested widget areas, can't be picked yet
 • Both shortcuts can be changed at Chrome's own "Extensions → Keyboard shortcuts" page; Settings has a "Manage shortcuts in Chrome" button. Chrome doesn't let extensions change bindings themselves, so that step belongs in the browser. The keycaps show the new key when you come back, and keys you set there are kept across updates
 • Support: https://github.com/cherishfall/page-mask/issues
@@ -180,7 +180,7 @@ Test steps (no login needed):
 4. Click the PageMask icon again and click 「标题和图标」 ("Title & icon"): a one-step form opens. Type a title and click 保存 (Save) — the tab title changes to it (leave it empty and the fallback title applies: "Reading" in an English browser, 「阅读」 in a Chinese one).
 5. Click the floating button to switch the site back to "As is": the element reappears and the title reverts.
 6. Click 「⋯」 on the floating button. By default the menu has four items in three groups: 「标题和图标」 (Title & icon — opens the one-step form) / 「收起内容」 (Hide items — opens pick mode again) | 「调整不透明度」 (opens the opacity setting) | 「删除这个网站的设置」 (Delete this site's settings, in red — always last; removes the site's settings and its permission). Once the button has been dragged, a fifth item 「按钮放回右下角」 (put the button back at the bottom-right) joins that second group. The button itself carries a whole-page-gray button (one click turns the whole page black & white; the tooltip says 「整页变灰」 / "Turn the whole page gray").
-7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「标题和图标」 / 「收起内容」, the 「整页变灰」 ("Turn the whole page gray") switch with the same icon as the floating button's gray button, the 「悬浮按钮」 (floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Whole-page gray" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
+7. Toolbar icon → the popup shows the 「按你的设置显示」 switch, the two buttons 「标题和图标」 / 「收起内容」, the 「整页变灰」 ("Turn the whole page gray") switch with the same icon as the floating button's gray button, the 「显示悬浮按钮」 (Show floating button) switch, then 「遮住这一页」 (Cover this page — the whole page is covered, the tab's sound is held, and only a small open-eye button remains; click it to restore), and two entries: 「全部网站设置」 (All site settings — the site list; a site's settings page has a "Whole-page gray" card and 「删除这个网站的设置」 in the footer) and 「插件设置」 (Settings — default title, export / import, interface language).
 8. Whole-page grayscale (no new permission): turn it on with the floating button's whole-page-gray button (tooltip 「整页变灰」 / "Turn the whole page gray"), in the popup, or in the 「整页变灰」 card on the site's settings page — the places stay in sync. The whole page turns black & white (text, pictures, videos, backgrounds, canvas, iframe content), stays in place and keeps its links; videos that the site autoplays are held, and clicking one lets that one play (still black & white). The gray switch is independent of the 「按你的设置显示」 / 「原样」 switch: flipping that switch restores the hidden parts and the tab title/icon while the gray stays as set. Covering the page (step 7) mutes the tab (Chrome shows a muted speaker icon); restoring brings the sound back.
 ```
 
@@ -190,10 +190,11 @@ Test steps (no login needed):
 ## 7. 版本历史
 
 > 0.4.2、0.5.0–0.5.5、0.6.2–0.6.7 为未上架商店的内部版本，故本表不列。
-> 本表列出对外可考的发版（与 CHANGELOG.md 的对外版本对应；上列内部版本不在此表）；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.9 时 release notes 可用：`1.0.9 — Round-9 hardening: draft-record sweeping now happens only at browser startup, so it can never race ahead of the orphan cleanup after an extension update; one comment corrected to state what actually happens to a leftover permission grant. Features and permissions unchanged.`
+> 本表列出对外可考的发版（与 CHANGELOG.md 的对外版本对应；上列内部版本不在此表）；**商店控制台的 release notes 只填最新一版的要点**（控制台没有整表可填，内部版本不进商店）。提交 1.0.10 时 release notes 可用：`1.0.10 — Full copy and interaction sweep: the popup and the site settings page now summarize everything the main switch controls (title & icon plus hidden items), not just the hidden count; saving a title or icon while the switch is off now asks whether to turn it on; the wizard's exit message says what each flow actually restores; dead-end messages (limited pages, import errors) now say what to do next. Features and permissions unchanged.`
 
 | 版本 | 日期 | 要点 |
 |---|---|---|
+| 1.0.10 | 2026-11-18 | 文案与交互全量收口（#252）：弹窗与站点设置页改为配置摘要——标题和图标 + 收起项一起报，三样全空用完整说明；设置页改过标题/图标而开关关着时，卡内问「现在打开吗」（ADR-0021，两套保存模型并存）；向导退出提示按流程说清；未设置站点、受限页面、快捷键被挡、导入错误与删除确认都补齐下一步 / 不可撤销；首次引导第 3 步拆成要点、「跳过引导」贴上标题基线；用词统一。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.9 | 2026-11-18 | 第九轮对抗扫修正批（两票）：草稿残留清扫只留在浏览器启动时——原挂在扩展更新上会抢在孤儿清理前面，「向导开着过夜」遇上后台更新残留记录被先删、预览又没人能撤（#249 收紧 #247）；一处注释如实化（删除后残留授权产品内无收回路径，只能用户在 Chrome 站点权限里手动撤，#250）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.8 | 2026-11-18 | 第八轮复审修正批（两票）：向导预览的恢复副本从 storage.session 改记 storage.local——session 随扩展更新被清空，恰是孤儿预览的目标场景（#247 修正 1.0.7 的 #239）；一键清空的删除挪到收权限之前，删除失败叫醒后的页面可完整恢复（#248 补全 #243）。功能与权限集合不变。详见 `CHANGELOG.md` |
 | 1.0.7 | 2026-11-18 | 第七轮上架前确认审查修复批（九票）：扩展更新时开着的向导预览样式不再残留（后台按文档记草稿副本，孤儿清理一并撤）；一键清空删配置失败时叫醒已清空的页面并如实报失败；设置页「关于」卡与首次引导直述「数据只存本机、不上传」（2026-07 政策）；「界面语言」说明与兜底标题展示对齐实际行为；删掉「清成空白显示网址」的过时警告（目检发现）；「未添加网站不运行任何内容」类绝对化表述改口（幕布例外如实写明）；导入路径收口（id 100 码点 / 候选 8 / 范围行 20 / 规则 500）；样式档位收口。功能与权限集合不变。详见 `CHANGELOG.md` |
@@ -253,7 +254,7 @@ Test steps (no login needed):
 | 截图 1（首图） | `docs/store-assets/screenshot-1-before-after.png` | ✅ 1280×800：「之前 / 之后」并排，32px 大字标题 |
 | 截图 2 | `docs/store-assets/screenshot-2-wizard.png` | ✅ 1280×800：设置向导的两步并排——点选（选中项列成清单）与看效果（逐项编辑 + 在哪些页面收起） |
 | 截图 3 | `docs/store-assets/screenshot-3-tabbar.png` | ✅ 1280×800：标签栏里两个标签页（原样 / 清爽），展示标题与图标 |
-| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 标题和图标 / 收起内容；整页变灰卡；遮住这一页；悬浮按钮行；底部两个入口），顶部站点名是虚构域名 acme-journal.test（`store-shots.mjs` 已修通：`--host-resolver-rules` 把虚构域名映射到本地 fixture，#190 起截图不再出现 127.0.0.1）。0.9.8 重生成与库中版本逐字节一致（0.9.5 起形态未变） |
+| 截图 4 | `docs/store-assets/screenshot-4-popup.png` | ✅ 1280×800：弹窗（面具卡：面具图标 + 按你的设置显示开关 + 开关下方的配置摘要 + 标题和图标 / 收起内容；整页变灰卡；遮住这一页；显示悬浮按钮行；底部两个入口），顶部站点名是虚构域名 acme-journal.test（`store-shots.mjs` 已修通：`--host-resolver-rules` 把虚构域名映射到本地 fixture，#190 起截图不再出现 127.0.0.1）。1.0.10 重拍（配置摘要入图） |
 | 截图 5 | `docs/store-assets/screenshot-5-management.png` | ✅ 1280×800：「全部网站设置」（网站列表）与「插件设置」两个独立页面并排 |
 | 截图 6 | `docs/store-assets/screenshot-6-curtain.png` | ✅ 1280×800：「⋯」菜单 + 遮住整页后的睁眼恢复按钮（悬停显出「恢复」），胶囊为现行形态（#190 预跑验证过：左侧菜单完整、右侧幕布恢复钮不再大面积全白）。0.9.8 重生成与库中版本逐字节一致 |
 | 宣传图块 440×280 | `docs/store-assets/promo-tile-440x280.png` | ✅ 新图标 + 一句话定位，无 emoji |
@@ -276,11 +277,11 @@ Test steps (no login needed):
 - 同一个网站按可注册域名算：`weibo.com`、`www.weibo.com` 与 `s.weibo.com` 共用一份设置与一次授权；规则仍按每个页面的实际网址生效，「只在 weibo.com 首页收起」不会套到子域页面。IP 地址、`localhost` 与带非默认端口的地址按原样识别，不合并子域。
 - 公共后缀只内置常见子集（`com.cn` / `co.uk` / `github.io` 等）：不在表里的后缀按单段后缀识别（取最后两段），最坏情况是同一后缀下的两个独立站点被当成一个（共用设置与授权），但不会丢设置。
 - 「整页变灰」只去掉颜色：页面内容照常加载，既不省流量，也不代替广告过滤工具；一条 CSS 规则覆盖整个页面（背景图、`<canvas>`、iframe 内容、内联 SVG、视频都在内），本扩展自己的浮层也会跟着变黑；`<audio>` 与一切声音不参与。
-- 幕布静音随幕布生灭：遮住即静音当前标签页，恢复（或刷新、离开页面）即还原；你自己用 Chrome 右键或播放器静音的不受影响。
+- 遮住这一页时标签页会静音：遮住即静音，恢复（或刷新、离开页面）就还原；你自己用 Chrome 右键或播放器静音的不受影响。
 - 不支持 `chrome://` 内部页面、`file://` 本地文件、Chrome 应用商店页面。
 - iframe 与 shadow DOM 内部的元素暂时无法点选。
 - 标签页悬停缩略图、浏览器历史记录里的标题是浏览器自身行为，扩展改不到。
-- 幕布只挡视线不挡输入：视频全屏、页面内对话框会盖住幕布；键盘焦点仍在页面中，继续打字仍会改动页面内容；刷新或离开页面后幕布消失。
+- 遮住这一页只挡视线不挡输入：视频全屏、页面内对话框会盖在它上面；键盘焦点仍在页面中，继续打字仍会改动页面内容；刷新或离开页面后遮住消失。
 
 ## 10. 审核员可能问的问题（提交前先想好答案）
 
@@ -304,7 +305,7 @@ Test steps (no login needed):
 | 项 | 结论 |
 |---|---|
 | manifest_version 3 | ✅ 产物 manifest `"manifest_version": 3` |
-| 版本号已递增 | ✅ `1.0.9`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
+| 版本号已递增 | ✅ `1.0.10`（提交版本；逐版递增记录见 `CHANGELOG.md`） |
 | manifest 名称与本文一致 | ✅ 名称/简介来自 `_locales`，与 §1 表格一致（控制台不可单独填写） |
 | 简介 ≤132 字符 | ✅ en 125 / zh_CN 54（2026-11-14 随 #199 文案修订后实测） |
 | ZIP 无多余文件 | ✅ 32 个文件，只含运行文件：`manifest.json`、`background.js`、`content-scripts/content.js`、`curtain-oneshot.js`、`chunks/*`、`assets/*.css`、`*.html`、`icon/*`、`_locales/*`、`THIRD_PARTY_NOTICES.txt`；无 `.map`、无 `README`/`CHANGELOG`/`CHROMEWEBSTORE.md`、无测试与配置（见 `check:package` 输出） |
@@ -361,7 +362,7 @@ Test steps (no login needed):
 
 | 项 | 结论 |
 |---|---|
-| 功能可用 | ✅ `npm run compile` 通过；单测 881 项（57 个文件，1.0.9 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.9 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
+| 功能可用 | ✅ `npm run compile` 通过；单测 897 项（58 个文件，1.0.10 提交前实测）；`npm run test:e2e` 十二脚本全绿（1.0.10 构建实测）；真机站点验证（微信读书 / 得到 / 墨问匿名页全绿，极客时间 451 环境受限跳过）；`npm run check:docs` / `check:package` 通过 |
 | 无崩溃/空白页 | ✅ popup、管理页、引导页、内容脚本都有 E2E |
 | 目标站点可用 | ✅ Wikipedia 首页实走（§6） |
 | 边界情况 | ✅ 内部页/本地文件/商店页有明确提示；无配置时零注入 |

@@ -31,15 +31,17 @@
 
 ### 已知限制
 
-- 不支持 `chrome://` 内部页、本地文件与 Chrome 商店页面；iframe 与 shadow DOM **内部**的元素暂不可选（外层容器可以）
+- 不支持 `chrome://` 内部页、本地文件与 Chrome 商店页面；网页里嵌入的另一层页面（iframe）和组件内部区域（shadow DOM）暂时点不了，外层容器可以
 - 「整页变灰」只是去色（不省流量、不代替广告拦截）；「遮住这一页」只挡眼睛不挡输入
 
 ### 安装
 
-商店版本审核中，通过后这里会补上安装链接。源码安装需 Chrome 116+：
+Chrome 应用商店还没上架。现在可以直接装 Releases 里的 zip，不用编译（需要 Chrome 116 或更高）：
 
-1. 克隆本仓库 → `npm ci && npm run build`
-2. 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择 `.output/chrome-mv3`
+1. 到 [Releases](https://github.com/cherishfall/page-mask/releases/latest) 下载最新的 `page-mask-*-chrome.zip`，解压到一个固定的空文件夹（升级时覆盖同一个文件夹）
+2. 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压出来的文件夹
+
+从源码构建：`npm ci && npm run build`（Node ≥ 22.13），然后在上一步选择 `.output/chrome-mv3`。
 
 **升级**：覆盖到同一目录后到 `chrome://extensions` 点刷新，设置不丢（换文件夹 = 换身份 = 清空，所有扩展都这样）。
 
@@ -95,15 +97,17 @@ Details, usage and FAQ live on the [landing page](https://cherishfall.github.io/
 
 ### Known limitations
 
-- Not supported: `chrome://` pages, local files, the Chrome Web Store; elements **inside** iframes and shadow DOM can't be picked yet (their containers can)
+- Not supported: `chrome://` pages, local files, the Chrome Web Store; elements **inside** an embedded page (iframe) or a widget's internal area (shadow DOM) can't be picked yet — their containers can
 - Whole-page gray only removes color (no data saved, not an ad blocker); the cover blinds but doesn't block input
 
 ### Install
 
-The store listing is under review; a store link will appear here once it passes. Building from source needs Chrome 116+:
+The Chrome Web Store listing isn't live yet. For now, install the zip from Releases — no build step (Chrome 116 or later):
 
-1. Clone this repo → `npm ci && npm run build`
-2. Open `chrome://extensions` → enable Developer mode → **Load unpacked** → select `.output/chrome-mv3`
+1. Download the latest `page-mask-*-chrome.zip` from [Releases](https://github.com/cherishfall/page-mask/releases/latest) and unzip it into a fixed, empty folder (overwrite that same folder for upgrades)
+2. Open `chrome://extensions` → enable Developer mode → **Load unpacked** → select the unzipped folder
+
+Building from source: `npm ci && npm run build` (Node ≥ 22.13), then select `.output/chrome-mv3` in step 2.
 
 **Upgrading**: overwrite the same folder and hit reload on `chrome://extensions` — settings survive (a new folder means a new identity and a clean slate; that's true for every extension).
 
