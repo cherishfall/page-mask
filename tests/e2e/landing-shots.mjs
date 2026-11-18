@@ -1,5 +1,5 @@
 /**
- * 落地页截图生成（中英两套）：5 张真实运行画面 × 2 种界面语言。
+ * 落地页截图生成（中英两套）：6 张真实运行画面 × 2 种界面语言。
  *
  * 运行：npm run build && node tests/e2e/landing-shots.mjs
  * 输出：默认 docs/store-assets/landing/<lang>/，可用 LANDING_SHOTS_OUT=<目录> 改位置。
@@ -20,6 +20,7 @@
  * - title：「标题和图标」表单，已填入「阅读」，演示第 2 步。
  * - after：收起 4 项，演示第 5 步。
  * - gray-hidden：收起 4 项 + 整页变灰，演示第 6 步。
+ * - curtain：遮住整页，演示第 7 步。
  * - pick：「收起内容」的点选界面，演示第 4 步。
  * 第 3 步「标题改为阅读」用 before 截图 + 落地页画的标签页示意：浏览器 UI
  * 不在页面截图里，伪造一张反而变成效果图。
@@ -354,6 +355,17 @@ try {
     await waitForToggle(pGrayHidden);
     await shot(pGrayHidden, lang, 'gray-hidden');
     await pGrayHidden.close();
+
+    // ---------- curtain：遮住整页（演示第 7 步） ----------
+    await setProfile(control, ORIGIN, profileFor(lang));
+    const pCurtain = await newPage(lang);
+    await waitForApplied(pCurtain);
+    await waitForToggle(pCurtain);
+    await sendToBackground(control, { t: 'coverPage', tabId: await tabIdOf(control, `${ORIGIN}/*`) });
+    await waitForShadow(pCurtain, 'pagemask-curtain', '[data-testid="pm-curtain-restore"]');
+    await sleep(500);
+    await shot(pCurtain, lang, 'curtain');
+    await pCurtain.close();
 
     // ---------- pick：设置向导第 1 步（点选），已有规则自动铺成草稿 ----------
     await setProfile(control, ORIGIN, profileFor(lang, { switchState: 'original' }));

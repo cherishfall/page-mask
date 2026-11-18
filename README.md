@@ -21,7 +21,7 @@
 ### 功能
 
 - **点选收起** — 悬停高亮、点击选中、即时预览；三种方式：消失 / 留空 / 盖住
-- **标签页标题与图标** — 按网站换成低调的名字和图标（内置 10 个图标可选）
+- **标签页标题与图标** — 标题自己写；图标可隐藏或换成内置的 10 个图标
 - **整页变灰** — 按网站把整页变黑白，快捷键 `Ctrl/⌘+Shift+Y`
 - **遮住这一页** — 一键把整页连标签页标题一起遮住，快捷键 `Ctrl/⌘+Shift+X`
 - **悬浮按钮** — 页面右下角的胶囊：一键切换、按住拖动、透明度可调
@@ -87,7 +87,7 @@ npm run test:e2e      # 真实 Chrome 全量 E2E
 ### Features
 
 - **Point-and-click hiding** — hover to highlight, click to select, instant preview; three modes: disappear / keep space / cover
-- **Tab title & icon** — give a site a low-key name and icon (10 built-in icons)
+- **Tab title & icon** — write your own title; hide the icon or pick one of ten built-in ones
 - **Whole-page gray** — turn the entire page black & white per site, shortcut `Ctrl/⌘+Shift+Y`
 - **Cover this page** — hide the whole page with its tab title in one click, shortcut `Ctrl/⌘+Shift+X`
 - **Floating button** — a capsule at the page corner: one-click toggle, draggable, adjustable opacity
