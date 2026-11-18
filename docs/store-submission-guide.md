@@ -39,7 +39,7 @@ unzip -p .output/page-mask-1.0.11-chrome.zip manifest.json
 - [x] 隐私表单填法（材料 §5）
 - [x] 审核员备注与八步测试步骤（材料 §6）
 - [x] 版本历史表（材料 §7）
-- [x] 截图中英两套（`zh/` 与 `en/` 各 6 张、各 1280×800）+ 宣传图块 440×280（不可本地化，仅一份）+ 商店图标 128×128（材料 §8）
+- [x] 截图中英两套（`zh/` 与 `en/` 各 6 张、各 1280×800）+ 全局宣传图块两份（440×280 小图块 + 1400×560 marquee，双语定位语，均不可本地化仅一份）+ 商店图标 128×128（材料 §8）
 - [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实为 Public，匿名浏览器可打开仓库页与 `docs/PRIVACY.md`）
 - [x] `docs/PRIVACY.md` 存在，且英文在前中文在后，与商店披露口径一致（`docs/CHROMEWEBSTORE.md` §5 引用它）
 - [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200，与 `docs/PRIVACY.md` 逐条等义）——两条路径都通，审核员无需登录
@@ -228,7 +228,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | **Language**（商店页语言） | Store listing | 简体中文 + English | 材料 §1 | §2.3 |
 | **Store icon**（图标） | Store listing | 128×128 PNG：`public/icon/128.png` | 材料 §8 | §2.3 |
 | **Screenshots**（截图） | Store listing | 两组槽位：语言切到 English 传 `en/` 那套、切到中文（简体）传 `zh/` 那套（各 1 / 2 / 4 / 5 / 6，每张 1280×800）；「全球通用的屏幕截图」留空 | 材料 §8 | §2.3 |
-| **Small promo tile**（宣传图块） | Store listing | 440×280 PNG：`docs/store-assets/promo-tile-440x280.png`（Marquee 1400×560 可选，没素材） | 材料 §8 | §2.3 |
+| **Small promo tile**（小型宣传图块） | Store listing | 440×280 PNG：`docs/store-assets/promo-tile-440x280.png`；Marquee 1400×560 一并传：`docs/store-assets/marquee-tile-1400x560.png` | 材料 §8 | §2.3 |
 | **Homepage URL** | Store listing | `https://github.com/cherishfall/page-mask` | 材料 §1 | §2.3 |
 | **Support URL** | Store listing | `https://github.com/cherishfall/page-mask/issues` | 材料 §1 | §2.3 |
 | **Content rating**（内容分级） | Store listing | 不勾 Mature | 材料 §11 | §2.3 |
@@ -254,8 +254,8 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | **Language**（商店页语言） | 简体中文 + English | 材料 §1 | 与 manifest 的 `_locales` 一致 |
 | **Store icon** | 128×128 PNG：`public/icon/128.png`（与 `docs/store-assets/icon-128.png` 同一张） | 材料 §8 | 官方要求 **128×128 px** |
 | **Screenshots**（以当地语言显示的屏幕截图） | 语言切到 **English** → 传 `docs/store-assets/en/` 的 **1 / 2 / 4 / 5 / 6**（首图、向导、弹窗、两个管理页、菜单+幕布）；切到 **中文（简体）** → 传 `docs/store-assets/zh/` 的同一批号。每张 **1280×800 px**；每组最多 5 张。「全球通用的屏幕截图」**留空**——官方取图顺序是「当地语言截图 → 全球通用截图」（官方文档 "Order of graphic assets"），两个语言都有自己的截图时全球通用那份永不显示 | 材料 §8 | 官方原文："At least one 1280x800 px screenshot, up to 5 total." |
-| **Small promo tile**（可选） | `docs/store-assets/promo-tile-440x280.png`，**440×280**，PNG/JPEG | 材料 §8 | 官方尺寸 440×280 px |
-| **Marquee promo tile**（可选） | 没有素材，跳过 | — | 官方尺寸 1400×560 px |
+| **Small promo tile**（可选但建议传） | `docs/store-assets/promo-tile-440x280.png`，**440×280**，PNG/JPEG；官方明示不传的扩展在推荐位排在有图的后面 | 材料 §8 | 官方尺寸 440×280 px |
+| **Marquee promo tile**（可选但建议传） | `docs/store-assets/marquee-tile-1400x560.png`，**1400×560**，PNG/JPEG；官方原句 "your extension can't be featured in marquee unless you provide a marquee promotional image"——不传就永远不进 marquee 推荐位 | 材料 §8 | 官方尺寸 1400×560 px |
 | **Promo video**（可选） | 没有视频，跳过 | — | YouTube 链接 |
 | **Homepage URL** | `https://github.com/cherishfall/page-mask` | 材料 §1 | 仓库已公开，能打开 |
 | **Support URL** | `https://github.com/cherishfall/page-mask/issues` | 材料 §1 | 无痕窗口能打开 |
@@ -417,7 +417,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 - [ ] `manifest.json` 在 zip 根目录；无 `.map`、无 README/CHANGELOG/CHROMEWEBSTORE.md、无测试与配置文件（`npm run check:package` 会验）
 - [ ] manifest 里 `permissions` = `storage`/`scripting`/`activeTab`，`optional_host_permissions` = `["*://*/*"]`，**没有** `content_scripts`、**没有** `host_permissions`
 - [ ] 名称/简介与 `_locales` 一致：en 40/125 字符、zh_CN 22/54 字符（≤45 / ≤132）
-- [ ] 截图两套各传 5 张（1/2/4/5/6；`en/` → English、`zh/` → 中文（简体）），每张 1280×800；「全球通用的屏幕截图」留空；宣传图块 440×280；图标 128×128
+- [ ] 截图两套各传 5 张（1/2/4/5/6；`en/` → English、`zh/` → 中文（简体）），每张 1280×800；「全球通用的屏幕截图」留空；宣传图块两份（440×280 小图块 + 1400×560 marquee，都在「全球通用」区）；图标 128×128
 - [ ] **隐私政策 URL（<https://cherishfall.github.io/page-mask/privacy.html>）用无登录浏览器能打开**，且页面里确实有「收集什么、怎么用、怎么共享」的说明
 - [ ] Support URL（`.../issues`）与 Homepage URL 无痕能打开
 - [ ] 材料 §3 四段权限理由、材料 §4 单一用途、材料 §5 两组勾选、材料 §6 八步测试说明，都已贴进对应标签页

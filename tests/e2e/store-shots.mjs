@@ -1,6 +1,6 @@
 /**
  * 商店素材生成（#29 / #58，#190 修通；2026-11-19 起按语言分目录出中英两套）：
- * 每种语言 6 张 1280×800 截图 + 440×280 宣传图块（全局素材，仅中文一份）。
+ * 每种语言 6 张 1280×800 截图 + 两张全局宣传图块（440×280 小图块、1400×560 marquee，仅 zh 轮生成一份）。
  *
  * 运行：npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs
  *       STORE_SHOTS_LOCALE=zh|en（默认 zh；两套都要出，各跑一遍）
@@ -32,7 +32,8 @@
  * - screenshot-5-management：「全部网站设置」与「插件设置」两个独立页面并排
  * - screenshot-6-curtain：悬浮按钮「⋯」菜单 + 遮住整页后的睁眼恢复按钮
  *   （2026-11-19 修说明文字：胶囊上那颗钮的实名是「整页变灰」，旧图写的「媒体开关在『媒体』钮上」是 0.8.x 旧称）
- * - promo-tile-440x280：新图标 + 一句话定位，无 emoji（仅 zh 轮生成）
+ * - promo-tile-440x280：新图标 + 双语定位语（中文主行 + 英文辅助行），无 emoji（仅 zh 轮生成）
+ * - marquee-tile-1400x560：同一套视觉的横版（官方：无此图不进 marquee 推荐位；仅 zh 轮生成）
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -580,18 +581,37 @@ try {
      </div>`,
   );
 
-  // 7. 宣传图块 440×280（官方明示不可本地化：只有中文一份，写到 store-assets 根目录）
+  // 7. 宣传图块（官方明示不可本地化：全球共用一份，写到 store-assets 根目录）。
+  //    定位语双语——中文为主行、英文为辅助行（更小更淡）：图块无法按语言切换，
+  //    主次式双语是商业产品面向多语言用户的通行做法（对等并排是政府类语言平权的做法）；
+  //    中文为主延续「中文用户为主」的既定取舍。marquee 1400×560 必须提供才可能进
+  //    marquee 推荐位（官方："your extension can't be featured in marquee unless you
+  //    provide a marquee promotional image"）。
   if (LOCALE === 'zh') {
     const promoFile = await compose(
       'promo-tile-440x280',
-      `<div style="width:440px;height:280px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:12px">
-         <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:76px;height:76px;display:block">
-         <div style="font-size:28px;font-weight:700;line-height:1.2">PageMask</div>
-         <div style="font-size:16px;color:#3f4a58;line-height:1.5">点选不想要的部分，<br>标签页一起变低调</div>
+      `<div style="width:440px;height:280px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:9px">
+         <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:72px;height:72px;display:block">
+         <div style="font-size:27px;font-weight:700;line-height:1.2">PageMask</div>
+         <div style="font-size:16px;color:#3f4a58;line-height:1.45">点选不想要的部分，<br>标签页一起变低调</div>
+         <div style="font-size:12.5px;color:#8a94a3;line-height:1.4">Hide what you don\u2019t want \u2014 the tab quiets down too</div>
        </div>`,
       { width: 440, height: 280, file: path.join(BASE, 'promo-tile-440x280.png') },
     );
     console.log(`  ✓ ${path.relative(REPO, promoFile)}（全局素材，不可本地化）`);
+    const marqueeFile = await compose(
+      'marquee-tile-1400x560',
+      `<div style="width:1400px;height:560px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;align-items:center;padding:0 130px;gap:56px">
+         <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:150px;height:150px;display:block;flex:none">
+         <div style="display:flex;flex-direction:column;gap:14px">
+           <div style="font-size:50px;font-weight:700;line-height:1.15">PageMask</div>
+           <div style="font-size:29px;color:#3f4a58;line-height:1.4">点选不想要的部分，标签页一起变低调</div>
+           <div style="font-size:20px;color:#8a94a3;line-height:1.4">Hide what you don\u2019t want \u2014 the tab quiets down too</div>
+         </div>
+       </div>`,
+      { width: 1400, height: 560, file: path.join(BASE, 'marquee-tile-1400x560.png') },
+    );
+    console.log(`  ✓ ${path.relative(REPO, marqueeFile)}（全局素材，官方：无此图不进 marquee 推荐位）`);
   }
 
   for (const f of fs.readdirSync(OUT).filter((n) => n.endsWith('.png')).sort()) {
