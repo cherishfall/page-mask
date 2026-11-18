@@ -27,7 +27,7 @@ npm run test:e2e            # = wxt build && node tests/e2e/run-e2e.mjs，约 45
 | `check-editor.mjs` | 编辑面板（#24：popup 入口、重选替换、开关不被覆盖、逐行校验、删除撤销） | 约 10 秒 |
 | `check-toggle.mjs` | 悬浮按钮与无障碍（#25：菜单不出屏/翻转/Esc/点外关闭、无右键菜单、Tab+回车、拖动贴边、三底色对比度、对话框在超高浮层之上） | 约 10 秒 |
 
-截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-i18n.mjs`、`check-dark-mode.mjs`、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）、`store-shots.mjs`（生成商店素材，直接写 `docs/store-assets/`，见 CHROMEWEBSTORE.md §8）、`landing-shots.mjs`（生成落地页截图 4 张 × 中英两套：原样 / 收起 4 项 / 收起 + 整页变灰 / 点选界面，写 `docs/store-assets/landing/<lang>/`，再复制到落地页仓库 `page-mask/screens/<lang>/`；界面改动后重跑：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/landing-shots.mjs`）。
+截图写到 `test-results/e2e/`（已忽略）。其他脚本不进 `test:e2e`：`check-i18n.mjs`、`check-dark-mode.mjs`、`run-e2e-real.mjs`（真实网站，输出 `test-results/real/`）、`store-shots.mjs`（生成商店素材，`STORE_SHOTS_LOCALE=zh|en` 分语言各跑一遍、写 `docs/store-assets/<locale>/`；宣传图块不可本地化、仅 zh 轮生成写到 store-assets 根目录；见 CHROMEWEBSTORE.md §8）、`landing-shots.mjs`（生成落地页截图 4 张 × 中英两套：原样 / 收起 4 项 / 收起 + 整页变灰 / 点选界面，写 `docs/store-assets/landing/<lang>/`，再复制到落地页仓库 `page-mask/screens/<lang>/`；界面改动后重跑：`npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/landing-shots.mjs`）。
 
 ## 工具函数（`tests/e2e/lib/`）
 

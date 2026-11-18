@@ -1,12 +1,20 @@
 /**
- * 商店素材生成（#29 / #58，#190 修通）：6 张 1280×800 截图 + 440×280 宣传图块。
+ * 商店素材生成（#29 / #58，#190 修通；2026-11-19 起按语言分目录出中英两套）：
+ * 每种语言 6 张 1280×800 截图 + 440×280 宣传图块（全局素材，仅中文一份）。
  *
  * 运行：npm run build && CHROME_ARGS="--no-sandbox --disable-gpu" node tests/e2e/store-shots.mjs
- *       （约 1 分钟；默认输出覆盖 docs/store-assets/，用 STORE_SHOTS_OUT=<目录> 改输出位置）
+ *       STORE_SHOTS_LOCALE=zh|en（默认 zh；两套都要出，各跑一遍）
+ *       输出 docs/store-assets/<locale>/（与控制台「当地语言截图」一一对应：
+ *       zh/ 传给中文（简体），en/ 传给 English，全球通用留空——官方回退顺序
+ *       「当地语言截图 → 全球通用截图」，两语言都有各自的图时全球通用永不显示）；
+ *       用 STORE_SHOTS_OUT=<目录> 改输出位置。
+ *       宣传图块官方明示不可本地化（small promo tile / marquee 不随语言切换），只在 zh 轮
+ *       生成、写 docs/store-assets/promo-tile-440x280.png，图上中文定位语是有意为之。
  *
- * 素材全部来自真实运行：页面截图是扩展在虚构站点「Acme 书房」上生效后的真实画面，
- * 拼版（之前/之后、标签栏、popup、两个管理页、⋯ 菜单与幕布）里的每一块都是这些截图
- * 与扩展自己的资源，不画假界面、不含第三方商标。
+ * 素材全部来自真实运行：页面截图是扩展在虚构站点「Acme 书房 / Acme Journal」上生效后的
+ * 真实画面，拼版（之前/之后、标签栏、popup、两个管理页、⋯ 菜单与幕布）里的每一块都是
+ * 这些截图与扩展自己的资源，不画假界面、不含第三方商标。界面语言锁定为本轮语言
+ * （写 settings.uiLanguage，auto 会随运行机器的系统语言漂移）。
  *
  * 虚构域名映射（#190）：主 fixture 用 acme-journal.test（RFC 6761 保留 TLD，公网永不解析），
  * 启动参数 --host-resolver-rules=MAP 把它指到本地 HTTP 服务，截图里不出现 127.0.0.1 / 端口。
@@ -18,12 +26,13 @@
  *
  * - screenshot-1-before-after：同一页面的「之前 / 之后」并排 + 大字说明
  * - screenshot-2-wizard：向导的点选与看效果两步并排（#81 起两步）
- * - screenshot-3-tabbar：标签栏里的两个标签页（原样 / 清爽），展示标题与图标
+ * - screenshot-3-tabbar：标签栏里的两个标签页（原样 / 清爽），展示标题与图标（不传商店，素材备用）
  * - screenshot-4-popup：弹窗正常状态（头部「查看使用说明」链接；面具卡：按你的设置显示开关 + 标题和图标 /
  *   收起内容两颗编辑入口；灰度卡：整页变灰开关；遮住卡：带图标的「遮住这一页」按钮；辅助行：悬浮按钮开关；底部两个入口）
- * - screenshot-5-management：「你添加的网站」与「插件设置」两个独立页面并排
- * - screenshot-6-curtain：悬浮按钮「⋯」菜单（0.8.0 起媒体开关在胶囊媒体钮上，菜单四项三组）+ 遮住整页后的睁眼恢复按钮
- * - promo-tile-440x280：新图标 + 一句话定位，无 emoji
+ * - screenshot-5-management：「全部网站设置」与「插件设置」两个独立页面并排
+ * - screenshot-6-curtain：悬浮按钮「⋯」菜单 + 遮住整页后的睁眼恢复按钮
+ *   （2026-11-19 修说明文字：胶囊上那颗钮的实名是「整页变灰」，旧图写的「媒体开关在『媒体』钮上」是 0.8.x 旧称）
+ * - promo-tile-440x280：新图标 + 一句话定位，无 emoji（仅 zh 轮生成）
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,10 +41,117 @@ import { evalInContentWorld, launchExtension, openPopup, sendToBackground, sendT
 import { clickInShadow, waitForShadow } from './lib/shadow.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
-const OUT = process.env.STORE_SHOTS_OUT ? path.resolve(process.env.STORE_SHOTS_OUT) : path.join(REPO, 'docs/store-assets');
+const LOCALE = process.env.STORE_SHOTS_LOCALE === 'en' ? 'en' : 'zh';
+const BASE = process.env.STORE_SHOTS_OUT ? path.resolve(process.env.STORE_SHOTS_OUT) : path.join(REPO, 'docs/store-assets');
+const OUT = path.join(BASE, LOCALE);
 const TMP = resultsDir('store-shots');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
+
+/** 每种语言一份素材文案：fixture 页面、演示数据（会出现在界面里）、拼版说明字 */
+const STR = {
+  zh: {
+    pageLang: 'zh-CN',
+    site: {
+      brand: 'Acme 书房',
+      title: 'Acme 书房 · 示例阅读站',
+      nav: ['书架', '发现', '想法', '统计'],
+      book: ['星海旅人', '雾中灯塔', '长夜书信'],
+      h1: '星海旅人',
+      meta: '示例作者 · 虚构类 · 全书 24 章 · 已读 18%',
+      cardP: (r) => `示例作者 · 虚构类 · 示例评分 ${r}`,
+      promoB: '开通示例会员',
+      promoS: '解锁全部章节与离线缓存（本例为虚构内容）',
+      p1: '这是一段用于演示的正文内容。PageMask 只做减法：收起你点选的部分，其余版式保持原样，阅读位置不会跳。',
+      p2: '你可以只收起推荐卡片与横幅，也可以把页头一起收起；每条收起项在「调整」里改收起方式与在哪些页面收起（整站或只是这类页面）。',
+      footer: '© Acme 书房（虚构站点，仅用于截图）',
+    },
+    profile: { title: '阅读', header: '页头导航', promo: '示例会员横幅', rec: '推荐卡片', footer: '页脚' },
+    siteTitles: ['阅读', '文档', '笔记'],
+    seedNames: ['页头导航', '推荐卡片', '横幅', '页脚', '侧栏'],
+    seedFallback: '元素',
+    cap1: {
+      big: '同一页面，收起前后',
+      sub: '点选让你分心的部分；保存后，标签页标题也一起变低调',
+      f1: '之前：页头、推荐卡片、横幅、页脚',
+      f2: (t) => `之后：只留下正文，标签页标题为「${t}」`,
+    },
+    cap2: {
+      big: '点选要收起的内容 → 看效果，保存即完成',
+      sub: '选中的内容列成清单、可逐项去掉；每项的收起方式与在哪些页面收起，在「调整」里改',
+      f1: '点选：悬停高亮、点一下选中，选中项列成清单',
+      f2: '看效果：滚动确认效果，逐项在「调整」里换收起方式、定范围',
+    },
+    cap3: '开关打开后，标签页标题和图标也会一起变低调',
+    cap4: {
+      a: '工具栏图标：按你的设置显示 · 收起内容 / 标题和图标 · 整页变灰 · 遮住这一页 / 恢复这一页',
+      b: '底部两个入口：全部网站设置 · 插件设置',
+    },
+    cap5: {
+      big: '两个独立页面：「全部网站设置」与「插件设置」',
+      sub: '弹窗底部两个入口分别进入；插件设置也是 Chrome 的「扩展程序选项」',
+      f1: '「全部网站设置」：一行一站，点进去是该网站的设置页',
+      f2: '「插件设置」：默认标题、悬浮按钮不透明度、快捷键、导出 / 导入、界面语言',
+    },
+    cap6: {
+      big: '页面上的悬浮按钮，与遮住整页后的那颗恢复按钮',
+      sub: '「⋯」菜单就地编辑；遮住后页面上只剩一颗可拖动的睁眼按钮，点一下就恢复',
+      f1: '「⋯」菜单：标题和图标 · 收起内容 · 调整不透明度 · 删除这个网站的设置（整页变灰与遮住两颗钮在胶囊本体上）',
+      f2: '遮住整页：整页连同标签页标题一起盖住，悬停小按钮显出「恢复」',
+    },
+  },
+  en: {
+    pageLang: 'en',
+    site: {
+      brand: 'Acme Journal',
+      title: 'Acme Journal · Sample reading site',
+      nav: ['Shelf', 'Discover', 'Ideas', 'Stats'],
+      book: ['Star Sea Voyager', 'Lighthouse in the Fog', 'Letters through the Night'],
+      h1: 'Star Sea Voyager',
+      meta: 'Sample Author · Fiction · 24 chapters · 18% read',
+      cardP: (r) => `Sample Author · Fiction · Sample rating ${r}`,
+      promoB: 'Get sample membership',
+      promoS: 'Unlock all chapters and offline caching (fictional demo)',
+      p1: "This is placeholder body text. PageMask only subtracts: it hides what you pick, the rest of the layout stays as it is, and your reading position doesn't jump.",
+      p2: 'You can hide just the recommendation cards and the banner, or the header as well; each hidden item\u2019s hide method and where it applies (whole site or only these pages) is edited in \u201cAdjust\u201d.',
+      footer: '© Acme Journal (fictional site, for screenshots only)',
+    },
+    profile: { title: 'Reading', header: 'Header nav', promo: 'Membership banner', rec: 'Recommendation card', footer: 'Footer' },
+    siteTitles: ['Reading', 'Docs', 'Notes'],
+    seedNames: ['Header nav', 'Recommendation card', 'Banner', 'Footer', 'Sidebar'],
+    seedFallback: 'Element',
+    cap1: {
+      big: 'The same page, before and after',
+      sub: 'Point at what distracts you; once saved, the tab title quiets down too',
+      f1: 'Before: header, recommendation cards, banner, footer',
+      f2: (t) => `After: just the article \u2014 the tab title is now \u201c${t}\u201d`,
+    },
+    cap2: {
+      big: 'Pick what to hide \u2192 check the result, save \u2014 done',
+      sub: 'Everything picked is listed and can be removed one by one; each item\u2019s hide method and where it applies are changed in \u201cAdjust\u201d',
+      f1: 'Pick: hover highlights, click selects; picks are listed',
+      f2: 'Check the result: scroll to confirm; change the hide method and scope per item in \u201cAdjust\u201d',
+    },
+    cap3: 'With the switch on, the tab title and icon quiet down too',
+    cap4: {
+      a: 'Toolbar icon: Show this site your way · Hide items / Title & icon · Whole-page gray · Cover this page / Restore this page',
+      b: 'Two entries at the bottom: All site settings · Settings',
+    },
+    cap5: {
+      big: 'Two separate pages: \u201cAll site settings\u201d and \u201cSettings\u201d',
+      sub: 'Both open from the bottom of the popup; Settings is also Chrome\u2019s \u201cOptions\u201d page',
+      f1: 'All site settings: one row per site; click through to that site\u2019s settings page',
+      f2: 'Settings: default title, floating button opacity, shortcuts, export / import, interface language',
+    },
+    cap6: {
+      big: 'The on-page floating button, and the restore button after covering the page',
+      sub: 'The \u22ef menu edits in place; once covered, only a draggable open-eye button remains \u2014 one click restores',
+      f1: '\u22ef menu: Title & icon · Hide items · Adjust opacity · Delete this site\u2019s settings (the whole-page-gray and cover buttons sit on the pill itself)',
+      f2: 'Covered: the page and its tab title are hidden together; hover the small button to reveal \u201cRestore\u201d',
+    },
+  },
+};
+const T = STR[LOCALE];
 
 /** 虚构阅读站；favicon 是一个橙色圆角方块（原样态的标签页图标） */
 const FAVICON =
@@ -43,13 +159,13 @@ const FAVICON =
   encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="4" fill="#f59e0b"/></svg>');
 
 const nav = (items) => items.map((t) => `<span>${t}</span>`).join('');
-const cards = ['星海旅人', '雾中灯塔', '长夜书信']
-  .map((t, i) => `<li class="card"><b>${t}</b><p>示例作者 · 虚构类 · 示例评分 ${(4.8 - i * 0.2).toFixed(1)}</p></li>`)
+const cards = T.site.book
+  .map((t, i) => `<li class="card"><b>${t}</b><p>${T.site.cardP((4.8 - i * 0.2).toFixed(1))}</p></li>`)
   .join('');
 
-const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+const PAGE = `<!doctype html><html lang="${T.pageLang}"><head><meta charset="utf-8">
 <link rel="icon" href="${FAVICON}">
-<title>Acme 书房 · 示例阅读站</title>
+<title>${T.site.title}</title>
 <style>
   body{margin:0;font-family:system-ui,'PingFang SC',sans-serif;color:#1f2329;background:#fff}
   header#site-header{display:flex;align-items:center;gap:28px;padding:14px 24px;border-bottom:1px solid #eceef1;background:#fbfbfc}
@@ -68,18 +184,18 @@ const PAGE = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
   article p{line-height:1.9;font-size:15px;color:#374151}
   footer#site-footer{text-align:center;color:#9ca3af;font-size:12px;padding:22px}
 </style></head><body>
-<header id="site-header"><b>Acme 书房</b><nav>${nav(['书架', '发现', '想法', '统计'])}</nav></header>
+<header id="site-header"><b>${T.site.brand}</b><nav>${nav(T.site.nav)}</nav></header>
 <main>
-  <h1>星海旅人</h1>
-  <p class="meta">示例作者 · 虚构类 · 全书 24 章 · 已读 18%</p>
+  <h1>${T.site.h1}</h1>
+  <p class="meta">${T.site.meta}</p>
   <ul id="rec-list">${cards}</ul>
-  <div id="promo"><b>开通示例会员</b><span>解锁全部章节与离线缓存（本例为虚构内容）</span></div>
+  <div id="promo"><b>${T.site.promoB}</b><span>${T.site.promoS}</span></div>
   <article>
-    <p>这是一段用于演示的正文内容。PageMask 只做减法：收起你点选的部分，其余版式保持原样，阅读位置不会跳。</p>
-    <p>你可以只收起推荐卡片与横幅，也可以把页头一起收起；每条收起项在「调整」里改收起方式与在哪些页面收起（整站或只是这类页面）。</p>
+    <p>${T.site.p1}</p>
+    <p>${T.site.p2}</p>
   </article>
 </main>
-<footer id="site-footer">© Acme 书房（虚构站点，仅用于截图）</footer>
+<footer id="site-footer">${T.site.footer}</footer>
 </body></html>`;
 
 /** 主 fixture 的虚构域名：公网永不解析（RFC 6761），浏览器内映射到本地服务（见文件头） */
@@ -101,9 +217,9 @@ const ORIGIN = `http://${SITE_HOST}`;
  * （eTLD+1，内核 isValidSiteKey 口径），裸域写法保证键、字段与显示同形
  * （#192 起 harness 的 siteKeyOf 已与内核同为 eTLD+1；0.9.1 的教训见 DEVLOG） */
 const DEMO_SITES = [
-  { origin: 'https://acme-notes.com', title: '阅读', rules: 3, stale: 0 },
-  { origin: 'https://daily-digest.co', title: '文档', rules: 2, stale: 1 },
-  { origin: 'https://studio-notes.dev', title: '笔记', rules: 4, stale: 0 },
+  { origin: 'https://acme-notes.com', rules: 3, stale: 0 },
+  { origin: 'https://daily-digest.co', rules: 2, stale: 1 },
+  { origin: 'https://studio-notes.dev', rules: 4, stale: 0 },
 ];
 
 const ext = await launchExtension({
@@ -116,6 +232,12 @@ const ext = await launchExtension({
   args: [`--host-resolver-rules=MAP ${SITE_HOST} 127.0.0.1:${srv.port}`, '--no-proxy-server'],
 });
 const { browser, control } = ext;
+
+// 界面语言锁定为本轮语言（写全局设置；'auto' 会随运行机器的系统语言漂移，两轮都必须显式钉死）
+await control.evaluate(async (v) => {
+  const cur = (await chrome.storage.local.get('settings')).settings ?? {};
+  await chrome.storage.local.set({ settings: { ...cur, uiLanguage: v } });
+}, LOCALE);
 
 const now = Date.now();
 const rule = (id, name, sel) => ({
@@ -133,15 +255,15 @@ const demoProfile = (overrides = {}) => ({
   formatVersion: 1,
   origin: ORIGIN,
   switchState: 'disguised',
-  disguisedTitle: '阅读',
+  disguisedTitle: T.profile.title,
   icon: { kind: 'none' },
   hideRules: [
-    rule('r_header', '页头导航', '#site-header'),
-    rule('r_promo', '示例会员横幅', '#promo'),
-    rule('r_rec', '推荐卡片', '.card:nth-child(1)'),
-    rule('r_rec2', '推荐卡片', '.card:nth-child(2)'),
-    rule('r_rec3', '推荐卡片', '.card:nth-child(3)'),
-    rule('r_footer', '页脚', '#site-footer'),
+    rule('r_header', T.profile.header, '#site-header'),
+    rule('r_promo', T.profile.promo, '#promo'),
+    rule('r_rec', T.profile.rec, '.card:nth-child(1)'),
+    rule('r_rec2', T.profile.rec, '.card:nth-child(2)'),
+    rule('r_rec3', T.profile.rec, '.card:nth-child(3)'),
+    rule('r_footer', T.profile.footer, '#site-footer'),
   ],
   floatingBtnPos: null,
   createdAt: now,
@@ -154,7 +276,7 @@ const shot = (page, file, clip = { x: 0, y: 0, width: 1280, height: 800 }) =>
   page.screenshot({ path: file, clip, captureBeyondViewport: false });
 
 /** 用一块拼版页面出图：传入 body 片段，截 1280×800（或指定尺寸） */
-async function compose(name, body, { width = 1280, height = 800 } = {}) {
+async function compose(name, body, { width = 1280, height = 800, file } = {}) {
   const page = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
   await page.setContent(
@@ -168,10 +290,10 @@ async function compose(name, body, { width = 1280, height = 800 } = {}) {
     </style></head><body>${body}</body></html>`,
     { waitUntil: 'load' },
   );
-  const file = path.join(OUT, `${name}.png`);
-  await shot(page, file, { x: 0, y: 0, width, height });
+  const out = file ?? path.join(OUT, `${name}.png`);
+  await shot(page, out, { x: 0, y: 0, width, height });
   await page.close();
-  return file;
+  return out;
 }
 
 try {
@@ -204,17 +326,17 @@ try {
   await compose(
     'screenshot-1-before-after',
     `<div style="padding:30px 44px 0">
-      <div class="big">同一页面，收起前后</div>
-      <div class="sub">点选让你分心的部分；保存后，标签页标题也一起变低调</div>
+      <div class="big">${T.cap1.big}</div>
+      <div class="sub">${T.cap1.sub}</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(beforeFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">之前：页头、推荐卡片、横幅、页脚</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap1.f1}</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(afterFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">之后：只留下正文，标签页标题为「${title}」</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap1.f2(title)}</figcaption>
        </figure>
      </div>`,
   );
@@ -248,17 +370,17 @@ try {
   await compose(
     'screenshot-2-wizard',
     `<div style="padding:30px 44px 0">
-      <div class="big">点选要收起的内容 → 看效果，保存即完成</div>
-      <div class="sub">选中的内容列成清单、可逐项去掉；每项的收起方式与在哪些页面收起，在「调整」里改</div>
+      <div class="big">${T.cap2.big}</div>
+      <div class="sub">${T.cap2.sub}</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(wizardPickFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">点选：悬停高亮、点一下选中，选中项列成清单</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap2.f1}</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(wizardPreviewFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">看效果：滚动确认效果，逐项在「调整」里换收起方式、定范围</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap2.f2}</figcaption>
        </figure>
      </div>`,
   );
@@ -275,7 +397,7 @@ try {
        </div>
        <div style="background:#eceef1;border-radius:9px 9px 0 0;padding:9px 16px;display:flex;align-items:center;gap:9px;font-size:13px;color:#5f6368;min-width:250px">
          <img src="${FAVICON}" style="width:16px;height:16px;display:block">
-         <span>Acme 书房 · 示例阅读站</span>
+         <span>${T.site.title}</span>
        </div>
        <div style="background:#fff;border-radius:9px 9px 0 0;padding:9px 16px;display:flex;align-items:center;gap:9px;font-size:13px;color:#1f2329;min-width:250px">
          <img src="${tabIcon}" style="width:16px;height:16px;display:block">
@@ -286,7 +408,7 @@ try {
        <img src="${dataUrl(afterFile)}" style="width:1280px;display:block">
      </div>
      <div style="position:absolute;left:44px;bottom:26px;background:#1f2329e6;color:#fff;border-radius:10px;padding:12px 18px;font-size:17px">
-       开关打开后，标签页标题和图标也会一起变低调
+       ${T.cap3}
      </div>`,
   );
 
@@ -315,8 +437,8 @@ try {
     'screenshot-4-popup',
     `<div style="height:800px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#eef1f5">
        <img src="${dataUrl(popupFile)}" style="width:420px;display:block;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);border:1px solid #dfe3e8">
-       <div class="cap" style="font-size:18px">工具栏图标：按你的设置显示 · 收起内容 / 标题和图标 · 整页变灰 · 遮住这一页 / 恢复这一页</div>
-       <div class="cap" style="font-size:18px;margin-top:-10px">底部两个入口：全部网站设置 · 插件设置</div>
+       <div class="cap" style="font-size:18px">${T.cap4.a}</div>
+       <div class="cap" style="font-size:18px;margin-top:-10px">${T.cap4.b}</div>
      </div>`,
   );
 
@@ -327,12 +449,11 @@ try {
   });
   for (const s of DEMO_SITES) {
     await control.evaluate(
-      async (k, t, n, stale) => {
+      async (k, t, n, stale, names, fallback) => {
         const stamp = Date.now();
-        const names = ['页头导航', '推荐卡片', '横幅', '页脚', '侧栏'];
         const rules = Array.from({ length: n }, (_, i) => ({
           id: `r_${i}`,
-          elementName: names[i] ?? '元素',
+          elementName: names[i] ?? fallback,
           candidates: ['#x'],
           strategy: 'remove',
           scope: { type: 'all' },
@@ -355,9 +476,11 @@ try {
         });
       },
       siteKeyOf(s.origin),
-      s.title,
+      T.siteTitles[DEMO_SITES.indexOf(s)],
       s.rules,
       s.stale,
+      T.seedNames,
+      T.seedFallback,
     );
   }
   const mgmtPage = await browser.newPage();
@@ -380,22 +503,22 @@ try {
   await compose(
     'screenshot-5-management',
     `<div style="padding:30px 44px 0">
-      <div class="big">两个独立页面：「全部网站设置」与「插件设置」</div>
-      <div class="sub">弹窗底部两个入口分别进入；插件设置也是 Chrome 的「扩展程序选项」</div>
+      <div class="big">${T.cap5.big}</div>
+      <div class="sub">${T.cap5.sub}</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(mgmtFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">「全部网站设置」：一行一站，点进去是该网站的设置页</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap5.f1}</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(settingsFile)}" style="width:572px;height:358px;display:block;border-radius:10px;border:1px solid #dfe3e8">
-         <figcaption class="cap" style="margin-top:10px">「插件设置」：默认标题、悬浮按钮不透明度、快捷键、导出 / 导入、界面语言</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap5.f2}</figcaption>
        </figure>
      </div>`,
   );
 
-  // 6. 小胶囊「⋯」菜单五项 + 幕布恢复按钮
+  // 6. 小胶囊「⋯」菜单 + 幕布恢复按钮
   // 重新种回 ORIGIN 的配置（上面为管理页素材清过库），再开一个页面。
   // 种回触发 storage.onChanged 对账是后台异步的：等对账完成再开页面，否则页面可能
   // 先于重新注册加载完（registerContentScripts 只影响后续导航），内容脚本永远不会注入。
@@ -412,14 +535,14 @@ try {
     { timeout: 8000 },
   );
   await cp.waitForSelector('pagemask-toggle', { timeout: 8000 });
-  // 左：⋯ 菜单展开（0.8.0 起默认四项三组，媒体开关在胶囊媒体钮上），截页面右下角
+  // 左：⋯ 菜单展开（默认四项三组，整页变灰与遮住在胶囊本体上），截页面右下角
   await clickInShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-more"]');
   await waitForShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-menu"]');
   await new Promise((r) => setTimeout(r, 400));
   const menuFile = path.join(TMP, 'capsule-menu.png');
   await shot(cp, menuFile, { x: 620, y: 400, width: 660, height: 400 });
   await clickInShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-more"]');
-  // 右：遮住整页 → 幕布上的睁眼恢复按钮（悬停显出「恢复」两字）
+  // 右：遮住整页 → 幕布上的睁眼恢复按钮（悬停显出「恢复」/ "Restore"）
   await clickInShadow(cp, 'pagemask-toggle', '[data-testid="pm-toggle-cover"]');
   await waitForShadow(cp, 'pagemask-curtain', '[data-testid="pm-curtain-restore"]', { timeout: 3000 });
   const btnRect = await cp.evaluate(() => {
@@ -442,37 +565,40 @@ try {
   await compose(
     'screenshot-6-curtain',
     `<div style="padding:30px 44px 0">
-      <div class="big">页面上的悬浮按钮，与遮住整页后的那颗恢复按钮</div>
-      <div class="sub">「⋯」菜单就地编辑；遮住后页面上只剩一颗可拖动的睁眼按钮，点一下就恢复</div>
+      <div class="big">${T.cap6.big}</div>
+      <div class="sub">${T.cap6.sub}</div>
      </div>
      <div style="display:flex;gap:26px;padding:22px 44px 0">
        <figure style="margin:0">
          <img src="${dataUrl(menuFile)}" style="width:572px;height:347px;display:block;border-radius:10px;border:1px solid #dfe3e8;object-fit:cover;object-position:right bottom">
-         <figcaption class="cap" style="margin-top:10px">「⋯」菜单：标题和图标 · 收起内容 · 调整不透明度 · 删除这个网站的设置（媒体开关在胶囊的「媒体」钮上）</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap6.f1}</figcaption>
        </figure>
        <figure style="margin:0">
          <img src="${dataUrl(curtainFile)}" style="width:572px;height:347px;display:block;border-radius:10px;border:1px solid #dfe3e8;object-fit:cover">
-         <figcaption class="cap" style="margin-top:10px">遮住整页：整页连同标签页标题一起盖住，悬停小按钮显出「恢复」</figcaption>
+         <figcaption class="cap" style="margin-top:10px">${T.cap6.f2}</figcaption>
        </figure>
      </div>`,
   );
 
-  // 7. 宣传图块 440×280
-  await compose(
-    'promo-tile-440x280',
-    `<div style="width:440px;height:280px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:12px">
-       <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:76px;height:76px;display:block">
-       <div style="font-size:28px;font-weight:700;line-height:1.2">PageMask</div>
-       <div style="font-size:16px;color:#3f4a58;line-height:1.5">点选不想要的部分，<br>标签页一起变低调</div>
-     </div>`,
-    { width: 440, height: 280 },
-  );
+  // 7. 宣传图块 440×280（官方明示不可本地化：只有中文一份，写到 store-assets 根目录）
+  if (LOCALE === 'zh') {
+    const promoFile = await compose(
+      'promo-tile-440x280',
+      `<div style="width:440px;height:280px;background:linear-gradient(140deg,#eef4ff 0%,#f7f9fc 55%,#eaf6ef 100%);display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:12px">
+         <img src="${dataUrl(path.join(REPO, 'public/icon/128.png'))}" style="width:76px;height:76px;display:block">
+         <div style="font-size:28px;font-weight:700;line-height:1.2">PageMask</div>
+         <div style="font-size:16px;color:#3f4a58;line-height:1.5">点选不想要的部分，<br>标签页一起变低调</div>
+       </div>`,
+      { width: 440, height: 280, file: path.join(BASE, 'promo-tile-440x280.png') },
+    );
+    console.log(`  ✓ ${path.relative(REPO, promoFile)}（全局素材，不可本地化）`);
+  }
 
   for (const f of fs.readdirSync(OUT).filter((n) => n.endsWith('.png')).sort()) {
     const size = fs.statSync(path.join(OUT, f)).size;
     console.log(`  ✓ ${f}（${Math.round(size / 1024)} KB）`);
   }
-  console.log(`\n素材已写入 ${path.relative(REPO, OUT)}/`);
+  console.log(`\n${LOCALE} 套图已写入 ${path.relative(REPO, OUT)}/`);
 } finally {
   await ext.cleanup();
   await srv.close();

@@ -39,7 +39,7 @@ unzip -p .output/page-mask-1.0.11-chrome.zip manifest.json
 - [x] 隐私表单填法（材料 §5）
 - [x] 审核员备注与八步测试步骤（材料 §6）
 - [x] 版本历史表（材料 §7）
-- [x] 截图 6 张（各 1280×800）+ 宣传图块 440×280 + 商店图标 128×128（材料 §8）
+- [x] 截图中英两套（`zh/` 与 `en/` 各 6 张、各 1280×800）+ 宣传图块 440×280（不可本地化，仅一份）+ 商店图标 128×128（材料 §8）
 - [x] `cherishfall/page-mask` 仓库**已经是公开仓库**（已核实为 Public，匿名浏览器可打开仓库页与 `docs/PRIVACY.md`）
 - [x] `docs/PRIVACY.md` 存在，且英文在前中文在后，与商店披露口径一致（`docs/CHROMEWEBSTORE.md` §5 引用它）
 - [x] 隐私政策已由 GitHub Pages 承载并发布：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200，与 `docs/PRIVACY.md` 逐条等义）——两条路径都通，审核员无需登录
@@ -227,7 +227,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | **Category**（类别） | Store listing | `Productivity › Tools`（控制台无此项时取最接近的） | 材料 §1 | §2.3 |
 | **Language**（商店页语言） | Store listing | 简体中文 + English | 材料 §1 | §2.3 |
 | **Store icon**（图标） | Store listing | 128×128 PNG：`public/icon/128.png` | 材料 §8 | §2.3 |
-| **Screenshots**（截图） | Store listing | 最多 5 张、每张 1280×800：传 1 / 2 / 4 / 5 / 6 | 材料 §8 | §2.3 |
+| **Screenshots**（截图） | Store listing | 两组槽位：语言切到 English 传 `en/` 那套、切到中文（简体）传 `zh/` 那套（各 1 / 2 / 4 / 5 / 6，每张 1280×800）；「全球通用的屏幕截图」留空 | 材料 §8 | §2.3 |
 | **Small promo tile**（宣传图块） | Store listing | 440×280 PNG：`docs/store-assets/promo-tile-440x280.png`（Marquee 1400×560 可选，没素材） | 材料 §8 | §2.3 |
 | **Homepage URL** | Store listing | `https://github.com/cherishfall/page-mask` | 材料 §1 | §2.3 |
 | **Support URL** | Store listing | `https://github.com/cherishfall/page-mask/issues` | 材料 §1 | §2.3 |
@@ -253,7 +253,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 | **Category**（类别） | `Productivity › Tools`；控制台没有这一项时选最接近的 | 材料 §1 | 官方只要求“一个主要类别”，没有固定清单；**以控制台当次选项为准** |
 | **Language**（商店页语言） | 简体中文 + English | 材料 §1 | 与 manifest 的 `_locales` 一致 |
 | **Store icon** | 128×128 PNG：`public/icon/128.png`（与 `docs/store-assets/icon-128.png` 同一张） | 材料 §8 | 官方要求 **128×128 px** |
-| **Screenshots** | 最多 **5 张**，每张 **1280×800 px**。我们有 6 张，按材料 §8 的建议上传 **1 / 2 / 4 / 5 / 6**（首图、向导、面板、两个管理页、菜单+幕布） | 材料 §8 | 官方原文："At least one 1280x800 px screenshot, up to 5 total." |
+| **Screenshots**（以当地语言显示的屏幕截图） | 语言切到 **English** → 传 `docs/store-assets/en/` 的 **1 / 2 / 4 / 5 / 6**（首图、向导、弹窗、两个管理页、菜单+幕布）；切到 **中文（简体）** → 传 `docs/store-assets/zh/` 的同一批号。每张 **1280×800 px**；每组最多 5 张。「全球通用的屏幕截图」**留空**——官方取图顺序是「当地语言截图 → 全球通用截图」（官方文档 "Order of graphic assets"），两个语言都有自己的截图时全球通用那份永不显示 | 材料 §8 | 官方原文："At least one 1280x800 px screenshot, up to 5 total." |
 | **Small promo tile**（可选） | `docs/store-assets/promo-tile-440x280.png`，**440×280**，PNG/JPEG | 材料 §8 | 官方尺寸 440×280 px |
 | **Marquee promo tile**（可选） | 没有素材，跳过 | — | 官方尺寸 1400×560 px |
 | **Promo video**（可选） | 没有视频，跳过 | — | YouTube 链接 |
@@ -265,7 +265,7 @@ PageMask 已经有 GitHub Pages 域名 `cherishfall.github.io`，Pages 已开启
 #### 操作要点
 
 1. **名称与简短说明在这一页找不到输入框**——这是正常的：它们写死在 `public/_locales/*/messages.json` 里（manifest 里是 `__MSG_extName__` / `__MSG_extDescription__`），控制台改不了（§2.1）。看到商店页顶部显示的名称与简介来自 `_locales`，就说明对了。
-2. **截图只能传 5 张**：材料 §8 明确给了优先级——「商店控制台最多传 5 张截图时，优先传 1 / 2 / 4 / 5 / 6」。
+2. **截图每组只能传 5 张**：材料 §8 明确给了优先级——「商店控制台最多传 5 张截图时，优先传 1 / 2 / 4 / 5 / 6」。中英两套各传一套到「以当地语言显示的屏幕截图」（English → `en/`，中文（简体） → `zh/`），「全球通用的屏幕截图」留空。
 3. **多语言一致性**：官方会用程序检查不同语言的元数据是否一致，不一致会弹一个 warning（不拦截提交，但别去踩）。
 4. **别让截图/描述说没做的事**：官方 "Misleading or Unexpected Behavior" 政策写明：任何内容、标题、图标、描述或截图里有不实信息，都可能被下架。我们的截图是虚构站点 `acme-journal.test` 上的真实渲染，不误导（材料 §8 有口径说明），**描述里不能写「任何网站都可用」这种话**（材料 §11 已列）。
 
@@ -417,7 +417,7 @@ PageMask 不需要登录、不需要付费账号，所以**硬性凭据这一项
 - [ ] `manifest.json` 在 zip 根目录；无 `.map`、无 README/CHANGELOG/CHROMEWEBSTORE.md、无测试与配置文件（`npm run check:package` 会验）
 - [ ] manifest 里 `permissions` = `storage`/`scripting`/`activeTab`，`optional_host_permissions` = `["*://*/*"]`，**没有** `content_scripts`、**没有** `host_permissions`
 - [ ] 名称/简介与 `_locales` 一致：en 40/125 字符、zh_CN 22/54 字符（≤45 / ≤132）
-- [ ] 截图 5 张（1/2/4/5/6），每张 1280×800；宣传图块 440×280；图标 128×128
+- [ ] 截图两套各传 5 张（1/2/4/5/6；`en/` → English、`zh/` → 中文（简体）），每张 1280×800；「全球通用的屏幕截图」留空；宣传图块 440×280；图标 128×128
 - [ ] **隐私政策 URL（<https://cherishfall.github.io/page-mask/privacy.html>）用无登录浏览器能打开**，且页面里确实有「收集什么、怎么用、怎么共享」的说明
 - [ ] Support URL（`.../issues`）与 Homepage URL 无痕能打开
 - [ ] 材料 §3 四段权限理由、材料 §4 单一用途、材料 §5 两组勾选、材料 §6 八步测试说明，都已贴进对应标签页
@@ -624,7 +624,7 @@ PageMask 是 Manifest V3，不在影响范围内——这条时间线只是让�
 ### 7.3 本项目特有的注意点清单
 
 1. **名称与简介控制台改不了**。它们来自 `public/_locales/*/messages.json`（manifest 里是 `__MSG_extName__` / `__MSG_extDescription__`）。要改名字 = 改 `_locales` + 升版本号 + 重新打包重传（上传后 manifest 元数据不可编辑）。
-2. **截图 6 张 > 上限 5 张**，按材料 §8 传 1/2/4/5/6。
+2. **截图每组 6 张 > 上限 5 张**，按材料 §8 每套传 1/2/4/5/6：中英两套（`en/` / `zh/`）各传到「以当地语言显示的屏幕截图」，「全球通用的屏幕截图」留空。
 3. **`*://*/*` 是官方点名的“拉长审核”因素**，权限理由与审核员备注必须写足（材料 §3、材料 §10、材料 §6），别让审核员自己推。
 4. **`activeTab` 是官方“常见误解权限”清单里的一项**：官方说拥有宽泛主机权限时通常不需要 activeTab。我们的主机权限是可选的、安装时不授予任何站点，所以需要它——**主动说明，别等被问**。
 5. **隐私政策 URL 指向 GitHub Pages**：<https://cherishfall.github.io/page-mask/privacy.html>（已点验 200；仓库 blob 那条作为备用）。改 URL 时要**同步改多处**：材料 §1、材料 §2 中英详细描述里的“隐私政策：”行、扩展设置页「关于」卡的「隐私政策」入口（`entrypoints/settings/App.vue` 的 `PRIVACY_URL` 与链接显示文字）、`tests/e2e/check-pages.mjs` 的 href 断言、`README.md` 与 `docs/PRIVACY.md` 的在线版本链接、以及本文件。另外**旧地址 `https://cherishfall.github.io/privacy.html` 已移除并返回 404**（PageMask 资源统一在 `/page-mask/` 下），商店后台只能填新地址，填旧地址会因死链自动拒审。改了 `PRIVACY_URL` 要发新版，已装着的旧扩展才会指到新地址。
