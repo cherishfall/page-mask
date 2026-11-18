@@ -5,6 +5,46 @@
 This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 Under each version, the Chinese and English sections correspond item by item.
 
+## [1.0.11] - 2026-11-18
+
+两处发版后反馈的交互修正，以及落地页与隐私页的文案复审。功能与权限集合不变。
+
+### 中文
+
+#### 改动
+
+- **空设置时关闭胶囊主开关不再弹说明框（#255）**：没有标题、图标和收起内容时，从「按设置」切回「原样」不再弹「打开后页面不变」——关掉就是恢复正常显示，弹框与刚做的动作矛盾。说明框现在只在打开开关时出现
+- **首次引导第 3 步与图里的控件一一对应（#254）**：原三条要点与图里从左到右的面具、圆圈、闭眼、⋯ 对不上，「点它」没有指代对象；现在一颗控件一条、同序四条，拖动说明并入首句
+
+#### 文档与商店材料
+
+- **落地页全页文案压缩**：功能卡、怎么用、安装、隐私卡、FAQ 每段只说一件事；演示新增第 7 步「遮住这一页」，写明整页空白是正常效果、点「恢复」回来
+- **隐私政策页**：正文行宽收到 760px；「不收集」与本地保存的矛盾改为「不上传、不出售、不分享」；CSS 选择器、读屏名称、标签页静音补一句白话；权限按 storage / activeTab / scripting / 按网站主机权限拆条
+- **README / 商店材料**：标题和图标描述同步压缩；版本口径与版本历史同步 1.0.11
+
+#### 面向审阅者
+
+- 功能与权限集合与 1.0.10 完全一致（`storage` / `scripting` / `activeTab` + 按站点可选主机权限）；本轮只改两处交互文案与对外文档，界面视觉无变化，商店截图沿用
+- 门禁：编译、单测 897 项（58 文件）、E2E 十二脚本全绿（1.0.11 构建实测）、`check:docs` / `check:package` 通过
+
+### English
+
+#### Changes
+
+- **Turning the floating switch off on an empty site no longer opens the explanation box (#255)**: when no title, icon or hidden items are set, switching from "Your settings" back to "As is" no longer shows "the page stays as it is" — turning it off is simply a return to normal, so the box contradicted the action. It now appears only when the switch is turned on
+- **Onboarding step 3 now matches the controls in the picture (#254)**: the old three bullets did not line up with the mask, circle, closed eye and ⋯ shown left to right, and "click it" had no clear referent. There is now one bullet per control, in the same order, with dragging folded into the opening sentence
+
+#### Docs and store listing
+
+- **Landing page copy tightened across the whole page**: feature cards, how-to, install, privacy cards and FAQ now say one thing per paragraph; the demo adds a seventh step, "Cover this page", stating that a blank page is the intended effect and that "Restore" brings it back
+- **Privacy policy page**: body text is capped at 760px; the contradiction between "collects nothing" and local storage is replaced by "we don't upload, sell or share"; CSS selectors, screen-reader names and tab muting each get a plain-language gloss; permissions are listed one by one
+- **README / store listing**: the title-and-icon description is shortened to match; version references and history are on 1.0.11
+
+#### For reviewers
+
+- Features and the permission set are identical to 1.0.10 (`storage` / `scripting` / `activeTab` + optional per-site host permissions); this round changes two interaction messages and outside documentation only, so the interface looks the same and the store screenshots are unchanged
+- Gates: compile, 897 unit tests (58 files), all twelve E2E scripts green (measured on the 1.0.11 build), `check:docs` / `check:package` pass
+
 ## [1.0.10] - 2026-11-18
 
 界面文案与交互的全量收口（#252），以及随版本发布的对外材料审查（#253）。功能与权限集合不变。
@@ -1962,6 +2002,7 @@ First review round (installed build: reviewed on the reviewer's machine, never p
 [0.9.5]: https://github.com/cherishfall/page-mask/compare/v0.9.4...v0.9.5
 [0.9.6]: https://github.com/cherishfall/page-mask/compare/v0.9.5...v0.9.6
 [0.9.7]: https://github.com/cherishfall/page-mask/compare/v0.9.6...v0.9.7
+[1.0.11]: https://github.com/cherishfall/page-mask/compare/v1.0.10...v1.0.11
 [1.0.10]: https://github.com/cherishfall/page-mask/compare/v1.0.9...v1.0.10
 [1.0.9]: https://github.com/cherishfall/page-mask/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/cherishfall/page-mask/compare/v1.0.7...v1.0.8
