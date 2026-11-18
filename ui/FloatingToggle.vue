@@ -20,7 +20,8 @@
          戴面具（填实）= 按你的设置显示，摘面具（描边）= 原样；状态用填实/描边 +
          aria-pressed 表达，不只靠颜色（WCAG 1.4.1）。悬停提示写全称。
          管的是「收起的内容 + 标题图标」这组定制（灰度独立，见媒体钮）。
-         空设置时（#158）仍照常切换，同时弹一句「打开后页面不变」的说明框——
+         空设置时（#158）只在**打开**这一下补一句「打开后页面不变」的说明框——
+         关掉是恢复正常显示，本来就该什么都没发生，不需要解释；
          胶囊只有图标、放不下字，对话框是这一处的形态例外（docs/design-surfaces.md 例外②） -->
     <button
       type="button"
@@ -116,7 +117,8 @@
       @cancel="deleteOpen = false"
     />
 
-    <!-- 空设置说明（#158）：点主按钮照常切换开关，同时把「打开后页面不变」讲清楚。
+    <!-- 空设置说明（#158）：只在打开开关那一下把「打开后页面不变」讲清楚；
+         关闭开关不弹（关掉本来就该恢复正常显示）。
          胶囊放不下文字，这里用与删除确认同款的原生模态对话框 -->
     <EmptySettingsDialog v-if="emptyOpen" @dismiss="emptyOpen = false" />
   </div>
@@ -157,8 +159,8 @@ const props = defineProps<{
   media?: MediaToggles;
   /**
    * 空设置（#158）：收起的内容与标签页标题图标都空（只有灰度不算）。
-   * 点主按钮时照常切换开关，同时用说明框讲一句「打开后页面不变」——判据由调用方从
-   * core/site-state.ts 取，这里只管显示。
+   * 只在主按钮从「原样」切到「按设置」时用说明框讲一句「打开后页面不变」——
+   * 判据由调用方从 core/site-state.ts 取，这里只管显示。
    */
   emptyNote?: boolean;
   /**
@@ -192,7 +194,7 @@ const menuOpen = ref(false);
 const dragging = ref(false);
 /** 删除确认框开着 */
 const deleteOpen = ref(false);
-/** 空设置说明框开着（#158）：点主按钮时开，关掉即卸掉节点 */
+/** 空设置说明框开着（#158）：主按钮切到「按设置」时开，关掉即卸掉节点 */
 const emptyOpen = ref(false);
 /** 拖动中的实时位置（松手后交给存储） */
 const dragPos = ref<{ x: number; y: number } | null>(null);
@@ -419,12 +421,14 @@ function onConfirmDelete() {
 }
 
 /**
- * 主按钮：**先照常切换**（三处行为一致，没有「点了没反应」的开关），
- * 空设置时再补一个说明框讲清「打开后页面不变」（#158）。
+ * 主按钮：**先照常切换**（三处行为一致，没有「点了没反应」的开关）。
+ * 空设置时只有「原样 → 按设置」这一下补说明框讲清「打开后页面不变」（#158）；
+ * 反向关闭不弹——关掉就是恢复正常显示，不需要解释。
  */
 function onMain() {
+  const turningOn = props.state !== 'disguised';
   emit('toggle');
-  if (props.emptyNote) emptyOpen.value = true;
+  if (turningOn && props.emptyNote) emptyOpen.value = true;
 }
 
 /**

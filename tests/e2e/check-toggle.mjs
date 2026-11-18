@@ -918,16 +918,26 @@ async function main() {
     check(true, '回车关掉说明框');
     check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '关掉说明框不会再多拨一次开关');
 
-    // Esc 关：原生 <dialog> 的 Esc 行为，关掉后节点一并卸掉
+    // 关闭开关这一下不弹（1.0.11，#255）：关掉就是恢复正常显示，没有「什么都没变」要解释
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
-    await waitFor(page, '说明框再次打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    await poll(async () => (await getProfile(ext.control, ORIGIN)).switchState === 'original', '关闭开关照常切回「原样」');
+    await new Promise((res) => setTimeout(res, 300));
+    check(!(await noteStage()).open, '关闭开关（按设置 → 原样）不弹说明框');
+
+    // 再次打开：说明框回来；Esc 关（原生 <dialog> 的 Esc 行为，关掉后节点一并卸掉）
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(page, '再次打开开关时说明框打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    check((await getProfile(ext.control, ORIGIN)).switchState === 'disguised', '再次打开开关：照常切到「按设置」');
     await page.keyboard.press('Escape');
     await waitFor(page, 'Esc 关掉说明框', (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]'), [TOGGLE], { timeout: 3000 });
     check(true, 'Esc 关掉说明框');
 
     // 点框外（幕布区域）关：纯说明不是要用户做选择，点外面即撤
     await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
-    await waitFor(page, '说明框第三次打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
+    await new Promise((res) => setTimeout(res, 300));
+    check(!(await noteStage()).open, '关闭开关仍然不弹说明框（第二次确认）');
+    await clickInShadow(page, TOGGLE, tid('pm-toggle-main'));
+    await waitFor(page, '点框外前说明框再次打开', (h) => !!document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]')?.matches(':modal'), [TOGGLE], { timeout: 3000 });
     await page.mouse.click(8, 8);
     await waitFor(page, '点框外关掉说明框', (h) => !document.querySelector(h)?.shadowRoot?.querySelector('[data-testid="pm-tg-empty-dialog"]'), [TOGGLE], { timeout: 3000 });
     check(true, '点框外关掉说明框');
