@@ -39,12 +39,12 @@
   },
   "devDependencies": {
     "@puppeteer/browsers": "3.2.6",
-    "@vitest/coverage-v8": "5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "@wxt-dev/module-vue": "1.0.3",
     "jsdom": "29.1.1",
     "puppeteer-core": "25.16.0",
     "typescript": "5.9.3",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "vue-tsc": "3.3.14",
     "wxt": "0.21.5"
   }
