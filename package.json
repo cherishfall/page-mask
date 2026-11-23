@@ -34,7 +34,7 @@
     "changelog:page": "node scripts/gen-changelog-page.mjs"
   },
   "dependencies": {
-    "css-selector-generator": "3.9.4",
+    "css-selector-generator": "3.9.5",
     "vue": "3.5.45"
   },
   "devDependencies": {
